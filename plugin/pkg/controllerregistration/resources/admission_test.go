@@ -26,7 +26,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 )
@@ -34,7 +35,8 @@ import (
 var _ = Describe("resources", func() {
 	Describe("#Admit", func() {
 		var (
-			controllerRegistration core.ControllerRegistration
+			controllerRegistration     gardencorev1beta1.ControllerRegistration
+			coreControllerRegistration core.ControllerRegistration
 
 			attrs            admission.Attributes
 			admissionHandler *Resources
@@ -50,9 +52,24 @@ var _ = Describe("resources", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &fake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
-			controllerRegistration = core.ControllerRegistration{
+			controllerRegistration = gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "dummy",
+				},
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind:    resourceKind,
+							Type:    resourceType,
+							Primary: ptr.To(true),
+						},
+					},
+				},
+			}
+
+			coreControllerRegistration = core.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "dummy",
 				},
@@ -69,7 +86,7 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should do nothing because the resource is not ControllerRegistration", func() {
-			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", controllerRegistration.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs = admission.NewAttributesRecord(nil, nil, gardencorev1beta1.Kind("SomeOtherResource").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("some-other-resource").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -77,7 +94,7 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should allow the object because no other resource in the system uses the kind/type combination", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs = admission.NewAttributesRecord(&coreControllerRegistration, nil, gardencorev1beta1.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -85,11 +102,11 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should not deny the object because it is updated", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, &controllerRegistration, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			attrs = admission.NewAttributesRecord(&coreControllerRegistration, &coreControllerRegistration, gardencorev1beta1.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &core.ControllerRegistrationList{
-					Items: []core.ControllerRegistration{controllerRegistration},
+				return true, &gardencorev1beta1.ControllerRegistrationList{
+					Items: []gardencorev1beta1.ControllerRegistration{controllerRegistration},
 				}, nil
 			})
 
@@ -99,14 +116,14 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should deny the object because another resource in the system uses the kind/type combination", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs = admission.NewAttributesRecord(&coreControllerRegistration, nil, gardencorev1beta1.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &core.ControllerRegistrationList{
-					Items: []core.ControllerRegistration{*controllerRegistration2},
+				return true, &gardencorev1beta1.ControllerRegistrationList{
+					Items: []gardencorev1beta1.ControllerRegistration{*controllerRegistration2},
 				}, nil
 			})
 
@@ -116,15 +133,15 @@ var _ = Describe("resources", func() {
 		})
 
 		It("should allow the object because another resource in the system  declared the kind/type combination as secondary only", func() {
-			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs = admission.NewAttributesRecord(&coreControllerRegistration, nil, gardencorev1beta1.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
 			controllerRegistration2.Spec.Resources[0].Primary = ptr.To(false)
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &core.ControllerRegistrationList{
-					Items: []core.ControllerRegistration{*controllerRegistration2},
+				return true, &gardencorev1beta1.ControllerRegistrationList{
+					Items: []gardencorev1beta1.ControllerRegistration{*controllerRegistration2},
 				}, nil
 			})
 

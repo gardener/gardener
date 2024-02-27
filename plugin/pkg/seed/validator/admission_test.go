@@ -24,7 +24,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/seed/validator"
 )
@@ -34,9 +35,9 @@ var _ = Describe("validator", func() {
 		var (
 			admissionHandler    *ValidateSeed
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			backupBucket        core.BackupBucket
+			backupBucket        gardencorev1beta1.BackupBucket
 			seed                core.Seed
-			shoot               core.Shoot
+			shoot               gardencorev1beta1.Shoot
 
 			backupBucketName = "backupbucket"
 			seedName         = "seed"
@@ -47,12 +48,12 @@ var _ = Describe("validator", func() {
 					Name: seedName,
 				},
 			}
-			shootBase = core.Shoot{
+			shootBase = gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
 					Namespace: namespaceName,
 				},
-				Spec: core.ShootSpec{
+				Spec: gardencorev1beta1.ShootSpec{
 					CloudProfileName:  "profile",
 					Region:            "europe",
 					SecretBindingName: ptr.To("my-secret"),
@@ -60,7 +61,7 @@ var _ = Describe("validator", func() {
 				},
 			}
 
-			backupBucketBase = core.BackupBucket{
+			backupBucketBase = gardencorev1beta1.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: backupBucketName,
 				},
@@ -75,7 +76,7 @@ var _ = Describe("validator", func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		Context("Seed Update", func() {
@@ -96,7 +97,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should forbid zone removal when there are shoots", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
@@ -110,7 +111,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should disallow seed deletion because it still hosts shoot clusters", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -121,7 +122,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow seed deletion even though it is still referenced by a backupbucket (will be cleaned up during Seed reconciliation)", func() {
 				backupBucket.Spec.SeedName = &seedName
-				Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -133,7 +134,7 @@ var _ = Describe("validator", func() {
 				shoot.Spec.SeedName = ptr.To(seedName + "-1")
 				shoot.Status.SeedName = &seedName
 
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -144,7 +145,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow deletion of empty seed", func() {
 				shoot.Spec.SeedName = ptr.To(seedName + "-1")
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -187,7 +188,7 @@ var _ = Describe("validator", func() {
 
 		It("should not return error if ShootLister and SeedLister are set", func() {
 			dr, _ := New()
-			dr.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 

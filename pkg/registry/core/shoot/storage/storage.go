@@ -27,7 +27,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/registry/core/shoot"
 )
 
@@ -48,7 +48,7 @@ type ShootStorage struct {
 // NewStorage creates a new ShootStorage object.
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
-	internalSecretLister gardencorelisters.InternalSecretLister,
+	internalSecretLister gardencorev1beta1listers.InternalSecretLister,
 	secretLister kubecorev1listers.SecretLister,
 	configMapLister kubecorev1listers.ConfigMapLister,
 	adminKubeconfigMaxExpiration time.Duration,

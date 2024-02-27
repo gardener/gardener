@@ -30,8 +30,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
@@ -45,7 +46,7 @@ var _ = Describe("dns", func() {
 			kubeInformerFactory kubeinformers.SharedInformerFactory
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
-			seed  core.Seed
+			seed  gardencorev1beta1.Seed
 			shoot core.Shoot
 
 			namespace   = "my-namespace"
@@ -59,11 +60,11 @@ var _ = Describe("dns", func() {
 
 			provider = core.DNSUnmanaged
 
-			project = core.Project{
+			project = gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
-				Spec: core.ProjectSpec{
+				Spec: gardencorev1beta1.ProjectSpec{
 					Namespace: &namespace,
 				},
 			}
@@ -113,7 +114,7 @@ var _ = Describe("dns", func() {
 				},
 			}
 
-			seedBase = core.Seed{
+			seedBase = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
@@ -137,7 +138,7 @@ var _ = Describe("dns", func() {
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			shootBase.Spec.DNS.Domain = nil
 			shootBase.Spec.DNS.Providers = []core.DNSProvider{
@@ -192,7 +193,7 @@ var _ = Describe("dns", func() {
 			shootBefore := shoot.DeepCopy()
 			shootBefore.Spec.DNS.Providers[0].Primary = ptr.To(true)
 
-			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -224,8 +225,8 @@ var _ = Describe("dns", func() {
 					},
 				}
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -253,8 +254,8 @@ var _ = Describe("dns", func() {
 					},
 				}
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -294,8 +295,8 @@ var _ = Describe("dns", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.DNS.Providers[1].Primary = ptr.To(true)
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -332,8 +333,8 @@ var _ = Describe("dns", func() {
 					},
 				}
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -364,8 +365,8 @@ var _ = Describe("dns", func() {
 					},
 				}
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -412,8 +413,8 @@ var _ = Describe("dns", func() {
 				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
 				shoot.Spec.DNS.Providers = providers
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -449,8 +450,8 @@ var _ = Describe("dns", func() {
 				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
 				shoot.Spec.DNS.Providers = providers
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -473,8 +474,8 @@ var _ = Describe("dns", func() {
 
 			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -488,8 +489,8 @@ var _ = Describe("dns", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecretLowerPriority)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecretHigherPriority)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -502,8 +503,8 @@ var _ = Describe("dns", func() {
 			It("should pass and generate a domain from the default domain without priority because default priority is 0 (no domain)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecretLowerPriority)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -522,8 +523,8 @@ var _ = Describe("dns", func() {
 				}
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -547,8 +548,8 @@ var _ = Describe("dns", func() {
 				}
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -572,8 +573,8 @@ var _ = Describe("dns", func() {
 				}
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -590,8 +591,8 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -606,8 +607,8 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -622,8 +623,8 @@ var _ = Describe("dns", func() {
 				oldShoot.Spec.SeedName = nil
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -638,8 +639,8 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -652,8 +653,8 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Domain = &shootDomain
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -663,7 +664,7 @@ var _ = Describe("dns", func() {
 
 			It("should reject because no domain was configured for the shoot and project is missing", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -672,8 +673,8 @@ var _ = Describe("dns", func() {
 			})
 
 			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -691,16 +692,16 @@ var _ = Describe("dns", func() {
 					shootCopy := shoot.DeepCopy()
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 					Expect(err).To(Not(HaveOccurred()))
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					err = admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -713,8 +714,8 @@ var _ = Describe("dns", func() {
 				It("should generate a default domain with shoot name for the shoot (no domain)", func() {
 					shoot.Name = "foo"
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -726,8 +727,8 @@ var _ = Describe("dns", func() {
 
 				It("should pass because a default domain was generated for the shoot (no domain)", func() {
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -742,8 +743,8 @@ var _ = Describe("dns", func() {
 					shoot.Spec.DNS = nil
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -758,8 +759,8 @@ var _ = Describe("dns", func() {
 					shoot.Spec.DNS.Domain = &shootDomain
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -772,8 +773,8 @@ var _ = Describe("dns", func() {
 					shoot.Spec.DNS.Domain = &shootDomain
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -788,8 +789,8 @@ var _ = Describe("dns", func() {
 					shoot.Spec.DNS.Domain = &shootDomain
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -819,9 +820,9 @@ var _ = Describe("dns", func() {
 				shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
 				shoot.Spec.DNS.Domain = &shootDomain
 
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&destinationSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&destinationSeed)).To(Succeed())
 
 				shoot.Spec.SeedName = &destinationSeedName
 				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)

@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -129,10 +129,10 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
-			admissionHandler.SetSeedManagementClientset(seedManagementClient)
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
 		})
 
 		It("should do nothing if the resource is not a Shoot", func() {
@@ -313,11 +313,19 @@ var _ = Describe("ManagedSeed", func() {
 
 		Context("delete collection", func() {
 			var (
-				anotherShoot *core.Shoot
+				shoot1       *gardencorev1beta1.Shoot
+				anotherShoot *gardencorev1beta1.Shoot
 			)
 
 			BeforeEach(func() {
-				anotherShoot = &core.Shoot{
+				shoot1 = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+				}
+
+				anotherShoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bar",
 						Namespace: "garden",
@@ -327,7 +335,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			It("should forbid multiple Shoots deletion if a ManagedSeed referencing any of the Shoots exists", func() {
 				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{*shoot, *anotherShoot}}, nil
+					return true, &gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot1, *anotherShoot}}, nil
 				})
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
@@ -339,7 +347,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			It("should allow multiple Shoots deletion if no ManagedSeeds referencing the Shoots exist", func() {
 				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{*shoot, *anotherShoot}}, nil
+					return true, &gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot1, *anotherShoot}}, nil
 				})
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
@@ -383,8 +391,8 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
-			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

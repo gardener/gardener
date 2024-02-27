@@ -26,6 +26,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -2560,10 +2561,10 @@ var _ = Describe("Helper", func() {
 		}
 
 		test := func(shoots []shootCase, expectedUsage map[string]int) {
-			var shootList []gardencorev1beta1.Shoot
+			var shootList []*gardencorev1beta1.Shoot
 
 			for i, shoot := range shoots {
-				s := gardencorev1beta1.Shoot{}
+				s := &gardencorev1beta1.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
 					s.Spec.SeedName = ptr.To(shoot.specSeedName)
@@ -2998,6 +2999,37 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#GetAllZonesFromShoot", func() {
+		It("should return an empty list because there are no zones", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{}))).To(BeEmpty())
+		})
+
+		It("should return the expected list when there is only one pool", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Zones: []string{"a", "b"}},
+						},
+					},
+				},
+			}))).To(ConsistOf("a", "b"))
+		})
+
+		It("should return the expected list when there are more than one pools", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Zones: []string{"a", "c"}},
+							{Zones: []string{"b", "d"}},
+						},
+					},
+				},
+			}))).To(ConsistOf("a", "b", "c", "d"))
+		})
+	})
+
 	DescribeTable("#IsFailureToleranceTypeZone",
 		func(failureToleranceType *gardencorev1beta1.FailureToleranceType, expectedResult bool) {
 			Expect(IsFailureToleranceTypeZone(failureToleranceType)).To(Equal(expectedResult))
@@ -3181,6 +3213,281 @@ var _ = Describe("Helper", func() {
 		Entry("last operation type does not match", &gardencorev1beta1.LastOperation{}, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
 		Entry("last operation type matches", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}, gardencorev1beta1.LastOperationTypeCreate, BeTrue()),
 	)
+
+	DescribeTable("#KubeAPIServerFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeAPIServerFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeAPIServerConfig=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeAPIServerConfig.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeControllerManagerFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeControllerManagerFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeControllerManager=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeControllerManager.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeProxyFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeProxyFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeProxy=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeProxy.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	Describe("#ConvertShootList", func() {
+		It("should convert a list of Shoots", func() {
+			shootList := &gardencorev1beta1.ShootList{
+				Items: []gardencorev1beta1.Shoot{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "shoot1"},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "shoot2"},
+					},
+				},
+			}
+
+			converted := ConvertShootList(shootList.Items)
+			Expect(converted).To(HaveLen(2))
+			Expect(converted[0].Name).To(Equal("shoot1"))
+			Expect(converted[1].Name).To(Equal("shoot2"))
+		})
+	})
 })
 
 func timePointer(t time.Time) *metav1.Time {

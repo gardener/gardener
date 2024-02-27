@@ -24,7 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -33,7 +34,7 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 }
 
 // IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
-func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
+func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool {
 	for _, shoot := range shoots {
 		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
 			return true
@@ -46,12 +47,13 @@ func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 }
 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister gardencorelisters.ShootLister, predicateFn func(*core.Shoot) bool) ([]*core.Shoot, error) {
-	var matchingShoots []*core.Shoot
+func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
+	var matchingShoots []*gardencorev1beta1.Shoot
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))
 	}
+
 	for _, shoot := range shoots {
 		if predicateFn(shoot) {
 			matchingShoots = append(matchingShoots, shoot)
@@ -77,7 +79,7 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 
 // ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
 // shoots.
-func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
+func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
 	if removedZones := sets.New(oldSeedSpec.Provider.Zones...).Difference(sets.New(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
 		shoots, err := shootLister.List(labels.Everything())
 		if err != nil {

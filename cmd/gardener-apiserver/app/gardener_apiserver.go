@@ -58,10 +58,8 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardencoreversionedclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencoreexternalinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
@@ -115,7 +113,6 @@ type Options struct {
 	ServerRunOptions              *genericoptions.ServerRunOptions
 	ExtraOptions                  *apiserver.ExtraOptions
 	CoreInformerFactory           gardencoreinformers.SharedInformerFactory
-	ExternalCoreInformerFactory   gardencoreexternalinformers.SharedInformerFactory
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
 	SeedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
 	SettingsInformerFactory       settingsinformers.SharedInformerFactory
@@ -199,20 +196,12 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		protobufLoopbackConfig.ContentType = runtime.ContentTypeProtobuf
 	}
 
-	// core client
 	coreClient, err := gardencoreclientset.NewForConfig(&protobufLoopbackConfig)
 	if err != nil {
 		return nil, err
 	}
 	o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, protobufLoopbackConfig.Timeout)
 	apiConfig.CoreInformerFactory = o.CoreInformerFactory
-
-	// versioned core client
-	versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(&protobufLoopbackConfig)
-	if err != nil {
-		return nil, err
-	}
-	o.ExternalCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
 
 	// seedmanagement client
 	seedManagementClient, err := seedmanagementclientset.NewForConfig(&protobufLoopbackConfig)
@@ -240,8 +229,6 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 			admissioninitializer.New(
 				o.CoreInformerFactory,
 				coreClient,
-				o.ExternalCoreInformerFactory,
-				versionedCoreClient,
 				o.SeedManagementInformerFactory,
 				seedManagementClient,
 				o.SettingsInformerFactory,
@@ -317,7 +304,6 @@ func (o *Options) Run(ctx context.Context) error {
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		o.CoreInformerFactory.Start(context.StopCh)
-		o.ExternalCoreInformerFactory.Start(context.StopCh)
 		o.KubeInformerFactory.Start(context.StopCh)
 		o.SeedManagementInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)

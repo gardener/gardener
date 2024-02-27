@@ -134,10 +134,13 @@ func (r *Reconciler) determineSeed(
 	if err := r.Client.List(ctx, seedList); err != nil {
 		return nil, err
 	}
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := r.Client.List(ctx, shootList); err != nil {
+	sl := &gardencorev1beta1.ShootList{}
+	if err := r.Client.List(ctx, sl); err != nil {
 		return nil, err
 	}
+
+	shootList := v1beta1helper.ConvertShootList(sl.Items)
+
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return nil, err
@@ -167,7 +170,7 @@ func (r *Reconciler) determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterCandidates(shoot, shootList.Items, filteredSeeds)
+	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +178,7 @@ func (r *Reconciler) determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList.Items)
+	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
 }
 
 func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
@@ -308,7 +311,7 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
@@ -343,7 +346,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 }
 
 // getSeedWithLeastShootsDeployed finds the best candidate (i.e. the one managing the smallest number of shoots right now).
-func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []*gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int

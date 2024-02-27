@@ -28,8 +28,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
@@ -57,7 +57,7 @@ func Register(plugins *admission.Plugins) {
 type TolerationRestriction struct {
 	*admission.Handler
 
-	projectLister gardencorelisters.ProjectLister
+	projectLister gardencorev1beta1listers.ProjectLister
 	readyFunc     admission.ReadyFunc
 
 	defaults  []core.Toleration
@@ -65,7 +65,7 @@ type TolerationRestriction struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&TolerationRestriction{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&TolerationRestriction{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -85,9 +85,9 @@ func (t *TolerationRestriction) AssignReadyFunc(f admission.ReadyFunc) {
 	t.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory sets the internal garden core informer factory.
-func (t *TolerationRestriction) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	projectInformer := f.Core().InternalVersion().Projects()
+// SetCoreInformerFactory sets the internal garden core informer factory.
+func (t *TolerationRestriction) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().V1beta1().Projects()
 	t.projectLister = projectInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced)
@@ -150,14 +150,16 @@ func (t *TolerationRestriction) Admit(_ context.Context, a admission.Attributes,
 }
 
 func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	defaults := t.defaults
 	if project.Spec.Tolerations != nil {
-		defaults = append(defaults, project.Spec.Tolerations.Defaults...)
+		for _, toleration := range project.Spec.Tolerations.Defaults {
+			defaults = append(defaults, core.Toleration{Key: toleration.Key, Value: toleration.Value})
+		}
 	}
 
 	existingKeys := sets.New[string]()
@@ -211,14 +213,16 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		tolerationsToValidate = getNewOrChangedTolerations(shoot, oldShoot)
 	}
 
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	allowlist := t.allowlist
 	if project.Spec.Tolerations != nil {
-		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
+		for _, toleration := range project.Spec.Tolerations.Whitelist {
+			allowlist = append(allowlist, core.Toleration{Key: toleration.Key, Value: toleration.Value})
+		}
 	}
 
 	if errList := gardencorevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {

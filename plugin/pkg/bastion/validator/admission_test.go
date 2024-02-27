@@ -30,12 +30,11 @@ import (
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/ptr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 )
@@ -55,24 +54,24 @@ var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
 			bastion          *operations.Bastion
-			shoot            *gardencore.Shoot
+			shoot            *gardencorev1beta1.Shoot
 			coreClient       *corefake.Clientset
 			dummyOwnerRef    *metav1.OwnerReference
 			admissionHandler *Bastion
 		)
 
 		BeforeEach(func() {
-			shoot = &gardencore.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 					UID:       "shoot-uid",
 				},
-				Spec: gardencore.ShootSpec{
+				Spec: gardencorev1beta1.ShootSpec{
 					SeedName: ptr.To(seedName),
-					Provider: gardencore.Provider{
+					Provider: gardencorev1beta1.Provider{
 						Type: provider,
-						Workers: []gardencore.Worker{
+						Workers: []gardencorev1beta1.Worker{
 							{
 								Name: workerName,
 							},
@@ -107,7 +106,7 @@ var _ = Describe("Bastion", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 		})
 
 		It("should do nothing if the resource is not a Bastion", func() {
@@ -237,8 +236,8 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should forbid the Bastion creation if the Shoot's SSH access is disabled", func() {
-			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
-				SSHAccess: &gardencore.SSHAccess{Enabled: false},
+			shoot.Spec.Provider.WorkersSettings = &gardencorev1beta1.WorkersSettings{
+				SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false},
 			}
 
 			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
@@ -272,8 +271,8 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should allow the Bastion update on finalizers even if the Shoot's SSH access is disabled", func() {
-			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
-				SSHAccess: &gardencore.SSHAccess{Enabled: false},
+			shoot.Spec.Provider.WorkersSettings = &gardencorev1beta1.WorkersSettings{
+				SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false},
 			}
 			now := metav1.Now()
 			bastion.DeletionTimestamp = &now
@@ -323,7 +322,7 @@ var _ = Describe("Bastion", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

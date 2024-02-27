@@ -25,14 +25,14 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // NewAdminKubeconfigREST returns a new KubeconfigREST for admin kubeconfigs.
 func NewAdminKubeconfigREST(
 	shootGetter getter,
 	secretLister kubecorev1listers.SecretLister,
-	internalSecretLister gardencorelisters.InternalSecretLister,
+	internalSecretLister gardencorev1beta1listers.InternalSecretLister,
 	configMapLister kubecorev1listers.ConfigMapLister,
 	maxExpiration time.Duration,
 ) *KubeconfigREST {

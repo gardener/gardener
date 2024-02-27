@@ -23,7 +23,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"

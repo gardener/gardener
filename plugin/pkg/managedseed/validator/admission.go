@@ -33,13 +33,15 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -59,8 +61,8 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	shootLister          gardencorelisters.ShootLister
-	secretBindingLister  gardencorelisters.SecretBindingLister
+	shootLister          gardencorev1beta1listers.ShootLister
+	secretBindingLister  gardencorev1beta1listers.SecretBindingLister
 	secretLister         kubecorev1listers.SecretLister
 	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
@@ -68,9 +70,9 @@ type ManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ManagedSeed{})
-	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreClientSet(&ManagedSeed{})
+	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ManagedSeed{})
 
 	readyFuncs []admission.ReadyFunc
@@ -89,12 +91,12 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ManagedSeed) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ManagedSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
-	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
+	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	v.secretBindingLister = secretBindingInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced)
@@ -108,13 +110,13 @@ func (v *ManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFacto
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
 }
 
-// SetInternalCoreClientset sets the garden core clientset.
-func (v *ManagedSeed) SetInternalCoreClientset(c gardencoreclientset.Interface) {
+// SetCoreClientSet sets the garden core clientset.
+func (v *ManagedSeed) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
-// SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+// SetSeedManagementClientSet sets the garden seedmanagement clientset.
+func (v *ManagedSeed) SetSeedManagementClientSet(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
@@ -205,13 +207,13 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kubernetesutils.ObjectName(shoot)))))
 	}
-	if gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
+	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")))
 	}
-	if !gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot) {
+	if !v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
 	}
-	if gardencorehelper.IsWorkerless(shoot) {
+	if v1beta1helper.IsWorkerless(shoot) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
 	}
 
@@ -260,7 +262,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	return nil
 }
 
-func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencore.Shoot) (field.ErrorList, error) {
+func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
 	allErrs := field.ErrorList{}
 
 	seedSpec, err := seedmanagementhelper.ExtractSeedSpec(managedSeed)
@@ -268,7 +270,7 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 		return nil, err
 	}
 
-	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
+	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
 
 	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
@@ -277,7 +279,7 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 	return allErrs, nil
 }
 
-func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencore.Shoot) (field.ErrorList, error) {
+func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
 	allErrs := field.ErrorList{}
 	zonesFieldPath := field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones")
 
@@ -294,7 +296,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
 	}
 
-	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
+	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)
 	newZones := sets.New(newSeedSpec.Provider.Zones...).Difference(sets.New(oldSeedSpec.Provider.Zones...))
 
 	// Newly added zones should match the ones found in the shoot cluster.
@@ -307,7 +309,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	return allErrs, nil
 }
 
-func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	if gardenlet.Config != nil {
@@ -340,7 +342,7 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot 
 	return allErrs, nil
 }
 
-func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	// Initialize backup provider
@@ -399,7 +401,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	} else if spec.Provider.Region != shoot.Spec.Region {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
 	}
-	if shootZones := gardencorehelper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
+	if shootZones := v1beta1helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
 		spec.Provider.Zones = sets.List(shootZones)
 	}
 
@@ -418,13 +420,13 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 
 	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
 	if topologyAwareRoutingEnabled {
-		if gardencorehelper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+		if v1beta1helper.KubeAPIServerFeatureGateDisabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"))
 		}
-		if gardencorehelper.KubeControllerManagerFeatureGateDisabled(shoot, "TopologyAwareHints") {
+		if v1beta1helper.KubeControllerManagerFeatureGateDisabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"))
 		}
-		if gardencorehelper.KubeProxyFeatureGateDisabled(shoot, "TopologyAwareHints") {
+		if v1beta1helper.KubeProxyFeatureGateDisabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"))
 		}
 	}
@@ -432,7 +434,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	return allErrs, nil
 }
 
-func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
 	dnsProvider, err := v.getSeedDNSProviderForCustomDomain(shoot)
 	if err != nil {
 		return nil, err
@@ -449,9 +451,9 @@ func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencore.Shoot) (*gardencore.S
 	return dnsProvider, nil
 }
 
-func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Find a primary DNS provider in the list of shoot DNS providers
-	primaryProvider := gardencorehelper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+	primaryProvider := v1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
 	if primaryProvider == nil {
 		return nil, nil
 	}
@@ -487,7 +489,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot)
 	}, nil
 }
 
-func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Get all default domain secrets in the garden namespace
 	defaultDomainSecrets, err := v.getSecrets(v1beta1constants.GardenNamespace, labels.SelectorFromValidatedSet(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
@@ -517,17 +519,18 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 	return nil, nil
 }
 
-func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencore.Shoot, error) {
+func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencorev1beta1.Shoot, error) {
 	shoot, err := v.shootLister.Shoots(namespace).Get(name)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
 		// and the shoot is not yet present in the lister cache, it could still be found
-		return v.coreClient.Core().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+		shoot, err = v.coreClient.CoreV1beta1().Shoots(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
+
 	return shoot, err
 }
 
-func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencore.SecretBinding, error) {
+func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencorev1beta1.SecretBinding, error) {
 	return v.secretBindingLister.SecretBindings(namespace).Get(name)
 }
 

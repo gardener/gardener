@@ -31,10 +31,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -59,16 +60,16 @@ func Register(plugins *admission.Plugins) {
 // QuotaValidator contains listers and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister         gardencorelisters.ShootLister
-	cloudProfileLister  gardencorelisters.CloudProfileLister
-	secretBindingLister gardencorelisters.SecretBindingLister
-	quotaLister         gardencorelisters.QuotaLister
+	shootLister         gardencorev1beta1listers.ShootLister
+	cloudProfileLister  gardencorev1beta1listers.CloudProfileLister
+	secretBindingLister gardencorev1beta1listers.SecretBindingLister
+	quotaLister         gardencorev1beta1listers.QuotaLister
 	readyFunc           admission.ReadyFunc
 	time                timeutils.Ops
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&QuotaValidator{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&QuotaValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -87,18 +88,18 @@ func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	q.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (q *QuotaValidator) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	q.shootLister = shootInformer.Lister()
 
-	cloudProfileInformer := f.Core().InternalVersion().CloudProfiles()
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
-	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
+	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
 
-	quotaInformer := f.Core().InternalVersion().Quotas()
+	quotaInformer := f.Core().V1beta1().Quotas()
 	q.quotaLister = quotaInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
@@ -239,7 +240,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 	return nil
 }
 
-func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[]corev1.ResourceName, error) {
+func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota gardencorev1beta1.Quota) (*[]corev1.ResourceName, error) {
 	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -264,7 +265,7 @@ func (q *QuotaValidator) isQuotaExceeded(shoot core.Shoot, quota core.Quota) (*[
 	return nil, nil
 }
 
-func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
+func (q *QuotaValidator) determineAllocatedResources(quota gardencorev1beta1.Quota, shoot core.Shoot) (corev1.ResourceList, error) {
 	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -288,10 +289,10 @@ func (q *QuotaValidator) determineAllocatedResources(quota core.Quota, shoot cor
 	return allocatedResources, nil
 }
 
-func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot) ([]core.Shoot, error) {
+func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, shoot core.Shoot) ([]core.Shoot, error) {
 	var (
 		shootsReferQuota []core.Shoot
-		secretBindings   []core.SecretBinding
+		secretBindings   []gardencorev1beta1.SecretBinding
 	)
 
 	scope, err := helper.QuotaScope(quota.Spec.Scope)
@@ -325,7 +326,12 @@ func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot
 				continue
 			}
 			if ptr.Deref(s.Spec.SecretBindingName, "") == binding.Name {
-				shootsReferQuota = append(shootsReferQuota, *s)
+				coreShoot := &core.Shoot{}
+				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(s, coreShoot, nil); err != nil {
+					return nil, apierrors.NewInternalError(err)
+				}
+
+				shootsReferQuota = append(shootsReferQuota, *coreShoot)
 			}
 		}
 	}
@@ -361,8 +367,8 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 	for _, worker := range workers {
 		var (
-			machineType *core.MachineType
-			volumeType  *core.VolumeType
+			machineType *gardencorev1beta1.MachineType
+			volumeType  *gardencorev1beta1.VolumeType
 		)
 
 		// Get the proper machineType
@@ -379,7 +385,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 
 		if worker.Volume != nil {
 			if machineType.Storage != nil {
-				volumeType = &core.VolumeType{
+				volumeType = &gardencorev1beta1.VolumeType{
 					Class: machineType.Storage.Class,
 				}
 			} else {
@@ -428,7 +434,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile) []core.Worker {
+func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) []core.Worker {
 	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {

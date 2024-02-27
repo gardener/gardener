@@ -35,7 +35,7 @@ import (
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -44,7 +44,7 @@ import (
 type KubeconfigREST struct {
 	// TODO(petersutter): Remove secretLister field from struct after v1.96 has been released, as the cluster CA should then only be read from the ConfigMap.
 	secretLister         kubecorev1listers.SecretLister
-	internalSecretLister gardencorelisters.InternalSecretLister
+	internalSecretLister gardencorev1beta1listers.InternalSecretLister
 	configMapLister      kubecorev1listers.ConfigMapLister
 	shootStorage         getter
 	maxExpirationSeconds int64
