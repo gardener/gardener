@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -39,6 +40,7 @@ import (
 type reconciler struct {
 	actuator        Actuator
 	configValidator ConfigValidator
+	knownCodes      map[gardencorev1beta1.ErrorCode]func(string) bool
 
 	client        client.Client
 	reader        client.Reader
@@ -47,13 +49,14 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // infrastructure resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(mgr manager.Manager, actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
+func NewReconciler(mgr manager.Manager, actuator Actuator, configValidator ConfigValidator, knownCodes map[gardencorev1beta1.ErrorCode]func(string) bool) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
 		mgr,
 		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		&reconciler{
 			actuator:        actuator,
 			configValidator: configValidator,
+			knownCodes:      knownCodes,
 			client:          mgr.GetClient(),
 			reader:          mgr.GetAPIReader(),
 			statusUpdater:   extensionscontroller.NewStatusUpdater(mgr.GetClient()),
@@ -271,6 +274,9 @@ func (r *reconciler) validateConfig(ctx context.Context, infrastructure *extensi
 
 	if allErrs := r.configValidator.Validate(ctx, infrastructure); len(allErrs) > 0 {
 		if filteredErrs := allErrs.Filter(field.NewErrorTypeMatcher(field.ErrorTypeInternal)); len(filteredErrs) < len(allErrs) {
+			if r.knownCodes != nil {
+				return util.DetermineError(allErrs.ToAggregate(), r.knownCodes)
+			}
 			return allErrs.ToAggregate()
 		}
 		return v1beta1helper.NewErrorWithCodes(allErrs.ToAggregate(), gardencorev1beta1.ErrorConfigurationProblem)

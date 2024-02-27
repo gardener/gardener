@@ -25,6 +25,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
@@ -57,6 +58,8 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
+	// KnownCodes is a map of known error codes and their respective error check functions.
+	KnownCodes map[gardencorev1beta1.ErrorCode]func(string) bool
 }
 
 // DefaultPredicates returns the default predicates for an infrastructure reconciler.
@@ -67,7 +70,7 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 // Add creates a new Infrastructure Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator, args.KnownCodes)
 	return add(ctx, mgr, args)
 }
 
