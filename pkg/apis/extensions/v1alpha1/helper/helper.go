@@ -17,7 +17,6 @@ package helper
 import (
 	"net"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -70,26 +69,26 @@ func FilePathsFrom(files []extensionsv1alpha1.File) []string {
 	return out
 }
 
-// GetClusterAutoscalerAnnotationMap returns a map of annotations with values intended to be used as cluster autoscaler options for the worker group
-func GetClusterAutoscalerAnnotationMap(caOptions *extensionsv1alpha1.ClusterAutoscalerOptions) map[string]string {
-	mcdAnnotationMap := map[string]string{}
+// GetMachineDeploymentClusterAutoscalerAnnotations returns a map of annotations with values intended to be used as cluster autoscaler options for the worker group
+func GetMachineDeploymentClusterAutoscalerAnnotations(caOptions *extensionsv1alpha1.ClusterAutoscalerOptions) map[string]string {
+	annotations := map[string]string{}
 	if caOptions != nil {
 		if caOptions.ScaleDownUtilizationThreshold != nil {
-			mcdAnnotationMap[v1beta1constants.ScaleDownUtilizationThresholdAnnotation] = *caOptions.ScaleDownUtilizationThreshold
+			annotations[extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation] = *caOptions.ScaleDownUtilizationThreshold
 		}
 		if caOptions.ScaleDownGpuUtilizationThreshold != nil {
-			mcdAnnotationMap[v1beta1constants.ScaleDownGpuUtilizationThresholdAnnotation] = *caOptions.ScaleDownGpuUtilizationThreshold
+			annotations[extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation] = *caOptions.ScaleDownGpuUtilizationThreshold
 		}
 		if caOptions.ScaleDownUnneededTime != nil {
-			mcdAnnotationMap[v1beta1constants.ScaleDownUnneededTimeAnnotation] = caOptions.ScaleDownUnneededTime.Duration.String()
+			annotations[extensionsv1alpha1.ScaleDownUnneededTimeAnnotation] = caOptions.ScaleDownUnneededTime.Duration.String()
 		}
 		if caOptions.ScaleDownUnreadyTime != nil {
-			mcdAnnotationMap[v1beta1constants.ScaleDownUnreadyTimeAnnotation] = caOptions.ScaleDownUnreadyTime.Duration.String()
+			annotations[extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation] = caOptions.ScaleDownUnreadyTime.Duration.String()
 		}
 		if caOptions.MaxNodeProvisionTime != nil {
-			mcdAnnotationMap[v1beta1constants.MaxNodeProvisionTimeAnnotation] = caOptions.MaxNodeProvisionTime.Duration.String()
+			annotations[extensionsv1alpha1.MaxNodeProvisionTimeAnnotation] = caOptions.MaxNodeProvisionTime.Duration.String()
 		}
 	}
 
-	return mcdAnnotationMap
+	return annotations
 }

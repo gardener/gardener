@@ -77,7 +77,7 @@ spec:
                       type: string
                     clusterAutoscaler:
                       description: ClusterAutoscaler contains the cluster autoscaler
-                        configurations for the worker.
+                        configurations for the worker pool.
                       properties:
                         maxNodeProvisionTime:
                           description: MaxNodeProvisionTime defines how long cluster

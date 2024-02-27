@@ -412,7 +412,7 @@ message ClusterAutoscaler {
   optional int32 verbosity = 14;
 }
 
-// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
 message ClusterAutoscalerOptions {
   // ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
   // +optional
@@ -3106,7 +3106,7 @@ message Worker {
   // +optional
   map<string, string> sysctls = 20;
 
-  // ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
+  // ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
   // +optional
   optional ClusterAutoscalerOptions clusterAutoscaler = 21;
 }

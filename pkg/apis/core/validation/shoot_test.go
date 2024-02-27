@@ -1388,11 +1388,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 			})
+
 			Describe("clusterAutoscaler options validation", func() {
 				var (
 					negativeDuration = metav1.Duration{Duration: -time.Second}
 					positiveDuration = metav1.Duration{Duration: time.Second}
 				)
+
 				DescribeTable("cluster autoscaler values",
 					func(caOptions core.ClusterAutoscalerOptions, matcher gomegatypes.GomegaMatcher) {
 						Expect(ValidateClusterAutoscalerOptions(&caOptions, nil)).To(matcher)

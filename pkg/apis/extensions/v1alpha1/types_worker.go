@@ -28,6 +28,19 @@ var _ Object = (*Worker)(nil)
 // WorkerResource is a constant for the name of the Worker resource.
 const WorkerResource = "Worker"
 
+const (
+	// ScaleDownUtilizationThresholdAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.ScaleDownUtilizationThreshold of cluster-autoscaler
+	ScaleDownUtilizationThresholdAnnotation = "autoscaler.gardener.cloud/scale-down-utilization-threshold"
+	// ScaleDownGpuUtilizationThresholdAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.ScaleDownGpuUtilizationThreshold of cluster-autoscaler
+	ScaleDownGpuUtilizationThresholdAnnotation = "autoscaler.gardener.cloud/scale-down-gpu-utilization-threshold"
+	// ScaleDownUnneededTimeAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.ScaleDownUnneededTime of cluster-autoscaler
+	ScaleDownUnneededTimeAnnotation = "autoscaler.gardener.cloud/scale-down-unneeded-time"
+	// ScaleDownUnreadyTimeAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.ScaleDownUnreadyTime of cluster-autoscaler
+	ScaleDownUnreadyTimeAnnotation = "autoscaler.gardener.cloud/scale-down-unready-time"
+	// MaxNodeProvisionTimeAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.MaxNodeProvisionTime of cluster-autoscaler
+	MaxNodeProvisionTimeAnnotation = "autoscaler.gardener.cloud/max-node-provision-time"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Namespaced,path=workers,singular=worker
@@ -154,12 +167,12 @@ type WorkerPool struct {
 	// Architecture is the CPU architecture of the worker pool machines and machine image.
 	// +optional
 	Architecture *string `json:"architecture,omitempty"`
-	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker.
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty"`
 }
 
-// ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
 type ClusterAutoscalerOptions struct {
 	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
 	// +optional

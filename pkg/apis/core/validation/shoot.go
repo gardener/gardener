@@ -1713,9 +1713,9 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	return allErrs
 }
 
-// ValidateClusterAutoscalerOptions validates the cluster autoscaler options of workers
+// ValidateClusterAutoscalerOptions validates the cluster autoscaler options of worker pools.
 func ValidateClusterAutoscalerOptions(caOptions *core.ClusterAutoscalerOptions, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var allErrs field.ErrorList
 
 	if scaleDownUtilThreshold := caOptions.ScaleDownUtilizationThreshold; scaleDownUtilThreshold != nil {
 		if *scaleDownUtilThreshold < 0.0 {

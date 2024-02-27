@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -206,12 +207,10 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		if workerPool.ClusterAutoscaler != nil {
 			autoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
 			if workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
-				ScaleDownUtilThreshold := fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold)
-				autoscalerOptions.ScaleDownUtilizationThreshold = &ScaleDownUtilThreshold
+				autoscalerOptions.ScaleDownUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold))
 			}
 			if workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold != nil {
-				ScaleDownGpuUtilThreshold := fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold)
-				autoscalerOptions.ScaleDownGpuUtilizationThreshold = &ScaleDownGpuUtilThreshold
+				autoscalerOptions.ScaleDownGpuUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold))
 			}
 			if workerPool.ClusterAutoscaler.ScaleDownUnneededTime != nil {
 				autoscalerOptions.ScaleDownUnneededTime = workerPool.ClusterAutoscaler.ScaleDownUnneededTime

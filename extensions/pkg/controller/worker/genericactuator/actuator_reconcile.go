@@ -246,13 +246,15 @@ func deployMachineDeployments(
 
 		machineDeployment := &machinev1alpha1.MachineDeployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        deployment.Name,
-				Namespace:   worker.Namespace,
-				Annotations: deployment.ClusterAutoscalerOptions,
+				Name:      deployment.Name,
+				Namespace: worker.Namespace,
 			},
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
+			for k, v := range deployment.ClusterAutoscalerAnnotations {
+				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,

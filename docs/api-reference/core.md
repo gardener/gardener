@@ -3182,7 +3182,7 @@ int32
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
-<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for the worker.</p>
+<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.</p>
 </p>
 <table>
 <thead>
@@ -12438,7 +12438,7 @@ ClusterAutoscalerOptions
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker.</p>
+<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
 </td>
 </tr>
 </tbody>

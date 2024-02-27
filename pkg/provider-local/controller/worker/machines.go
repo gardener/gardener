@@ -130,18 +130,18 @@ func (w *workerDelegate) generateMachineConfig() error {
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
-			Name:                     deploymentName,
-			ClassName:                className,
-			SecretName:               className,
-			Minimum:                  pool.Minimum,
-			Maximum:                  pool.Maximum,
-			MaxSurge:                 pool.MaxSurge,
-			MaxUnavailable:           pool.MaxUnavailable,
-			Labels:                   pool.Labels,
-			Annotations:              pool.Annotations,
-			Taints:                   pool.Taints,
-			MachineConfiguration:     genericworkeractuator.ReadMachineConfiguration(pool),
-			ClusterAutoscalerOptions: extensionsv1alpha1helper.GetClusterAutoscalerAnnotationMap(pool.ClusterAutoscaler),
+			Name:                         deploymentName,
+			ClassName:                    className,
+			SecretName:                   className,
+			Minimum:                      pool.Minimum,
+			Maximum:                      pool.Maximum,
+			MaxSurge:                     pool.MaxSurge,
+			MaxUnavailable:               pool.MaxUnavailable,
+			Labels:                       pool.Labels,
+			Annotations:                  pool.Annotations,
+			Taints:                       pool.Taints,
+			MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
+			ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
 		})
 	}
 
