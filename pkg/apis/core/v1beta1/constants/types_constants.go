@@ -765,6 +765,16 @@ const (
 	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
+
+	// AdvertisedAddressExternal is a constant that represents the name of the external kube-apiserver address.
+	AdvertisedAddressExternal = "external"
+	// AdvertisedAddressInternal is a constant that represents the name of the internal kube-apiserver address.
+	AdvertisedAddressInternal = "internal"
+	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.
+	AdvertisedAddressUnmanaged = "unmanaged"
+	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address
+	// that is used as a service account issuer for the kube-apiserver.
+	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
 )
 
 var (

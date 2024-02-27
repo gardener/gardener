@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -45,21 +46,21 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 
 	if b.Shoot.ExternalClusterDomain != nil && len(*b.Shoot.ExternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "external",
+			Name: v1beta1constants.AdvertisedAddressExternal,
 			URL:  "https://" + gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 		})
 	}
 
 	if len(b.Shoot.InternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "internal",
+			Name: v1beta1constants.AdvertisedAddressInternal,
 			URL:  "https://" + gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		})
 	}
 
 	if len(b.APIServerAddress) > 0 && len(addresses) == 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "unmanaged",
+			Name: v1beta1constants.AdvertisedAddressUnmanaged,
 			URL:  "https://" + b.APIServerAddress,
 		})
 	}
@@ -80,7 +81,7 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 			return nil, err
 		}
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "service-account-issuer",
+			Name: v1beta1constants.AdvertisedAddressServiceAccountIssuer,
 			URL:  serviceAccountConfig.Issuer,
 		})
 	}

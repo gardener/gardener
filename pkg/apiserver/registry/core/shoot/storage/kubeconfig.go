@@ -35,6 +35,7 @@ import (
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -110,7 +111,9 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 	// it is possible that the list of addresses also include URLs like the shoot's issuer URL
 	var kubeAPIServerAddresses []core.ShootAdvertisedAddress
 	for _, addr := range shoot.Status.AdvertisedAddresses {
-		if addr.Name == "external" || addr.Name == "internal" || addr.Name == "unmanaged" {
+		if addr.Name == v1beta1constants.AdvertisedAddressExternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressInternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressUnmanaged {
 			kubeAPIServerAddresses = append(kubeAPIServerAddresses, addr)
 		}
 	}
