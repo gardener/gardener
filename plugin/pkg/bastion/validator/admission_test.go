@@ -117,7 +117,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should allow Bastion creation if all fields are set correctly", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -126,7 +126,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should mutate Bastion with Shoot information", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -137,7 +137,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should ensure an owner reference from the Bastion to the Shoot", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -151,7 +151,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should mutate Bastion with creator information", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -161,7 +161,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should always keep the creator annotation", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -203,7 +203,7 @@ var _ = Describe("Bastion", func() {
 		It("should forbid the Bastion creation if the Shoot does not specify a Seed", func() {
 			shoot.Spec.SeedName = nil
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -221,7 +221,7 @@ var _ = Describe("Bastion", func() {
 			now := metav1.Now()
 			shoot.DeletionTimestamp = &now
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -240,7 +240,7 @@ var _ = Describe("Bastion", func() {
 				SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false},
 			}
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -258,7 +258,7 @@ var _ = Describe("Bastion", func() {
 			now := metav1.Now()
 			shoot.DeletionTimestamp = &now
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -277,7 +277,7 @@ var _ = Describe("Bastion", func() {
 			now := metav1.Now()
 			bastion.DeletionTimestamp = &now
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 

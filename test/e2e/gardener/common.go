@@ -151,7 +151,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 func SetupDNSForMultiZoneTest() {
 	net.DefaultResolver = &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			dialer := net.Dialer{
 				Timeout: time.Duration(5) * time.Second,
 			}

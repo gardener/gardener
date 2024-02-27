@@ -100,7 +100,7 @@ var _ = Describe("cleaner", func() {
 			fakeErr := fmt.Errorf("fake")
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-				DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
 					return fakeErr
 				})
 
@@ -110,7 +110,7 @@ var _ = Describe("cleaner", func() {
 
 		It("should do nothing if all PVCs of the StatefulSet have already been deleted", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-				DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
 					return nil
 				})
 
@@ -136,7 +136,7 @@ var _ = Describe("cleaner", func() {
 						return nil
 					}),
 				c.EXPECT().DeleteAllOf(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-					DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+					DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.DeleteAllOfOption) error {
 						return fakeErr
 					}),
 			)
@@ -161,7 +161,7 @@ var _ = Describe("cleaner", func() {
 						return nil
 					}),
 				c.EXPECT().DeleteAllOf(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-					DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+					DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.DeleteAllOfOption) error {
 						return nil
 					}),
 			)

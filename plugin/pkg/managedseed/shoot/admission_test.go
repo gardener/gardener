@@ -114,7 +114,7 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("should forbid multiple ManagedSeed deletion if a Shoots scheduled on any of their Seeds exists", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
 				})
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
@@ -124,7 +124,7 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("should allow multiple ManagedSeed deletion if no Shoots scheduled on any of their Seeds exist", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
 				})
 

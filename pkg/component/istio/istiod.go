@@ -276,7 +276,7 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 	taskFns := make([]flow.TaskFn, 0, len(managedResources))
 	for _, mr := range managedResources {
 		name := mr
-		taskFns = append(taskFns, func(ctx context.Context) error {
+		taskFns = append(taskFns, func(_ context.Context) error {
 			return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.values.Istiod.Namespace, name)
 		})
 	}

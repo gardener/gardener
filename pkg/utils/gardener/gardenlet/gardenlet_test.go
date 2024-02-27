@@ -62,7 +62,7 @@ var _ = Describe("Gardenlet", func() {
 
 		It("should return that seed is a not a garden cluster because of a no match error", func() {
 			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return &meta.NoResourceMatchError{}
 				})
 			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())

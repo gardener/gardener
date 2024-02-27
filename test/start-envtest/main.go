@@ -44,7 +44,7 @@ func main() {
 		Use:   name,
 		Short: "Launch an envtest environment",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.validate(); err != nil {
 				return err
 			}

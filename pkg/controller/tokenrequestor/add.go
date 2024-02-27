@@ -65,7 +65,7 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 		CreateFunc:  func(e event.CreateEvent) bool { return r.isRelevantSecret(e.Object) },
 		UpdateFunc:  func(e event.UpdateEvent) bool { return r.isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
 		DeleteFunc:  func(e event.DeleteEvent) bool { return r.isRelevantSecret(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 

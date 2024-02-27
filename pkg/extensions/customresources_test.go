@@ -199,7 +199,7 @@ var _ = Describe("extensions", func() {
 		It("should return error if object does not exist", func() {
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return nil
 				},
 				expected, extensionsv1alpha1.WorkerResource,
@@ -217,7 +217,7 @@ var _ = Describe("extensions", func() {
 				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
 					Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), expected.Name)),
 				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *extensionsv1alpha1.Worker, _ ...client.GetOption) error {
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Worker, _ ...client.GetOption) error {
 						expected.DeepCopyInto(obj)
 						return nil
 					}),
@@ -227,7 +227,7 @@ var _ = Describe("extensions", func() {
 
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, mc, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return nil
 				},
 				expected, extensionsv1alpha1.WorkerResource,
@@ -245,7 +245,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return fakeError
 				},
 				expected, extensionsv1alpha1.WorkerResource,
@@ -275,7 +275,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return nil
 				},
 				passedObj, extensionsv1alpha1.WorkerResource,
@@ -296,7 +296,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return nil
 				},
 				passedObj, extensionsv1alpha1.WorkerResource,
@@ -332,7 +332,7 @@ var _ = Describe("extensions", func() {
 			val := 0
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj client.Object) error {
+				func(_ client.Object) error {
 					return nil
 				},
 				expected, extensionsv1alpha1.WorkerResource,
@@ -394,7 +394,7 @@ var _ = Describe("extensions", func() {
 				c,
 				list,
 				namespace,
-				func(obj extensionsv1alpha1.Object) bool { return true },
+				func(_ extensionsv1alpha1.Object) bool { return true },
 			)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -571,7 +571,7 @@ var _ = Describe("extensions", func() {
 					c,
 					shootState,
 					extensionsv1alpha1.WorkerResource,
-					func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
+					func(ctx context.Context, _ string) (extensionsv1alpha1.Object, error) {
 						Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 						return expected, nil
 					},
@@ -597,7 +597,7 @@ var _ = Describe("extensions", func() {
 					c,
 					shootState,
 					extensionsv1alpha1.WorkerResource,
-					func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
+					func(ctx context.Context, _ string) (extensionsv1alpha1.Object, error) {
 						Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 						return expected, nil
 					},

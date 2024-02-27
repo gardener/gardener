@@ -372,7 +372,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 		undiscoverableGardenerAPIGroups.Insert(gv.String())
 	}
 
-	if err := retry.Until(ctx, waitPollInterval, func(ctx context.Context) (bool, error) {
+	if err := retry.Until(ctx, waitPollInterval, func(_ context.Context) (bool, error) {
 		apiGroupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
 			return retry.MinorError(err)

@@ -636,7 +636,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 					obj.TypeMeta = metav1.TypeMeta{}
 					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-						DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+						DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 							Expect(actual).To(DeepEqual(obj))
 							return nil
 						})
@@ -927,7 +927,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
 				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(multierror.Append(fakeErr)))
+				var expectedErr error = multierror.Append(fakeErr)
+				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(expectedErr))
 			})
 		})
 

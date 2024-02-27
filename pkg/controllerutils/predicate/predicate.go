@@ -69,10 +69,10 @@ func ForEventTypes(events ...EventType) predicate.Predicate {
 	}
 
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return has(Create) },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return has(Update) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return has(Delete) },
-		GenericFunc: func(e event.GenericEvent) bool { return has(Generic) },
+		CreateFunc:  func(_ event.CreateEvent) bool { return has(Create) },
+		UpdateFunc:  func(_ event.UpdateEvent) bool { return has(Update) },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return has(Delete) },
+		GenericFunc: func(_ event.GenericEvent) bool { return has(Generic) },
 	}
 }
 

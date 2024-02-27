@@ -494,7 +494,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	It("should call the cancel function when gardener-node-agent must be restarted itself", func() {
 		var lastAppliedOSC []byte
 		By("Wait last-applied OSC file to be persisted")
-		Eventually(func(g Gomega) error {
+		Eventually(func(_ Gomega) error {
 			var err error
 			lastAppliedOSC, err = fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
 			return err

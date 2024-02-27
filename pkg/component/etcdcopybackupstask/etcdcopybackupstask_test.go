@@ -44,7 +44,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		values              *Values
 		etcdCopyBackupsTask Interface
 
-		notFoundErr = apierrors.NewNotFound(schema.GroupResource{}, "etcdcopybackupstask")
+		notFoundErr error = apierrors.NewNotFound(schema.GroupResource{}, "etcdcopybackupstask")
 	)
 
 	BeforeEach(func() {

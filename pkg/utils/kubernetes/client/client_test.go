@@ -637,7 +637,7 @@ var _ = Describe("Cleaner", func() {
 				return fakeClient.Update(ctx, object)
 			}
 
-			fn := func(kind string, objectList client.ObjectList) flow.TaskFn {
+			fn := func(_ string, objectList client.ObjectList) flow.TaskFn {
 				return func(ctx context.Context) error {
 					if err := fakeClient.List(ctx, objectList); err != nil {
 						return err

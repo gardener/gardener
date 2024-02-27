@@ -296,7 +296,7 @@ var _ = Describe("Project Stale controller tests", func() {
 			}).Should(Succeed())
 
 			By("Ensure project is not deleted")
-			Consistently(func(g Gomega) error {
+			Consistently(func(_ Gomega) error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(project), project)
 			}).Should(Succeed())
 		})
@@ -316,7 +316,7 @@ var _ = Describe("Project Stale controller tests", func() {
 
 			fakeClock.Step(staleExpirationTimeDays * 24 * time.Hour)
 
-			Eventually(func(g Gomega) error {
+			Eventually(func(_ Gomega) error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(project), project)
 			}).Should(BeNotFoundError())
 		})

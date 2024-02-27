@@ -167,7 +167,7 @@ var _ = Describe("Errors", func() {
 
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
-				func(errorID string, err error) error {
+				func(_ string, err error) error {
 					return err
 				},
 				f1,
@@ -182,7 +182,7 @@ var _ = Describe("Errors", func() {
 			errID := "x2"
 			errorContext := errorsutils.NewErrorContext("Check success handler", []string{errID})
 			Expect(errorsutils.HandleErrors(errorContext,
-				func(errorID string) error {
+				func(_ string) error {
 					return nil
 				},
 				nil,
@@ -208,7 +208,7 @@ var _ = Describe("Errors", func() {
 
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
-				func(errorID string, err error) error {
+				func(_ string, err error) error {
 					return err
 				},
 				f1,

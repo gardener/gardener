@@ -1068,7 +1068,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			configMap.Data = newData
 			Expect(testClient.Create(ctx, configMap)).To(Succeed())
 
-			Eventually(func(g Gomega) error {
+			Eventually(func(_ Gomega) error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 			}).Should(Succeed())
 

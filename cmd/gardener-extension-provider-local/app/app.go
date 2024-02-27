@@ -189,7 +189,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: fmt.Sprintf("%s-controller-manager", local.Name),
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			seedName := os.Getenv("SEED_NAME")
 
 			if err := aggOption.Complete(); err != nil {

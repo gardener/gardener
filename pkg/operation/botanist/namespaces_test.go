@@ -23,9 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -182,7 +180,7 @@ var _ = Describe("Namespaces", func() {
 		}
 
 		It("should successfully deploy the namespace", func() {
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -194,7 +192,7 @@ var _ = Describe("Namespaces", func() {
 			defaultSeedInfo.Spec.Provider.Zones = nil
 			botanist.Seed.SetInfo(defaultSeedInfo)
 
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -206,7 +204,7 @@ var _ = Describe("Namespaces", func() {
 			defaultSeedInfo.Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
 			botanist.Seed.SetInfo(defaultSeedInfo)
 
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -225,7 +223,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -247,7 +245,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -310,7 +308,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 			Expect(botanist.DeploySeedNamespace(ctx)).To(MatchError(ContainSubstring("cannot select 3 zones for shoot because seed only specifies 2 zones in its specification")))
@@ -366,7 +364,7 @@ var _ = Describe("Namespaces", func() {
 				})
 
 				It("should use existing zones instead of picking a new zone", func() {
-					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -385,7 +383,7 @@ var _ = Describe("Namespaces", func() {
 					}
 					botanist.Shoot.SetInfo(defaultShootInfo)
 
-					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -432,7 +430,7 @@ var _ = Describe("Namespaces", func() {
 				It("should not use zone information from persistent volumes if zone is missing in seed spec", func() {
 					defaultSeedInfo.Spec.Provider.Zones = []string{"1", "2", "3"}
 
-					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
@@ -485,7 +483,7 @@ var _ = Describe("Namespaces", func() {
 				})
 
 				It("should pick a new zone", func() {
-					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
 					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())

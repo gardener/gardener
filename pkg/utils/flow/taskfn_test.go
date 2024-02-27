@@ -52,7 +52,7 @@ var _ = Describe("task functions", func() {
 				started         = make(chan struct{}, 3)
 
 				ctx = context.Background()
-				fn  = flow.TaskFn(func(ctx context.Context) error {
+				fn  = flow.TaskFn(func(_ context.Context) error {
 					started <- struct{}{}
 					// block until all tasks were started to verify parallel execution of tasks
 					<-allTasksStarted
@@ -101,7 +101,7 @@ var _ = Describe("task functions", func() {
 				started         = make(chan struct{}, 3)
 
 				ctx = context.Background()
-				fn  = flow.TaskFn(func(ctx context.Context) error {
+				fn  = flow.TaskFn(func(_ context.Context) error {
 					started <- struct{}{}
 					// block until all tasks were started to verify parallel execution of tasks
 					<-allTasksStarted
@@ -126,7 +126,7 @@ var _ = Describe("task functions", func() {
 				ctx       = context.Background()
 				cancelled = make(chan struct{})
 
-				f1 = flow.TaskFn(func(ctx context.Context) error {
+				f1 = flow.TaskFn(func(_ context.Context) error {
 					return fmt.Errorf("task1")
 				})
 				f2 = flow.TaskFn(func(ctx context.Context) error {
@@ -151,7 +151,7 @@ var _ = Describe("task functions", func() {
 				blockCh     = make(chan struct{}, 5)
 				doneCh      = make(chan struct{})
 				fn          = func(key string) flow.TaskFn {
-					return func(ctx context.Context) error {
+					return func(_ context.Context) error {
 						activeTasks.Store(key, struct{}{})
 						defer func() {
 							doneTasks.Store(key, struct{}{})
@@ -191,7 +191,7 @@ var _ = Describe("task functions", func() {
 			taskIds = taskIds.Difference(tasksFound)
 
 			Eventually(func(g Gomega) {
-				doneTasks.Range(func(key, value any) bool {
+				doneTasks.Range(func(key, _ any) bool {
 					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
 					return false
 				})
@@ -208,7 +208,7 @@ var _ = Describe("task functions", func() {
 			taskIds = taskIds.Difference(tasksFound)
 
 			Eventually(func(g Gomega) {
-				doneTasks.Range(func(key, value any) bool {
+				doneTasks.Range(func(key, _ any) bool {
 					g.Expect(taskIds).NotTo(HaveKey(key.(string)))
 					return false
 				})
@@ -222,7 +222,7 @@ var _ = Describe("task functions", func() {
 
 			Eventually(func(g Gomega) {
 				tasks := 0
-				activeTasks.Range(func(key, value any) bool {
+				activeTasks.Range(func(_, _ any) bool {
 					tasks += 1
 					return true
 				})
@@ -235,7 +235,7 @@ var _ = Describe("task functions", func() {
 			var (
 				ctx = context.Background()
 				fn  = func(err error) flow.TaskFn {
-					return func(ctx context.Context) error {
+					return func(_ context.Context) error {
 						return err
 					}
 				}
@@ -253,7 +253,7 @@ var _ = Describe("task functions", func() {
 func findTasks(taskIds sets.Set[string], tasks *sync.Map) sets.Set[string] {
 	tasksFound := sets.New[string]()
 
-	tasks.Range(func(key, value any) bool {
+	tasks.Range(func(key, _ any) bool {
 		if taskIds.Has(key.(string)) {
 			tasksFound.Insert(key.(string))
 		}

@@ -643,7 +643,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return nil
 						}),
@@ -666,7 +666,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return errors.New("foo")
 						}),

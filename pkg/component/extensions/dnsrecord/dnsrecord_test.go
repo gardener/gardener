@@ -447,14 +447,14 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(secret))
 					return nil
 				})
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
 				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
 					return testErr
 				})
@@ -729,7 +729,7 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(secret))
 					return nil
 				})
@@ -738,7 +738,7 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
 				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
 					return nil
 				})

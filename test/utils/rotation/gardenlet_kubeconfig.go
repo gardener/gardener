@@ -56,7 +56,7 @@ type GardenletKubeconfigRotationVerifier struct {
 func (v *GardenletKubeconfigRotationVerifier) Before(ctx context.Context) {
 	v.timeBeforeRotation = time.Now().UTC()
 
-	Eventually(func(g Gomega) {
+	Eventually(func(_ Gomega) {
 		Expect(v.GardenReader.Get(ctx, client.ObjectKeyFromObject(v.Seed), v.Seed)).To(Succeed())
 		v.oldGardenletName = v.Seed.Status.Gardener.Name
 	}).Should(Succeed())
@@ -69,7 +69,7 @@ func (v *GardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 
 	if expectPodRestart {
 		By("Verify that new gardenlet pod has taken over responsibility for seed")
-		CEventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(_ Gomega) error {
 			if err := v.GardenReader.Get(ctx, client.ObjectKeyFromObject(v.Seed), v.Seed); err != nil {
 				return err
 			}
@@ -83,7 +83,7 @@ func (v *GardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 	}
 
 	By("Verify that gardenlet's kubeconfig secret has actually been renewed")
-	CEventually(ctx, func(g Gomega) error {
+	CEventually(ctx, func(_ Gomega) error {
 		secret := &corev1.Secret{}
 		if err := v.SeedReader.Get(ctx, client.ObjectKey{Name: v.GardenletKubeconfigSecretName, Namespace: v.GardenletKubeconfigSecretNamespace}, secret); err != nil {
 			return err

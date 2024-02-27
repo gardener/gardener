@@ -84,7 +84,7 @@ var _ = Describe("Seed Care controller tests", func() {
 					},
 				},
 			},
-			MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			MapperProvider: func(config *rest.Config, _ *http.Client) (meta.RESTMapper, error) {
 				return thirdpartyapiutil.NewDynamicRESTMapper(config)
 			},
 		})

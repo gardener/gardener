@@ -152,7 +152,7 @@ var _ = Describe("Certificates", func() {
 				return approvedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &approvedCSR, nil
 			})
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
@@ -183,7 +183,7 @@ var _ = Describe("Certificates", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 
@@ -198,7 +198,7 @@ var _ = Describe("Certificates", func() {
 				return failedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &failedCSR, nil
 			})
 
@@ -213,7 +213,7 @@ var _ = Describe("Certificates", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 

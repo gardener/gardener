@@ -1298,7 +1298,7 @@ exemptions:
 			)
 
 			DescribeTable("should have the expected ServiceAccountConfig config",
-				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool, errMatcher gomegatypes.GomegaMatcher) {
+				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -1323,7 +1323,6 @@ exemptions:
 					nil,
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("ServiceAccountConfig is nil",
 					func() {
@@ -1331,7 +1330,6 @@ exemptions:
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("service account key rotation phase is set",
 					func() {
@@ -1343,7 +1341,6 @@ exemptions:
 						RotationPhase: gardencorev1beta1.RotationCompleting,
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Issuer is not provided",
 					func() {
@@ -1360,7 +1357,6 @@ exemptions:
 						MaxTokenExpiration:    &maxTokenExpiration,
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Issuer is provided",
 					func() {
@@ -1375,7 +1371,6 @@ exemptions:
 						AcceptedIssuers: []string{"https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers is provided and Issuer is not",
 					func() {
@@ -1390,7 +1385,6 @@ exemptions:
 						AcceptedIssuers: []string{"issuer1", "issuer2"},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers and Issuer are provided",
 					func() {
@@ -1406,7 +1400,6 @@ exemptions:
 						AcceptedIssuers: []string{"issuer1", "issuer2", "https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Default Issuer is already part of AcceptedIssuers",
 					func() {
@@ -1422,7 +1415,6 @@ exemptions:
 						AcceptedIssuers: []string{"https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Default Issuer is already part of AcceptedIssuers but no Issuer is provided",
 					func() {
@@ -1437,7 +1429,6 @@ exemptions:
 						AcceptedIssuers: []string{},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers is not provided",
 					func() {
@@ -1447,7 +1438,6 @@ exemptions:
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 			)
 		})

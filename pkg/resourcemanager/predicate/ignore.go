@@ -35,16 +35,16 @@ func NotIgnored() predicate.Predicate {
 // during an update.
 func NoLongerIgnored() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return isIgnored(e.ObjectOld) && !isIgnored(e.ObjectNew)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
-		GenericFunc: func(e event.GenericEvent) bool {
+		GenericFunc: func(_ event.GenericEvent) bool {
 			return true
 		},
 	}
@@ -54,17 +54,17 @@ func NoLongerIgnored() predicate.Predicate {
 // during an update.
 func GotMarkedAsIgnored() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			// Add event is received on controller startup. We need to reconcile this if we haven't updated the conditions yet
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return !isIgnored(e.ObjectOld) && isIgnored(e.ObjectNew)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
-		GenericFunc: func(e event.GenericEvent) bool {
+		GenericFunc: func(_ event.GenericEvent) bool {
 			return true
 		},
 	}

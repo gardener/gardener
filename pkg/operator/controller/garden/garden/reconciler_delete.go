@@ -145,7 +145,7 @@ func (r *Reconciler) delete(
 		})
 		invalidateClient = g.Add(flow.Task{
 			Name: "Invalidate client for virtual garden",
-			Fn: func(ctx context.Context) error {
+			Fn: func(_ context.Context) error {
 				return r.GardenClientMap.InvalidateClient(keys.ForGarden(garden))
 			},
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),

@@ -104,7 +104,7 @@ var _ = Describe("resources", func() {
 		It("should not deny the object because it is updated", func() {
 			attrs = admission.NewAttributesRecord(&coreControllerRegistration, &coreControllerRegistration, gardencorev1beta1.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, gardencorev1beta1.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("list", "controllerregistrations", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &gardencorev1beta1.ControllerRegistrationList{
 					Items: []gardencorev1beta1.ControllerRegistration{controllerRegistration},
 				}, nil
@@ -121,7 +121,7 @@ var _ = Describe("resources", func() {
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
 
-			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("list", "controllerregistrations", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &gardencorev1beta1.ControllerRegistrationList{
 					Items: []gardencorev1beta1.ControllerRegistration{*controllerRegistration2},
 				}, nil
@@ -139,7 +139,7 @@ var _ = Describe("resources", func() {
 			controllerRegistration2.Name = "another-name"
 			controllerRegistration2.Spec.Resources[0].Primary = ptr.To(false)
 
-			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("list", "controllerregistrations", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &gardencorev1beta1.ControllerRegistrationList{
 					Items: []gardencorev1beta1.ControllerRegistration{*controllerRegistration2},
 				}, nil

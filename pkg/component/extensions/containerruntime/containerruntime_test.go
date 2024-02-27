@@ -370,7 +370,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
 			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().Format(time.RFC3339Nano)
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(expected[0])).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(expected[0]))
 					return nil
 				})

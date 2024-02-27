@@ -84,7 +84,7 @@ var _ = Describe("ResourceManager", func() {
 			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithClient(c).Build()
 			sm = fakesecretsmanager.New(c, namespace)
 
-			setReplicas = func(ctx context.Context) (int32, error) {
+			setReplicas = func(_ context.Context) (int32, error) {
 				return 2, nil
 			}
 			getAPIServerAddress = func() string { return "kube-apiserver" }
@@ -182,7 +182,7 @@ var _ = Describe("ResourceManager", func() {
 						}),
 
 						// delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.DeleteOption) error {
 							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
 							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
 							return nil
@@ -373,7 +373,7 @@ var _ = Describe("ResourceManager", func() {
 						}),
 
 						// delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.DeleteOption) error {
 							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
 							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
 							return fakeErr

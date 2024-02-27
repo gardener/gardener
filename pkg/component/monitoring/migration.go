@@ -104,7 +104,7 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 	// PV was found, so let's label it so that we can find it in future invocations of this function (even after the old
 	// PVC has already been deleted).
 	log.Info("Adding PVC name to PV labels", "persistentVolume", client.ObjectKeyFromObject(pv), "label", labelMigrationPVCName, "persistentVolumeClaim", client.ObjectKeyFromObject(oldPVC))
-	if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
+	if err := d.patchPV(ctx, pv, func(_ *corev1.PersistentVolume) {
 		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationPVCName, oldPVC.Name)
 	}); err != nil {
 		return false, nil, nil, err

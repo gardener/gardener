@@ -294,7 +294,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 
 					DeferCleanup(func() {
 						Expect(testClient.Delete(ctx, shoot)).To(Succeed())
-						Eventually(func(g Gomega) error {
+						Eventually(func(_ Gomega) error {
 							return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 						}).Should(BeNotFoundError())
 					})

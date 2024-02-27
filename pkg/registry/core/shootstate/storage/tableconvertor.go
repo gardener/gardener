@@ -62,7 +62,7 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 		}
 	}
 
-	table.Rows, err = metatable.MetaToTableRow(o, func(o runtime.Object, m metav1.Object, name, age string) ([]interface{}, error) {
+	table.Rows, err = metatable.MetaToTableRow(o, func(o runtime.Object, _ metav1.Object, _, _ string) ([]interface{}, error) {
 		var (
 			obj   = o.(*core.ShootState)
 			cells = []interface{}{}

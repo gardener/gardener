@@ -28,9 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
@@ -783,14 +781,14 @@ var _ = Describe("istiod", func() {
 			Expect(istiod.Destroy(ctx)).To(Succeed())
 
 			namespace := &corev1.Namespace{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceIstio.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceIstioSecret.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceIstioSystem.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceIstioSystemSecret.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSecret), oldMrSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldMrSecret.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSystemSecret), oldMrSystemSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldMrSystemSecret.Name)))
-			Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNS)))
-			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNSIngress)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSecret), oldMrSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSystemSecret), oldMrSystemSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(BeNotFoundError())
 		})
 
 		Context("istiod disabled", func() {
@@ -815,7 +813,7 @@ var _ = Describe("istiod", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstio)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNSIngress)))
+				Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(BeNotFoundError())
 			})
 		})
 	})

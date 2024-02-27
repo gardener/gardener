@@ -34,7 +34,7 @@ import (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameSeedValidator, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameSeedValidator, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

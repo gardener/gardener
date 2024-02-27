@@ -171,7 +171,7 @@ var _ = Describe("handler", func() {
 			})
 
 			It("should fail because listing shoots fails", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return fmt.Errorf("fake")
 				})
 
@@ -179,7 +179,7 @@ var _ = Describe("handler", func() {
 			})
 
 			It("should pass because namespace is does not contain any shoots", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return nil
 				})
 

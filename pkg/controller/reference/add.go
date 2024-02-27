@@ -48,14 +48,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // Predicate reacts on CREATE and on UPDATE events.
 func (r *Reconciler) Predicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return r.ReferenceChangedPredicate(e.ObjectOld, e.ObjectNew) ||
 				(e.ObjectNew.GetDeletionTimestamp() != nil && !controllerutil.ContainsFinalizer(e.ObjectNew, gardencorev1beta1.GardenerName))
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }

@@ -208,7 +208,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		CEventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(_ Gomega) error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -228,7 +228,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		CEventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func(_ Gomega) error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil

@@ -52,7 +52,7 @@ var _ = Describe("EnqueueMapped", func() {
 		)
 
 		BeforeEach(func() {
-			mapper = MapFunc(func(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+			mapper = MapFunc(func(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 				return []reconcile.Request{
 					requestWithSuffix(obj, "1"),
 					requestWithSuffix(obj, "2"),
