@@ -109,7 +109,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			settingsInformerFactory = settingsinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSettingsInformerFactory(settingsInformerFactory)
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 		})
 
@@ -324,7 +324,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		It("should return nil error when everything is set", func() {
 			plugin.SetSettingsInformerFactory(settingsinformers.NewSharedInformerFactory(nil, 0))
-			plugin.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			plugin.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			Expect(plugin.ValidateInitialization()).ToNot(HaveOccurred())
 		})
 	})

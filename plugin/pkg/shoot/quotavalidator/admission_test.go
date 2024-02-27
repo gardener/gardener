@@ -266,7 +266,7 @@ var _ = Describe("quotavalidator", func() {
 			admissionHandler, _ = New(timeOps)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			Expect(coreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quotaProject)).To(Succeed())
 			Expect(coreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quotaSecret)).To(Succeed())

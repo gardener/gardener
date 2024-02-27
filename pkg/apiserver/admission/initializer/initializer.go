@@ -65,11 +65,11 @@ func New(
 // Initialize checks the initialization interfaces implemented by each plugin
 // and provide the appropriate initialization data
 func (i pluginInitializer) Initialize(plugin admission.Interface) {
-	if wants, ok := plugin.(WantsExternalCoreInformerFactory); ok {
-		wants.SetExternalCoreInformerFactory(i.coreInformers)
+	if wants, ok := plugin.(WantsCoreInformerFactory); ok {
+		wants.SetCoreInformerFactory(i.coreInformers)
 	}
-	if wants, ok := plugin.(WantsExternalCoreClientSet); ok {
-		wants.SetExternalCoreClientSet(i.coreClient)
+	if wants, ok := plugin.(WantsCoreClientSet); ok {
+		wants.SetCoreClientSet(i.coreClient)
 	}
 
 	if wants, ok := plugin.(WantsSeedManagementInformerFactory); ok {

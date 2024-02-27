@@ -51,7 +51,7 @@ type Bastion struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreClientSet(&Bastion{})
+	_ = admissioninitializer.WantsCoreClientSet(&Bastion{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -69,8 +69,8 @@ func (v *Bastion) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetExternalCoreClientSet sets the garden core clientset.
-func (v *Bastion) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
+// SetCoreClientSet sets the garden core clientset.
+func (v *Bastion) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 

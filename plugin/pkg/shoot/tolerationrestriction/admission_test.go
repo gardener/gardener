@@ -49,7 +49,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 			admissionHandler, _ = New(&shoottolerationrestriction.Configuration{})
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +91,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
@@ -106,7 +106,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
@@ -123,7 +123,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 					Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 					attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
@@ -189,7 +189,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
@@ -211,7 +211,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 					admissionHandler, _ = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
-					admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 					shoot.Spec.Tolerations = []core.Toleration{
 						{Key: "foo"},
@@ -324,7 +324,7 @@ var _ = Describe("tolerationrestriction", func() {
 
 		It("should not return error if ProjectLister is set", func() {
 			dr, _ := New(&shoottolerationrestriction.Configuration{})
-			dr.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

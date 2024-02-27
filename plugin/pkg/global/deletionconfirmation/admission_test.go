@@ -58,10 +58,10 @@ var _ = Describe("deleteconfirmation", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			gardenClient = &internalClientSet.Clientset{}
-			admissionHandler.SetExternalCoreClientSet(gardenClient)
+			admissionHandler.SetCoreClientSet(gardenClient)
 
 			shootStore = coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore()
 			projectStore = coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore()
@@ -474,8 +474,8 @@ var _ = Describe("deleteconfirmation", func() {
 		It("should not return error if lister and core clients are set", func() {
 			dr, _ := New()
 			gardenClient := &internalClientSet.Clientset{}
-			dr.SetExternalCoreClientSet(gardenClient)
-			dr.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetCoreClientSet(gardenClient)
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 

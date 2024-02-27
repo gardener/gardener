@@ -58,7 +58,7 @@ type ExtensionValidator struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ExtensionValidator{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ExtensionValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -76,8 +76,8 @@ func (e *ExtensionValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (e *ExtensionValidator) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (e *ExtensionValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 

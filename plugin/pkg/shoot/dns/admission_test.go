@@ -138,7 +138,7 @@ var _ = Describe("dns", func() {
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			shootBase.Spec.DNS.Domain = nil
 			shootBase.Spec.DNS.Providers = []core.DNSProvider{

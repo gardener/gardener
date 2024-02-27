@@ -55,7 +55,7 @@ type ClusterOpenIDConnectPreset struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ClusterOpenIDConnectPreset{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ClusterOpenIDConnectPreset{})
 	_ = admissioninitializer.WantsSettingsInformerFactory(&ClusterOpenIDConnectPreset{})
 
 	readyFuncs []admission.ReadyFunc
@@ -74,8 +74,8 @@ func (c *ClusterOpenIDConnectPreset) AssignReadyFunc(f admission.ReadyFunc) {
 	c.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (c *ClusterOpenIDConnectPreset) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (c *ClusterOpenIDConnectPreset) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	projectInformer := f.Core().V1beta1().Projects()
 	c.projectLister = projectInformer.Lister()
 

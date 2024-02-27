@@ -49,7 +49,7 @@ type ExposureClass struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ExposureClass{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ExposureClass{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -67,8 +67,8 @@ func (e *ExposureClass) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExposureClass) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory sets the external garden core informer factory.
+func (e *ExposureClass) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	exposureClassInformer := f.Core().V1beta1().ExposureClasses()
 	e.exposureClassLister = exposureClassInformer.Lister()
 

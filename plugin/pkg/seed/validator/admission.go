@@ -48,7 +48,7 @@ type ValidateSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateSeed{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ValidateSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -66,8 +66,8 @@ func (v *ValidateSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateSeed) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	seedInformer := f.Core().V1beta1().Seeds()
 	v.seedLister = seedInformer.Lister()
 

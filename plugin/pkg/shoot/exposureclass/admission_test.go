@@ -48,7 +48,7 @@ var _ = Describe("exposureclass", func() {
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{

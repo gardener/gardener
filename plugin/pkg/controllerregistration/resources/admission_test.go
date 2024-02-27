@@ -52,7 +52,7 @@ var _ = Describe("resources", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &fake.Clientset{}
-			admissionHandler.SetExternalCoreClientSet(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
 			controllerRegistration = gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{

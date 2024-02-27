@@ -46,7 +46,7 @@ var _ = Describe("Project", func() {
 		}
 	)
 
-	Describe("#ProjectForNamespaceFromExternalLister", func() {
+	Describe("#ProjectForNamespaceFromLister", func() {
 		var lister *fakeInternalLister
 
 		BeforeEach(func() {
@@ -56,7 +56,7 @@ var _ = Describe("Project", func() {
 		It("should return an error because listing failed", func() {
 			lister.err = fakeErr
 
-			result, err := utils.ProjectForNamespaceFromExternalLister(lister, namespaceName)
+			result, err := utils.ProjectForNamespaceFromLister(lister, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(result).To(BeNil())
 		})
@@ -64,13 +64,13 @@ var _ = Describe("Project", func() {
 		It("should return the found project", func() {
 			lister.projects = []*gardencorev1beta1.Project{projectInternal}
 
-			result, err := utils.ProjectForNamespaceFromExternalLister(lister, namespaceName)
+			result, err := utils.ProjectForNamespaceFromLister(lister, namespaceName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(projectInternal))
 		})
 
 		It("should return a 'not found' error", func() {
-			result, err := utils.ProjectForNamespaceFromExternalLister(lister, namespaceName)
+			result, err := utils.ProjectForNamespaceFromLister(lister, namespaceName)
 			Expect(err).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: "core.gardener.cloud", Resource: "Project"}, namespaceName)))
 			Expect(result).To(BeNil())
 		})

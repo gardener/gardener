@@ -53,7 +53,7 @@ type ManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreClientSet(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 
 	readyFuncs []admission.ReadyFunc
@@ -72,8 +72,8 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetExternalCoreClientSet sets the garden core clientset.
-func (v *ManagedSeed) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
+// SetCoreClientSet sets the garden core clientset.
+func (v *ManagedSeed) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 

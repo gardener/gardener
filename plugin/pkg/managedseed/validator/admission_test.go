@@ -169,10 +169,10 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetExternalCoreClientSet(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
@@ -717,8 +717,8 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			admissionHandler.SetExternalCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 			admissionHandler.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 

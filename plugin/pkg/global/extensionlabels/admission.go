@@ -58,7 +58,7 @@ type ExtensionLabels struct {
 }
 
 var (
-	_          = admissioninitializer.WantsExternalCoreInformerFactory(&ExtensionLabels{})
+	_          = admissioninitializer.WantsCoreInformerFactory(&ExtensionLabels{})
 	readyFuncs []admission.ReadyFunc
 )
 
@@ -75,8 +75,8 @@ func (e *ExtensionLabels) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExtensionLabels) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory sets the garden core informer factory.
+func (e *ExtensionLabels) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
 	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()

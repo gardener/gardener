@@ -106,7 +106,7 @@ var _ = Describe("Bastion", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetExternalCoreClientSet(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 		})
 
 		It("should do nothing if the resource is not a Bastion", func() {
@@ -322,7 +322,7 @@ var _ = Describe("Bastion", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetExternalCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

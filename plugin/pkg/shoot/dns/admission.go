@@ -61,7 +61,7 @@ type DNS struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&DNS{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&DNS{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&DNS{})
 
 	readyFuncs []admission.ReadyFunc
@@ -80,8 +80,8 @@ func (d *DNS) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (d *DNS) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DNS) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	projectInformer := f.Core().V1beta1().Projects()
 	d.projectLister = projectInformer.Lister()
 
@@ -303,7 +303,7 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
 func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromExternalLister(projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -330,7 +330,7 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1be
 }
 
 func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromExternalLister(projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}

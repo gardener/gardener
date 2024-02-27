@@ -69,7 +69,7 @@ type QuotaValidator struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&QuotaValidator{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&QuotaValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -88,8 +88,8 @@ func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	q.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (q *QuotaValidator) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().V1beta1().Shoots()
 	q.shootLister = shootInformer.Lister()
 

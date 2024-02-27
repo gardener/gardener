@@ -48,7 +48,7 @@ type Resources struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreClientSet(&Resources{})
+	_ = admissioninitializer.WantsCoreClientSet(&Resources{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -66,8 +66,8 @@ func (r *Resources) AssignReadyFunc(f admission.ReadyFunc) {
 	r.SetReadyFunc(f)
 }
 
-// SetExternalCoreClientSet gets the clientset from the Kubernetes client.
-func (r *Resources) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
+// SetCoreClientSet gets the clientset from the Kubernetes client.
+func (r *Resources) SetCoreClientSet(c gardencoreclientset.Interface) {
 	r.coreClient = c
 }
 

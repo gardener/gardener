@@ -72,7 +72,7 @@ var _ = Describe("Shoot", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
@@ -166,7 +166,7 @@ var _ = Describe("Shoot", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()

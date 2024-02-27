@@ -29,15 +29,15 @@ import (
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 )
 
-// WantsExternalCoreInformerFactory defines a function which sets external Core InformerFactory for admission plugins that need it.
-type WantsExternalCoreInformerFactory interface {
-	SetExternalCoreInformerFactory(gardencoreinformers.SharedInformerFactory)
+// WantsCoreInformerFactory defines a function which sets Core InformerFactory for admission plugins that need it.
+type WantsCoreInformerFactory interface {
+	SetCoreInformerFactory(gardencoreinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
-// WantsExternalCoreClientSet defines a function which sets external Core Clientset for admission plugins that need it.
-type WantsExternalCoreClientSet interface {
-	SetExternalCoreClientSet(gardencoreclientset.Interface)
+// WantsCoreClientSet defines a function which sets Core Clientset for admission plugins that need it.
+type WantsCoreClientSet interface {
+	SetCoreClientSet(gardencoreclientset.Interface)
 	admission.InitializationValidator
 }
 

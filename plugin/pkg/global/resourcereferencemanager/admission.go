@@ -84,9 +84,9 @@ type ReferenceManager struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
-	_ = admissioninitializer.WantsExternalCoreClientSet(&ReferenceManager{})
+	_ = admissioninitializer.WantsCoreClientSet(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
@@ -116,8 +116,8 @@ func (r *ReferenceManager) SetAuthorizer(authorizer authorizer.Authorizer) {
 	r.authorizer = authorizer
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (r *ReferenceManager) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	seedInformer := f.Core().V1beta1().Seeds()
 	r.seedLister = seedInformer.Lister()
 
@@ -168,8 +168,8 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced, configMapInformer.Informer().HasSynced)
 }
 
-// SetExternalCoreClientSet sets the Gardener client.
-func (r *ReferenceManager) SetExternalCoreClientSet(c versioned.Interface) {
+// SetCoreClientSet sets the Gardener client.
+func (r *ReferenceManager) SetCoreClientSet(c versioned.Interface) {
 	r.gardenCoreClient = c
 }
 

@@ -70,8 +70,8 @@ type ManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ManagedSeed{})
-	_ = admissioninitializer.WantsExternalCoreClientSet(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ManagedSeed{})
 
@@ -91,8 +91,8 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ManagedSeed) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ManagedSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
@@ -110,8 +110,8 @@ func (v *ManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFacto
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
 }
 
-// SetExternalCoreClientSet sets the garden core clientset.
-func (v *ManagedSeed) SetExternalCoreClientSet(c gardencoreclientset.Interface) {
+// SetCoreClientSet sets the garden core clientset.
+func (v *ManagedSeed) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 

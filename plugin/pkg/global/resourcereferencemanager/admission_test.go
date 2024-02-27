@@ -315,10 +315,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			gardenCoreClient = internalclientset.NewSimpleClientset()
 			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
-			admissionHandler.SetExternalCoreClientSet(gardenCoreClient)
+			admissionHandler.SetCoreClientSet(gardenCoreClient)
 
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
@@ -1756,9 +1756,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			rm, _ := New()
 
 			internalGardenClient := &internalclientset.Clientset{}
-			rm.SetExternalCoreClientSet(internalGardenClient)
+			rm.SetCoreClientSet(internalGardenClient)
 
-			rm.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			fakeAuthorizer := fakeAuthorizerType{}
 			rm.SetAuthorizer(fakeAuthorizer)

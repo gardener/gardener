@@ -65,7 +65,7 @@ type TolerationRestriction struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&TolerationRestriction{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&TolerationRestriction{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -85,8 +85,8 @@ func (t *TolerationRestriction) AssignReadyFunc(f admission.ReadyFunc) {
 	t.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory sets the internal garden core informer factory.
-func (t *TolerationRestriction) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory sets the internal garden core informer factory.
+func (t *TolerationRestriction) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	projectInformer := f.Core().V1beta1().Projects()
 	t.projectLister = projectInformer.Lister()
 
@@ -150,7 +150,7 @@ func (t *TolerationRestriction) Admit(_ context.Context, a admission.Attributes,
 }
 
 func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
-	project, err := admissionutils.ProjectForNamespaceFromExternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
@@ -213,7 +213,7 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		tolerationsToValidate = getNewOrChangedTolerations(shoot, oldShoot)
 	}
 
-	project, err := admissionutils.ProjectForNamespaceFromExternalLister(t.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}

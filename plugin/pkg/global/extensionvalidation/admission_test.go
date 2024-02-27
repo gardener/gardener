@@ -42,7 +42,7 @@ var _ = Describe("ExtensionValidator", func() {
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
 		coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+		admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 	})
 
 	It("should do nothing because the resource is not BackupBucket, BackupEntry, Seed, or Shoot", func() {
@@ -504,7 +504,7 @@ var _ = Describe("ExtensionValidator", func() {
 
 		It("should not return error if ControllerRegistrationLister, BackupBucketLister and core client are set", func() {
 			dr, _ := New()
-			dr.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			err := dr.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
 		})

@@ -51,7 +51,7 @@ type Shoot struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&Shoot{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&Shoot{})
 	_ = admissioninitializer.WantsSeedManagementClientSet(&Shoot{})
 
 	readyFuncs []admission.ReadyFunc
@@ -70,8 +70,8 @@ func (v *Shoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *Shoot) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *Shoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 

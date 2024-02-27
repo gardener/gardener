@@ -82,7 +82,7 @@ type ValidateShoot struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
@@ -107,8 +107,8 @@ func (v *ValidateShoot) SetAuthorizer(authorizer authorizer.Authorizer) {
 	v.authorizer = authorizer
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateShoot) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	seedInformer := f.Core().V1beta1().Seeds()
 	v.seedLister = seedInformer.Lister()
 
@@ -249,7 +249,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
-	project, err := admissionutils.ProjectForNamespaceFromExternalLister(v.projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromLister(v.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}

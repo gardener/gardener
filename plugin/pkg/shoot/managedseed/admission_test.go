@@ -129,7 +129,7 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetExternalCoreClientSet(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
@@ -391,7 +391,7 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetExternalCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()

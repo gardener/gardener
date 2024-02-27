@@ -57,8 +57,8 @@ type DeletionConfirmation struct {
 }
 
 var (
-	_ = admissioninitializer.WantsExternalCoreInformerFactory(&DeletionConfirmation{})
-	_ = admissioninitializer.WantsExternalCoreClientSet(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsCoreClientSet(&DeletionConfirmation{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -76,8 +76,8 @@ func (d *DeletionConfirmation) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetExternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DeletionConfirmation) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().V1beta1().Shoots()
 	d.shootLister = shootInformer.Lister()
 
@@ -95,8 +95,8 @@ func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f gardencoreinform
 	)
 }
 
-// SetExternalCoreClientSet gets the clientset from the Kubernetes client.
-func (d *DeletionConfirmation) SetExternalCoreClientSet(c versioned.Interface) {
+// SetCoreClientSet gets the clientset from the Kubernetes client.
+func (d *DeletionConfirmation) SetCoreClientSet(c versioned.Interface) {
 	d.gardenCoreClient = c
 }
 

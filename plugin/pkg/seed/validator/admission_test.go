@@ -76,7 +76,7 @@ var _ = Describe("validator", func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetExternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		Context("Seed Update", func() {
@@ -188,7 +188,7 @@ var _ = Describe("validator", func() {
 
 		It("should not return error if ShootLister and SeedLister are set", func() {
 			dr, _ := New()
-			dr.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 

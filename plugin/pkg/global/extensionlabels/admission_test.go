@@ -42,7 +42,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
 		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		admissionHandler.SetExternalCoreInformerFactory(gardenCoreInformerFactory)
+		admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 	})
 
 	Context("Seed", func() {
@@ -628,7 +628,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 		It("should not return error if BackupBucketLister and core client are set", func() {
 			el, _ := New()
-			el.SetExternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			el.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			err := el.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
 		})
