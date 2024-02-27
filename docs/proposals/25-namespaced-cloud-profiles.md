@@ -241,8 +241,8 @@ kind: ClusterRole
 metadata:
   name: namespaced-cloud-profile-modify-special-fields
 rules:
-  - apiGroups: [""]
-    resources: ["NamespacedCloudProfile"]
+  - apiGroups: ["core.gardener.cloud"]
+    resources: ["namespacedcloudprofiles"]
     verbs: ["modify-spec-kubernetes", "modify-spec-machineImages"]
 ```
 
