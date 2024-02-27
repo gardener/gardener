@@ -79,7 +79,7 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
   * These secrets are synced to each seed cluster and used to gain access to the aggregate monitoring components.
 
 * **Shoot Service Account Issuer secret** (optional) - contains the configuration needed to centrally configure gardenlets in order to implement [GEP-24](../proposals/24-shoot-oidc-issuer.md). Please see [the example configuration](../../example/10-secret-shoot-service-account-issuer.yaml) for more details.
-  * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured. 
+  * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured.
 
 Apart from this "static" configuration there are several custom resources extending the Kubernetes API and used by Gardener.
 As an operator/administrator, you have to configure some of them to make the system work.

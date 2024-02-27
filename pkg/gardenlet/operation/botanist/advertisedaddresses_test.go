@@ -207,7 +207,7 @@ var _ = Describe("AdvertisedAddresses", func() {
 
 			addresses, err := botanist.ToAdvertisedAddresses()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("shoot requires managed issuer, but the gardenlet does not have shoot service account hostname configured"))
+			Expect(err.Error()).To(Equal("shoot requires managed issuer, but gardener does not have shoot service account hostname configured"))
 			Expect(addresses).To(BeNil())
 		})
 	})

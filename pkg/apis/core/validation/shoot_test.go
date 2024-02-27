@@ -1127,7 +1127,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should allow updating the shoot if the annotation is still ", func() {
+			It("should allow updating the shoot if the annotation is still set", func() {
 				shoot.Annotations = map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
 				}
