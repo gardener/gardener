@@ -452,7 +452,7 @@ var _ = Describe("Etcd", func() {
 											},
 											MaxAllowed: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("4"),
-												corev1.ResourceMemory: resource.MustParse("30G"),
+												corev1.ResourceMemory: resource.MustParse("28G"),
 											},
 											ControlledValues: &controlledValues,
 										},
