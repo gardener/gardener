@@ -19,6 +19,16 @@ requires:
   - configs:
       - etcd
 build:
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+      - name: version
+        envTemplate:
+          template: "{{.GARDENER_VERSION}}"
+      - name: sha
+        gitCommit:
+          variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
       ko:
@@ -524,6 +534,16 @@ kind: Config
 metadata:
   name: provider-local
 build:
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+      - name: version
+        envTemplate:
+          template: "{{.GARDENER_VERSION}}"
+      - name: sha
+        gitCommit:
+          variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-local
       ko:
@@ -766,6 +786,16 @@ kind: Config
 metadata:
   name: gardenlet
 build:
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+      - name: version
+        envTemplate:
+          template: "{{.GARDENER_VERSION}}"
+      - name: sha
+        gitCommit:
+          variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
       ko:
