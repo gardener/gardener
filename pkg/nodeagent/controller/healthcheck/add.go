@@ -33,10 +33,12 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "healthcheck"
+const (
+	// ControllerName is the name of this controller.
+	ControllerName = "health-check"
 
-const defaultIntervalSeconds = 30
+	defaultIntervalSeconds = 30
+)
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.Predicate) error {
