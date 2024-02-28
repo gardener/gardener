@@ -282,6 +282,10 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 		v := DefaultRecommenderInterval
 		obj.RecommenderInterval = &v
 	}
+	if obj.TargetCPUPercentile == nil {
+		v := DefaultTargetCPUPercentile
+		obj.TargetCPUPercentile = &v
+	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.

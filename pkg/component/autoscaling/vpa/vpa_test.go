@@ -130,7 +130,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingRecommenderStatusActor     *rbacv1.ClusterRoleBinding
 		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
-		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType) *appsv1.Deployment
+		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 		podMonitorRecommender                        *monitoringv1.PodMonitor
 
@@ -622,10 +622,12 @@ var _ = Describe("VPA", func() {
 			interval *metav1.Duration,
 			recommendationMarginFraction *float64,
 			clusterType component.ClusterType,
+			targetCPUPercentile *float64,
 		) *appsv1.Deployment {
 			var (
 				flagRecommendationMarginFraction = "0.150000"
 				flagRecommenderIntervalValue     = "1m0s"
+				flagTargetCPUPercentile          = "0.900000"
 			)
 
 			if interval != nil {
@@ -633,6 +635,9 @@ var _ = Describe("VPA", func() {
 			}
 			if recommendationMarginFraction != nil {
 				flagRecommendationMarginFraction = fmt.Sprintf("%f", *recommendationMarginFraction)
+			}
+			if targetCPUPercentile != nil {
+				flagTargetCPUPercentile = fmt.Sprintf("%f", *targetCPUPercentile)
 			}
 
 			var cpuRequest string
@@ -692,6 +697,7 @@ var _ = Describe("VPA", func() {
 									"--kube-api-qps=100",
 									"--kube-api-burst=120",
 									"--memory-saver=true",
+									fmt.Sprintf("--target-cpu-percentile=%s", flagTargetCPUPercentile),
 								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
@@ -1388,7 +1394,7 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.Name)
 					clusterRoleBindingRecommenderStatusActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.RoleRef.Name)
 
-					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed)
+					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceAccountRecommender)))
@@ -1471,6 +1477,7 @@ var _ = Describe("VPA", func() {
 			It("should successfully deploy with special configuration", func() {
 				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
 				valuesRecommender.RecommendationMarginFraction = ptr.To(float64(8.91))
+				valuesRecommender.TargetCPUPercentile = ptr.To(float64(0.333))
 
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
@@ -1531,6 +1538,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.Interval,
 					valuesRecommender.RecommendationMarginFraction,
 					component.ClusterTypeSeed,
+					valuesRecommender.TargetCPUPercentile,
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
@@ -1632,7 +1640,7 @@ var _ = Describe("VPA", func() {
 
 					deployment = &appsv1.Deployment{}
 					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-recommender"), deployment)).To(Succeed())
-					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot)
+					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil)
 					deploymentRecommender.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentRecommender))
 
@@ -1783,7 +1791,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
 				By("Create vpa-recommender runtime resources")
-				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil))).To(Succeed())
 				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
@@ -1803,7 +1811,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-recommender runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
