@@ -16,6 +16,8 @@ However, we have not touched the logic how it performs auto-scaling decisions.
 Consequently, please refer to the [offical documentation](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#faqdocumentation) for this component.
 
 The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
+
+The following flags are general options for `cluster-autoscaler`, and these values will be used for all worker groups except for those overwriting them:
 * `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterAdd` defines how long after scale up that scale down evaluation resumes (default: `1h`).
 * `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterDelete` defines how long after node deletion that scale down evaluation resumes (defaults to `ScanInterval`).
 * `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterFailure` defines how long after scale down failure that scale down evaluation resumes (default: `3m`).
@@ -25,6 +27,14 @@ The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 * `.spec.kubernetes.clusterAutoscaler.ignoreTaints` specifies a list of taint keys to ignore in node templates when considering to scale a node group (default: `nil`). 
 * `.spec.kubernetes.clusterAutoscaler.newPodScaleupDelay` specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 * `.spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete` specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+
+The following flags allow some `cluster-autoscaler` flags to be set per worker pool. They are specified along with the worker and override any general value such as those specified in the flags above
+> Only some `cluster-autoscaler` flags can be configured per worker pool, and is limited by NodeGroupAutoscalingOptions of the upstream community Kubernetes repository. This list can be found [here](https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/config/autoscaling_options.go#L37-L55).
+* `.spec.provider.workers[].clusterAutoscaler.scaleDownUtilizationThreshold` defines the threshold under which a node is being removed
+* `.spec.provider.workers[].clusterAutoscaler.scaleDownGpuUtilizationThreshold` defines the threshold for gpu resources under which a node is being removed
+* `.spec.provider.workers[].clusterAutoscaler.scaleDownUnneededTime` defines how long a node should be unneeded before it is eligible for scale down
+* `.spec.provider.workers[].clusterAutoscaler.scaleDownUnreadyTime` defines how long an unready node should be unneeded before it is eligible for scale down.
+* `.spec.provider.workers[].clusterAutoscaler.maxNodeProvisionTime` defines how long cluster autoscaler should wait for a node to be provisioned.
 
 ## Vertical Pod Auto-Scaling
 

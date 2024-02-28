@@ -45,6 +45,12 @@ spec:
         # providerConfig:
         #   <some-machine-image-specific-configuration>
       # architecture: <some-cpu-architecture>
+    # clusterAutoscaler:
+    #   scaleDownUtilizationThreshold: 0.5
+    #   scaleDownGpuUtilizationThreshold: 0.5
+    #   scaleDownUnneededTime: 30m
+    #   scaleDownUnreadyTime: 1h
+    #   maxNodeProvisionTime: 15m
       volume:
         type: gp2
         size: 20Gi

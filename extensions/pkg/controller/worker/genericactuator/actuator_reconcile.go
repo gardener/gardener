@@ -252,6 +252,9 @@ func deployMachineDeployments(
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
+			for k, v := range deployment.ClusterAutoscalerAnnotations {
+				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,

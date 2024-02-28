@@ -1440,6 +1440,28 @@ type Worker struct {
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
+	// +optional
+	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+}
+
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	// +optional
+	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty" protobuf:"fixed64,1,opt,name=scaleDownUtilizationThreshold"`
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	// +optional
+	ScaleDownGpuUtilizationThreshold *float64 `json:"scaleDownGpuUtilizationThreshold,omitempty" protobuf:"fixed64,2,opt,name=scaleDownGpuUtilizationThreshold"`
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty" protobuf:"bytes,3,opt,name=scaleDownUnneededTime"`
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnreadyTime"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	// +optional
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,5,opt,name=maxNodeProvisionTime"`
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.

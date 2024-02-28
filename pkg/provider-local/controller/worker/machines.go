@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -129,17 +130,18 @@ func (w *workerDelegate) generateMachineConfig() error {
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
-			Name:                 deploymentName,
-			ClassName:            className,
-			SecretName:           className,
-			Minimum:              pool.Minimum,
-			Maximum:              pool.Maximum,
-			MaxSurge:             pool.MaxSurge,
-			MaxUnavailable:       pool.MaxUnavailable,
-			Labels:               pool.Labels,
-			Annotations:          pool.Annotations,
-			Taints:               pool.Taints,
-			MachineConfiguration: genericworkeractuator.ReadMachineConfiguration(pool),
+			Name:                         deploymentName,
+			ClassName:                    className,
+			SecretName:                   className,
+			Minimum:                      pool.Minimum,
+			Maximum:                      pool.Maximum,
+			MaxSurge:                     pool.MaxSurge,
+			MaxUnavailable:               pool.MaxUnavailable,
+			Labels:                       pool.Labels,
+			Annotations:                  pool.Annotations,
+			Taints:                       pool.Taints,
+			MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
+			ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
 		})
 	}
 
