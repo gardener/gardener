@@ -747,7 +747,7 @@ var _ = Describe("Garden controller tests", func() {
 		By("Verify that the garden system components have been deleted")
 		// When the controller succeeds then it deletes the `ManagedResource` CRD, so we only need to ensure here that
 		// the `ManagedResource` API is no longer available.
-		Eventually(func(_ Gomega) error {
+		Eventually(func() error {
 			return testClient.List(ctx, &resourcesv1alpha1.ManagedResourceList{}, client.InNamespace(testNamespace.Name))
 		}).Should(BeNotFoundError())
 
@@ -803,7 +803,7 @@ var _ = Describe("Garden controller tests", func() {
 		))
 
 		By("Verify that gardener-resource-manager has been deleted")
-		Eventually(func(_ Gomega) error {
+		Eventually(func() error {
 			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 			return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 		}).Should(BeNotFoundError())

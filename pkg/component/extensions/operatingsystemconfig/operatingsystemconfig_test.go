@@ -927,8 +927,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
 				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-				var expectedErr error = multierror.Append(fakeErr)
-				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(expectedErr))
+				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(error(multierror.Append(fakeErr))))
 			})
 		})
 

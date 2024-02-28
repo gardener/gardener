@@ -63,7 +63,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		fakeClock.Step(time.Hour)
 
 		By("Ensure health status is true")
-		Consistently(func(_ Gomega) bool {
+		Consistently(func() bool {
 			return healthManager.Get()
 		}).Should(BeTrue())
 
@@ -101,7 +101,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		fakeError = fmt.Errorf("fake")
 
 		By("Ensure health status was set to false")
-		Eventually(func(_ Gomega) bool {
+		Eventually(func() bool {
 			return healthManager.Get()
 		}).Should(BeFalse())
 

@@ -142,7 +142,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 	It("should delete the shoot because the expiration time has passed", func() {
 		fakeClock.Step(48 * time.Hour)
 
-		Eventually(func(_ Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
@@ -163,7 +163,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		fakeClock.Step(48 * time.Hour)
 
 		By("Ensure the shoot still exists")
-		Consistently(func(_ Gomega) error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
 
@@ -181,7 +181,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		fakeClock.Step(2 * time.Hour)
 
-		Eventually(func(_ Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
@@ -200,13 +200,13 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		By("Verify that shoot is not deleted after original expiration time (1 day) has passed")
 		fakeClock.Step(25 * time.Hour)
-		Consistently(func(_ Gomega) error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
 
 		By("Verify that shoot is deleted after manually prolonged expiration time has passed")
 		fakeClock.Step(25 * time.Hour)
-		Eventually(func(_ Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
