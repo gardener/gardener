@@ -510,17 +510,15 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 				return err
 			}
 
-			//Delete old DWD secrets
-			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
-				return err
-			}
-
-			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+			// Delete old DWD secrets
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}},
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}},
+			); err != nil {
 				return err
 			}
 
 			// Fetch and update the GRM configmap
-			grmConfigMap := &corev1.ConfigMap{}
 			var grmCMName string
 			var grmCMVolumeIndex int
 			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
@@ -533,6 +531,8 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			if len(grmCMName) == 0 {
 				return nil
 			}
+
+			grmConfigMap := &corev1.ConfigMap{}
 			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: grmCMName}, grmConfigMap); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
