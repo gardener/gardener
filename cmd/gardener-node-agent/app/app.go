@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -154,11 +153,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Fetching hostname")
-	hostName, err := os.Hostname()
+	hostName, err := nodeagent.GetHostName()
 	if err != nil {
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
-	hostName = strings.ToLower(hostName)
 	log.Info("Fetched hostname", "hostname", hostName)
 
 	log.Info("Fetching name of node (if already registered)")
