@@ -603,7 +603,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubeapiserver/constants
             - pkg/component/kubeproxy
-            - pkg/component/logging/vali
+            - pkg/component/logging/vali/constants
             - pkg/component/machinecontrollermanager
             - pkg/controller/service
             - pkg/controllerutils
@@ -868,11 +868,13 @@ build:
             - pkg/component/logging/fluentoperator
             - pkg/component/logging/fluentoperator/customresources
             - pkg/component/logging/vali
+            - pkg/component/logging/vali/constants
             - pkg/component/machinecontrollermanager
             - pkg/component/metricsserver
             - pkg/component/monitoring
             - pkg/component/monitoring/alertmanager
             - pkg/component/monitoring/prometheus
+            - pkg/component/monitoring/prometheus/aggregate
             - pkg/component/monitoring/prometheus/cache
             - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
@@ -1139,8 +1141,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/logging/vali
+            - pkg/component/logging/vali/constants
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes
@@ -1178,7 +1179,6 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
-            - pkg/utils/secrets/manager
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version

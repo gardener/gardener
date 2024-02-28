@@ -41,7 +41,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -322,7 +322,7 @@ func (p *plutono) getDataSource() string {
 		url = "http://" + p.namespace + "-prometheus:80"
 		maxLine = "5000"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		url = "http://aggregate-prometheus-web:80"
+		url = "http://prometheus-aggregate:80"
 		maxLine = "5000"
 	}
 
@@ -378,7 +378,7 @@ datasources:
 	datasource += `- name: vali
   type: vali
   access: proxy
-  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(vali.ValiPort) + `
+  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(valiconstants.ValiPort) + `
   jsonData:
     maxLines: ` + maxLine + `
 `
@@ -826,8 +826,8 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 
 func (p *plutono) getPodLabels() map[string]string {
 	labels := map[string]string{
-		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
 	if p.values.IsGardenCluster {
@@ -841,10 +841,9 @@ func (p *plutono) getPodLabels() map[string]string {
 
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
-			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):          v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{

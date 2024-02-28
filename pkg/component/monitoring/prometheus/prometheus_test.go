@@ -24,6 +24,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -59,13 +61,20 @@ var _ = Describe("Prometheus", func() {
 		version           = "v1.2.3"
 		priorityClassName = "priority-class"
 		storageCapacity   = resource.MustParse("1337Gi")
+		retention         = monitoringv1.Duration("1d")
 		retentionSize     = monitoringv1.ByteSize("5GB")
+		externalLabels    = map[string]string{"seed": "test"}
 		additionalLabels  = map[string]string{"foo": "bar"}
+		alertmanagerName  = "alertmgr-test"
 
 		additionalScrapeConfig1 = `job_name: foo
 honor_labels: false`
 		additionalScrapeConfig2 = `job_name: bar
 honor_labels: true`
+
+		ingressAuthSecretName     = "foo"
+		ingressHost               = "some-host.example.com"
+		ingressWildcardSecretName = "bar"
 
 		fakeClient client.Client
 		deployer   component.DeployWaiter
@@ -76,19 +85,19 @@ honor_labels: true`
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		reloadStrategy = monitoringv1.HTTPReloadStrategyType
-
-		serviceAccount                *corev1.ServiceAccount
-		service                       *corev1.Service
-		clusterRoleBinding            *rbacv1.ClusterRoleBinding
-		prometheus                    *monitoringv1.Prometheus
-		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
-		prometheusRule                *monitoringv1.PrometheusRule
-		serviceMonitor                *monitoringv1.ServiceMonitor
-		podMonitor                    *monitoringv1.PodMonitor
-		scrapeConfig                  *monitoringv1alpha1.ScrapeConfig
-		additionalConfigMap           *corev1.ConfigMap
-		secretAdditionalScrapeConfigs *corev1.Secret
+		serviceAccount                      *corev1.ServiceAccount
+		service                             *corev1.Service
+		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
+		prometheusFor                       func(string) *monitoringv1.Prometheus
+		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
+		ingress                             *networkingv1.Ingress
+		prometheusRule                      *monitoringv1.PrometheusRule
+		serviceMonitor                      *monitoringv1.ServiceMonitor
+		podMonitor                          *monitoringv1.PodMonitor
+		scrapeConfig                        *monitoringv1alpha1.ScrapeConfig
+		additionalConfigMap                 *corev1.ConfigMap
+		secretAdditionalScrapeConfigs       *corev1.Secret
+		secretAdditionalAlertRelabelConfigs *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -102,7 +111,9 @@ honor_labels: true`
 			Version:             version,
 			PriorityClassName:   priorityClassName,
 			StorageCapacity:     storageCapacity,
+			Retention:           &retention,
 			RetentionSize:       retentionSize,
+			ExternalLabels:      externalLabels,
 			AdditionalPodLabels: additionalLabels,
 		}
 
@@ -183,75 +194,92 @@ honor_labels: true`
 				Namespace: namespace,
 			}},
 		}
-		prometheus = &monitoringv1.Prometheus{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "prometheus",
-					"role": "monitoring",
-					"name": name,
+		prometheusFor = func(alertmanagerName string) *monitoringv1.Prometheus {
+			obj := &monitoringv1.Prometheus{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "prometheus",
+						"role": "monitoring",
+						"name": name,
+					},
 				},
-			},
-			Spec: monitoringv1.PrometheusSpec{
-				Retention:          "1d",
-				RetentionSize:      retentionSize,
-				EvaluationInterval: "1m",
-				CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-					ScrapeInterval: "1m",
-					ReloadStrategy: &reloadStrategy,
-					AdditionalScrapeConfigs: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "prometheus-" + name + "-additional-scrape-configs",
+				Spec: monitoringv1.PrometheusSpec{
+					Retention:          retention,
+					RetentionSize:      retentionSize,
+					EvaluationInterval: "1m",
+					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+						ScrapeInterval: "1m",
+						ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
+						ExternalLabels: externalLabels,
+						AdditionalScrapeConfigs: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "prometheus-" + name + "-additional-scrape-configs"},
+							Key:                  "prometheus.yaml",
 						},
-						Key: "prometheus.yaml",
-					},
 
-					PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
-						Labels: map[string]string{
-							"foo":                              "bar",
-							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
-							"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
-						},
-					},
-					PriorityClassName: priorityClassName,
-					Replicas:          ptr.To(int32(1)),
-					Shards:            ptr.To(int32(1)),
-					Image:             &image,
-					ImagePullPolicy:   corev1.PullIfNotPresent,
-					Version:           version,
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("300m"),
-							corev1.ResourceMemory: resource.MustParse("1000Mi"),
-						},
-					},
-					ServiceAccountName: "prometheus-" + name,
-					SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
-					Storage: &monitoringv1.StorageSpec{
-						VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
-							EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
-							Spec: corev1.PersistentVolumeClaimSpec{
-								AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-								Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
+						PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
+							Labels: map[string]string{
+								"foo":                              "bar",
+								"networking.gardener.cloud/to-dns": "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
+								"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
 							},
 						},
+						PriorityClassName: priorityClassName,
+						Replicas:          ptr.To(int32(1)),
+						Shards:            ptr.To(int32(1)),
+						Image:             &image,
+						ImagePullPolicy:   corev1.PullIfNotPresent,
+						Version:           version,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("300m"),
+								corev1.ResourceMemory: resource.MustParse("1000Mi"),
+							},
+						},
+						ServiceAccountName: "prometheus-" + name,
+						SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+						Storage: &monitoringv1.StorageSpec{
+							VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
+								EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},
+								Spec: corev1.PersistentVolumeClaimSpec{
+									AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+									Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: storageCapacity}},
+								},
+							},
+						},
+
+						ServiceMonitorSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+						PodMonitorSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+						ProbeSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+						ScrapeConfigSelector:   &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+
+						ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
+						PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
+						ProbeNamespaceSelector:          &metav1.LabelSelector{},
+						ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
 					},
-
-					ServiceMonitorSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
-					PodMonitorSelector:     &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
-					ProbeSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
-					ScrapeConfigSelector:   &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
-
-					ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
-					PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
-					ProbeNamespaceSelector:          &metav1.LabelSelector{},
-					ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
+					RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
+					RuleNamespaceSelector: &metav1.LabelSelector{},
 				},
-				RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
-				RuleNamespaceSelector: &metav1.LabelSelector{},
-			},
+			}
+
+			if alertmanagerName != "" {
+				obj.Spec.Alerting = &monitoringv1.AlertingSpec{
+					Alertmanagers: []monitoringv1.AlertmanagerEndpoints{{
+						Namespace: namespace,
+						Name:      alertmanagerName,
+						Port:      intstr.FromString("metrics"),
+					}},
+				}
+				obj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "prometheus-" + name + "-additional-alert-relabel-configs"},
+					Key:                  "configs.yaml",
+				}
+			}
+
+			return obj
 		}
 		vpaUpdateMode, vpaControlledValuesRequestsOnly, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -292,6 +320,46 @@ honor_labels: true`
 						},
 					},
 				},
+			},
+		}
+		ingress = &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/auth-type":   "basic",
+					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
+					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+				TLS: []networkingv1.IngressTLS{{
+					SecretName: ingressWildcardSecretName,
+					Hosts:      []string{ingressHost},
+				}},
+				Rules: []networkingv1.IngressRule{{
+					Host: ingressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: "prometheus-" + name,
+										Port: networkingv1.ServiceBackendPort{Number: 80},
+									},
+								},
+								Path:     "/",
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
+					},
+				}},
 			},
 		}
 		prometheusRule = &monitoringv1.PrometheusRule{
@@ -351,6 +419,23 @@ honor_labels: true`
   honor_labels: false
 - job_name: bar
   honor_labels: true
+`)},
+		}
+		secretAdditionalAlertRelabelConfigs = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name + "-additional-alert-relabel-configs",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"configs.yaml": []byte(`
+- source_labels: [ ignoreAlerts ]
+  regex: true
+  action: drop
 `)},
 		}
 	})
@@ -421,7 +506,7 @@ honor_labels: true`
 				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheus)))
+				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(""))))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
 
 				prometheusRule.Namespace = namespace
@@ -439,6 +524,37 @@ honor_labels: true`
 
 				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
+			})
+
+			When("ingress is configured", func() {
+				BeforeEach(func() {
+					values.Ingress = &IngressValues{
+						AuthSecretName:   ingressAuthSecretName,
+						Host:             ingressHost,
+						WildcardCertName: &ingressWildcardSecretName,
+					}
+					deployer = New(logr.Discard(), fakeClient, namespace, values)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
+
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+				})
+			})
+
+			When("alerting is configured", func() {
+				BeforeEach(func() {
+					values.Alerting = &AlertingValues{AlertmanagerName: alertmanagerName}
+					deployer = New(logr.Discard(), fakeClient, namespace, values)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
+
+					Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(alertmanagerName))))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-alert-relabel-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalAlertRelabelConfigs)))
+				})
 			})
 		})
 	})

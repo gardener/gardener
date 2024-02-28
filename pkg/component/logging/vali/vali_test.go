@@ -21,6 +21,7 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -294,7 +295,7 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Data).To(HaveLen(6))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -302,6 +303,9 @@ var _ = Describe("Vali", func() {
 			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(false))))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
+			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getServiceMonitor())))
+			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getPrometheusRule())))
+			test.PrometheusRule(getPrometheusRule(), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
 
 		It("should successfully deploy all resources for seed without HVPA", func() {
@@ -350,13 +354,15 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
+			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getServiceMonitor())))
+			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getPrometheusRule())))
 		})
 	})
 
@@ -859,6 +865,68 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 	}
 
 	return svc
+}
+
+func getServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aggregate-vali",
+			Namespace: namespace,
+			Labels:    map[string]string{"prometheus": "aggregate"},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "metrics",
+				RelabelConfigs: []*monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: "vali",
+						TargetLabel: "job",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+				},
+				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(vali_ingester_blocks_per_chunk_sum|vali_ingester_blocks_per_chunk_count|vali_ingester_chunk_age_seconds_sum|vali_ingester_chunk_age_seconds_count|vali_ingester_chunk_bounds_hours_sum|vali_ingester_chunk_bounds_hours_count|vali_ingester_chunk_compression_ratio_sum|vali_ingester_chunk_compression_ratio_count|vali_ingester_chunk_encode_time_seconds_sum|vali_ingester_chunk_encode_time_seconds_count|vali_ingester_chunk_entries_sum|vali_ingester_chunk_entries_count|vali_ingester_chunk_size_bytes_sum|vali_ingester_chunk_size_bytes_count|vali_ingester_chunk_utilization_sum|vali_ingester_chunk_utilization_count|vali_ingester_memory_chunks|vali_ingester_received_chunks|vali_ingester_samples_per_chunk_sum|vali_ingester_samples_per_chunk_count|vali_ingester_sent_chunks|vali_panic_total|vali_logql_querystats_duplicates_total|vali_logql_querystats_ingester_sent_lines_total|prometheus_target_scrapes_sample_out_of_order_total)$`,
+				}},
+			}},
+		},
+	}
+}
+
+func getPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aggregate-vali",
+			Namespace: namespace,
+			Labels:    map[string]string{"prometheus": "aggregate"},
+		},
+		Spec: monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "vali.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert: "ValiDown",
+					Expr:  intstr.FromString(`absent(up{app="vali"} == 1)`),
+					For:   ptr.To(monitoringv1.Duration("30m")),
+					Labels: map[string]string{
+						"service":    "logging",
+						"severity":   "warning",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"description": "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected.",
+						"summary":     "Vali is down",
+					},
+				}},
+			}},
+		},
+	}
 }
 
 func getValiConfigMap() *corev1.ConfigMap {

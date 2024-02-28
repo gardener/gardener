@@ -37,7 +37,7 @@ func (a *alertManager) service() *corev1.Service {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: a.getLabels(),
 			Ports: []corev1.ServicePort{{
-				Name: "metrics",
+				Name: PortNameMetrics,
 				Port: port,
 			}},
 		},

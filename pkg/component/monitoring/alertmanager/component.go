@@ -32,6 +32,8 @@ import (
 
 const (
 	port = 9093
+	// PortNameMetrics is the name of the metrics port.
+	PortNameMetrics = "metrics"
 )
 
 // Values contains configuration values for the AlertManager resources.

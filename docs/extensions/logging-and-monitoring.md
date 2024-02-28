@@ -19,7 +19,7 @@ This guide is about the roles and extensibility options of the logging and monit
 The central Prometheus instance in the `garden` namespace (called "cache Prometheus") fetches metrics and data from all seed cluster nodes and all seed cluster pods.
 It uses the [federation](https://prometheus.io/docs/prometheus/latest/federation/) concept to allow the shoot-specific instances to scrape only the metrics for the pods of the control plane they are responsible for.
 This mechanism allows to scrape the metrics for the nodes/pods once for the whole cluster, and to have them distributed afterwards.
-For more details, continue reading [here](../development/monitoring-stack.md#overview).
+For more details, continue reading [here](../monitoring/README.md#prometheus).
 
 Typically, this is not necessary, but in case an extension wants to extend the configuration for this cache Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=cache`, for example:
 
@@ -48,7 +48,7 @@ spec:
 
 Another Prometheus instance in the `garden` namespace (called "seed Prometheus") fetches metrics and data from seed system components, kubelets, cAdvisors, and extensions.
 If you want your extension pods to be scraped then they must be annotated with `prometheus.io/scrape=true` and `prometheus.io/port=<metrics-port>`.
-For more details, continue reading [here](../development/monitoring-stack.md#overview).
+For more details, continue reading [here](../monitoring/README.md#seed-prometheus).
 
 Typically, this is not necessary, but in case an extension wants to extend the configuration for this seed Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=seed`, for example:
 
@@ -59,6 +59,35 @@ metadata:
   labels:
     prometheus: seed
   name: seed-my-component
+  namespace: garden
+spec:
+  selector:
+    matchLabels:
+      app: my-component
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(metric1|metric2|...)$
+      sourceLabels:
+      - __name__
+    port: metrics
+```
+
+### Aggregate Prometheus
+
+Another Prometheus instance in the `garden` namespace (called "aggregate Prometheus") stores pre-aggregated data from the cache Prometheus and shoot Prometheis.
+An ingress exposes this Prometheus instance allowing it to be scraped from another cluster.
+For more details, continue reading [here](../monitoring/README.md#aggregate-prometheus).
+
+Typically, this is not necessary, but in case an extension wants to extend the configuration for this aggregate Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=aggregate`, for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: aggregate
+  name: aggregate-my-component
   namespace: garden
 spec:
   selector:

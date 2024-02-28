@@ -38,8 +38,8 @@ func (p *prometheus) service() *corev1.Service {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{"prometheus": p.values.Name},
 			Ports: []corev1.ServicePort{{
-				Name:       "web",
-				Port:       80,
+				Name:       ServicePortName,
+				Port:       servicePort,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(port),
 			}},

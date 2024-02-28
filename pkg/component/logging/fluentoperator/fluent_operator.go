@@ -33,7 +33,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -333,12 +333,12 @@ func getLabels() map[string]string {
 
 func getFluentBitLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                                            v1beta1constants.DaemonSetNameFluentBit,
-		v1beta1constants.LabelRole:                                           v1beta1constants.LabelLogging,
-		v1beta1constants.GardenRole:                                          v1beta1constants.GardenRoleLogging,
-		v1beta1constants.LabelNetworkPolicyToDNS:                             v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort):    v1beta1constants.LabelNetworkPolicyAllowed,
-		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelApp:                             v1beta1constants.DaemonSetNameFluentBit,
+		v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
+		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
+		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
+		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100":                v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }

@@ -195,6 +195,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			prometheusoperator.ManagedResourceName,
 			"prometheus-cache",
 			"prometheus-seed",
+			"prometheus-aggregate",
 		}
 
 		test := func(managedResourceNames []string) {

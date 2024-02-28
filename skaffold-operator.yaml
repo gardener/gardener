@@ -86,6 +86,11 @@ build:
             - pkg/component/logging/fluentoperator
             - pkg/component/logging/fluentoperator/customresources
             - pkg/component/logging/vali
+            - pkg/component/logging/vali/constants
+            - pkg/component/monitoring
+            - pkg/component/monitoring/alertmanager
+            - pkg/component/monitoring/prometheus
+            - pkg/component/monitoring/prometheus/aggregate
             - pkg/component/monitoring/prometheus/cache
             - pkg/component/monitoring/prometheus/seed
             - pkg/component/monitoring/prometheusoperator
