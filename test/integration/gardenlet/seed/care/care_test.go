@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -80,6 +81,7 @@ var _ = Describe("Seed Care controller tests", func() {
 					},
 				},
 			},
+			MapperProvider: apiutil.NewDynamicRESTMapper,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
@@ -187,12 +186,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
-			opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-				return apiutil.NewDynamicRESTMapper(
-					config,
-					httpClient,
-				)
-			}
+			opts.MapperProvider = apiutil.NewDynamicRESTMapper
 
 			opts.Cache.DefaultNamespaces = getCacheConfig(cfg.TargetClientConnection.Namespaces)
 			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration

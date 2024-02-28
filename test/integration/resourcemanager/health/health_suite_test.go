@@ -16,7 +16,6 @@ package health_test
 
 import (
 	"context"
-	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -25,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -118,9 +116,7 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
-		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-			return apiutil.NewDynamicRESTMapper(config, httpClient)
-		},
+		MapperProvider: apiutil.NewDynamicRESTMapper,
 	})
 	Expect(err).NotTo(HaveOccurred())
 

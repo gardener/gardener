@@ -148,8 +148,12 @@ func (s *singleObject) GetInformer(ctx context.Context, obj client.Object, opts 
 	return cache.GetInformer(ctx, obj, opts...)
 }
 
-func (s *singleObject) RemoveInformer(_ context.Context, _ client.Object) error {
-	return nil
+func (s *singleObject) RemoveInformer(ctx context.Context, obj client.Object) error {
+	cache, err := s.getOrCreateCache(client.ObjectKeyFromObject(obj))
+	if err != nil {
+		return err
+	}
+	return cache.RemoveInformer(ctx, obj)
 }
 
 func (s *singleObject) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {

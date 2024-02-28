@@ -169,13 +169,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			RecoverPanic: ptr.To(true),
 		},
 
-		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-			return apiutil.NewDynamicRESTMapper(
-				config,
-				httpClient,
-			)
-		},
-
+		MapperProvider: apiutil.NewDynamicRESTMapper,
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				DisableFor: []client.Object{
@@ -340,12 +334,7 @@ func (g *garden) Start(ctx context.Context) error {
 			}, nil
 		}
 
-		opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-			return apiutil.NewDynamicRESTMapper(
-				config,
-				httpClient,
-			)
-		}
+		opts.MapperProvider = apiutil.NewDynamicRESTMapper
 	})
 	if err != nil {
 		return fmt.Errorf("failed creating garden cluster object: %w", err)
