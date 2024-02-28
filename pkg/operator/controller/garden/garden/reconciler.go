@@ -352,6 +352,16 @@ func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsM
 	return client.IgnoreNotFound(r.RuntimeClientSet.Client().Delete(ctx, secret))
 }
 
+func (r *Reconciler) generateObservabilityIngressPassword(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	_, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	return err
+}
+
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing
