@@ -25,6 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
+	"github.com/gardener/gardener/pkg/nodeagent/controller/hostnamecheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/lease"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/node"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -61,7 +62,14 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 	}
 
 	if err := (&healthcheck.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
-		return fmt.Errorf("failed adding healthcheck controller: %w", err)
+		return fmt.Errorf("failed adding health-check controller: %w", err)
+	}
+
+	if err := (&hostnamecheck.Reconciler{
+		HostName:      hostName,
+		CancelContext: cancel,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding hostname-check controller: %w", err)
 	}
 
 	return nil
