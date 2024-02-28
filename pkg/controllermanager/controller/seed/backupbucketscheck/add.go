@@ -96,8 +96,8 @@ func (r *Reconciler) BackupBucketPredicate() predicate.Predicate {
 			}
 			return lastErrorChanged(oldBackupBucket.Status.LastError, backupBucket.Status.LastError)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 

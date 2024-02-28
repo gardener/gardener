@@ -166,7 +166,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error {
 						return nil
 					}
@@ -184,7 +184,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch with optimistic locking", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error {
 						return nil
 					}
@@ -305,7 +305,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error { return nil }
 				}
 				_ = mutateFn(objCopy)()
@@ -325,7 +325,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch with optimistic locking", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error { return nil }
 				}
 				_ = mutateFn(objCopy)()

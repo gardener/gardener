@@ -37,7 +37,7 @@ func NewBuilder() *Builder {
 
 // WithSeedObject sets the seedObjectFunc attribute at the Builder.
 func (b *Builder) WithSeedObject(seedObject *gardencorev1beta1.Seed) *Builder {
-	b.seedObjectFunc = func(ctx context.Context) (*gardencorev1beta1.Seed, error) { return seedObject, nil }
+	b.seedObjectFunc = func(_ context.Context) (*gardencorev1beta1.Seed, error) { return seedObject, nil }
 	return b
 }
 

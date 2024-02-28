@@ -557,21 +557,21 @@ var _ = Describe("Options", func() {
 					return config, nil
 				})
 			}),
-			Entry("kubeconfig from env", func(config *rest.Config, opts *RESTOptions) func() {
+			Entry("kubeconfig from env", func(config *rest.Config, _ *RESTOptions) func() {
 				resetConfigFromFlags := test.WithVar(&BuildConfigFromFlags, func(string, string) (*rest.Config, error) {
 					return config, nil
 				})
 				resetGetenv := test.WithVar(&Getenv, func(string) string { return kubeconfig })
 				return func() { resetConfigFromFlags(); resetGetenv() }
 			}),
-			Entry("in-cluster", func(config *rest.Config, opts *RESTOptions) func() {
+			Entry("in-cluster", func(config *rest.Config, _ *RESTOptions) func() {
 				resetInClusterConfig := test.WithVar(&InClusterConfig, func() (*rest.Config, error) {
 					return config, nil
 				})
 				resetGetenv := test.WithVar(&Getenv, func(string) string { return "" })
 				return func() { resetInClusterConfig(); resetGetenv() }
 			}),
-			Entry("recommended kubeconfig", func(config *rest.Config, opts *RESTOptions) func() {
+			Entry("recommended kubeconfig", func(config *rest.Config, _ *RESTOptions) func() {
 				resetInClusterConfig := test.WithVar(&InClusterConfig, func() (*rest.Config, error) {
 					return nil, errors.New("error")
 				})

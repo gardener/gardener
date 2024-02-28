@@ -86,7 +86,7 @@ To do that reliably and to offer a certain quality of service, it requires to co
 the main components of a Kubernetes cluster (etcd, API server, controller manager, scheduler).
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			verflag.PrintAndExitIfRequested()
 
 			if err := opts.Validate(); err != nil {
@@ -224,7 +224,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 	}
 
 	// Initialize admission plugins
-	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
+	o.Recommended.ExtraAdmissionInitializers = func(_ *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				o.CoreInformerFactory,
@@ -312,7 +312,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(context genericapiserver.PostStartHookContext) error {
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
 		if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
@@ -330,7 +330,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(context genericapiserver.PostStartHookContext) error {
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(_ genericapiserver.PostStartHookContext) error {
 		if clusterIdentity, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {

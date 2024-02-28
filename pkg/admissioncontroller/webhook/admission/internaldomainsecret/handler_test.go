@@ -282,7 +282,7 @@ var _ = Describe("handler", func() {
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, limitOne client.ListOption) error {
+			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil
 			})
@@ -358,7 +358,7 @@ var _ = Describe("handler", func() {
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, limitOne client.ListOption) error {
+			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil
 			})

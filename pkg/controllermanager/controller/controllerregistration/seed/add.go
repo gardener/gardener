@@ -251,7 +251,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 // returns true when the Required condition's status has changed. For other events, false is returned.
 func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return true },
+		CreateFunc: func(_ event.CreateEvent) bool { return true },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			controllerInstallation, ok := e.ObjectNew.(*gardencorev1beta1.ControllerInstallation)
 			if !ok {
@@ -265,8 +265,8 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 
 			return v1beta1helper.IsControllerInstallationRequired(*oldControllerInstallation) != v1beta1helper.IsControllerInstallationRequired(*controllerInstallation)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 

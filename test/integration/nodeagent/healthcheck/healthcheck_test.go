@@ -126,7 +126,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 
 	It("Containerd health should be true", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(w, "OK")
 		}))
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
@@ -138,7 +138,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 
 	It("Containerd health should be false", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(w, "OK")
 		}))
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
@@ -161,7 +161,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 	})
 
 	It("Kubelet health should be true", func() {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(w, "OK")
 		}))
 
@@ -173,7 +173,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 	})
 
 	It("Node InternalIP went away and came back", func() {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(w, "OK")
 		}))
 
@@ -211,7 +211,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 
 	It("Kubelet toggles between Ready and NotReady to fast and triggers a reboot", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(w, "OK")
 		}))
 

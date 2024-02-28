@@ -57,7 +57,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -100,7 +100,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -141,7 +141,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -182,7 +182,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {

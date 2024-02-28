@@ -103,7 +103,7 @@ var _ = Describe("Associations", func() {
 				s.Spec.ExposureClassName = ptr.To(obj.GetName())
 			}, BeNil()),
 		Entry("should return error if the object is of not supported type",
-			&gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "backupbucket"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {}, HaveOccurred()),
+			&gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "backupbucket"}}, func(_ *gardencorev1beta1.Shoot, _ client.Object) {}, HaveOccurred()),
 	)
 
 	Describe("#DetermineSecretBindingAssociations", func() {

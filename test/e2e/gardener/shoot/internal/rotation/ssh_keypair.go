@@ -67,7 +67,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
 
 	By("Verify that old SSH key(s) are accepted")
-	Eventually(func(g Gomega) {
+	Eventually(func(_ Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -102,7 +102,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed(), "ssh-keypair secret should have been rotated")
 
 	By("Verify that new SSH keys are accepted")
-	Eventually(func(g Gomega) {
+	Eventually(func(_ Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())
 

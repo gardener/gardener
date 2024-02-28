@@ -31,6 +31,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/component/etcdcopybackupstask"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("EtcdCopyBackupsTask", func() {
@@ -110,7 +111,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 
 		It("should return error if EtcdCopyBackupsTask resource is not found", func() {
 			c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).Return(notFoundErr).AnyTimes()
-			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(notFoundErr))
+			Expect(etcdCopyBackupsTask.Wait(ctx)).To(BeNotFoundError())
 		})
 
 		It("should return error if observed generation is nil", func() {

@@ -343,7 +343,7 @@ var _ = Describe("Etcd", func() {
 
 				expectGetBackupSecret = func() {
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-						func(ctx context.Context, key client.ObjectKey, obj client.Object, opt ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 							return nil
 						},
@@ -438,7 +438,7 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should properly restore multi-node main etcd from backup if it is deployed with 1 replica", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
 						return &druidv1alpha1.Etcd{
 							Spec: druidv1alpha1.EtcdSpec{
 								Replicas: 1,
@@ -460,7 +460,7 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should not try to restore multi-node etcd from backup if it has alrady been scaled up", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
 						return &druidv1alpha1.Etcd{
 							Spec: druidv1alpha1.EtcdSpec{
 								Replicas: 3,
@@ -476,7 +476,7 @@ var _ = Describe("Etcd", func() {
 				It("should not try to restore multi-node etcd from backup if it has alrady been scaled down and the shoot is hibernated", func() {
 					botanist.Shoot.HibernationEnabled = true
 
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
 						return &druidv1alpha1.Etcd{
 							Spec: druidv1alpha1.EtcdSpec{
 								Replicas: 0,

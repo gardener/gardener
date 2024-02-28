@@ -68,7 +68,7 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 	cmd := &cobra.Command{
 		Use: "os-" + ctrlName + "-controller-manager",
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
 			if err := aggOption.Complete(); err != nil {

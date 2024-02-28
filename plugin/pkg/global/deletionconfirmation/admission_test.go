@@ -99,7 +99,7 @@ var _ = Describe("deleteconfirmation", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 				msg := `shoot.core.gardener.cloud "dummy" not found`
 
-				gardenClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf(msg)
 				})
 
@@ -150,7 +150,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
-					gardenClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, &gardencorev1beta1.Shoot{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      shoot.Name,
@@ -206,7 +206,7 @@ var _ = Describe("deleteconfirmation", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 				msg := `project.core.gardenerutils.cloud "dummy" not found`
 
-				gardenClient.AddReactor("get", "projects", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenClient.AddReactor("get", "projects", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf(msg)
 				})
 
@@ -256,7 +256,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should succeed for true annotation value (live lookup)", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					gardenClient.AddReactor("get", "projects", func(action testing.Action) (bool, runtime.Object, error) {
+					gardenClient.AddReactor("get", "projects", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, &gardencorev1beta1.Project{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: project.Name,
@@ -311,7 +311,7 @@ var _ = Describe("deleteconfirmation", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 				msg := `shoot.core.gardener.cloud "dummyName" not found`
 
-				gardenClient.AddReactor("get", "shootstates", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenClient.AddReactor("get", "shootstates", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf(msg)
 				})
 
@@ -362,7 +362,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
-					gardenClient.AddReactor("get", "shootstates", func(action testing.Action) (bool, runtime.Object, error) {
+					gardenClient.AddReactor("get", "shootstates", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, &gardencorev1beta1.ShootState{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      shootState.Name,

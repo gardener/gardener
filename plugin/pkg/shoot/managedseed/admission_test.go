@@ -144,7 +144,7 @@ var _ = Describe("ManagedSeed", func() {
 
 		Context("update", func() {
 			It("should forbid Shoot update if the Shoot enables the nginx-ingress addon", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -156,7 +156,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid Shoot update if the Shoot does not enable VPA", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -168,7 +168,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow Shoot update if the spec is valid", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -178,7 +178,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should fail with an error different from Invalid if retrieving the ManagedSeed fails with an error different from NotFound", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
 				})
 				oldShoot := shoot.DeepCopy()
@@ -189,7 +189,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid Shoot if the spec.Networking.Nodes is changes", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -207,7 +207,7 @@ var _ = Describe("ManagedSeed", func() {
 						Object: &gardenletv1alpha1.GardenletConfiguration{},
 					},
 				}
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -219,7 +219,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid Shoot update when zones have changed but still configured in ManagedSeed", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -235,7 +235,7 @@ var _ = Describe("ManagedSeed", func() {
 			It("should allow Shoot update when zones were not changed", func() {
 				// Create zone name mismatch between ManagedSeed and Shoot which was once tolerated, see https://github.com/gardener/gardener/pull/7024.
 				gardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-a", "zone-b", "2"}
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -246,7 +246,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			It("should allow Shoot update when zones have changed which are not registered in seed", func() {
 				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -258,7 +258,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			It("should allow Shoot update when new zone is added", func() {
 				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -269,7 +269,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow Shoot update", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 				oldShoot := shoot.DeepCopy()
@@ -280,7 +280,7 @@ var _ = Describe("ManagedSeed", func() {
 
 		Context("delete", func() {
 			It("should forbid the Shoot deletion if a ManagedSeed referencing the Shoot exists", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -290,7 +290,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow the Shoot deletion if a ManagedSeed referencing the Shoot does not exist", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
 				})
 
@@ -300,7 +300,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should fail with an error different from Forbidden if retrieving the ManagedSeed fails with an error different from NotFound", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
 				})
 
@@ -334,10 +334,10 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid multiple Shoots deletion if a ManagedSeed referencing any of the Shoots exists", func() {
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				coreClient.AddReactor("list", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot1, *anotherShoot}}, nil
 				})
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
 
@@ -346,10 +346,10 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow multiple Shoots deletion if no ManagedSeeds referencing the Shoots exist", func() {
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				coreClient.AddReactor("list", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot1, *anotherShoot}}, nil
 				})
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
 				})
 

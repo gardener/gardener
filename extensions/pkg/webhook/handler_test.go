@@ -138,7 +138,7 @@ var _ = Describe("Handler", func() {
 		It("should return a patch response if the resource was changed by mutator", func() {
 			// Create mock mutator
 			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
-			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb client.Object) error {
+			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(_ context.Context, obj, _ client.Object) error {
 				obj.SetAnnotations(map[string]string{"foo": "bar"})
 				return nil
 			})

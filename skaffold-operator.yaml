@@ -3,6 +3,16 @@ kind: Config
 metadata:
   name: gardener-operator
 build:
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+      - name: version
+        envTemplate:
+          template: "{{.GARDENER_VERSION}}"
+      - name: sha
+        gitCommit:
+          variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/operator
       ko:

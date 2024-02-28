@@ -345,7 +345,7 @@ var _ = Describe("ResourceManager", func() {
 						}),
 
 						// delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.DeleteOption) error {
 							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
 							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
 							return nil
@@ -565,7 +565,7 @@ var _ = Describe("ResourceManager", func() {
 						}),
 
 						// delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.DeleteOption) error {
 							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
 							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
 							return fakeErr

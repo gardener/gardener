@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&tokenrequestor.Reconciler{
 		Clock:           fakeClock,
-		JitterFunc:      func(duration time.Duration, f float64) time.Duration { return time.Second },
+		JitterFunc:      func(_ time.Duration, _ float64) time.Duration { return time.Second },
 		ConcurrentSyncs: 5,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 

@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("RBAC testing", func() {
 
 	f := framework.NewGardenerFramework(nil)
 
-	f.Release().CIt("Should have rbac enabled", func(ctx context.Context) {
+	f.Release().CIt("Should have rbac enabled", func(_ context.Context) {
 		apiGroups, err := f.GardenClient.Kubernetes().Discovery().ServerGroups()
 		framework.ExpectNoError(err)
 

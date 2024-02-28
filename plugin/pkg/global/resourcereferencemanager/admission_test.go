@@ -370,7 +370,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should accept because all referenced objects have been found (controller deployment looked up live)", func() {
-				gardenCoreClient.AddReactor("get", "controllerdeployments", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("get", "controllerdeployments", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &controllerDeployment, nil
 				})
 
@@ -385,7 +385,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced secret does not exist", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
-				gardenCoreClient.AddReactor("get", "controllerdeployments", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("get", "controllerdeployments", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
@@ -411,7 +411,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should accept because all referenced objects have been found (secret looked up live)", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: secret.Namespace,
@@ -430,7 +430,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the referenced secret does not exist", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
@@ -805,7 +805,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				}
 
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
@@ -831,7 +831,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				}
 
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
@@ -860,7 +860,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				now := metav1.Now()
 				coreShoot.DeletionTimestamp = &now
 
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
@@ -884,7 +884,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				}
 
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, nil
 				})
 
@@ -908,7 +908,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should reject if the referred Secret is not found", func() {
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf("secret not found")
 				})
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -922,7 +922,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 
 			It("should accept (direct secret lookup)", func() {
-				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: secret.Namespace,
@@ -954,7 +954,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupentries", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{}}, nil
 				})
 
@@ -973,7 +973,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				backupEntry2.Name = "another-name"
 				backupEntry2.Namespace = "another-namespace"
 
-				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupentries", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{backupEntry, *backupEntry2}}, nil
 				})
 
@@ -989,7 +989,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
-				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupentries", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("error")
 				})
 
@@ -1013,11 +1013,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				backupEntry2.Namespace = "another-namespace"
 				backupEntry2.Spec.BucketName = backupBucket2.Name
 
-				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupentries", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{backupEntry, *backupEntry2}}, nil
 				})
 
-				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupBucketList{Items: []gardencorev1beta1.BackupBucket{*backupBucket2, backupBucket}}, nil
 				})
 
@@ -1042,11 +1042,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				backupEntry2.Namespace = "another-namespace"
 				backupEntry2.Spec.BucketName = "some-other-bucket"
 
-				gardenCoreClient.AddReactor("list", "backupentries", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupentries", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{}}, nil
 				})
 
-				gardenCoreClient.AddReactor("list", "backupbuckets", func(action testing.Action) (bool, runtime.Object, error) {
+				gardenCoreClient.AddReactor("list", "backupbuckets", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &gardencorev1beta1.BackupBucketList{Items: []gardencorev1beta1.BackupBucket{*backupBucket2, backupBucket}}, nil
 				})
 

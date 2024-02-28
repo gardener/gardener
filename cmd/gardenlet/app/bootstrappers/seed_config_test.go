@@ -213,7 +213,7 @@ var _ = Describe("SeedConfigChecker", func() {
 		})
 
 		DescribeTable("validate seed network configuration",
-			func(seedConfig *config.SeedConfig, shootInfoData map[string]string, secretRetrievalExpected bool, matcher gomegatypes.GomegaMatcher) {
+			func(seedConfig *config.SeedConfig, shootInfoData map[string]string, matcher gomegatypes.GomegaMatcher) {
 				checker.SeedConfig = seedConfig
 
 				shootInfoConfigMap.Data = shootInfoData
@@ -222,49 +222,49 @@ var _ = Describe("SeedConfigChecker", func() {
 				Expect(checker.Start(ctx)).To(matcher)
 			},
 
-			Entry("no seed configuration", nil, shootInfoWithNodes, false, BeNil()),
+			Entry("no seed configuration", nil, shootInfoWithNodes, BeNil()),
 			Entry("correct seed configuration with nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithNodes, true, BeNil()),
+			}}}}, shootInfoWithNodes, BeNil()),
 			Entry("correct seed configuration without nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithoutNodes, true, BeNil()),
+			}}}}, shootInfoWithoutNodes, BeNil()),
 			Entry("correct seed configuration with nodes but no nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithoutNodes, true, BeNil()),
+			}}}}, shootInfoWithoutNodes, BeNil()),
 			Entry("correct seed configuration without nodes but nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithNodes, true, BeNil()),
+			}}}}, shootInfoWithNodes, BeNil()),
 			Entry("correct seed configuration with incorrect nodes but no nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &otherCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithoutNodes, true, BeNil()),
+			}}}}, shootInfoWithoutNodes, BeNil()),
 			Entry("correct seed configuration without nodes but incorrect nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithIncorrectNodes, true, BeNil()),
+			}}}}, shootInfoWithIncorrectNodes, BeNil()),
 			Entry("incorrect node cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &otherCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithNodes, true, HaveOccurred()),
+			}}}}, shootInfoWithNodes, HaveOccurred()),
 			Entry("incorrect pod cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     otherCIDR,
 				Services: serviceCIDR,
-			}}}}, shootInfoWithNodes, true, HaveOccurred()),
+			}}}}, shootInfoWithNodes, HaveOccurred()),
 			Entry("incorrect service cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: otherCIDR,
-			}}}}, shootInfoWithNodes, true, HaveOccurred()),
+			}}}}, shootInfoWithNodes, HaveOccurred()),
 		)
 
 		DescribeTable("validate seed network configuration heuristically",

@@ -730,7 +730,7 @@ func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMach
 		// auto-update strategy: "major"
 		getHigherVersionAutoUpdate = v1beta1helper.GetOverallLatestVersionForAutoUpdate
 		// cannot force update the overall latest version if it is expired
-		getHigherVersionForceUpdate = func(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
+		getHigherVersionForceUpdate = func(_ []gardencorev1beta1.ExpirableVersion, _ string) (bool, string, error) {
 			return false, "", fmt.Errorf("either the machine image %q is reaching end of life and migration to another machine image is required or there is a misconfiguration in the CloudProfile. If it is the latter, make sure the machine image in the CloudProfile has at least one version that is not expired, not in preview and greater or equal to the current Shoot image version %q", shootMachineImage.Name, *shootMachineImage.Version)
 		}
 	}

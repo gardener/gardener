@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
-		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+		MapperProvider: func(config *rest.Config, _ *http.Client) (meta.RESTMapper, error) {
 			return thirdpartyapiutil.NewDynamicRESTMapper(config)
 		},
 	})

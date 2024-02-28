@@ -219,7 +219,7 @@ func testCache(
 
 	By("cache is re-created")
 	startChan2 := make(chan struct{})
-	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(_ context.Context) error {
 		startChan2 <- struct{}{}
 		return nil
 	})

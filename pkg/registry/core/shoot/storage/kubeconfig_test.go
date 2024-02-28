@@ -149,7 +149,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 			},
 		}
 
-		createValidation = func(ctx context.Context, obj runtime.Object) error { return nil }
+		createValidation = func(_ context.Context, _ runtime.Object) error { return nil }
 		shoot = &gardencore.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 			Status: gardencore.ShootStatus{
@@ -197,7 +197,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		})
 
 		It("returns an error if create validation fails", func() {
-			createValidation = func(ctx context.Context, obj runtime.Object) error {
+			createValidation = func(_ context.Context, _ runtime.Object) error {
 				return errors.New("some error")
 			}
 		})

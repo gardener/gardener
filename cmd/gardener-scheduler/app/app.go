@@ -60,7 +60,7 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			log, err := cmdutils.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err

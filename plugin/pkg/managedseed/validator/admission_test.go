@@ -301,7 +301,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
 			})
 
@@ -481,7 +481,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					}
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -539,7 +539,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					}
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -600,7 +600,7 @@ var _ = Describe("ManagedSeed", func() {
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 					Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
@@ -611,7 +611,7 @@ var _ = Describe("ManagedSeed", func() {
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -637,7 +637,7 @@ var _ = Describe("ManagedSeed", func() {
 					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
 					gardenletConfig.SeedConfig.Spec.Provider.Zones = append(gardenletConfig.SeedConfig.Spec.Provider.Zones, "zone-foo")
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -667,7 +667,7 @@ var _ = Describe("ManagedSeed", func() {
 					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar", "zone-foobar"}
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 

@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // RoleBindingPredicate filters for events for RoleBindings that we might need to reconcile back.
 func (r *Reconciler) RoleBindingPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return false },
+		CreateFunc: func(_ event.CreateEvent) bool { return false },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// enqueue on periodic cache resyncs
 			if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
@@ -77,7 +77,7 @@ func (r *Reconciler) RoleBindingPredicate() predicate.Predicate {
 			return !apiequality.Semantic.DeepEqual(oldRoleBinding.RoleRef, roleBinding.RoleRef) ||
 				!apiequality.Semantic.DeepEqual(oldRoleBinding.Subjects, roleBinding.Subjects)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return true },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }

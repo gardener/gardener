@@ -558,7 +558,7 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 			secretsManager,
 			resourceManager,
 			r.GardenNamespace,
-			func(ctx context.Context) (int32, error) {
+			func(_ context.Context) (int32, error) {
 				return 2, nil
 			},
 			func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })

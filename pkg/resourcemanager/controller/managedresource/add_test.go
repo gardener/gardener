@@ -98,7 +98,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})
@@ -120,7 +120,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})

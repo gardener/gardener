@@ -100,14 +100,14 @@ var _ = Describe("GardenClientMap", func() {
 		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because of unpopulated token", func() {
 			fakeErr := fmt.Errorf("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return nil
 				})
-			LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(_ string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -121,7 +121,7 @@ var _ = Describe("GardenClientMap", func() {
 		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because NewClientFromSecretObject fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      key.Name,
@@ -131,11 +131,11 @@ var _ = Describe("GardenClientMap", func() {
 					}).DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
-			LookupHost = func(host string) ([]string, error) {
+			LookupHost = func(_ string) ([]string, error) {
 				return nil, fakeErr
 			}
 
-			NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(secret.Namespace).To(Equal("garden"))
 				Expect(secret.Name).To(Equal("gardener"))
 				return nil, fakeErr
@@ -150,7 +150,7 @@ var _ = Describe("GardenClientMap", func() {
 			fakeCS := kubernetesfake.NewClientSet()
 
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return nil
 				})
 
@@ -174,7 +174,7 @@ var _ = Describe("GardenClientMap", func() {
 			fakeCS := kubernetesfake.NewClientSet()
 			gomock.InOrder(
 				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						(&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      key.Name,
@@ -185,7 +185,7 @@ var _ = Describe("GardenClientMap", func() {
 						return nil
 					}),
 				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						(&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      key.Name,
@@ -231,7 +231,7 @@ var _ = Describe("GardenClientMap", func() {
 		It("should fail if Get gardener-internal Secret fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return fakeErr
 				})
 
@@ -244,12 +244,12 @@ var _ = Describe("GardenClientMap", func() {
 			test := func(secretName string) {
 				gomock.InOrder(
 					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
 							return nil
 						}),
 					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
 							return nil
 						}),
@@ -271,7 +271,7 @@ var _ = Describe("GardenClientMap", func() {
 			})
 
 			It("when out-of-cluster", func() {
-				LookupHost = func(host string) ([]string, error) {
+				LookupHost = func(_ string) ([]string, error) {
 					return nil, nil
 				}
 				test("gardener")

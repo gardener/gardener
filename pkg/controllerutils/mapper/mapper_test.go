@@ -100,7 +100,7 @@ var _ = Describe("Controller Mapper", func() {
 		It("should find no objects for the passed cluster because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
-					GenericFunc: func(event event.GenericEvent) bool {
+					GenericFunc: func(_ event.GenericEvent) bool {
 						return false
 					},
 				},

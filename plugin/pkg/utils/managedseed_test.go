@@ -64,7 +64,7 @@ var _ = Describe("ManagedSeed utils", func() {
 		})
 
 		It("should return the ManagedSeed for the given shoot namespace and name, if it exists", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 			})
 
@@ -74,7 +74,7 @@ var _ = Describe("ManagedSeed utils", func() {
 		})
 
 		It("should return nil if a ManagedSeed does not exist", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
 			})
 
@@ -84,7 +84,7 @@ var _ = Describe("ManagedSeed utils", func() {
 		})
 
 		It("should fail if more than one ManagedSeeds exist", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *managedSeed}}, nil
 			})
 
@@ -93,7 +93,7 @@ var _ = Describe("ManagedSeed utils", func() {
 		})
 
 		It("should fail if listing the ManagedSeeds fails", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, nil, errors.New("error")
 			})
 

@@ -63,7 +63,7 @@ const internalVersionErrorMsg = "must not use apiVersion 'internal'"
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootValidator, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootValidator, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

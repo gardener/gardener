@@ -583,7 +583,7 @@ func newSeedWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.Service{}}},
 		Target:   extensionswebhook.TargetSeed,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 
@@ -594,7 +594,7 @@ func newShootMutatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, err
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 
@@ -606,7 +606,7 @@ func newShootValidatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, e
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 

@@ -128,7 +128,7 @@ var _ = Describe("chart applier", func() {
 				}
 
 				m := kubernetes.MergeFuncs{
-					corev1.SchemeGroupVersion.WithKind("ConfigMap").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+					corev1.SchemeGroupVersion.WithKind("ConfigMap").GroupKind(): func(newObj, _ *unstructured.Unstructured) {
 						newObj.SetAnnotations(map[string]string{"new": "new-value"})
 					},
 				}

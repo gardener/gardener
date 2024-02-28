@@ -162,11 +162,11 @@ var _ = Describe("Aggregator", func() {
 			ctx, cancel := context.WithCancel(ctx)
 			testChan := make(chan struct{})
 
-			fallback.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			fallback.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})
-			secretCache.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			secretCache.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})

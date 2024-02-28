@@ -284,10 +284,9 @@ var _ = Describe("migration", func() {
 			})
 
 			It("should return an error if backupentry is not found", func() {
-				backupEntryNotFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "backupentry")
-				backupEntry.EXPECT().Get(ctx).Return(nil, backupEntryNotFoundErr)
+				backupEntry.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "backupentry"))
 				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
-				Expect(err).To(MatchError(backupEntryNotFoundErr))
+				Expect(err).To(BeNotFoundError())
 				Expect(copyRequired).To(BeFalse())
 			})
 
@@ -314,10 +313,9 @@ var _ = Describe("migration", func() {
 			})
 
 			It("should return error if source backupentry does not exist", func() {
-				sourceBackupEntryNotFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "source-backupentry")
-				sourceBackupEntry.EXPECT().Get(ctx).Return(nil, sourceBackupEntryNotFoundErr)
+				sourceBackupEntry.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "source-backupentry"))
 				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
-				Expect(err).To(MatchError(sourceBackupEntryNotFoundErr))
+				Expect(err).To(BeNotFoundError())
 				Expect(copyRequired).To(BeFalse())
 			})
 

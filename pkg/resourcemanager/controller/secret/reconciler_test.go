@@ -98,7 +98,7 @@ var _ = Describe("SecretReconciler", func() {
 			secret.Finalizers = []string{classFilter.FinalizerName()}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -116,7 +116,7 @@ var _ = Describe("SecretReconciler", func() {
 
 		It("should do nothing if secret has no finalizer", func() {
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
