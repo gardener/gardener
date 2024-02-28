@@ -72,7 +72,7 @@ KIND_VERSION ?= v0.22.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.29.2
 # renovate: datasource=github-releases depName=prometheus/prometheus
-PROMTOOL_VERSION ?= 2.50.0
+PROMTOOL_VERSION ?= 2.50.1
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
 PROTOC_VERSION ?= 25.3
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
