@@ -89,8 +89,8 @@ var _ = Describe("helper", func() {
 	})
 
 	Describe("#GetMachineDeploymentClusterAutoscalerAnnotations", func() {
-		It("should return empty map when options passed is nil", func() {
-			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(nil)).To(Equal(map[string]string{}))
+		It("should return nil when options passed is nil", func() {
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(nil)).To(BeNil())
 		})
 
 		It("should return empty map when an empty map is passed", func() {

@@ -1389,7 +1389,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Describe("clusterAutoscaler options validation", func() {
+			Describe("ClusterAutoscaler options validation", func() {
 				var (
 					negativeDuration = metav1.Duration{Duration: -time.Second}
 					positiveDuration = metav1.Duration{Duration: time.Second}
