@@ -26,4 +26,4 @@ groups:
     annotations:
       summary: A node is not healthy.
       description: >
-        Node {{$labels.node}} in seed {{$externalLabels.seed}} in landscape {{$externalLabels.landscape}} has been marked as not healthy for at least 5 times in the past 30 mins.
+        Node {{$labels.node}} in seed {{$externalLabels.seed}} in landscape {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 mins.
