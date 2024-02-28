@@ -16,6 +16,8 @@ package gardener
 
 import (
 	"fmt"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 const (
@@ -48,6 +50,16 @@ const (
 	// configured internal domain already contains it, it won't be added twice. If it does not contain it, it will be
 	// appended.
 	InternalDomainKey = "internal"
+
+	// AnnotationKeyIPStack is the annotation key to set the IP stack for a DNSRecord.
+	// This can be used to create different type of records, e.g. A vs. AAAA records.
+	AnnotationKeyIPStack = "dns.gardener.cloud/ip-stack"
+	// AnnotationValueIPStackIPv4 is the annotation value for ipv4-only.
+	AnnotationValueIPStackIPv4 = "ipv4"
+	// AnnotationValueIPStackIPv6 is the annotation value for ipv6-only.
+	AnnotationValueIPStackIPv6 = "ipv6"
+	// AnnotationValueIPStackIPDualStack is the annotation value for dual-stack, i.e. ipv4 and ipv6.
+	AnnotationValueIPStackIPDualStack = "dual-stack"
 )
 
 // GetDomainInfoFromAnnotations returns the provider, domain, and zones that are specified in the given annotations.
@@ -102,4 +114,20 @@ func GenerateDNSProviderName(secretName, providerType string) string {
 	default:
 		return ""
 	}
+}
+
+func getIPStackForFamilies(ipFamilies []gardencorev1beta1.IPFamily) string {
+	if gardencorev1beta1.IsIPv4SingleStack(ipFamilies) {
+		return AnnotationValueIPStackIPv4
+	}
+	if gardencorev1beta1.IsIPv6SingleStack(ipFamilies) {
+		return AnnotationValueIPStackIPv6
+	}
+	if len(ipFamilies) == 2 &&
+		((ipFamilies[0] == gardencorev1beta1.IPFamilyIPv4 && ipFamilies[1] == gardencorev1beta1.IPFamilyIPv6) ||
+			(ipFamilies[0] == gardencorev1beta1.IPFamilyIPv6 && ipFamilies[1] == gardencorev1beta1.IPFamilyIPv4)) {
+		return AnnotationValueIPStackIPDualStack
+	}
+	// Fall-back to IPv4 per default
+	return AnnotationValueIPStackIPv4
 }

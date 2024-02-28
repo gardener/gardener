@@ -755,3 +755,13 @@ func DefaultGVKsForEncryption() []schema.GroupVersionKind {
 func DefaultResourcesForEncryption() sets.Set[string] {
 	return sets.New(corev1.Resource("secrets").String())
 }
+
+// GetIPStackForShoot returns the value for the AnnotationKeyIPStack annotation based on the given shoot.
+// It falls back to IPv4 if no IP families are available, e.g. in a workerless shoot cluster.
+func GetIPStackForShoot(shoot *gardencorev1beta1.Shoot) string {
+	var ipFamilies []gardencorev1beta1.IPFamily
+	if networking := shoot.Spec.Networking; networking != nil {
+		ipFamilies = networking.IPFamilies
+	}
+	return getIPStackForFamilies(ipFamilies)
+}
