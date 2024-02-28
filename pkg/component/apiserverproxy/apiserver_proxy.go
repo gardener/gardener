@@ -172,7 +172,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
