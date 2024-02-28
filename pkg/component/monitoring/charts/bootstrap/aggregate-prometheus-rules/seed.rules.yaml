@@ -18,7 +18,7 @@ groups:
   - alert: NodeNotHealthy
     expr: |
       count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!="ToBeDeletedByClusterAutoscaler", key!="node.gardener.cloud/critical-components-not-ready"}))[30m:]) > 5
-    for: 10m
+    for: 0m
     labels:
       severity: warning
       type: seed
@@ -26,4 +26,4 @@ groups:
     annotations:
       summary: A node is not healthy.
       description: >
-        Node {{$labels.node}} in seed {{$labels.name}} in landscape {{$externalLabels.landscape}} is not healthy for over 10 min.
+        Node {{$labels.node}} in seed {{$externalLabels.seed}} in landscape {{$externalLabels.landscape}} has been marked as not healthy for at least 5 times in the past 30 mins.
