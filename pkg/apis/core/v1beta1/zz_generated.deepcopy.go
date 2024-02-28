@@ -5045,6 +5045,11 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.TargetCPUPercentile != nil {
+		in, out := &in.TargetCPUPercentile, &out.TargetCPUPercentile
+		*out = new(float64)
+		**out = **in
+	}
 	return
 }
 

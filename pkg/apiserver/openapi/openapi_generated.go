@@ -8477,6 +8477,13 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"targetCPUPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation. Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations. (default: 0.9)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
