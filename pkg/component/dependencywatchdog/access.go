@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -102,9 +101,25 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 
 // TODO(aaronfern): Remove this function after v1.93 got released.
 func (d *dependencyWatchdogAccess) DeployMigrate(ctx context.Context) error {
-	caSecret := &corev1.Secret{}
-	if err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: v1beta1constants.SecretNameCACluster}, caSecret); err != nil {
-		return fmt.Errorf("error in fetching secret %s: %w", v1beta1constants.SecretNameCACluster, err)
+	secretList := &corev1.SecretList{}
+	if err := d.client.List(ctx, secretList, client.InNamespace(d.namespace), client.MatchingLabels{
+		secretsmanager.LabelKeyBundleFor:       v1beta1constants.SecretNameCACluster,
+		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+	}); err != nil {
+		return err
+	}
+
+	// Find the newest secret in system (there could be multiple bundle secrets in case a rotation is going on).
+	var caSecret *corev1.Secret
+	for _, secret := range secretList.Items {
+		if caSecret == nil || caSecret.CreationTimestamp.Time.Before(secret.CreationTimestamp.Time) {
+			caSecret = secret.DeepCopy()
+		}
+	}
+
+	if caSecret == nil {
+		return fmt.Errorf("could not find CA bundle secret in namespace %s", d.namespace)
 	}
 
 	if err := d.createShootAccessSecret(ctx, caSecret); err != nil {
