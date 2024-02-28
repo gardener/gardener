@@ -16,18 +16,13 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	"github.com/gardener/gardener/pkg/component/shared"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultPlutono returns a deployer for Plutono.
@@ -53,33 +48,14 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 
 // DeployPlutono deploys the plutono in the Seed cluster.
 func (b *Botanist) DeployPlutono(ctx context.Context) error {
+	// disable plutono if no observability components are needed
+	if !b.Operation.WantsObservabilityComponents() {
+		return b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx)
+	}
+
 	if b.ControlPlaneWildcardCert != nil {
 		b.Operation.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
 	}
-	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
-	if !b.Operation.WantsPlutono() {
-		if err := b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx); err != nil {
-			return err
-		}
 
-		secretName := gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixMonitoring)
-		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
-	}
-
-	if err := b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx); err != nil {
-		return err
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
-	}
-
-	return b.syncShootCredentialToGarden(
-		ctx,
-		gardenerutils.ShootProjectSecretSuffixMonitoring,
-		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
-		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
-		credentialsSecret.Data,
-	)
+	return b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx)
 }

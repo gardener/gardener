@@ -38,10 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Plutono", func() {
@@ -51,8 +47,6 @@ var _ = Describe("Plutono", func() {
 		gardenClient  client.Client
 		seedClient    client.Client
 		seedClientSet kubernetes.Interface
-
-		sm secretsmanager.Interface
 
 		mockPlutono *mockplutono.MockInterface
 
@@ -64,7 +58,6 @@ var _ = Describe("Plutono", func() {
 		shootName        = "bar"
 
 		shootPurposeEvaluation = gardencorev1beta1.ShootPurposeEvaluation
-		shootPurposeTesting    = gardencorev1beta1.ShootPurposeTesting
 	)
 
 	BeforeEach(func() {
@@ -77,27 +70,14 @@ var _ = Describe("Plutono", func() {
 			WithClient(seedClient).
 			WithRESTConfig(&rest.Config{}).
 			Build()
-		sm = fakesecretsmanager.New(seedClient, seedNamespace)
-
-		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
-		Expect(seedClient.Create(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "observability-ingress-users",
-				Namespace:   seedNamespace,
-				Labels:      map[string]string{"gardener.cloud/role": "monitoring"},
-				Annotations: map[string]string{"url": "https://gu-foo--bar.example.com"},
-			},
-			Data: map[string][]byte{"username": {}, "password": {}, "auth": {}},
-		})).To(Succeed())
 
 		mockPlutono = mockplutono.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				GardenClient:   gardenClient,
-				SeedClientSet:  seedClientSet,
-				SecretsManager: sm,
-				Config:         &config.GardenletConfiguration{},
+				GardenClient:  gardenClient,
+				SeedClientSet: seedClientSet,
+				Config:        &config.GardenletConfiguration{},
 				Garden: &garden.Garden{
 					Project: &gardencorev1beta1.Project{},
 				},
@@ -143,30 +123,15 @@ var _ = Describe("Plutono", func() {
 	})
 
 	Describe("#DeployPlutono", func() {
-		It("should successfully deploy plutono sync the ingress credentials for the users observability to the garden project namespace", func() {
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
+		It("should successfully deploy plutono", func() {
 			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
-
-			secret := &corev1.Secret{}
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
-			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar."))
-			Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
-			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
 		})
 
-		It("should cleanup the secrets when shoot purpose is changed", func() {
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
-			mockPlutono.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
-			Expect(*botanist.Shoot.GetInfo().Spec.Purpose).To(Equal(shootPurposeEvaluation))
-
-			botanist.Shoot.Purpose = shootPurposeTesting
+		It("should successfully destroy plutono", func() {
+			botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
 			mockPlutono.EXPECT().Destroy(ctx)
 			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
-
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 })

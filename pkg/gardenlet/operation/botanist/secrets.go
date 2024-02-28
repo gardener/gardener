@@ -67,6 +67,12 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		taskFns = append(taskFns, b.deleteSSHKeypair)
 	}
 
+	if b.WantsObservabilityComponents() {
+		taskFns = append(taskFns, b.generateObservabilityIngressPassword)
+	} else {
+		taskFns = append(taskFns, b.deleteObservabilityIngressPassword)
+	}
+
 	return flow.Sequential(taskFns...)(ctx)
 }
 
@@ -295,6 +301,30 @@ func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) generateObservabilityIngressPassword(ctx context.Context) error {
+	secret, err := b.SecretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngressUsers,
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
+	return b.syncShootCredentialToGarden(
+		ctx,
+		gardenerutils.ShootProjectSecretSuffixMonitoring,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
+		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
+		secret.Data,
+	)
+}
+
+func (b *Botanist) deleteObservabilityIngressPassword(ctx context.Context) error {
+	return b.deleteShootCredentialFromGarden(ctx, gardenerutils.ShootProjectSecretSuffixMonitoring)
 }
 
 // quotaExceededRegex is used to check if an error occurred due to infrastructure quota limits.

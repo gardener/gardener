@@ -34,6 +34,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -87,11 +88,19 @@ var _ = Describe("Secrets", func() {
 				SeedClientSet:  seedClientSet,
 				ShootClientSet: shootClientSet,
 				SecretsManager: fakeSecretsManager,
+				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 				},
 			},
 		}
+		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+			Spec: gardencorev1beta1.SeedSpec{
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "example.com",
+				},
+			},
+		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
@@ -103,6 +112,9 @@ var _ = Describe("Secrets", func() {
 						{Name: "foo"},
 					},
 				},
+			},
+			Status: gardencorev1beta1.ShootStatus{
+				TechnicalID: seedNamespace,
 			},
 		})
 		botanist.Shoot.SetShootState(&gardencorev1beta1.ShootState{})
@@ -214,6 +226,50 @@ var _ = Describe("Secrets", func() {
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(BeNotFoundError())
 				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(BeNotFoundError())
+			})
+
+			Context("observability credentials", func() {
+				It("should generate the password and sync it to the garden", func() {
+					Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+					secretList := &corev1.SecretList{}
+					Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+						"name":       "observability-ingress-users",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Immutable).To(PointTo(BeTrue()))
+					Expect(secretList.Items[0].Labels).To(And(
+						HaveKeyWithValue("name", "observability-ingress-users"),
+						HaveKeyWithValue("managed-by", "secrets-manager"),
+						HaveKeyWithValue("persist", "true"),
+						HaveKeyWithValue("rotation-strategy", "inplace"),
+						HaveKey("checksum-of-config"),
+						HaveKey("last-rotation-initiation-time"),
+					))
+
+					gardenSecret := &corev1.Secret{}
+					Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".monitoring"), gardenSecret)).To(Succeed())
+					Expect(gardenSecret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar.example.com"))
+					Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
+					Expect(gardenSecret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
+				})
+
+				It("should not generate the password in case no observability components are needed", func() {
+					botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
+
+					Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+					secretList := &corev1.SecretList{}
+					Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+						"name":       "observability-ingress-users",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(BeEmpty())
+
+					gardenSecret := &corev1.Secret{}
+					Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".monitoring"), gardenSecret)).To(BeNotFoundError())
+				})
 			})
 		})
 
