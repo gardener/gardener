@@ -50,3 +50,6 @@ GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   SEED_VALUES=$seed_values \
   SKAFFOLD_PUSH=true \
   skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"
+
+echo "Deploying additional kyverno policies"
+kubectl --server-side=true --force-conflicts=true --kubeconfig="$seed_kubeconfig" apply -k "$SCRIPT_DIR/../registry-seed/kyverno-policies"
