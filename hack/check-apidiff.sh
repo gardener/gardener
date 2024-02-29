@@ -43,7 +43,7 @@ exported_pkg=(
   gardener/gardener/pkg/extensions/
   gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
   gardener/gardener/pkg/logger/
-  gardener/gardener/pkg/mock/controller-runtime/client/
+  gardener/gardener/third_party/mock/controller-runtime/client/
   gardener/gardener/pkg/component/extensions/operatingsystemconfig/
   gardener/gardener/pkg/operator/apis/config/v1alpha1
   gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/

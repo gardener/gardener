@@ -1,6 +1,6 @@
 rules:
 # allow reusing config codecs with operation package
-# Note: this will only allow sharing exactly these packages but no other packages in pkg/operation/, this is still
+# Note: this will only allow sharing exactly these packages but no other packages in pkg/gardenlet/operation/, this is still
 # forbidden by the top-level import restriction in extensions/
 - selectorRegexp: github[.]com/gardener/gardener/pkg/component/extensions/operatingsystemconfig
   allowedPrefixes:

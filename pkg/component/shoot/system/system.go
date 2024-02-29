@@ -1,0 +1,503 @@
+// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package system
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
+)
+
+// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+const ManagedResourceName = "shoot-core-system"
+
+// Interface is an interface for managing shoot system resources.
+type Interface interface {
+	component.DeployWaiter
+	SetAPIResourceList([]*metav1.APIResourceList)
+}
+
+// Values is a set of configuration values for the system resources.
+type Values struct {
+	// APIResourceList is the list of available API resources in the shoot cluster.
+	APIResourceList []*metav1.APIResourceList
+	// Extensions is the list of the extension types.
+	Extensions []string
+	// ExternalClusterDomain is the external domain of the cluster.
+	ExternalClusterDomain *string
+	// IsWorkerless specifies whether the cluster has worker nodes.
+	IsWorkerless bool
+	// KubernetesVersion is the version of the cluster.
+	KubernetesVersion *semver.Version
+	// EncryptedResources is the list of resources which are encrypted by the kube-apiserver.
+	EncryptedResources []string
+	// Object is the shoot object.
+	Object *gardencorev1beta1.Shoot
+	// PodNetworkCIDR is the CIDR of the pod network.
+	PodNetworkCIDR string
+	// ProjectName is the name of the project of the cluster.
+	ProjectName string
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR string
+}
+
+// New creates a new instance of DeployWaiter for shoot system resources.
+func New(
+	client client.Client,
+	namespace string,
+	values Values,
+) Interface {
+	return &shootSystem{
+		client:    client,
+		namespace: namespace,
+		values:    values,
+	}
+}
+
+type shootSystem struct {
+	client    client.Client
+	namespace string
+	values    Values
+}
+
+func (s *shootSystem) Deploy(ctx context.Context) error {
+	data, err := s.computeResourcesData()
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, s.client, s.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+}
+
+func (s *shootSystem) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForShoot(ctx, s.client, s.namespace, ManagedResourceName)
+}
+
+func (s *shootSystem) SetAPIResourceList(list []*metav1.APIResourceList) {
+	s.values.APIResourceList = list
+}
+
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (s *shootSystem) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, s.client, s.namespace, ManagedResourceName)
+}
+
+func (s *shootSystem) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, s.client, s.namespace, ManagedResourceName)
+}
+
+func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+	if !s.values.IsWorkerless {
+		var (
+			shootInfoConfigMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.ConfigMapNameShootInfo,
+					Namespace: metav1.NamespaceSystem,
+				},
+				Data: s.shootInfoData(),
+			}
+
+			port53      = intstr.FromInt32(53)
+			port443     = intstr.FromInt32(kubeapiserverconstants.Port)
+			port8053    = intstr.FromInt32(corednsconstants.PortServer)
+			port10250   = intstr.FromInt32(10250)
+			protocolUDP = corev1.ProtocolUDP
+			protocolTCP = corev1.ProtocolTCP
+
+			networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-apiserver",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows traffic to the API server in TCP "+
+							"port 443 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToAPIServer,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port443, Protocol: &protocolTCP}}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
+			networkPolicyAllowToDNS = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-dns",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic from pods labeled "+
+							"with '%s=%s' to DNS running in the '%s' namespace.", v1beta1constants.LabelNetworkPolicyToDNS,
+							v1beta1constants.LabelNetworkPolicyAllowed, metav1.NamespaceSystem),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					Egress: []networkingv1.NetworkPolicyEgressRule{
+						{
+							To: []networkingv1.NetworkPolicyPeer{{
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      corednsconstants.LabelKey,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{corednsconstants.LabelValue},
+									}},
+								},
+							}},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: &protocolUDP, Port: &port8053},
+								{Protocol: &protocolTCP, Port: &port8053},
+							},
+						},
+						// this allows Pods with 'dnsPolicy: Default' to talk to the node's DNS provider.
+						{
+							To: []networkingv1.NetworkPolicyPeer{
+								{
+									IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
+								},
+								{
+									IPBlock: &networkingv1.IPBlock{CIDR: "::/0"},
+								},
+								{
+									PodSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{{
+											Key:      corednsconstants.LabelKey,
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{nodelocaldnsconstants.LabelValue},
+										}},
+									},
+								},
+							},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: &protocolUDP, Port: &port53},
+								{Protocol: &protocolTCP, Port: &port53},
+							},
+						},
+					},
+				},
+			}
+			networkPolicyAllowToKubelet = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-kubelet",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to kubelet in TCP "+
+							"port 10250 for pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootToKubelet,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootToKubelet: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress:      []networkingv1.NetworkPolicyEgressRule{{Ports: []networkingv1.NetworkPolicyPort{{Port: &port10250, Protocol: &protocolTCP}}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
+			networkPolicyAllowToPublicNetworks = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-to-public-networks",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows egress traffic to all networks for "+
+							"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
+					Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{
+						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
+					}}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				},
+			}
+		)
+
+		for _, name := range s.getServiceAccountNamesToInvalidate() {
+			if err := registry.Add(&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   metav1.NamespaceSystem,
+					Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
+				},
+				AutomountServiceAccountToken: ptr.To(false),
+			}); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := registry.Add(
+			shootInfoConfigMap,
+			networkPolicyAllowToShootAPIServer,
+			networkPolicyAllowToDNS,
+			networkPolicyAllowToKubelet,
+			networkPolicyAllowToPublicNetworks,
+		); err != nil {
+			return nil, err
+		}
+
+		if err := registry.Add(priorityClassResources()...); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(s.values.APIResourceList) > 0 {
+		if err := registry.Add(s.readOnlyRBACResources()...); err != nil {
+			return nil, err
+		}
+	}
+
+	return registry.SerializedObjects(), nil
+}
+
+func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
+	// Well-known {kube,cloud}-controller-manager controllers using a token for ServiceAccounts in the shoot
+	// To maintain this list for each new Kubernetes version:
+	// * Run hack/compare-k8s-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-controllers.sh 1.26 1.27').
+	//   It will present 2 lists of controllers: those added and those removed in <new-version> compared to <old-version>.
+	// * Double check whether such ServiceAccount indeed appears in the kube-system namespace when creating a cluster
+	//   with <new-version>. Note that it sometimes might be hidden behind a default-off feature gate.
+	//   If it appears, add all added controllers to the list if the Kubernetes version is high enough.
+	// * For any removed controllers, add them only to the Kubernetes version if it is low enough.
+	kubeControllerManagerServiceAccountNames := []string{
+		"attachdetach-controller",
+		"bootstrap-signer",
+		"certificate-controller",
+		"clusterrole-aggregation-controller",
+		"controller-discovery",
+		"cronjob-controller",
+		"daemon-set-controller",
+		"deployment-controller",
+		"disruption-controller",
+		"endpoint-controller",
+		"endpointslice-controller",
+		"expand-controller",
+		"generic-garbage-collector",
+		"horizontal-pod-autoscaler",
+		"job-controller",
+		"metadata-informers",
+		"namespace-controller",
+		"persistent-volume-binder",
+		"pod-garbage-collector",
+		"pv-protection-controller",
+		"pvc-protection-controller",
+		"replicaset-controller",
+		"replication-controller",
+		"resourcequota-controller",
+		"root-ca-cert-publisher",
+		"service-account-controller",
+		"shared-informers",
+		"statefulset-controller",
+		"token-cleaner",
+		"tokens-controller",
+		"ttl-after-finished-controller",
+		"ttl-controller",
+		"endpointslicemirroring-controller",
+		"ephemeral-volume-controller",
+		"storage-version-garbage-collector",
+		"node-controller",
+		"route-controller",
+		"service-controller",
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual126.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"resource-claim-controller")
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"legacy-service-account-token-cleaner",
+		)
+	}
+
+	if versionutils.ConstraintK8sEqual128.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"validatingadmissionpolicy-status-controller",
+		)
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual129.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"service-cidrs-controller",
+		)
+	}
+
+	return append(kubeControllerManagerServiceAccountNames, "default")
+}
+
+// remember to update docs/development/priority-classes.md when making changes here
+var gardenletManagedPriorityClasses = []struct {
+	name        string
+	value       int32
+	description string
+}{
+	{v1beta1constants.PriorityClassNameShootSystem900, 999999900, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem800, 999999800, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem700, 999999700, "PriorityClass for Shoot system components"},
+	{v1beta1constants.PriorityClassNameShootSystem600, 999999600, "PriorityClass for Shoot system components"},
+}
+
+func priorityClassResources() []client.Object {
+	var out []client.Object
+
+	for _, class := range gardenletManagedPriorityClasses {
+		out = append(out, &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: class.name,
+			},
+			Description:   class.description,
+			GlobalDefault: false,
+			Value:         class.value,
+		})
+	}
+
+	return out
+}
+
+func (s *shootSystem) shootInfoData() map[string]string {
+	data := map[string]string{
+		"extensions":        strings.Join(s.values.Extensions, ","),
+		"projectName":       s.values.ProjectName,
+		"shootName":         s.values.Object.Name,
+		"provider":          s.values.Object.Spec.Provider.Type,
+		"region":            s.values.Object.Spec.Region,
+		"kubernetesVersion": s.values.Object.Spec.Kubernetes.Version,
+		"podNetwork":        s.values.PodNetworkCIDR,
+		"serviceNetwork":    s.values.ServiceNetworkCIDR,
+		"maintenanceBegin":  s.values.Object.Spec.Maintenance.TimeWindow.Begin,
+		"maintenanceEnd":    s.values.Object.Spec.Maintenance.TimeWindow.End,
+	}
+
+	if domain := s.values.ExternalClusterDomain; domain != nil {
+		data["domain"] = *domain
+	}
+
+	if nodeNetwork := s.values.Object.Spec.Networking.Nodes; nodeNetwork != nil {
+		data["nodeNetwork"] = *nodeNetwork
+	}
+
+	return data
+}
+
+func (s *shootSystem) readOnlyRBACResources() []client.Object {
+	apiGroupToReadableResourcesNames := make(map[string][]string)
+	for _, api := range s.values.APIResourceList {
+		apiGroup := strings.Split(api.GroupVersion, "/")[0]
+		if apiGroup == corev1.SchemeGroupVersion.Version {
+			apiGroup = corev1.GroupName
+		}
+
+		for _, resource := range api.APIResources {
+			// We don't want to include privileges for reading encrypted resources.
+			if s.isEncryptedResource(resource.Name, apiGroup) {
+				continue
+			}
+
+			// We don't want to include privileges for resources which are not readable.
+			if !slices.ContainsFunc(resource.Verbs, func(verb string) bool {
+				return verb == "get" || verb == "list"
+			}) {
+				continue
+			}
+
+			apiGroupToReadableResourcesNames[apiGroup] = append(apiGroupToReadableResourcesNames[apiGroup], resource.Name)
+		}
+	}
+
+	// Sort keys to get a stable order of the RBAC rules when iterating.
+	var allAPIGroups []string
+	for key := range apiGroupToReadableResourcesNames {
+		allAPIGroups = append(allAPIGroups, key)
+	}
+	sort.Strings(allAPIGroups)
+
+	clusterRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener.cloud:system:read-only",
+		},
+	}
+
+	for _, apiGroup := range allAPIGroups {
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{apiGroup},
+			Resources: apiGroupToReadableResourcesNames[apiGroup],
+			Verbs:     []string{"get", "list", "watch"},
+		})
+	}
+
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "gardener.cloud:system:read-only",
+			Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind: rbacv1.GroupKind,
+			Name: v1beta1constants.ShootGroupViewers,
+		}},
+	}
+
+	return []client.Object{clusterRole, clusterRoleBinding}
+}
+
+func (s *shootSystem) isEncryptedResource(resource, group string) bool {
+	resourceName := fmt.Sprintf("%s.%s", resource, group)
+
+	if group == corev1.SchemeGroupVersion.Group {
+		resourceName = resource
+	}
+
+	return slices.Contains(s.values.EncryptedResources, resourceName)
+}

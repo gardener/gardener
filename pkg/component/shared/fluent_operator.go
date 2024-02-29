@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 )
 
 // NewFluentOperator instantiates a new `Fluent Operator` component.

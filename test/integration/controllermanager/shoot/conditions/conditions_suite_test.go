@@ -37,8 +37,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestShootConditions(t *testing.T) {

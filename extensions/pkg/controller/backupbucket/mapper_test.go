@@ -34,8 +34,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var _ = Describe("Controller Mapper", func() {

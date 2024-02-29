@@ -108,49 +108,49 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/validation
             - pkg/logger
-            - pkg/openapi
-            - pkg/registry/core/backupbucket
-            - pkg/registry/core/backupbucket/storage
-            - pkg/registry/core/backupentry
-            - pkg/registry/core/backupentry/storage
-            - pkg/registry/core/cloudprofile
-            - pkg/registry/core/cloudprofile/storage
-            - pkg/registry/core/controllerdeployment
-            - pkg/registry/core/controllerdeployment/storage
-            - pkg/registry/core/controllerinstallation
-            - pkg/registry/core/controllerinstallation/storage
-            - pkg/registry/core/controllerregistration
-            - pkg/registry/core/controllerregistration/storage
-            - pkg/registry/core/exposureclass
-            - pkg/registry/core/exposureclass/storage
-            - pkg/registry/core/internalsecret
-            - pkg/registry/core/internalsecret/storage
-            - pkg/registry/core/project
-            - pkg/registry/core/project/storage
-            - pkg/registry/core/quota
-            - pkg/registry/core/quota/storage
-            - pkg/registry/core/rest
-            - pkg/registry/core/secretbinding
-            - pkg/registry/core/secretbinding/storage
-            - pkg/registry/core/seed
-            - pkg/registry/core/seed/storage
-            - pkg/registry/core/shoot
-            - pkg/registry/core/shoot/storage
-            - pkg/registry/core/shootstate
-            - pkg/registry/core/shootstate/storage
-            - pkg/registry/operations/bastion
-            - pkg/registry/operations/bastion/storage
-            - pkg/registry/operations/rest
-            - pkg/registry/seedmanagement/managedseed
-            - pkg/registry/seedmanagement/managedseed/storage
-            - pkg/registry/seedmanagement/managedseedset
-            - pkg/registry/seedmanagement/managedseedset/storage
-            - pkg/registry/seedmanagement/rest
-            - pkg/registry/settings/clusteropenidconnectpreset
-            - pkg/registry/settings/clusteropenidconnectpreset/storage
-            - pkg/registry/settings/openidconnectpreset
-            - pkg/registry/settings/openidconnectpreset/storage
-            - pkg/registry/settings/rest
+            - pkg/apiserver/openapi
+            - pkg/apiserver/registry/core/backupbucket
+            - pkg/apiserver/registry/core/backupbucket/storage
+            - pkg/apiserver/registry/core/backupentry
+            - pkg/apiserver/registry/core/backupentry/storage
+            - pkg/apiserver/registry/core/cloudprofile
+            - pkg/apiserver/registry/core/cloudprofile/storage
+            - pkg/apiserver/registry/core/controllerdeployment
+            - pkg/apiserver/registry/core/controllerdeployment/storage
+            - pkg/apiserver/registry/core/controllerinstallation
+            - pkg/apiserver/registry/core/controllerinstallation/storage
+            - pkg/apiserver/registry/core/controllerregistration
+            - pkg/apiserver/registry/core/controllerregistration/storage
+            - pkg/apiserver/registry/core/exposureclass
+            - pkg/apiserver/registry/core/exposureclass/storage
+            - pkg/apiserver/registry/core/internalsecret
+            - pkg/apiserver/registry/core/internalsecret/storage
+            - pkg/apiserver/registry/core/project
+            - pkg/apiserver/registry/core/project/storage
+            - pkg/apiserver/registry/core/quota
+            - pkg/apiserver/registry/core/quota/storage
+            - pkg/apiserver/registry/core/rest
+            - pkg/apiserver/registry/core/secretbinding
+            - pkg/apiserver/registry/core/secretbinding/storage
+            - pkg/apiserver/registry/core/seed
+            - pkg/apiserver/registry/core/seed/storage
+            - pkg/apiserver/registry/core/shoot
+            - pkg/apiserver/registry/core/shoot/storage
+            - pkg/apiserver/registry/core/shootstate
+            - pkg/apiserver/registry/core/shootstate/storage
+            - pkg/apiserver/registry/operations/bastion
+            - pkg/apiserver/registry/operations/bastion/storage
+            - pkg/apiserver/registry/operations/rest
+            - pkg/apiserver/registry/seedmanagement/managedseed
+            - pkg/apiserver/registry/seedmanagement/managedseed/storage
+            - pkg/apiserver/registry/seedmanagement/managedseedset
+            - pkg/apiserver/registry/seedmanagement/managedseedset/storage
+            - pkg/apiserver/registry/seedmanagement/rest
+            - pkg/apiserver/registry/settings/clusteropenidconnectpreset
+            - pkg/apiserver/registry/settings/clusteropenidconnectpreset/storage
+            - pkg/apiserver/registry/settings/openidconnectpreset
+            - pkg/apiserver/registry/settings/openidconnectpreset/storage
+            - pkg/apiserver/registry/settings/rest
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/context
@@ -242,7 +242,7 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
-            - pkg/component/projectrbac
+            - pkg/component/garden/projectrbac
             - pkg/controller/reference
             - pkg/controllermanager/apis/config
             - pkg/controllermanager/apis/config/v1alpha1
@@ -621,10 +621,10 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/kubeproxy
-            - pkg/component/logging/vali/constants
-            - pkg/component/machinecontrollermanager
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/proxy
+            - pkg/component/observability/logging/vali/constants
+            - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -842,17 +842,17 @@ build:
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver
-            - pkg/component/apiserverproxy
-            - pkg/component/backupentry
-            - pkg/component/blackboxexporter
-            - pkg/component/clusterautoscaler
+            - pkg/component/networking/apiserverproxy
+            - pkg/component/garden/backupentry
+            - pkg/component/observability/monitoring/blackboxexporter
+            - pkg/component/autoscaling/clusterautoscaler
             - pkg/component/clusteridentity
-            - pkg/component/coredns
-            - pkg/component/coredns/constants
-            - pkg/component/dependencywatchdog
-            - pkg/component/etcd
-            - pkg/component/etcd/constants
-            - pkg/component/etcdcopybackupstask
+            - pkg/component/networking/coredns
+            - pkg/component/networking/coredns/constants
+            - pkg/component/nodemanagement/dependencywatchdog
+            - pkg/component/etcd/copybackupstask
+            - pkg/component/etcd/etcd
+            - pkg/component/etcd/etcd/constants
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/containerruntime
@@ -881,51 +881,51 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
-            - pkg/component/gardeneraccess
-            - pkg/component/gardenerapiserver
-            - pkg/component/hvpa
-            - pkg/component/istio
-            - pkg/component/kubeapiserver
-            - pkg/component/kubeapiserver/constants
-            - pkg/component/kubeapiserverexposure
-            - pkg/component/kubecontrollermanager
-            - pkg/component/kubeproxy
-            - pkg/component/kubernetesdashboard
-            - pkg/component/kubescheduler
-            - pkg/component/kubestatemetrics
-            - pkg/component/logging
-            - pkg/component/logging/eventlogger
-            - pkg/component/logging/fluentoperator
-            - pkg/component/logging/fluentoperator/customresources
-            - pkg/component/logging/vali
-            - pkg/component/logging/vali/constants
-            - pkg/component/machinecontrollermanager
-            - pkg/component/metricsserver
-            - pkg/component/monitoring
-            - pkg/component/monitoring/alertmanager
-            - pkg/component/monitoring/prometheus
-            - pkg/component/monitoring/prometheus/aggregate
-            - pkg/component/monitoring/prometheus/cache
-            - pkg/component/monitoring/prometheus/seed
-            - pkg/component/monitoring/prometheusoperator
-            - pkg/component/monitoring/utils
-            - pkg/component/namespaces
-            - pkg/component/nginxingress
-            - pkg/component/nodeexporter
-            - pkg/component/nodelocaldns
-            - pkg/component/nodelocaldns/constants
-            - pkg/component/nodeproblemdetector
-            - pkg/component/plutono
-            - pkg/component/resourcemanager
-            - pkg/component/resourcemanager/constants
-            - pkg/component/seedsystem
+            - pkg/component/gardener/access
+            - pkg/component/gardener/apiserver
+            - pkg/component/autoscaling/hvpa
+            - pkg/component/networking/istio
+            - pkg/component/kubernetes/apiserver
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/apiserverexposure
+            - pkg/component/kubernetes/controllermanager
+            - pkg/component/kubernetes/proxy
+            - pkg/component/kubernetes/dashboard
+            - pkg/component/kubernetes/scheduler
+            - pkg/component/observability/monitoring/kubestatemetrics
+            - pkg/component/observability/logging
+            - pkg/component/observability/logging/eventlogger
+            - pkg/component/observability/logging/fluentoperator
+            - pkg/component/observability/logging/fluentoperator/customresources
+            - pkg/component/observability/logging/vali
+            - pkg/component/observability/logging/vali/constants
+            - pkg/component/nodemanagement/machinecontrollermanager
+            - pkg/component/observability/monitoring/metricsserver
+            - pkg/component/observability/monitoring
+            - pkg/component/observability/monitoring/alertmanager
+            - pkg/component/observability/monitoring/prometheus
+            - pkg/component/observability/monitoring/prometheus/aggregate
+            - pkg/component/observability/monitoring/prometheus/cache
+            - pkg/component/observability/monitoring/prometheus/seed
+            - pkg/component/observability/monitoring/prometheusoperator
+            - pkg/component/observability/monitoring/utils
+            - pkg/component/shoot/namespaces
+            - pkg/component/networking/nginxingress
+            - pkg/component/observability/monitoring/nodeexporter
+            - pkg/component/networking/nodelocaldns
+            - pkg/component/networking/nodelocaldns/constants
+            - pkg/component/nodemanagement/nodeproblemdetector
+            - pkg/component/observability/plutono
+            - pkg/component/gardener/resourcemanager
+            - pkg/component/gardener/resourcemanager/constants
+            - pkg/component/seed/system
             - pkg/component/shared
-            - pkg/component/shootsystem
-            - pkg/component/vpa
-            - pkg/component/vpa/constants
-            - pkg/component/vpnauthzserver
-            - pkg/component/vpnseedserver
-            - pkg/component/vpnshoot
+            - pkg/component/shoot/system
+            - pkg/component/autoscaling/vpa
+            - pkg/component/autoscaling/vpa/constants
+            - pkg/component/networking/vpn/authzserver
+            - pkg/component/networking/vpn/seedserver
+            - pkg/component/networking/vpn/shoot
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
@@ -969,12 +969,12 @@ build:
             - pkg/logger
             - pkg/nodeagent/apis/config
             - pkg/nodeagent/apis/config/v1alpha1
-            - pkg/operation
-            - pkg/operation/botanist
-            - pkg/operation/botanist/matchers
-            - pkg/operation/garden
-            - pkg/operation/seed
-            - pkg/operation/shoot
+            - pkg/gardenlet/operation
+            - pkg/gardenlet/operation/botanist
+            - pkg/gardenlet/operation/botanist/matchers
+            - pkg/gardenlet/operation/garden
+            - pkg/gardenlet/operation/seed
+            - pkg/gardenlet/operation/shoot
             - pkg/operator/client
             - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1
@@ -1171,7 +1171,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/utils
-            - pkg/component/logging/vali/constants
+            - pkg/component/observability/logging/vali/constants
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes

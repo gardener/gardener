@@ -21,6 +21,6 @@ set -o pipefail
 echo "> Test Prometheus"
 
 echo "Executing shoot Prometheus alert tests"
-pushd "$(dirname $0)/../pkg/component/monitoring/charts/seed-monitoring/charts/core/charts/prometheus" > /dev/null
+pushd "$(dirname $0)/../pkg/component/observability/monitoring/charts/seed-monitoring/charts/core/charts/prometheus" > /dev/null
 promtool test rules rules-tests/*test.yaml
 popd > /dev/null

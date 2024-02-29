@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

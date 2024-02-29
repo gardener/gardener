@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var logger = log.Log.WithName("controlplane-webhook-test")

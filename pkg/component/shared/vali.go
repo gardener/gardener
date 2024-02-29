@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 

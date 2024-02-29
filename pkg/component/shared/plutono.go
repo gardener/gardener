@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/plutono"
+	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 

@@ -22,7 +22,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	valiconstants "github.com/gardener/gardener/pkg/component/logging/vali/constants"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )

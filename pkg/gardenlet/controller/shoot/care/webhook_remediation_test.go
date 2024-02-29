@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 

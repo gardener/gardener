@@ -28,8 +28,8 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
 	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
+	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
 )
 
 var _ = Describe("customverbauthorizer", func() {
