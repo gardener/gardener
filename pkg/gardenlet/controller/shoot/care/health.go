@@ -473,19 +473,10 @@ func (h *Health) checkSystemComponents(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	mrList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := h.seedClient.Client().List(ctx, mrList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
-		return nil, err
-	}
-
-	for _, mr := range mrList.Items {
-		if mr.Spec.Class != nil {
-			continue
-		}
-
-		if exitCondition := h.healthChecker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
-			return exitCondition, nil
-		}
+	if exitCondition, err := h.checkManagedResources(ctx, condition, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Spec.Class == nil
+	}); err != nil {
+		return exitCondition, err
 	}
 
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
@@ -535,6 +526,25 @@ func (h *Health) checkWorkers(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
+}
+
+func (h *Health) checkManagedResources(ctx context.Context, condition gardencorev1beta1.Condition, filterFunc func(resourcesv1alpha1.ManagedResource) bool) (*gardencorev1beta1.Condition, error) {
+	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+		return nil, err
+	}
+
+	for _, managedResource := range managedResourceList.Items {
+		if !filterFunc(managedResource) {
+			continue
+		}
+
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, &managedResource, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+			return exitCondition, nil
+		}
+	}
+
+	return nil, nil
 }
 
 var constraintGardenerGreaterEqual190 *semver.Constraints
