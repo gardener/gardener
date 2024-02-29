@@ -19,7 +19,7 @@
       // Generic detection for pod-like image specifications.
       "customType": "regex",
       "fileMatch": ["^example\/.+\\.yaml$", "^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
-      "matchStrings": ["image: (?<depName>.*?):(?<currentValue>.*?)\\s"],
+      "matchStrings": ["image: [\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
       "datasourceTemplate": "docker"
     },
     {
@@ -31,6 +31,13 @@
         "https:\/\/raw\\.githubusercontent\\.com\/(?<depName>[^/]*\/[^/]*?)\/(?<currentValue>.*?)\/",
       ],
       "datasourceTemplate": "github-releases"
+    },
+    {
+      // Generic detection for cli argument image specifications.
+      "customType": "regex",
+      "fileMatch": ["^hack\/.+\\.sh$"],
+      "matchStrings": ["--image[=| ][\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
+      "datasourceTemplate": "docker"
     }
   ],
   "separateMinorPatch": true,
@@ -47,10 +54,17 @@
       "matchFileNames": ["hack\/tools\\.mk"]
     },
     {
-      // Only patch level updates for golang-test image. Minor and major versions are manually updated.
+      // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
       "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
+      "enabled": false
+    },
+    {
+      // Only patch level updates for kindest/node image. Minor and major versions are updated manually.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": ["kindest\/node"],
       "enabled": false
     },
     {
