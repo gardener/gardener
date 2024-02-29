@@ -70,18 +70,14 @@ func ReconcileWebhookConfig(
 		return err
 	}
 
-	if createIfNotExists {
-		err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil)
-		if err != nil {
-			return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
-		}
-	} else {
-		err := managedresources.Update(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil)
-		if err != nil {
-			return fmt.Errorf("could not update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
-		}
+	f := managedresources.Create
+	if !createIfNotExists {
+		f = managedresources.Update
 	}
 
+	if err := f(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
+		return fmt.Errorf("failed reconciling managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	}
 	return nil
 }
 
@@ -130,7 +126,10 @@ func ReconcileWebhooksForAllNamespaces(
 					return err
 				}
 				// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
-				return client.IgnoreNotFound(err)
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
 			}
 			return nil
 		})
