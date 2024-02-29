@@ -411,8 +411,8 @@ func (o *Operation) IsShootMonitoringEnabled() bool {
 	return helper.IsMonitoringEnabled(o.Config) && o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
 }
 
-// WantsPlutono returns true if shoot is not of purpose testing and either shoot monitoring or vali is enabled.
-func (o *Operation) WantsPlutono() bool {
+// WantsObservabilityComponents returns true if shoot is not of purpose testing and either shoot monitoring or vali is enabled.
+func (o *Operation) WantsObservabilityComponents() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsValiEnabled(o.Config))
 }
 

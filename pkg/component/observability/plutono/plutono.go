@@ -706,15 +706,10 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 
 	if p.values.IsGardenCluster {
 		pathType = networkingv1.PathTypeImplementationSpecific
-		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
-			Name:           v1beta1constants.SecretNameObservabilityIngress,
-			Format:         secrets.BasicAuthFormatNormal,
-			Username:       "admin",
-			PasswordLength: 32,
-		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace),
-		)
-		if err != nil {
-			return nil, err
+
+		credentialsSecret, found := p.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
 		}
 
 		credentialsSecretName = credentialsSecret.Name
@@ -722,16 +717,9 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	}
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
-		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
-			Name:           v1beta1constants.SecretNameObservabilityIngressUsers,
-			Format:         secrets.BasicAuthFormatNormal,
-			Username:       "admin",
-			PasswordLength: 32,
-		}, secretsmanager.Persist(),
-			secretsmanager.Rotate(secretsmanager.InPlace),
-		)
-		if err != nil {
-			return nil, err
+		credentialsSecret, found := p.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 		}
 
 		credentialsSecretName = credentialsSecret.Name

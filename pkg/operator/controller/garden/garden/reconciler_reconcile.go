@@ -130,6 +130,12 @@ func (r *Reconciler) reconcile(
 				return r.generateGenericTokenKubeconfig(ctx, garden, secretsManager)
 			},
 		})
+		generateObservabilityIngressPassword = g.Add(flow.Task{
+			Name: "Generating observability ingress password",
+			Fn: func(ctx context.Context) error {
+				return r.generateObservabilityIngressPassword(ctx, secretsManager)
+			},
+		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
 			Fn:   c.etcdCRD.Deploy,
@@ -217,6 +223,7 @@ func (r *Reconciler) reconcile(
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
+			generateObservabilityIngressPassword,
 			deployRuntimeSystemResources,
 			deployFluentCRD,
 			deployPrometheusCRD,

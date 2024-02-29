@@ -92,6 +92,10 @@ var _ = Describe("Plutono", func() {
 			},
 		}
 
+		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: namespace}})).To(Succeed())
+
 		// extensions dashboard
 		filePath := filepath.Join("testdata", "configmap.yaml")
 		cm, err := os.ReadFile(filePath)
@@ -469,7 +473,7 @@ metadata:
 `
 				if !values.IsGardenCluster {
 					if values.ClusterType == comp.ClusterTypeShoot {
-						out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
+						out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users
     nginx.ingress.kubernetes.io/auth-type: basic
 `
 					} else {
@@ -478,7 +482,7 @@ metadata:
 `
 					}
 				} else {
-					out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-0da36eb1
+					out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress
     nginx.ingress.kubernetes.io/auth-type: basic
 `
 				}
