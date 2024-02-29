@@ -40,7 +40,6 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -395,8 +394,8 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				}
 			}
 		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
-			oldSeedNameStr := pointer.StringDeref(c.oldShoot.Spec.SeedName, "nil")
-			seedNameStr := pointer.StringDeref(c.shoot.Spec.SeedName, "nil")
+			oldSeedNameStr := ptr.Deref(c.oldShoot.Spec.SeedName, "nil")
+			seedNameStr := ptr.Deref(c.shoot.Spec.SeedName, "nil")
 			return admission.NewForbidden(a, fmt.Errorf("spec.seedName '%s' cannot be changed to '%s' by patching the shoot, please use the shoots/binding subresource", oldSeedNameStr, seedNameStr))
 		}
 	case admission.Delete:
