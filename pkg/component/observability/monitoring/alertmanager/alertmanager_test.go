@@ -427,9 +427,9 @@ var _ = Describe("Prometheus", func() {
 			When("ingress is configured", func() {
 				BeforeEach(func() {
 					values.Ingress = &IngressValues{
-						AuthSecretName:   ingressAuthSecretName,
-						Host:             ingressHost,
-						WildcardCertName: &ingressWildcardSecretName,
+						AuthSecretName:         ingressAuthSecretName,
+						Host:                   ingressHost,
+						WildcardCertSecretName: &ingressWildcardSecretName,
 					}
 				})
 

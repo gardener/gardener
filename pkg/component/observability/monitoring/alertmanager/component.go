@@ -42,7 +42,7 @@ type Interface interface {
 	component.DeployWaiter
 	// SetIngressAuthSecret sets the ingress auth secret name.
 	SetIngressAuthSecret(*corev1.Secret)
-	// SetIngressWildcardCertSecret sets the ingress wild card cert secret name.
+	// SetIngressWildcardCertSecret sets the ingress wildcard cert secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 }
 
@@ -67,7 +67,7 @@ type Values struct {
 	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
 	// will be sent to the email address in `.data.to` in the alerting SMTP secret.
 	EmailReceivers []string
-	// IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
+	// Ingress contains configuration for exposing this AlertManager instance via an Ingress resource.
 	Ingress *IngressValues
 
 	// DataMigration is a struct for migrating data from existing disks.
@@ -84,9 +84,9 @@ type IngressValues struct {
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
-	// WildcardCertName is name of wildcard TLS certificate which is issued for the ingress domain. If not provided, a
-	// self-signed server certificate will be created.
-	WildcardCertName *string
+	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
+	// ingress domain. If not provided, a self-signed server certificate will be created.
+	WildcardCertSecretName *string
 }
 
 // New creates a new instance of DeployWaiter for the AlertManager.
@@ -189,7 +189,7 @@ func (a *alertManager) SetIngressAuthSecret(secret *corev1.Secret) {
 
 func (a *alertManager) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 	if a.values.Ingress != nil && secret != nil {
-		a.values.Ingress.WildcardCertName = &secret.Name
+		a.values.Ingress.WildcardCertSecretName = &secret.Name
 	}
 }
 

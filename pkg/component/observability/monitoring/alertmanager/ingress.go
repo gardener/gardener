@@ -31,7 +31,7 @@ func (a *alertManager) ingress(ctx context.Context) (*networkingv1.Ingress, erro
 		return nil, nil
 	}
 
-	tlsSecretName := ptr.Deref(a.values.Ingress.WildcardCertName, "")
+	tlsSecretName := ptr.Deref(a.values.Ingress.WildcardCertSecretName, "")
 	if tlsSecretName == "" && a.values.Ingress.SecretsManager != nil {
 		ingressTLSSecret, err := a.values.Ingress.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        a.name() + "-tls",

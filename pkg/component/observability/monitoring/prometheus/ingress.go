@@ -31,7 +31,7 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 		return nil, nil
 	}
 
-	tlsSecretName := ptr.Deref(p.values.Ingress.WildcardCertName, "")
+	tlsSecretName := ptr.Deref(p.values.Ingress.WildcardCertSecretName, "")
 	if tlsSecretName == "" && p.values.Ingress.SecretsManager != nil {
 		ingressTLSSecret, err := p.values.Ingress.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        p.name() + "-tls",

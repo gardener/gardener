@@ -114,9 +114,9 @@ type IngressValues struct {
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
-	// WildcardCertName is name of wildcard TLS certificate which is issued for the ingress domain. If not provided, a
-	// self-signed server certificate will be created.
-	WildcardCertName *string
+	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
+	// ingress domain. If not provided, a self-signed server certificate will be created.
+	WildcardCertSecretName *string
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.

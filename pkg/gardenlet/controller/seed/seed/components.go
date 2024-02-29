@@ -639,7 +639,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 	}
 
 	if wildcardCertSecret != nil {
-		values.Ingress.WildcardCertName = ptr.To(wildcardCertSecret.GetName())
+		values.Ingress.WildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
 	}
 
 	if alertingSMTPSecret != nil {
