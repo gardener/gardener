@@ -94,7 +94,7 @@ var _ = Describe("Resource Manager", func() {
 				WithKeyValues(data).
 				WithLabels(labels).
 				WithAnnotations(annotations).
-				CreateOnUpdate(false).
+				CreateIfNotExists(false).
 				Unique()
 
 			secretBuilder.AddLabels(map[string]string{"one": "two"})
@@ -248,7 +248,7 @@ var _ = Describe("Resource Manager", func() {
 			secret := NewSecret(fakeClient).
 				WithNamespacedName(namespace, name).
 				WithLabels(labels).
-				CreateOnUpdate(false)
+				CreateIfNotExists(false)
 
 			Expect(secret.Reconcile(ctx)).To(BeNotFoundError())
 
@@ -470,7 +470,7 @@ var _ = Describe("Resource Manager", func() {
 					WithNamespacedName(namespace, name).
 					WithLabels(labels).
 					WithAnnotations(annotations).
-					CreateOnUpdate(false).
+					CreateIfNotExists(false).
 					Reconcile(ctx),
 			).To(Succeed())
 
@@ -504,7 +504,7 @@ var _ = Describe("Resource Manager", func() {
 					WithNamespacedName(namespace, name).
 					WithLabels(labels).
 					WithAnnotations(annotations).
-					CreateOnUpdate(false).
+					CreateIfNotExists(false).
 					Reconcile(ctx),
 			).To(BeNotFoundError())
 

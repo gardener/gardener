@@ -31,9 +31,9 @@ import (
 
 // ManagedResource is a structure managing a ManagedResource.
 type ManagedResource struct {
-	client         client.Client
-	createOnUpdate bool
-	resource       *resourcesv1alpha1.ManagedResource
+	client            client.Client
+	createIfNotExists bool
+	resource          *resourcesv1alpha1.ManagedResource
 
 	labels, annotations map[string]string
 }
@@ -41,15 +41,15 @@ type ManagedResource struct {
 // NewManagedResource creates a new builder for a ManagedResource.
 func NewManagedResource(client client.Client) *ManagedResource {
 	return &ManagedResource{
-		client:         client,
-		createOnUpdate: true,
-		resource:       &resourcesv1alpha1.ManagedResource{},
+		client:            client,
+		createIfNotExists: true,
+		resource:          &resourcesv1alpha1.ManagedResource{},
 	}
 }
 
-// CreateOnUpdate determines if the managed resources should be created if it does not exist.
-func (m *ManagedResource) CreateOnUpdate(create bool) *ManagedResource {
-	m.createOnUpdate = create
+// CreateIfNotExists determines if the managed resources should be created if it does not exist.
+func (m *ManagedResource) CreateIfNotExists(createIfNotExists bool) *ManagedResource {
+	m.createIfNotExists = createIfNotExists
 	return m
 }
 
@@ -146,7 +146,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	}
 
 	if err := m.client.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
-		if apierrors.IsNotFound(err) && m.createOnUpdate {
+		if apierrors.IsNotFound(err) && m.createIfNotExists {
 			// if the mr is not found just create it
 			mutateFn(resource)
 

@@ -47,7 +47,7 @@ func ReconcileWebhookConfig(
 	managedResourceName string,
 	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
-	createOnUpdate bool,
+	createIfNotExists bool,
 ) error {
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
@@ -70,7 +70,7 @@ func ReconcileWebhookConfig(
 		return err
 	}
 
-	if createOnUpdate {
+	if createIfNotExists {
 		err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil)
 		if err != nil {
 			return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)

@@ -152,7 +152,7 @@ func Update(
 ) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateOnUpdate(false)
+		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)

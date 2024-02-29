@@ -32,8 +32,8 @@ import (
 
 // Secret is a structure for managing a secret.
 type Secret struct {
-	client         client.Client
-	createOnUpdate bool
+	client            client.Client
+	createIfNotExists bool
 
 	keyValues map[string]string
 	secret    *corev1.Secret
@@ -42,17 +42,17 @@ type Secret struct {
 // NewSecret creates a new builder for a secret.
 func NewSecret(client client.Client) *Secret {
 	return &Secret{
-		client:         client,
-		createOnUpdate: true,
-		keyValues:      make(map[string]string),
-		secret:         &corev1.Secret{},
+		client:            client,
+		createIfNotExists: true,
+		keyValues:         make(map[string]string),
+		secret:            &corev1.Secret{},
 	}
 }
 
-// CreateOnUpdate determines if the secret should be created if it does not exist.
+// CreateIfNotExists determines if the secret should be created if it does not exist.
 // Immutable secrets are always created, regardless of this configuration.
-func (s *Secret) CreateOnUpdate(create bool) *Secret {
-	s.createOnUpdate = create
+func (s *Secret) CreateIfNotExists(createIfNotExists bool) *Secret {
+	s.createIfNotExists = createIfNotExists
 	return s
 }
 
@@ -125,7 +125,7 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 		return nil
 	}
 
-	if s.createOnUpdate || ptr.Deref(s.secret.Immutable, false) {
+	if s.createIfNotExists || ptr.Deref(s.secret.Immutable, false) {
 		_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, mutate)
 		return err
 	}
