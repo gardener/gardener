@@ -19,12 +19,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/component"
 )
 
 const dataKeyAuthPassword = "auth_password"
 
 func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
-	emailReceiverName := "email-kubernetes-ops"
+	if !a.hasSMTPSecret() {
+		return nil
+	}
+
+	var (
+		emailReceiverName = "email-kubernetes-ops"
+		visibility        = "operator"
+	)
+
+	if a.values.ClusterType == component.ClusterTypeShoot {
+		visibility = "owner"
+	}
 
 	return &monitoringv1alpha1.AlertmanagerConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -49,7 +62,7 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 				// Send alerts by default to nowhere
 				Receiver: "dev-null",
 				// email only for critical and blocker
-				Routes: []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|operator)$"},"receiver":"` + emailReceiverName + `"}`)}},
+				Routes: []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|` + visibility + `)$"},"receiver":"` + emailReceiverName + `"}`)}},
 			},
 			InhibitRules: []monitoringv1alpha1.InhibitRule{
 				// Apply inhibition if the alert name is the same.
@@ -93,18 +106,8 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 			Receivers: []monitoringv1alpha1.Receiver{
 				{Name: "dev-null"},
 				{
-					Name: emailReceiverName,
-					EmailConfigs: []monitoringv1alpha1.EmailConfig{{
-						To:           string(a.values.AlertingSMTPSecret.Data["to"]),
-						From:         string(a.values.AlertingSMTPSecret.Data["from"]),
-						Smarthost:    string(a.values.AlertingSMTPSecret.Data["smarthost"]),
-						AuthUsername: string(a.values.AlertingSMTPSecret.Data["auth_username"]),
-						AuthIdentity: string(a.values.AlertingSMTPSecret.Data["auth_identity"]),
-						AuthPassword: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: a.smtpSecret().Name},
-							Key:                  dataKeyAuthPassword,
-						},
-					}},
+					Name:         emailReceiverName,
+					EmailConfigs: a.emailConfigs(),
 				},
 			},
 		},
@@ -112,6 +115,10 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 }
 
 func (a *alertManager) smtpSecret() *corev1.Secret {
+	if !a.hasSMTPSecret() {
+		return nil
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.name() + "-smtp",
@@ -120,4 +127,32 @@ func (a *alertManager) smtpSecret() *corev1.Secret {
 		Type: a.values.AlertingSMTPSecret.Type,
 		Data: map[string][]byte{dataKeyAuthPassword: a.values.AlertingSMTPSecret.Data[dataKeyAuthPassword]},
 	}
+}
+
+func (a *alertManager) hasSMTPSecret() bool {
+	return a.values.AlertingSMTPSecret != nil && string(a.values.AlertingSMTPSecret.Data["auth_type"]) == "smtp"
+}
+
+func (a *alertManager) emailConfigs() []monitoringv1alpha1.EmailConfig {
+	emailReceivers := []string{string(a.values.AlertingSMTPSecret.Data["to"])}
+	if len(a.values.EmailReceivers) > 0 {
+		emailReceivers = a.values.EmailReceivers
+	}
+
+	var configs []monitoringv1alpha1.EmailConfig
+	for _, email := range emailReceivers {
+		configs = append(configs, monitoringv1alpha1.EmailConfig{
+			To:           email,
+			From:         string(a.values.AlertingSMTPSecret.Data["from"]),
+			Smarthost:    string(a.values.AlertingSMTPSecret.Data["smarthost"]),
+			AuthUsername: string(a.values.AlertingSMTPSecret.Data["auth_username"]),
+			AuthIdentity: string(a.values.AlertingSMTPSecret.Data["auth_identity"]),
+			AuthPassword: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: a.smtpSecret().Name},
+				Key:                  dataKeyAuthPassword,
+			},
+		})
+	}
+
+	return configs
 }

@@ -639,7 +639,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 	}
 
 	if wildcardCertSecret != nil {
-		values.Ingress.WildcardCertName = ptr.To(wildcardCertSecret.GetName())
+		values.Ingress.WildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
 	}
 
 	if alertingSMTPSecret != nil {
@@ -677,41 +677,19 @@ func (r *Reconciler) newPrometheus(log logr.Logger, values prometheus.Values, ol
 }
 
 func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
-	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
-	if err != nil {
-		return nil, err
-	}
-	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
-
-	storageCapacity := resource.MustParse(seed.GetValidVolumeSize("1Gi"))
-
-	alertManager := alertmanager.New(log, r.SeedClientSet.Client(), r.GardenNamespace, alertmanager.Values{
+	c, err := sharedcomponent.NewAlertmanager(log, r.SeedClientSet.Client(), r.GardenNamespace, alertmanager.Values{
 		Name:               "seed",
-		Image:              imageAlertmanager.String(),
-		Version:            ptr.Deref(imageAlertmanager.Version, "v0.0.0"),
+		ClusterType:        component.ClusterTypeSeed,
 		PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:    storageCapacity,
+		StorageCapacity:    resource.MustParse(seed.GetValidVolumeSize("1Gi")),
 		AlertingSMTPSecret: alertingSMTPSecret,
-		// TODO(rfranzke): Remove this after v1.92 has been released.
-		DataMigration: monitoring.DataMigration{
-			Client:          r.SeedClientSet.Client(),
-			Namespace:       r.GardenNamespace,
-			StorageCapacity: storageCapacity,
-			ImageAlpine:     imageAlpine.String(),
-			StatefulSetName: "alertmanager",
-			FullName:        "alertmanager-seed",
-			PVCName:         "alertmanager-db-alertmanager-0",
-		},
 	})
 
 	if alertingSMTPSecret == nil {
-		return component.OpDestroyAndWait(alertManager), nil
+		return component.OpDestroyAndWait(c), nil
 	}
 
-	return alertManager, nil
+	return c, err
 }
 
 func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer component.DeployWaiter, err error) {

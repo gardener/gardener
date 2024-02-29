@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheus
+package alertmanager
 
 import (
 	"context"
@@ -26,22 +26,22 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error) {
-	if p.values.Ingress == nil {
+func (a *alertManager) ingress(ctx context.Context) (*networkingv1.Ingress, error) {
+	if a.values.Ingress == nil {
 		return nil, nil
 	}
 
-	tlsSecretName := ptr.Deref(p.values.Ingress.WildcardCertSecretName, "")
-	if tlsSecretName == "" && p.values.Ingress.SecretsManager != nil {
-		ingressTLSSecret, err := p.values.Ingress.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        p.name() + "-tls",
-			CommonName:                  p.name(),
+	tlsSecretName := ptr.Deref(a.values.Ingress.WildcardCertSecretName, "")
+	if tlsSecretName == "" && a.values.Ingress.SecretsManager != nil {
+		ingressTLSSecret, err := a.values.Ingress.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+			Name:                        a.name() + "-tls",
+			CommonName:                  a.name(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{p.values.Ingress.Host},
+			DNSNames:                    []string{a.values.Ingress.Host},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
 			return nil, err
 		}
@@ -50,30 +50,33 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.name(),
-			Namespace: p.namespace,
-			Labels:    p.getLabels(),
+			Name:      a.name(),
+			Namespace: a.namespace,
+			Labels:    a.getLabels(),
 			Annotations: map[string]string{
 				"nginx.ingress.kubernetes.io/auth-type":   "basic",
 				"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
-				"nginx.ingress.kubernetes.io/auth-secret": p.values.Ingress.AuthSecretName,
+				"nginx.ingress.kubernetes.io/auth-secret": a.values.Ingress.AuthSecretName,
+				"nginx.ingress.kubernetes.io/server-snippet": `location /-/reload {
+  return 403;
+}`,
 			},
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: tlsSecretName,
-				Hosts:      []string{p.values.Ingress.Host},
+				Hosts:      []string{a.values.Ingress.Host},
 			}},
 			Rules: []networkingv1.IngressRule{{
-				Host: p.values.Ingress.Host,
+				Host: a.values.Ingress.Host,
 				IngressRuleValue: networkingv1.IngressRuleValue{
 					HTTP: &networkingv1.HTTPIngressRuleValue{
 						Paths: []networkingv1.HTTPIngressPath{{
 							Backend: networkingv1.IngressBackend{
 								Service: &networkingv1.IngressServiceBackend{
-									Name: p.name(),
-									Port: networkingv1.ServiceBackendPort{Number: servicePort},
+									Name: a.name(),
+									Port: networkingv1.ServiceBackendPort{Number: port},
 								},
 							},
 							Path:     "/",

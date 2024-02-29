@@ -24,6 +24,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -54,11 +56,13 @@ var _ = Describe("Prometheus", func() {
 		namespace           = "some-namespace"
 		managedResourceName = "alertmanager-" + name
 
-		image              = "some-image"
-		version            = "v1.2.3"
-		priorityClassName  = "priority-class"
-		storageCapacity    = resource.MustParse("1337Gi")
-		alertingSMTPSecret = &corev1.Secret{
+		image                    = "some-image"
+		version                  = "v1.2.3"
+		priorityClassName        = "priority-class"
+		replicas           int32 = 1
+		clusterType              = component.ClusterTypeSeed
+		storageCapacity          = resource.MustParse("1337Gi")
+		alertingSMTPSecret       = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "smtp-secret"},
 			Data: map[string][]byte{
 				"to":            []byte("secret-data1"),
@@ -67,8 +71,13 @@ var _ = Describe("Prometheus", func() {
 				"auth_username": []byte("secret-data4"),
 				"auth_identity": []byte("secret-data5"),
 				"auth_password": []byte("secret-data6"),
+				"auth_type":     []byte("smtp"),
 			},
 		}
+
+		ingressAuthSecretName     = "foo"
+		ingressHost               = "some-host.example.com"
+		ingressWildcardSecretName = "bar"
 
 		fakeClient client.Client
 		deployer   component.DeployWaiter
@@ -84,6 +93,7 @@ var _ = Describe("Prometheus", func() {
 		vpa          *vpaautoscalingv1.VerticalPodAutoscaler
 		config       *monitoringv1alpha1.AlertmanagerConfig
 		smtpSecret   *corev1.Secret
+		ingress      *networkingv1.Ingress
 	)
 
 	BeforeEach(func() {
@@ -97,6 +107,8 @@ var _ = Describe("Prometheus", func() {
 			Version:            version,
 			PriorityClassName:  priorityClassName,
 			StorageCapacity:    storageCapacity,
+			Replicas:           replicas,
+			ClusterType:        clusterType,
 			AlertingSMTPSecret: alertingSMTPSecret,
 		}
 
@@ -164,7 +176,7 @@ var _ = Describe("Prometheus", func() {
 					},
 				},
 				PriorityClassName: priorityClassName,
-				Replicas:          ptr.To(int32(1)),
+				Replicas:          &replicas,
 				Image:             &image,
 				ImagePullPolicy:   corev1.PullIfNotPresent,
 				Version:           version,
@@ -172,9 +184,6 @@ var _ = Describe("Prometheus", func() {
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("5m"),
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("200Mi"),
 					},
 				},
 				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
@@ -307,6 +316,48 @@ var _ = Describe("Prometheus", func() {
 			Type: alertingSMTPSecret.Type,
 			Data: map[string][]byte{"auth_password": alertingSMTPSecret.Data["auth_password"]},
 		}
+		ingress = &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-" + name,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"component": "alertmanager",
+					"role":      "monitoring",
+				},
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/auth-type":   "basic",
+					"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
+					"nginx.ingress.kubernetes.io/auth-secret": ingressAuthSecretName,
+					"nginx.ingress.kubernetes.io/server-snippet": `location /-/reload {
+  return 403;
+}`,
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+				TLS: []networkingv1.IngressTLS{{
+					SecretName: ingressWildcardSecretName,
+					Hosts:      []string{ingressHost},
+				}},
+				Rules: []networkingv1.IngressRule{{
+					Host: ingressHost,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: "alertmanager-" + name,
+										Port: networkingv1.ServiceBackendPort{Number: 9093},
+									},
+								},
+								Path:     "/",
+								PathType: ptr.To(networkingv1.PathTypePrefix),
+							}},
+						},
+					},
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -314,58 +365,152 @@ var _ = Describe("Prometheus", func() {
 	})
 
 	Describe("#Deploy", func() {
-		Context("resources generation", func() {
-			BeforeEach(func() {
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+		BeforeEach(func() {
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceName,
-						Namespace:  namespace,
-						Generation: 1,
-					},
-					Status: healthyManagedResourceStatus,
-				})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       managedResourceName,
+					Namespace:  namespace,
+					Generation: 1,
+				},
+				Status: healthyManagedResourceStatus,
+			})).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			Expect(deployer.Deploy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResource.Name,
+					Namespace:       managedResource.Namespace,
+					ResourceVersion: "2",
+					Generation:      1,
+					Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:       ptr.To("seed"),
+					SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
+					KeepObjects: ptr.To(false),
+				},
+				Status: healthyManagedResourceStatus,
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
+			Expect(managedResource).To(Equal(expectedRuntimeMr))
+
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+		})
+
+		When("cluster type is 'seed'", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
+
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
 			})
 
-			JustBeforeEach(func() {
-				Expect(deployer.Deploy(ctx)).To(Succeed())
+			When("ingress is configured", func() {
+				BeforeEach(func() {
+					values.Ingress = &IngressValues{
+						AuthSecretName:         ingressAuthSecretName,
+						Host:                   ingressHost,
+						WildcardCertSecretName: &ingressWildcardSecretName,
+					}
+				})
 
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResource.Name,
-						Namespace:       managedResource.Namespace,
-						ResourceVersion: "2",
-						Generation:      1,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       ptr.To("seed"),
-						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
-						KeepObjects: ptr.To(false),
-					},
-					Status: healthyManagedResourceStatus,
-				}
-				utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
-				Expect(managedResource).To(Equal(expectedRuntimeMr))
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(6))
 
-				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+				})
+			})
 
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			When("no alerting smtp secret is configured", func() {
+				BeforeEach(func() {
+					values.AlertingSMTPSecret = nil
+				})
 
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(3))
+
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(managedResourceSecret.Data).NotTo(HaveKey("alertmanagerconfig__some-namespace__alertmanager-" + name + ".yaml"))
+					Expect(managedResourceSecret.Data).NotTo(HaveKey("secret__some-namespace__alertmanager-" + name + "-smtp.yaml"))
+				})
+			})
+
+			When("email receivers are configured", func() {
+				BeforeEach(func() {
+					values.EmailReceivers = []string{"foo@example.bar", "bar@example.foo"}
+
+					config.Spec.Receivers[1].EmailConfigs = []monitoringv1alpha1.EmailConfig{
+						{
+							To:           values.EmailReceivers[0],
+							From:         string(alertingSMTPSecret.Data["from"]),
+							Smarthost:    string(alertingSMTPSecret.Data["smarthost"]),
+							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
+							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
+							AuthPassword: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
+								Key:                  "auth_password",
+							},
+						},
+						{
+							To:           values.EmailReceivers[1],
+							From:         string(alertingSMTPSecret.Data["from"]),
+							Smarthost:    string(alertingSMTPSecret.Data["smarthost"]),
+							AuthUsername: string(alertingSMTPSecret.Data["auth_username"]),
+							AuthIdentity: string(alertingSMTPSecret.Data["auth_identity"]),
+							AuthPassword: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "alertmanager-" + name + "-smtp"},
+								Key:                  "auth_password",
+							},
+						},
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
+				})
+			})
+		})
+
+		When("cluster type is 'shoot'", func() {
+			BeforeEach(func() {
+				values.ClusterType = component.ClusterTypeShoot
+
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`}
+				alertManager.Labels["gardener.cloud/role"] = "monitoring"
+				alertManager.Spec.PodMetadata.Labels["gardener.cloud/role"] = "monitoring"
+				config.Spec.Route.Routes[0].Raw = []byte(`{"match_re":{"visibility":"^(all|owner)$"},"receiver":"email-kubernetes-ops"}`)
 			})
 
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(5))
+
 				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
 				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))

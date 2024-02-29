@@ -211,6 +211,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 
 	// Monitoring
+	o.Shoot.Components.Monitoring.Alertmanager, err = b.DefaultAlertmanager()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.Monitoring.Monitoring, err = b.DefaultMonitoring()
 	if err != nil {
 		return nil, err

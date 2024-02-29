@@ -48,10 +48,6 @@ import (
 )
 
 var (
-	//go:embed charts/seed-monitoring/charts/alertmanager
-	chartAlertmanager     embed.FS
-	chartPathAlertmanager = filepath.Join("charts", "seed-monitoring", "charts", "alertmanager")
-
 	//go:embed charts/seed-monitoring/charts/core
 	chartCore     embed.FS
 	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
@@ -90,16 +86,12 @@ type Values struct {
 	GlobalShootRemoteWriteSecret *corev1.Secret
 	// IgnoreAlerts specifies whether alerts should be ignored.
 	IgnoreAlerts bool
-	// ImageAlertmanager is the image of Alertmanager.
-	ImageAlertmanager string
 	// ImageBlackboxExporter is the image of BlackboxExporter.
 	ImageBlackboxExporter string
 	// ImageConfigmapReloader is the image of ConfigmapReloader.
 	ImageConfigmapReloader string
 	// ImagePrometheus is the image of Prometheus.
 	ImagePrometheus string
-	// IngressHostAlertmanager is the host name of Alertmanager.
-	IngressHostAlertmanager string
 	// IngressHostPrometheus is the host name of Prometheus.
 	IngressHostPrometheus string
 	// IsWorkerless specifies whether the cluster is workerless.
@@ -126,8 +118,6 @@ type Values struct {
 	RuntimeProviderType string
 	// RuntimeRegion is the region of the runtime cluster.
 	RuntimeRegion string
-	// StorageCapacityAlertmanager is the storage capacity of Alertmanager.
-	StorageCapacityAlertmanager string
 	// TargetName is the name of the target cluster.
 	TargetName string
 	// TargetProviderType is the provider type of the target cluster.
@@ -339,81 +329,10 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
-		return err
-	}
-
-	// Check if we want to deploy an alertmanager into the shoot namespace.
-	if m.values.AlertmanagerEnabled {
-		var emailConfigs []map[string]interface{}
-		if m.values.MonitoringConfig != nil && m.values.MonitoringConfig.Alerting != nil {
-			for _, email := range m.values.MonitoringConfig.Alerting.EmailReceivers {
-				for _, secret := range m.values.AlertingSecrets {
-					if string(secret.Data["auth_type"]) != "smtp" {
-						continue
-					}
-					emailConfigs = append(emailConfigs, map[string]interface{}{
-						"to":            email,
-						"from":          string(secret.Data["from"]),
-						"smarthost":     string(secret.Data["smarthost"]),
-						"auth_username": string(secret.Data["auth_username"]),
-						"auth_identity": string(secret.Data["auth_identity"]),
-						"auth_password": string(secret.Data["auth_password"]),
-					})
-				}
-			}
-		}
-
-		var alertManagerIngressTLSSecretName string
-		if m.values.WildcardCertName != nil {
-			alertManagerIngressTLSSecretName = *m.values.WildcardCertName
-		} else {
-			ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-				Name:                        "alertmanager-tls",
-				CommonName:                  "alertmanager",
-				Organization:                []string{"gardener.cloud:monitoring:ingress"},
-				DNSNames:                    []string{m.values.IngressHostAlertmanager},
-				CertType:                    secretsutils.ServerCert,
-				Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-				SkipPublishingCACertificate: true,
-			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-			if err != nil {
-				return err
-			}
-			alertManagerIngressTLSSecretName = ingressTLSSecret.Name
-		}
-
-		alertManagerValues := map[string]interface{}{
-			"images": map[string]string{
-				"alertmanager":       m.values.ImageAlertmanager,
-				"configmap-reloader": m.values.ImageConfigmapReloader,
-			},
-			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   m.values.IngressHostAlertmanager,
-						"secretName": alertManagerIngressTLSSecretName,
-					},
-				},
-			},
-			"replicas":     m.values.Replicas,
-			"storage":      m.values.StorageCapacityAlertmanager,
-			"emailConfigs": emailConfigs,
-		}
-
-		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
-	}
-
-	return deleteAlertmanager(ctx, m.client, m.namespace)
+	return m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
-	if err := deleteAlertmanager(ctx, m.client, m.namespace); err != nil {
-		return err
-	}
-
 	if err := managedresources.DeleteForShoot(ctx, m.client, m.namespace, managedResourceNamePrometheus); err != nil {
 		return err
 	}
