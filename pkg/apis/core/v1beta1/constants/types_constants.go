@@ -669,6 +669,10 @@ const (
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
 	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
 	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
+	// LabelCareConditionType is a key for a label on a ManagedResource indicating to which condition type its status
+	// should be aggregated.
+	LabelCareConditionType = "care.gardener.cloud/condition-type"
+
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"
 	// LabelWorkerKubernetesVersion is a constant for a label that indicates the Kubernetes version used for the worker pool nodes.

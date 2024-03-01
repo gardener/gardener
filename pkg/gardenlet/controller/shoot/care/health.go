@@ -143,14 +143,20 @@ func (h *Health) Check(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
+	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+		updatedConditions := managedResourceListingFailedConditions(h.clock, conditions.ConvertToSlice(), err)
+		return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
+	}
+
 	// Health checks that can be executed in all cases.
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, healthCheckOutdatedThreshold)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
@@ -165,7 +171,7 @@ func (h *Health) Check(
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
@@ -397,8 +403,12 @@ func (h *Health) checkControlPlane(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
 	if err != nil {
 		return nil, err
@@ -406,6 +416,13 @@ func (h *Health) checkControlPlane(
 
 	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
+	}
+
+	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Spec.Class != nil &&
+			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
+	}); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
@@ -423,8 +440,12 @@ func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
 		gardenerVersion, err := semver.NewVersion(h.shoot.GetInfo().Status.Gardener.Version)
 		if err != nil {
@@ -454,6 +475,13 @@ func (h *Health) checkObservabilityComponents(
 			return exitCondition, err
 		}
 	}
+
+	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return sets.New(string(gardencorev1beta1.ShootObservabilityComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
+	}); exitCondition != nil {
+		return exitCondition, nil
+	}
+
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -468,15 +496,17 @@ func (h *Health) checkSystemComponents(
 	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	if exitCondition, err := h.checkManagedResources(ctx, condition, func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return managedResource.Spec.Class == nil
-	}); err != nil {
-		return exitCondition, err
+	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Spec.Class == nil &&
+			sets.New("", string(gardencorev1beta1.ShootSystemComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
+	}); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
@@ -528,23 +558,22 @@ func (h *Health) checkWorkers(
 	return &c, nil
 }
 
-func (h *Health) checkManagedResources(ctx context.Context, condition gardencorev1beta1.Condition, filterFunc func(resourcesv1alpha1.ManagedResource) bool) (*gardencorev1beta1.Condition, error) {
-	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
-		return nil, err
-	}
-
-	for _, managedResource := range managedResourceList.Items {
+func (h *Health) checkManagedResources(
+	condition gardencorev1beta1.Condition,
+	managedResources []resourcesv1alpha1.ManagedResource,
+	filterFunc func(resourcesv1alpha1.ManagedResource) bool,
+) *gardencorev1beta1.Condition {
+	for _, managedResource := range managedResources {
 		if !filterFunc(managedResource) {
 			continue
 		}
 
 		if exitCondition := h.healthChecker.CheckManagedResource(condition, &managedResource, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
-			return exitCondition, nil
+			return exitCondition
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 var constraintGardenerGreaterEqual190 *semver.Constraints
@@ -885,6 +914,14 @@ func shootHibernatedConditions(clock clock.Clock, conditions []gardencorev1beta1
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
+}
+
+func managedResourceListingFailedConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition, err error) []gardencorev1beta1.Condition {
+	outConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		outConditions = append(outConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionFalse, "ManagedResourceListingFailed", fmt.Sprintf("Failed listing ManagedResources: %s", err.Error())))
+	}
+	return outConditions
 }
 
 func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOperation) string {
