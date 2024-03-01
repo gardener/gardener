@@ -442,6 +442,33 @@ var _ = Describe("DNSRecord", func() {
 			Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 		})
 
+		It("should deploy the DNSRecord resource with ip stack annotation", func() {
+			values.IPStack = "ipv5"
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.DNSRecordResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+						"dns.gardener.cloud/ip-stack":      "ipv5",
+					},
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+		})
+
 		It("should fail if creating the DNSRecord resource failed", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).

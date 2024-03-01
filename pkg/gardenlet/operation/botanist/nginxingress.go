@@ -28,6 +28,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultNginxIngress returns a deployer for the nginxingress.
@@ -103,6 +104,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		Namespace:         b.Shoot.SeedNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.IsRestorePhase(),
+		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 	}
 
 	// Set component values even if the nginx-ingress addons is not enabled.

@@ -32,6 +32,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		Namespace:         b.Shoot.SeedNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
+		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 	}
 
 	if b.NeedsExternalDNS() {
@@ -64,6 +65,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
 			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
 			b.IsRestorePhase(),
+		IPStack: gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 	}
 
 	if b.NeedsInternalDNS() {

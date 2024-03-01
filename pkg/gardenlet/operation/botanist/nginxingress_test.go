@@ -233,6 +233,7 @@ var _ = Describe("NginxIngress", func() {
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
 				AnnotateOperation: false,
+				IPStack:           "ipv4",
 			}))
 		})
 
@@ -279,6 +280,7 @@ var _ = Describe("NginxIngress", func() {
 				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
 				Values:            []string{address},
 				AnnotateOperation: false,
+				IPStack:           "ipv4",
 			}))
 		})
 

@@ -1341,4 +1341,16 @@ var _ = Describe("Shoot", func() {
 			))
 		})
 	})
+
+	DescribeTable("#GetIPStackForShoot",
+		func(shoot *gardencorev1beta1.Shoot, expectedResult string) {
+			Expect(GetIPStackForShoot(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("default shoot", &gardencorev1beta1.Shoot{}, "ipv4"),
+		Entry("ipv4 shoot", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}}}}, "ipv4"),
+		Entry("ipv6 shoot", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}}}}, "ipv6"),
+		Entry("dual-stack shoot (ipv4 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
+		Entry("dual-stack shoot (ipv6 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
+	)
 })

@@ -342,4 +342,16 @@ var _ = Describe("utils", func() {
 			})
 		})
 	})
+
+	DescribeTable("#GetIPStackForSeed",
+		func(seed *gardencorev1beta1.Seed, expectedResult string) {
+			Expect(GetIPStackForSeed(seed)).To(Equal(expectedResult))
+		},
+
+		Entry("default seed", &gardencorev1beta1.Seed{}, "ipv4"),
+		Entry("ipv4 seed", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}}}}, "ipv4"),
+		Entry("ipv6 seed", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}}}}, "ipv6"),
+		Entry("dual-stack seed (ipv4 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
+		Entry("dual-stack seed (ipv6 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
+	)
 })
