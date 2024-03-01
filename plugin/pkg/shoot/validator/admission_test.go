@@ -741,7 +741,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName 'seed' cannot be changed to 'new-seed' by patching the shoot, please use the shoots/binding subresource")))
 			})
 
 			It("should not forbid changing the seedName on admission.Update if the subresource is binding", func() {
@@ -761,7 +761,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName is already set to 'seed' and cannot be changed to 'nil'")))
 			})
 
 			It("should not allow setting the seedName to nil on admission.Update even if the subresource is binding", func() {
@@ -771,7 +771,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be set to nil")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName is already set to 'seed' and cannot be changed to 'nil'")))
 			})
 
 			It("should not allow setting seedName even if old seedName was nil on admission.Update if the subresource is not binding", func() {
@@ -781,7 +781,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource")))
+				Expect(err).To(MatchError(ContainSubstring("spec.seedName 'nil' cannot be changed to 'seed' by patching the shoot, please use the shoots/binding subresource")))
 			})
 
 			It("should reject update of binding when shoot.spec.seedName is not nil and the binding has the same seedName", func() {
@@ -4539,7 +4539,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("spec.seedName cannot be set to nil"))
+					Expect(err.Error()).To(ContainSubstring("spec.seedName is already set to 'seed' and cannot be changed to 'nil'"))
 				})
 
 				It("should allow update of binding when shoot.spec.seedName is not nil", func() {

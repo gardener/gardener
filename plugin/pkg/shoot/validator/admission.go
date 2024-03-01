@@ -381,11 +381,9 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			}
 		}
 	case admission.Update:
-		if a.GetSubresource() == "binding" {
-			if c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName == nil {
-				return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be set to nil"))
-			}
-
+		if c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName == nil {
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName is already set to '%s' and cannot be changed to 'nil'", *c.oldShoot.Spec.SeedName))
+		} else if a.GetSubresource() == "binding" {
 			if shootIsBeingRescheduled {
 				newShootSpec := c.shoot.Spec
 				newShootSpec.SeedName = c.oldShoot.Spec.SeedName
@@ -394,7 +392,8 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 				}
 			}
 		} else if !reflect.DeepEqual(c.shoot.Spec.SeedName, c.oldShoot.Spec.SeedName) {
-			return admission.NewForbidden(a, fmt.Errorf("spec.seedName cannot be changed by patching the shoot, please use the shoots/binding subresource"))
+			oldShootNameStr := ptr.Deref(c.oldShoot.Spec.SeedName, "nil")
+			return admission.NewForbidden(a, fmt.Errorf("spec.seedName '%s' cannot be changed to '%s' by patching the shoot, please use the shoots/binding subresource", oldShootNameStr, *c.shoot.Spec.SeedName))
 		}
 	case admission.Delete:
 		return nil
