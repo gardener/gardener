@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -120,15 +119,8 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			if err := ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); err != nil {
-				statusErr := &apierrors.StatusError{}
-				if !errors.As(err, &statusErr) {
-					return err
-				}
-				// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
+			// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
+			if err := ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 			return nil
