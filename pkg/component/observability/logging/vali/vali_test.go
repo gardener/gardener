@@ -168,6 +168,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
+					Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -267,6 +268,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
+					Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -322,6 +324,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
+					Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{

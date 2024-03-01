@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -163,7 +164,7 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
-	Describe("#CreateForShoot", func() {
+	Describe("#CreateForShoot{WithLabels}", func() {
 		It("should return the error of the secret reconciliation", func() {
 			errClient := &errorClient{err: fakeErr, failSecretCreate: true, Client: fakeClient}
 			Expect(CreateForShoot(ctx, errClient, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
@@ -193,6 +194,48 @@ var _ = Describe("managedresources", func() {
 			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
 
 			Expect(CreateForShoot(ctx, fakeClient, namespace, name, LabelValueGardener, keepObjects, data)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMR))
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret).To(Equal(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+				},
+				Data:      data,
+				Immutable: ptr.To(true),
+				Type:      corev1.SecretTypeOpaque,
+			}))
+		})
+
+		It("should successfully create secret and managed resource with labels", func() {
+			labels := map[string]string{"foo": "bar"}
+
+			secretName, _ := NewSecret(fakeClient, namespace, name, data, true)
+			expectedMR := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          utils.MergeStringMaps(map[string]string{"origin": "gardener"}, labels),
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs:   []corev1.LocalObjectReference{{Name: secretName}},
+					KeepObjects:  ptr.To(keepObjects),
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				},
+			}
+
+			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
+
+			Expect(CreateForShootWithLabels(ctx, fakeClient, namespace, name, LabelValueGardener, keepObjects, labels, data)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
 			Expect(mr).To(Equal(expectedMR))
 
@@ -245,8 +288,7 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
-	Describe("#CreateForSeed", func() {
-
+	Describe("#CreateForSeed{WithLabels}", func() {
 		var (
 			secretName string
 			expectedMR *resourcesv1alpha1.ManagedResource
@@ -316,6 +358,34 @@ var _ = Describe("managedresources", func() {
 
 			Expect(CreateForSeed(ctx, fakeClient, namespace, name, keepObjects, data)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMR))
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret).To(Equal(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+				},
+				Data:      data,
+				Immutable: ptr.To(true),
+				Type:      corev1.SecretTypeOpaque,
+			}))
+		})
+
+		It("should successfully create secret and managed resource with labels", func() {
+			labels := map[string]string{"foo": "bar"}
+			expectedMR.Labels = utils.MergeStringMaps(expectedMR.Labels, labels)
+
+			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
+
+			Expect(CreateForSeedWithLabels(ctx, fakeClient, namespace, name, keepObjects, labels, data)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
 			Expect(mr).To(Equal(expectedMR))
 

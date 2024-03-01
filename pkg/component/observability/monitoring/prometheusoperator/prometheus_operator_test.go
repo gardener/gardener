@@ -384,7 +384,10 @@ var _ = Describe("PrometheusOperator", func() {
 						Namespace:       managedResource.Namespace,
 						ResourceVersion: "2",
 						Generation:      1,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						Labels: map[string]string{
+							"gardener.cloud/role":                "seed-system-component",
+							"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class:       ptr.To("seed"),

@@ -27,6 +27,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ManagedResource is a structure managing a ManagedResource.
@@ -62,7 +63,7 @@ func (m *ManagedResource) WithNamespacedName(namespace, name string) *ManagedRes
 
 // WithLabels sets the labels.
 func (m *ManagedResource) WithLabels(labels map[string]string) *ManagedResource {
-	m.labels = labels
+	m.labels = utils.MergeStringMaps(m.labels, labels)
 	return m
 }
 

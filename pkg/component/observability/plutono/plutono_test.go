@@ -540,7 +540,10 @@ status:
 					Name:            managedResource.Name,
 					Namespace:       managedResource.Namespace,
 					ResourceVersion: "1",
-					Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+					Labels: map[string]string{
+						v1beta1constants.GardenRole:          "seed-system-component",
+						"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class:       ptr.To("seed"),

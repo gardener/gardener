@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -81,9 +82,10 @@ var _ = Describe("ResourceConfig", func() {
 
 	Context("Deployment/Destruction", func() {
 		var (
-			ctx                 = context.TODO()
-			namespace           = "some-namespace"
-			managedResourceName = "managed-resource-name"
+			ctx                   = context.TODO()
+			namespace             = "some-namespace"
+			managedResourceName   = "managed-resource-name"
+			managedResourceLabels = map[string]string{"foo": "bar"}
 
 			clusterType  ClusterType
 			fakeClient   client.Client
@@ -122,14 +124,14 @@ var _ = Describe("ResourceConfig", func() {
 				It("should deploy the expected resources", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					expectedMr := &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
-							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+							Labels:          utils.MergeStringMaps(map[string]string{"gardener.cloud/role": "seed-system-component"}, managedResourceLabels),
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -154,7 +156,7 @@ var _ = Describe("ResourceConfig", func() {
 
 			Describe("#Destroy", func() {
 				It("should destroy the expected resources", func() {
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
@@ -176,7 +178,7 @@ var _ = Describe("ResourceConfig", func() {
 				It("should deploy the expected resources", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					expectedMr := &resourcesv1alpha1.ManagedResource{
@@ -210,7 +212,7 @@ var _ = Describe("ResourceConfig", func() {
 
 			Describe("#Destroy", func() {
 				It("should destroy the expected resources", func() {
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())

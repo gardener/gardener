@@ -79,6 +79,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualGardenAccessSecret = g.newVirtualGardenAccessSecret()
+		conditionTypeLabels       = map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}
 	)
 
 	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
@@ -98,7 +99,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, conditionTypeLabels, runtimeResources); err != nil {
 		return err
 	}
 
@@ -112,7 +113,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, conditionTypeLabels, virtualResources)
 }
 
 func (g *gardenerMetricsExporter) Destroy(ctx context.Context) error {

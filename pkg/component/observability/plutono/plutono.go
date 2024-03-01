@@ -162,7 +162,7 @@ func (p *plutono) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForSeed(ctx, p.client, p.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, ManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}, data)
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {

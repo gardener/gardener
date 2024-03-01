@@ -143,7 +143,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		log.Info("Deploy new AlertManager (with init container for renaming the data directory)")
 	}
 
-	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, a.name(), false, resources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, a.client, a.namespace, a.name(), false, map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}, resources); err != nil {
 		return err
 	}
 

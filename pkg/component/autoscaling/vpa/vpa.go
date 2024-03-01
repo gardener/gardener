@@ -172,7 +172,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), registry, allResources)
+	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), nil, registry, allResources)
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {

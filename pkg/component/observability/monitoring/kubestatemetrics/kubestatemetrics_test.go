@@ -644,9 +644,12 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceName,
-						Namespace:       namespace,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						Name:      managedResourceName,
+						Namespace: namespace,
+						Labels: map[string]string{
+							"gardener.cloud/role":                "seed-system-component",
+							"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+						},
 						ResourceVersion: "1",
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{

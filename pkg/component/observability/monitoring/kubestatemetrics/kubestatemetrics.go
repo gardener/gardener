@@ -121,7 +121,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
+	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
