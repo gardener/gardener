@@ -366,41 +366,18 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 	return nil, nil
 }
 
-var (
-	requiredLoggingStatefulSets = sets.New(
-		v1beta1constants.StatefulSetNameVali,
-	)
-
-	requiredLoggingDeployments = sets.New(
-		v1beta1constants.DeploymentNameEventLogger,
-	)
-)
+var requiredLoggingDeployments = sets.New(v1beta1constants.DeploymentNameEventLogger)
 
 // CheckLoggingControlPlane checks whether the logging components are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	ctx context.Context,
 	namespace string,
 	eventLoggingEnabled bool,
-	valiEnabled bool,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	if valiEnabled {
-		statefulSetList := &appsv1.StatefulSetList{}
-		if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: loggingSelector}); err != nil {
-			return nil, err
-		}
-
-		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList.Items); exitCondition != nil {
-			return exitCondition, nil
-		}
-		if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
-			return exitCondition, nil
-		}
-	}
-
 	if eventLoggingEnabled {
 		deploymentList := &appsv1.DeploymentList{}
 		if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: loggingSelector}); err != nil {

@@ -72,7 +72,6 @@ var (
 
 	commonMonitoringDeployments = sets.New(
 		v1beta1constants.DeploymentNameKubeStateMetrics,
-		v1beta1constants.DeploymentNamePlutono,
 	)
 )
 
@@ -447,16 +446,11 @@ func (h *Health) checkObservabilityComponents(
 	error,
 ) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
-		gardenerVersion, err := semver.NewVersion(h.shoot.GetInfo().Status.Gardener.Version)
-		if err != nil {
-			return nil, err
-		}
-
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
 			h.shoot.SeedNamespace,
 			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
-			ComputeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager, gardenerVersion),
+			ComputeRequiredMonitoringStatefulSets(),
 			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
@@ -469,7 +463,6 @@ func (h *Health) checkObservabilityComponents(
 			ctx,
 			h.shoot.SeedNamespace,
 			gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration),
-			gardenlethelper.IsValiEnabled(h.gardenletConfiguration),
 			condition,
 		); err != nil || exitCondition != nil {
 			return exitCondition, err
@@ -585,16 +578,8 @@ func init() {
 }
 
 // ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
-func ComputeRequiredMonitoringStatefulSets(wantsAlertmanager bool, gardenerVersion *semver.Version) sets.Set[string] {
-	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
-	if wantsAlertmanager {
-		if constraintGardenerGreaterEqual190.Check(gardenerVersion) {
-			requiredMonitoringStatefulSets.Insert("alertmanager-shoot")
-		} else {
-			requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
-		}
-	}
-	return requiredMonitoringStatefulSets
+func ComputeRequiredMonitoringStatefulSets() sets.Set[string] {
+	return sets.New(v1beta1constants.StatefulSetNamePrometheus)
 }
 
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
