@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,49 +27,16 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
-	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
-	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	"github.com/gardener/gardener/pkg/component/networking/istio"
-	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
-	"github.com/gardener/gardener/pkg/features"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
-)
-
-var requiredManagedResourcesSeed = sets.New(
-	etcd.Druid,
-	clusterautoscaler.ManagedResourceControlName,
-	kubestatemetrics.ManagedResourceName,
-	nginxingress.ManagedResourceName,
-	seedsystem.ManagedResourceName,
-	vpa.ManagedResourceControlName,
-	prometheusoperator.ManagedResourceName,
-	"prometheus-cache",
-	"prometheus-seed",
-	"prometheus-aggregate",
 )
 
 // health contains information needed to execute health checks for a seed.
 type health struct {
-	seed                *gardencorev1beta1.Seed
-	seedClient          client.Client
-	clock               clock.Clock
-	namespace           *string
-	seedIsGarden        bool
-	loggingEnabled      bool
-	valiEnabled         bool
-	alertManagerEnabled bool
-	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
-	healthChecker       *healthchecker.HealthChecker
+	seed          *gardencorev1beta1.Seed
+	seedClient    client.Client
+	clock         clock.Clock
+	namespace     *string
+	healthChecker *healthchecker.HealthChecker
 }
 
 // NewHealth creates a new Health instance with the given parameters.
@@ -79,23 +45,14 @@ func NewHealth(
 	seedClient client.Client,
 	clock clock.Clock,
 	namespace *string,
-	seedIsGarden bool,
-	loggingEnabled bool,
-	valiEnabled bool,
-	alertManagerEnabled bool,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck {
 	return &health{
-		seedClient:          seedClient,
-		seed:                seed,
-		clock:               clock,
-		namespace:           namespace,
-		seedIsGarden:        seedIsGarden,
-		loggingEnabled:      loggingEnabled,
-		valiEnabled:         valiEnabled,
-		alertManagerEnabled: alertManagerEnabled,
-		conditionThresholds: conditionThresholds,
-		healthChecker:       healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
+		seedClient:    seedClient,
+		seed:          seed,
+		clock:         clock,
+		namespace:     namespace,
+		healthChecker: healthchecker.NewHealthChecker(seedClient, clock, conditionThresholds, seed.Status.LastOperation),
 	}
 }
 

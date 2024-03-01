@@ -26,12 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // NewHealthCheck is used to create a new Health check instance.
@@ -39,14 +36,12 @@ var NewHealthCheck = defaultNewHealthCheck
 
 // Reconciler reconciles Seed resources and executes health check operations.
 type Reconciler struct {
-	GardenClient   client.Client
-	SeedClient     client.Client
-	Config         config.SeedCareControllerConfiguration
-	Clock          clock.Clock
-	Namespace      *string
-	SeedName       string
-	LoggingEnabled bool
-	ValiEnabled    bool
+	GardenClient client.Client
+	SeedClient   client.Client
+	Config       config.SeedCareControllerConfiguration
+	Clock        clock.Clock
+	Namespace    *string
+	SeedName     string
 }
 
 // Reconcile reconciles Seed resources and executes health check operations.
@@ -76,26 +71,11 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	seedConditions := NewSeedConditions(r.Clock, seed.Status)
 
 	// Trigger health check
-	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, r.SeedClient)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), false)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	alertManagerEnabled := secrets[v1beta1constants.GardenRoleAlerting] != nil && string(secrets[v1beta1constants.GardenRoleAlerting].Data["auth_type"]) == "smtp"
-
 	updatedConditions := NewHealthCheck(
 		seed,
 		r.SeedClient,
 		r.Clock,
 		r.Namespace,
-		seedIsGarden,
-		r.LoggingEnabled,
-		r.ValiEnabled,
-		alertManagerEnabled,
 		r.conditionThresholdsToProgressingMapping(),
 	).Check(
 		ctx,
