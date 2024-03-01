@@ -361,6 +361,13 @@ If at least one `ManagedResource` is unhealthy and there is threshold configurat
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
+In order to compute the condition statuses, this reconciler considers `ManagedResource`s (in the `garden` and `istio-system` namespace) and their status, see [this document](resource-manager.md#conditions) for more information.
+The following table explains which `ManagedResource`s are considered for which condition type:
+
+| Condition Type                | `ManagedResource`s are considered when |
+|-------------------------------|----------------------------------------|
+| `SeedSystemComponentsHealthy` | `.spec.class=seed`                     |
+
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
