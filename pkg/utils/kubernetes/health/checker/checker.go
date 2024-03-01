@@ -222,6 +222,28 @@ func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration)
 	}
 }
 
+// CheckManagedResources checks multiple ManagedResources in case the provided filter func returns true. If their state
+// indicates issues then this is reflected in the state of the provided condition. If there are no issues, nil is
+// returned.
+func (b *HealthChecker) CheckManagedResources(
+	condition gardencorev1beta1.Condition,
+	managedResources []resourcesv1alpha1.ManagedResource,
+	filterFunc func(resourcesv1alpha1.ManagedResource) bool,
+	progressingThreshold *metav1.Duration,
+) *gardencorev1beta1.Condition {
+	for _, managedResource := range managedResources {
+		if !filterFunc(managedResource) {
+			continue
+		}
+
+		if exitCondition := b.CheckManagedResource(condition, &managedResource, progressingThreshold); exitCondition != nil {
+			return exitCondition
+		}
+	}
+
+	return nil
+}
+
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{

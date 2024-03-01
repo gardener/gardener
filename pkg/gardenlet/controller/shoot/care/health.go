@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -30,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
@@ -417,10 +415,10 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
-	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil &&
 			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
-	}); exitCondition != nil {
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -469,9 +467,9 @@ func (h *Health) checkObservabilityComponents(
 		}
 	}
 
-	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return sets.New(string(gardencorev1beta1.ShootObservabilityComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
-	}); exitCondition != nil {
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -495,10 +493,10 @@ func (h *Health) checkSystemComponents(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	if exitCondition := h.checkManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class == nil &&
 			sets.New("", string(gardencorev1beta1.ShootSystemComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
-	}); exitCondition != nil {
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 		return exitCondition, nil
 	}
 
@@ -549,32 +547,6 @@ func (h *Health) checkWorkers(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
-}
-
-func (h *Health) checkManagedResources(
-	condition gardencorev1beta1.Condition,
-	managedResources []resourcesv1alpha1.ManagedResource,
-	filterFunc func(resourcesv1alpha1.ManagedResource) bool,
-) *gardencorev1beta1.Condition {
-	for _, managedResource := range managedResources {
-		if !filterFunc(managedResource) {
-			continue
-		}
-
-		if exitCondition := h.healthChecker.CheckManagedResource(condition, &managedResource, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
-			return exitCondition
-		}
-	}
-
-	return nil
-}
-
-var constraintGardenerGreaterEqual190 *semver.Constraints
-
-func init() {
-	var err error
-	constraintGardenerGreaterEqual190, err = semver.NewConstraint(">= 1.90-0")
-	utilruntime.Must(err)
 }
 
 // ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
