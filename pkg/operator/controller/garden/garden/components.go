@@ -310,6 +310,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 		garden.Spec.RuntimeCluster.Provider.Zones,
+		map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 	)
 }
 
@@ -693,6 +694,7 @@ func (r *Reconciler) newKubeControllerManager(
 		kubecontrollermanager.ControllerSyncPeriods{
 			ResourceQuota: ptr.To(time.Minute),
 		},
+		map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 	)
 }
 
@@ -761,8 +763,9 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
-			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
+			ServerOutOfCluster:    gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			ManagedResourceLabels: map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 		},
 	)
 }

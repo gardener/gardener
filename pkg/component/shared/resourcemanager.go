@@ -62,6 +62,7 @@ func NewRuntimeGardenerResourceManager(
 	endpointSliceHintsEnabled bool,
 	additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector,
 	zones []string,
+	managedResourceLabels map[string]string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -91,6 +92,7 @@ func NewRuntimeGardenerResourceManager(
 		Image:                                image.String(),
 		LogLevel:                             logLevel,
 		LogFormat:                            logFormat,
+		ManagedResourceLabels:                managedResourceLabels,
 		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).

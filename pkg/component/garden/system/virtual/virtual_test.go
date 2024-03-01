@@ -609,7 +609,10 @@ var _ = Describe("Virtual", func() {
 					Name:            managedResource.Name,
 					Namespace:       managedResource.Namespace,
 					ResourceVersion: "1",
-					Labels:          map[string]string{"origin": "gardener"},
+					Labels: map[string]string{
+						"origin":                             "gardener",
+						"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},

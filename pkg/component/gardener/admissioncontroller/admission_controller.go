@@ -92,6 +92,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualGardenAccessSecret = a.newVirtualGardenAccessSecret()
+		managedResourceLabels     = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
 	)
 
 	secretServerCert, err := a.reconcileSecretServerCert(ctx)
@@ -124,7 +125,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, a.client, a.namespace, ManagedResourceNameRuntime, false, managedResourceLabels, runtimeResources); err != nil {
 		return err
 	}
 
@@ -144,7 +145,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, a.client, a.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShootWithLabels(ctx, a.client, a.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, managedResourceLabels, virtualResources)
 }
 
 func (a *gardenerAdmissionController) Wait(ctx context.Context) error {

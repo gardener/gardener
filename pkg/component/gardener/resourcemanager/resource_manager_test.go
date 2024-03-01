@@ -355,6 +355,7 @@ var _ = Describe("ResourceManager", func() {
 			LogLevel:                            "info",
 			LogFormat:                           "json",
 			Zones:                               []string{"a", "b"},
+			ManagedResourceLabels:               map[string]string{"foo": "bar"},
 		}
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -1885,7 +1886,10 @@ subjects:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-gardener-resource-manager",
 				Namespace: deployNamespace,
-				Labels:    map[string]string{"origin": "gardener"},
+				Labels: map[string]string{
+					"origin": "gardener",
+					"foo":    "bar",
+				},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{

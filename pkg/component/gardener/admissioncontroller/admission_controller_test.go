@@ -455,6 +455,10 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 		Namespace: namespace,
 	}}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeMr), runtimeMr)).To(Succeed())
+	Expect(runtimeMr.Labels).To(Equal(map[string]string{
+		"gardener.cloud/role":                "seed-system-component",
+		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+	}))
 
 	runtimeManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -478,6 +482,11 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 		Namespace: namespace,
 	}}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualMr), virtualMr)).To(Succeed())
+	Expect(virtualMr.Labels).To(Equal(map[string]string{
+		"origin":                             "gardener",
+		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+	}))
+
 	virtualManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      virtualMr.Spec.SecretRefs[0].Name,

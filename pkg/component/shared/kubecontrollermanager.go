@@ -47,6 +47,7 @@ func NewKubeControllerManager(
 	clusterSigningDuration *time.Duration,
 	controllerWorkers kubecontrollermanager.ControllerWorkers,
 	controllerSyncPeriods kubecontrollermanager.ControllerSyncPeriods,
+	managedResourceLabels map[string]string,
 ) (
 	kubecontrollermanager.Interface,
 	error,
@@ -75,6 +76,7 @@ func NewKubeControllerManager(
 			ClusterSigningDuration: clusterSigningDuration,
 			ControllerWorkers:      controllerWorkers,
 			ControllerSyncPeriods:  controllerSyncPeriods,
+			ManagedResourceLabels:  managedResourceLabels,
 		},
 	), nil
 }

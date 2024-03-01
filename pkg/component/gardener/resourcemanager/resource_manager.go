@@ -271,6 +271,8 @@ type Values struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
+	// ManagedResourceLabels are labels added to the ManagedResource.
+	ManagedResourceLabels map[string]string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
 	MaxConcurrentHealthWorkers *int
 	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations.
@@ -1254,7 +1256,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShootWithLabels(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, r.values.ManagedResourceLabels, data)
 }
 
 func (r *resourceManager) newShootAccessSecret() *gardenerutils.AccessSecret {

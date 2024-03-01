@@ -277,6 +277,7 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings),
 		additionalNetworkPolicyNamespaceSelectors,
 		seed.Spec.Provider.Zones,
+		nil,
 	)
 }
 
