@@ -31,73 +31,12 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
-	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
-	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
-	gardeneradmissioncontroller "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
-	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
-	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
-	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
-	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
 const virtualGardenPrefix = "virtual-garden-"
-
-var (
-	requiredGardenRuntimeManagedResources = sets.New(
-		etcd.Druid,
-		runtimegardensystem.ManagedResourceName,
-	)
-
-	requiredVirtualGardenManagedResources = sets.New(
-		resourcemanager.ManagedResourceName,
-		gardeneraccess.ManagedResourceName,
-		kubecontrollermanager.ManagedResourceName,
-		gardenerapiserver.ManagedResourceNameRuntime,
-		gardenerapiserver.ManagedResourceNameVirtual,
-		gardeneradmissioncontroller.ManagedResourceNameRuntime,
-		gardeneradmissioncontroller.ManagedResourceNameVirtual,
-		gardenercontrollermanager.ManagedResourceNameRuntime,
-		gardenercontrollermanager.ManagedResourceNameVirtual,
-		gardenerscheduler.ManagedResourceNameRuntime,
-		gardenerscheduler.ManagedResourceNameVirtual,
-		virtualgardensystem.ManagedResourceName,
-	)
-
-	requiredVirtualGardenControlPlaneDeployments = sets.New(
-		virtualGardenPrefix+v1beta1constants.DeploymentNameGardenerResourceManager,
-		virtualGardenPrefix+v1beta1constants.DeploymentNameKubeAPIServer,
-		virtualGardenPrefix+v1beta1constants.DeploymentNameKubeControllerManager,
-	)
-
-	requiredVirtualGardenControlPlaneEtcds = sets.New(
-		virtualGardenPrefix+v1beta1constants.ETCDMain,
-		virtualGardenPrefix+v1beta1constants.ETCDEvents,
-	)
-
-	requiredObservabilityManagedResources = sets.New(
-		kubestatemetrics.ManagedResourceName,
-		fluentoperator.OperatorManagedResourceName,
-		fluentoperator.CustomResourcesManagedResourceName+"-garden",
-		fluentoperator.FluentBitManagedResourceName,
-		valiconstants.ManagedResourceNameRuntime,
-		plutono.ManagedResourceName,
-		gardenermetricsexporter.ManagedResourceNameRuntime,
-		gardenermetricsexporter.ManagedResourceNameVirtual,
-		prometheusoperator.ManagedResourceName,
-	)
-)
 
 // health contains information needed to execute health checks for garden.
 type health struct {
@@ -208,8 +147,8 @@ func (h *health) checkVirtualComponents(ctx context.Context, condition gardencor
 	if exitCondition, err := h.healthChecker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
-		requiredVirtualGardenControlPlaneDeployments,
-		requiredVirtualGardenControlPlaneEtcds,
+		sets.New(virtualGardenPrefix+v1beta1constants.DeploymentNameGardenerResourceManager, virtualGardenPrefix+v1beta1constants.DeploymentNameKubeAPIServer, virtualGardenPrefix+v1beta1constants.DeploymentNameKubeControllerManager),
+		sets.New(virtualGardenPrefix+v1beta1constants.ETCDMain, virtualGardenPrefix+v1beta1constants.ETCDEvents),
 		condition,
 	); err != nil || exitCondition != nil {
 		return exitCondition, err
@@ -234,12 +173,6 @@ func (h *health) checkObservabilityComponents(condition gardencorev1beta1.Condit
 	}
 
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."))
-}
-
-func (h *health) isVPAEnabled() bool {
-	return h.garden.Spec.RuntimeCluster.Settings != nil &&
-		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
-		ptr.Deref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
 }
 
 // GardenConditions contains all conditions of the garden status subresource.
