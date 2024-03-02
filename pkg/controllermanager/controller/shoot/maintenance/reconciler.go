@@ -41,6 +41,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -154,6 +156,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
+	if reasons := maintainFeatureGatesForShoot(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
+	}
+
+	if reasons := maintainAdmissionPlugins(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
+	}
+
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
 		if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
@@ -190,6 +200,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		if err != nil {
 			// continue execution to allow other maintenance activities to continue
 			workerLog.Error(err, "Could not maintain Kubernetes version for worker pool")
+		} else {
+			if maintainedShoot.Spec.Provider.Workers[i].Kubernetes != nil && maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
+				if reasons := maintainFeatureGates(&maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, *maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubeletConfig.featureGates", i)); len(reasons) > 0 {
+					operations = append(operations, reasons...)
+				}
+			}
 		}
 
 		if workerKubernetesUpdate != nil {
@@ -810,4 +826,102 @@ func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) [
 	}
 
 	return reasonsForUpdate
+}
+
+func maintainFeatureGatesForShoot(shoot *gardencorev1beta1.Shoot) []string {
+	var reasons []string
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeAPIServer.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeAPIServer.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeControllerManager.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeControllerManager.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeScheduler.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeScheduler.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeProxy != nil && shoot.Spec.Kubernetes.KubeProxy.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeProxy.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeProxy.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.Kubelet != nil && shoot.Spec.Kubernetes.Kubelet.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.Kubelet.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubelet.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	return reasons
+}
+
+// IsFeatureGateSupported is an alias for featuresvalidation.IsFeatureGateSupported. Exposed for testing purposes.
+var IsFeatureGateSupported = featuresvalidation.IsFeatureGateSupported
+
+func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, version, fieldPath string) []string {
+	var (
+		reasons             []string
+		validFeatureGates   = make(map[string]bool, len(kubernetes.FeatureGates))
+		removedFeatureGates []string
+	)
+
+	for fg, enabled := range kubernetes.FeatureGates {
+		if supported, err := IsFeatureGateSupported(fg, version); err == nil && supported {
+			validFeatureGates[fg] = enabled
+		} else {
+			removedFeatureGates = append(removedFeatureGates, fg)
+		}
+	}
+
+	kubernetes.FeatureGates = validFeatureGates
+
+	if len(removedFeatureGates) == 1 {
+		reasons = append(reasons, fmt.Sprintf("Feature gate %q is removed from %q, not supported in Kubernetes version %q", removedFeatureGates[0], fieldPath, version))
+	} else if len(removedFeatureGates) > 1 {
+		slices.Sort(removedFeatureGates)
+		reasons = append(reasons, fmt.Sprintf("Feature gates: %s are removed from %q, not supported in Kubernetes version %q", strings.Join(removedFeatureGates, ", "), fieldPath, version))
+	}
+
+	return reasons
+}
+
+// IsAdmissionPluginSupported is an alias for admissionpluginsvalidation.IsAdmissionPluginSupported. Exposed for testing purposes.
+var IsAdmissionPluginSupported = admissionpluginsvalidation.IsAdmissionPluginSupported
+
+func maintainAdmissionPlugins(shoot *gardencorev1beta1.Shoot) []string {
+	var (
+		reasons                 []string
+		removedAdmissionPlugins []string
+	)
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins != nil {
+		validAdmissionPlugins := []gardencorev1beta1.AdmissionPlugin{}
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if supported, err := IsAdmissionPluginSupported(plugin.Name, shoot.Spec.Kubernetes.Version); err == nil && supported {
+				validAdmissionPlugins = append(validAdmissionPlugins, plugin)
+			} else {
+				removedAdmissionPlugins = append(removedAdmissionPlugins, plugin.Name)
+			}
+		}
+
+		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = validAdmissionPlugins
+
+		if len(removedAdmissionPlugins) == 1 {
+			reasons = append(reasons, fmt.Sprintf("Admission plugin %q is removed from %q, not supported in Kubernetes version %q", removedAdmissionPlugins[0], "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version))
+		} else if len(removedAdmissionPlugins) > 1 {
+			slices.Sort(removedAdmissionPlugins)
+			reasons = append(reasons, fmt.Sprintf("Admission plugins: %s are removed from %q, not supported in Kubernetes version %q", strings.Join(removedAdmissionPlugins, ", "), "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version))
+		}
+	}
+
+	return reasons
 }
