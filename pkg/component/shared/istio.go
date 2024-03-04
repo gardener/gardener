@@ -91,6 +91,7 @@ func NewIstio(
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
 	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
+	policyLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 
 	enforceSpreadAcrossHosts, err := ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)
 	if err != nil {
