@@ -196,7 +196,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret)
-	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret)
+	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
 	c.ingressDNSRecord, err = r.newIngressDNSRecord(ctx, log, seed, "")
 	if err != nil {
 		return
@@ -851,14 +851,16 @@ func (r *Reconciler) newKubeAPIServerService(wildCardCertSecret *corev1.Secret) 
 	return c
 }
 
-func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSecret *corev1.Secret) component.Deployer {
-	values := kubeapiserverexposure.IngressValues{}
+func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSecret *corev1.Secret, istioDefaultLabels map[string]string, istioDefaultNamespace string) component.Deployer {
+	values := kubeapiserverexposure.IngressValues{ServiceNamespace: metav1.NamespaceDefault}
 	if wildCardCertSecret != nil {
 		values = kubeapiserverexposure.IngressValues{
-			Host:             seed.GetIngressFQDN("api-seed"),
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
-			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
-			TLSSecretName:    &wildCardCertSecret.Name,
+			Host:                         seed.GetIngressFQDN("api-seed"),
+			IstioIngressGatewayLabels:    istioDefaultLabels,
+			IstioIngressGatewayNamespace: istioDefaultNamespace,
+			ServiceName:                  "kubernetes",
+			ServiceNamespace:             metav1.NamespaceDefault,
+			TLSSecretName:                &wildCardCertSecret.Name,
 		}
 	}
 
