@@ -73,6 +73,11 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 		obj.Spec.AlertmanagerConfiguration = &monitoringv1.AlertmanagerConfiguration{Name: a.name()}
 	}
 
+	if a.values.Replicas > 1 {
+		obj.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-9094"] = v1beta1constants.LabelNetworkPolicyAllowed
+		obj.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-9094"] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
+
 	if a.values.ClusterType == component.ClusterTypeShoot {
 		obj.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring
 		obj.Spec.PodMetadata.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring

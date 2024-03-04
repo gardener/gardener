@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -62,6 +63,8 @@ type Values struct {
 	StorageCapacity resource.Quantity
 	// Replicas is the number of replicas.
 	Replicas int32
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
 	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
@@ -127,6 +130,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		a.service(),
 		a.alertManager(takeOverExistingPV),
 		a.vpa(),
+		a.podDisruptionBudget(),
 		a.config(),
 		a.smtpSecret(),
 		ingress,
