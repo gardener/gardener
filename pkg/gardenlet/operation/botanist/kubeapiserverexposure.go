@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -114,9 +113,10 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		kubeapiserverexposure.IngressValues{
-			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
-			Host:             b.ComputeKubeAPIServerHost(),
-			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
+			ServiceName:                  v1beta1constants.DeploymentNameKubeAPIServer,
+			Host:                         b.ComputeKubeAPIServerHost(),
+			IstioIngressGatewayLabels:    b.IstioLabels(),
+			IstioIngressGatewayNamespace: b.IstioNamespace(),
 		})
 }
 

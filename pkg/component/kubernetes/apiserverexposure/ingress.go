@@ -16,7 +16,11 @@ package apiserverexposure
 
 import (
 	"context"
+	"fmt"
 
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -26,23 +30,23 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
-)
-
-const (
-	nginxIngressSSLPassthrough       = "nginx.ingress.kubernetes.io/ssl-passthrough"
-	nginxIngressBackendProtocol      = "nginx.ingress.kubernetes.io/backend-protocol"
-	nginxIngressBackendProtocolHTTPS = "HTTPS"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/istio"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // IngressValues configure the kube-apiserver ingress.
 type IngressValues struct {
 	// Host is the host where the kube-apiserver should be exposed.
 	Host string
-	// IngressClassName is the name of the ingress class.
-	IngressClassName *string
+	// IstioIngressGatewayLabels are labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the corresponding istio ingress gateway.
+	IstioIngressGatewayNamespace string
 	// ServiceName is the name of the service the ingress is using.
 	ServiceName string
+	// ServiceNamespace is the namespace of the service the ingress is using.
+	ServiceNamespace string
 	// TLSSecretName is the name of the TLS secret.
 	// If no secret is provided TLS is not terminated by nginx.
 	TLSSecretName *string
@@ -60,52 +64,117 @@ type ingress struct {
 }
 
 func (i *ingress) Deploy(ctx context.Context) error {
-	ingress := i.emptyIngress()
+	destinationRule := i.emptyDestinationRule()
+	gateway := i.emptyGateway()
+	virtualService := i.emptyVirtualService()
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, ingress, func() error {
-		if i.values.TLSSecretName == nil {
-			metav1.SetMetaDataAnnotation(&ingress.ObjectMeta, nginxIngressSSLPassthrough, "true")
-		} else {
-			metav1.SetMetaDataAnnotation(&ingress.ObjectMeta, nginxIngressBackendProtocol, nginxIngressBackendProtocolHTTPS)
+	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings_DISABLE
+	if i.values.TLSSecretName != nil {
+		tlsMode = istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE
+	}
+
+	serviceNamespace := i.namespace
+	if i.values.ServiceNamespace != "" {
+		serviceNamespace = i.values.ServiceNamespace
+	}
+
+	destinationHost := kubernetesutils.FQDNForService(i.values.ServiceName, serviceNamespace)
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), destinationHost, tlsMode)); err != nil {
+		return err
+	}
+
+	if i.values.TLSSecretName != nil {
+		// Istio expects the secret in the istio ingress gateway namespace => copy certifcate to istio namespace
+		wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, i.client)
+		if err != nil {
+			return err
 		}
-		ingress.Labels = utils.MergeStringMaps(ingress.Labels, getLabels())
-		pathType := networkingv1.PathTypePrefix
-		ingress.Spec = networkingv1.IngressSpec{
-			IngressClassName: i.values.IngressClassName,
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: i.values.Host,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: i.values.ServiceName,
-											Port: networkingv1.ServiceBackendPort{
-												Number: kubeapiserverconstants.Port,
-											},
-										},
-									},
-									Path:     "/",
-									PathType: &pathType,
-								},
-							},
+		if wildcardCert == nil {
+			return fmt.Errorf("wildcard secret '%s' not found in garden namespace", *i.values.TLSSecretName)
+		}
+
+		wildcardSecret := i.emptyWildcardSecret()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, wildcardSecret, func() error {
+			wildcardSecret.Data = wildcardCert.Data
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSTermination(gateway, getLabels(), i.values.IstioIngressGatewayLabels, []string{i.values.Host}, kubeapiserverconstants.Port, ptr.Deref(i.values.TLSSecretName, ""))); err != nil {
+			return err
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, func() error {
+			if err := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)(); err != nil {
+				return err
+			}
+			virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{{
+				Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{Prefix: "/"},
+					},
+				}},
+				Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: destinationHost,
+						Port: &istioapinetworkingv1beta1.PortSelector{
+							Number: kubeapiserverconstants.Port,
 						},
 					},
-				},
-			},
-			TLS: []networkingv1.IngressTLS{{Hosts: []string{i.values.Host}, SecretName: ptr.Deref(i.values.TLSSecretName, "")}},
+				}},
+			}}
+			return nil
+		}); err != nil {
+			return err
 		}
-		return nil
-	})
-	return err
+	} else {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), i.values.IstioIngressGatewayLabels, []string{i.values.Host}, kubeapiserverconstants.Port)); err != nil {
+			return err
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)); err != nil {
+			return err
+		}
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, i.client, i.emptyIngress())
 }
 
 func (i *ingress) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(i.client.Delete(ctx, i.emptyIngress()))
+	objects := []client.Object{
+		i.emptyIngress(),
+		i.emptyDestinationRule(),
+		i.emptyGateway(),
+		i.emptyVirtualService(),
+	}
+	if i.values.TLSSecretName != nil {
+		objects = append(objects, i.emptyWildcardSecret())
+	}
+	return kubernetesutils.DeleteObjects(ctx, i.client, objects...)
 }
 
 func (i *ingress) emptyIngress() *networkingv1.Ingress {
 	return &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: i.namespace}}
+}
+
+func (i *ingress) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
+	serviceNamespace := i.namespace
+	if i.values.ServiceNamespace != "" {
+		serviceNamespace = i.values.ServiceNamespace
+	}
+	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer + "-ingress", Namespace: serviceNamespace}}
+}
+
+func (i *ingress) emptyGateway() *istionetworkingv1beta1.Gateway {
+	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer + "-ingress", Namespace: i.namespace}}
+}
+
+func (i *ingress) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
+	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer + "-ingress", Namespace: i.namespace}}
+}
+
+func (i *ingress) emptyWildcardSecret() *corev1.Secret {
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: *i.values.TLSSecretName, Namespace: i.values.IstioIngressGatewayNamespace}}
 }
