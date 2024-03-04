@@ -430,6 +430,8 @@ var _ = Describe("Alertmanager", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
+					alertManager.Spec.ExternalURL = "https://" + ingressHost
+
 					Expect(managedResourceSecret.Data).To(HaveLen(6))
 
 					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))

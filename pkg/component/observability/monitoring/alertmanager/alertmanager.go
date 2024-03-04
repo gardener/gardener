@@ -78,6 +78,10 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 		obj.Spec.PodMetadata.Labels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleMonitoring
 	}
 
+	if a.values.Ingress != nil {
+		obj.Spec.ExternalURL = "https://" + a.values.Ingress.Host
+	}
+
 	if takeOverOldPV {
 		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
 			Name:            "take-over-old-pv",
