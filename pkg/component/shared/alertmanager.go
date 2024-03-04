@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 )
 
@@ -30,22 +29,30 @@ func NewAlertmanager(log logr.Logger, c client.Client, namespace string, values 
 	if err != nil {
 		return nil, err
 	}
-	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
 
 	values.Image = imageAlertmanager.String()
 	values.Version = ptr.Deref(imageAlertmanager.Version, "v0.0.0")
-	// TODO(rfranzke): Remove this after v1.93 has been released.
-	values.DataMigration = monitoring.DataMigration{
-		Client:          c,
-		Namespace:       namespace,
-		StorageCapacity: values.StorageCapacity,
-		ImageAlpine:     imageAlpine.String(),
-		StatefulSetName: "alertmanager",
-		FullName:        "alertmanager-" + values.Name,
-		PVCName:         "alertmanager-db-alertmanager-0",
+
+	// TODO(rfranzke): Remove this block after v1.93 has been released.
+	{
+		imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+		if err != nil {
+			return nil, err
+		}
+
+		values.DataMigration.Client = c
+		values.DataMigration.Namespace = namespace
+		values.DataMigration.StorageCapacity = values.StorageCapacity
+		values.DataMigration.ImageAlpine = imageAlpine.String()
+		if values.DataMigration.StatefulSetName == "" {
+			values.DataMigration.StatefulSetName = "alertmanager"
+		}
+		if values.DataMigration.FullName == "" {
+			values.DataMigration.FullName = "alertmanager-" + values.Name
+		}
+		if values.DataMigration.PVCNames == nil {
+			values.DataMigration.PVCNames = []string{"alertmanager-db-alertmanager-0"}
+		}
 	}
 
 	return alertmanager.New(log, c, namespace, values), nil

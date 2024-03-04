@@ -712,7 +712,7 @@ func (r *Reconciler) newPrometheus(log logr.Logger, values prometheus.Values, ol
 		ImageAlpine:     imageAlpine.String(),
 		StatefulSetName: oldStatefulSetName,
 		FullName:        "prometheus-" + values.Name,
-		PVCName:         "prometheus-db-" + oldStatefulSetName + "-0",
+		PVCNames:        []string{"prometheus-db-" + oldStatefulSetName + "-0"},
 	}
 
 	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, values), nil

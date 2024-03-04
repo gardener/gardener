@@ -143,7 +143,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	)
 
 	// TODO(rfranzke): Remove this migration code after all Prometheis have been migrated.
-	takeOverExistingPV, pv, oldPVC, err := p.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
+	takeOverExistingPV, pvs, oldPVCs, err := p.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := p.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
+		if err := p.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pvs, oldPVCs); err != nil {
 			return err
 		}
 
@@ -193,7 +193,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pv); err != nil {
+		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
 			return err
 		}
 

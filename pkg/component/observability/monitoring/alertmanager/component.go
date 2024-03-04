@@ -116,7 +116,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	)
 
 	// TODO(rfranzke): Remove this migration code after all AlertManagers have been migrated.
-	takeOverExistingPV, pv, oldPVC, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
+	takeOverExistingPV, pvs, oldPVCs, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
+		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pvs, oldPVCs); err != nil {
 			return err
 		}
 
@@ -152,7 +152,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pv); err != nil {
+		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
 			return err
 		}
 
