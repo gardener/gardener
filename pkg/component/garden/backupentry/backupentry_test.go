@@ -85,10 +85,6 @@ var _ = Describe("BackupEntry", func() {
 		}
 
 		expected = &gardencorev1beta1.BackupEntry{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-				Kind:       "BackupEntry",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,

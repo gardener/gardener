@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: operatingsystemconfigs.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -40,20 +40,26 @@ spec:
           resource
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: Specification of the OperatingSystemConfig. If the object's
-              deletion timestamp is set, this field is immutable.
+            description: |-
+              Specification of the OperatingSystemConfig.
+              If the object's deletion timestamp is set, this field is immutable.
             properties:
               criConfig:
                 description: CRI config is a structure contains configurations of
@@ -70,9 +76,9 @@ spec:
                 description: Files is a list of files that should get written to the
                   host's file system.
                 items:
-                  description: File is a file that should get written to the host's
-                    file system. The content can either be inlined or referenced from
-                    a secret in the same namespace.
+                  description: |-
+                    File is a file that should get written to the host's file system. The content can either be inlined or
+                    referenced from a secret in the same namespace.
                   properties:
                     content:
                       description: Content describe the file's content.
@@ -123,10 +129,9 @@ spec:
                           - name
                           type: object
                         transmitUnencoded:
-                          description: TransmitUnencoded set to true will ensure that
-                            the os-extension does not encode the file content when
-                            sent to the node. This for example can be used to manipulate
-                            the clear-text content before it reaches the node.
+                          description: |-
+                            TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
+                            This for example can be used to manipulate the clear-text content before it reaches the node.
                           type: boolean
                       type: object
                     path:
@@ -134,9 +139,9 @@ spec:
                         should get written to.
                       type: string
                     permissions:
-                      description: Permissions describes with which permissions the
-                        file should get written to the file system. Should be defaulted
-                        to octal 0644.
+                      description: |-
+                        Permissions describes with which permissions the file should get written to the file system.
+                        Should be defaulted to octal 0644.
                       format: int32
                       type: integer
                   required:
@@ -149,19 +154,19 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               purpose:
-                description: Purpose describes how the result of this OperatingSystemConfig
-                  is used by Gardener. Either it gets sent to the `Worker` extension
-                  controller to bootstrap a VM, or it is downloaded by the cloud-config-downloader
-                  script already running on a bootstrapped VM. This field is immutable.
+                description: |-
+                  Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
+                  gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
+                  cloud-config-downloader script already running on a bootstrapped VM.
+                  This field is immutable.
                 type: string
               reloadConfigFilePath:
-                description: 'ReloadConfigFilePath is the path to the generated operating
-                  system configuration. If set, controllers are asked to use it when
-                  determining the .status.command of this resource. For example, if
-                  for CoreOS the reload-path might be "/var/lib/config"; then the
-                  controller shall set .status.command to "/usr/bin/coreos-cloudinit
-                  --from-file=/var/lib/config". TODO(rfranzke): Deprecate this field
-                  once UseGardenerNodeAgent feature gate is promoted to GA.'
+                description: |-
+                  ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
+                  are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
+                  the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
+                  "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
+                  TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
                 type: string
               type:
                 description: Type contains the instance of the resource's kind.
@@ -201,10 +206,9 @@ spec:
                         not.
                       type: boolean
                     filePaths:
-                      description: FilePaths is a list of files the unit depends on.
-                        If any file changes a restart of the dependent unit will be
-                        triggered. For each FilePath there must exist a File with
-                        matching Path in OperatingSystemConfig.Spec.Files.
+                      description: |-
+                        FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+                        triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.
                       items:
                         type: string
                       type: array
@@ -224,9 +228,9 @@ spec:
               resource.
             properties:
               cloudConfig:
-                description: CloudConfig is a structure for containing the generated
-                  output for the given operating system config spec. It contains a
-                  reference to a secret as the result may contain confidential data.
+                description: |-
+                  CloudConfig is a structure for containing the generated output for the given operating system
+                  config spec. It contains a reference to a secret as the result may contain confidential data.
                 properties:
                   secretRef:
                     description: SecretRef is a reference to a secret that contains
@@ -246,12 +250,11 @@ spec:
                 - secretRef
                 type: object
               command:
-                description: 'Command is the command whose execution renews/reloads
-                  the cloud config on an existing VM, e.g. "/usr/bin/reload-cloud-config
-                  -from-file=<path>". The <path> is optionally provided by Gardener
-                  in the .spec.reloadConfigFilePath field. TODO(rfranzke): Deprecate
-                  this field once UseGardenerNodeAgent feature gate is promoted to
-                  GA.'
+                description: |-
+                  Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
+                  "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
+                  in the .spec.reloadConfigFilePath field.
+                  TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
                 type: string
               conditions:
                 description: Conditions represents the latest available observations
@@ -302,9 +305,9 @@ spec:
                 description: ExtensionFiles is a list of additional files provided
                   by the extension.
                 items:
-                  description: File is a file that should get written to the host's
-                    file system. The content can either be inlined or referenced from
-                    a secret in the same namespace.
+                  description: |-
+                    File is a file that should get written to the host's file system. The content can either be inlined or
+                    referenced from a secret in the same namespace.
                   properties:
                     content:
                       description: Content describe the file's content.
@@ -355,10 +358,9 @@ spec:
                           - name
                           type: object
                         transmitUnencoded:
-                          description: TransmitUnencoded set to true will ensure that
-                            the os-extension does not encode the file content when
-                            sent to the node. This for example can be used to manipulate
-                            the clear-text content before it reaches the node.
+                          description: |-
+                            TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
+                            This for example can be used to manipulate the clear-text content before it reaches the node.
                           type: boolean
                       type: object
                     path:
@@ -366,9 +368,9 @@ spec:
                         should get written to.
                       type: string
                     permissions:
-                      description: Permissions describes with which permissions the
-                        file should get written to the file system. Should be defaulted
-                        to octal 0644.
+                      description: |-
+                        Permissions describes with which permissions the file should get written to the file system.
+                        Should be defaulted to octal 0644.
                       format: int32
                       type: integer
                   required:
@@ -411,10 +413,9 @@ spec:
                         not.
                       type: boolean
                     filePaths:
-                      description: FilePaths is a list of files the unit depends on.
-                        If any file changes a restart of the dependent unit will be
-                        triggered. For each FilePath there must exist a File with
-                        matching Path in OperatingSystemConfig.Spec.Files.
+                      description: |-
+                        FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+                        triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.
                       items:
                         type: string
                       type: array
@@ -426,10 +427,10 @@ spec:
                   type: object
                 type: array
               files:
-                description: 'Files is a list of file paths that are part of the generated
-                  Cloud Config and shall be written to the host''s file system. TODO(rfranzke):
-                  Deprecate this field once UseGardenerNodeAgent feature gate is promoted
-                  to GA.'
+                description: |-
+                  Files is a list of file paths that are part of the generated Cloud Config and shall be
+                  written to the host's file system.
+                  TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
                 items:
                   type: string
                 type: array
@@ -537,10 +538,10 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               units:
-                description: 'Units is a list of systemd unit names that are part
-                  of the generated Cloud Config and shall be restarted when a new
-                  version has been downloaded. TODO(rfranzke): Deprecate this field
-                  once UseGardenerNodeAgent feature gate is promoted to GA.'
+                description: |-
+                  Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
+                  restarted when a new version has been downloaded.
+                  TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
                 items:
                   type: string
                 type: array

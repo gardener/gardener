@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: machinesets.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -43,14 +43,19 @@ spec:
         description: MachineSet TODO
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -77,33 +82,33 @@ spec:
                 format: int32
                 type: integer
               selector:
-                description: A label selector is a label query over a set of resources.
-                  The result of matchLabels and matchExpressions are ANDed. An empty
-                  label selector matches all objects. A null label selector matches
-                  no objects.
+                description: |-
+                  A label selector is a label query over a set of resources. The result of matchLabels and
+                  matchExpressions are ANDed. An empty label selector matches all objects. A null
+                  label selector matches no objects.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
                       The requirements are ANDed.
                     items:
-                      description: A label selector requirement is a selector that
-                        contains values, a key, and an operator that relates the key
-                        and values.
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
                       properties:
                         key:
                           description: key is the label key that the selector applies
                             to.
                           type: string
                         operator:
-                          description: operator represents a key's relationship to
-                            a set of values. Valid operators are In, NotIn, Exists
-                            and DoesNotExist.
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
                           type: string
                         values:
-                          description: values is an array of string values. If the
-                            operator is In or NotIn, the values array must be non-empty.
-                            If the operator is Exists or DoesNotExist, the values
-                            array must be empty. This array is replaced during a strategic
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
                             merge patch.
                           items:
                             type: string
@@ -116,11 +121,10 @@ spec:
                   matchLabels:
                     additionalProperties:
                       type: string
-                    description: matchLabels is a map of {key,value} pairs. A single
-                      {key,value} in the matchLabels map is equivalent to an element
-                      of matchExpressions, whose key field is "key", the operator
-                      is "In", and the values array contains only "value". The requirements
-                      are ANDed.
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
@@ -129,12 +133,15 @@ spec:
                   have when created from a template
                 properties:
                   metadata:
-                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
+                    description: |-
+                      Standard object's metadata.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   spec:
-                    description: 'Specification of the desired behavior of the machine.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status'
+                    description: |-
+                      Specification of the desired behavior of the machine.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
                     properties:
                       class:
                         description: Class contains the machineclass attributes of
@@ -193,31 +200,29 @@ spec:
                                       ConfigMap
                                     properties:
                                       kubeletConfigKey:
-                                        description: KubeletConfigKey declares which
-                                          key of the referenced ConfigMap corresponds
-                                          to the KubeletConfiguration structure This
-                                          field is required in all cases.
+                                        description: |-
+                                          KubeletConfigKey declares which key of the referenced ConfigMap corresponds to the KubeletConfiguration structure
+                                          This field is required in all cases.
                                         type: string
                                       name:
-                                        description: Name is the metadata.name of
-                                          the referenced ConfigMap. This field is
-                                          required in all cases.
+                                        description: |-
+                                          Name is the metadata.name of the referenced ConfigMap.
+                                          This field is required in all cases.
                                         type: string
                                       namespace:
-                                        description: Namespace is the metadata.namespace
-                                          of the referenced ConfigMap. This field
-                                          is required in all cases.
+                                        description: |-
+                                          Namespace is the metadata.namespace of the referenced ConfigMap.
+                                          This field is required in all cases.
                                         type: string
                                       resourceVersion:
-                                        description: ResourceVersion is the metadata.ResourceVersion
-                                          of the referenced ConfigMap. This field
-                                          is forbidden in Node.Spec, and required
-                                          in Node.Status.
+                                        description: |-
+                                          ResourceVersion is the metadata.ResourceVersion of the referenced ConfigMap.
+                                          This field is forbidden in Node.Spec, and required in Node.Status.
                                         type: string
                                       uid:
-                                        description: UID is the metadata.UID of the
-                                          referenced ConfigMap. This field is forbidden
-                                          in Node.Spec, and required in Node.Status.
+                                        description: |-
+                                          UID is the metadata.UID of the referenced ConfigMap.
+                                          This field is forbidden in Node.Spec, and required in Node.Status.
                                         type: string
                                     required:
                                     - kubeletConfigKey
@@ -226,18 +231,18 @@ spec:
                                     type: object
                                 type: object
                               externalID:
-                                description: 'Deprecated. Not all kubelets will set
-                                  this field. Remove field after 1.13. see: https://issues.k8s.io/61966'
+                                description: |-
+                                  Deprecated. Not all kubelets will set this field. Remove field after 1.13.
+                                  see: https://issues.k8s.io/61966
                                 type: string
                               podCIDR:
                                 description: PodCIDR represents the pod IP range assigned
                                   to the node.
                                 type: string
                               podCIDRs:
-                                description: podCIDRs represents the IP ranges assigned
-                                  to the node for usage by Pods on that node. If this
-                                  field is specified, the 0th entry must match the
-                                  podCIDR field. It may contain at most 1 value for
+                                description: |-
+                                  podCIDRs represents the IP ranges assigned to the node for usage by Pods on that node. If this
+                                  field is specified, the 0th entry must match the podCIDR field. It may contain at most 1 value for
                                   each of IPv4 and IPv6.
                                 items:
                                   type: string
@@ -249,24 +254,24 @@ spec:
                               taints:
                                 description: If specified, the node's taints.
                                 items:
-                                  description: The node this Taint is attached to
-                                    has the "effect" on any pod that does not tolerate
-                                    the Taint.
+                                  description: |-
+                                    The node this Taint is attached to has the "effect" on
+                                    any pod that does not tolerate the Taint.
                                   properties:
                                     effect:
-                                      description: Required. The effect of the taint
-                                        on pods that do not tolerate the taint. Valid
-                                        effects are NoSchedule, PreferNoSchedule and
-                                        NoExecute.
+                                      description: |-
+                                        Required. The effect of the taint on pods
+                                        that do not tolerate the taint.
+                                        Valid effects are NoSchedule, PreferNoSchedule and NoExecute.
                                       type: string
                                     key:
                                       description: Required. The taint key to be applied
                                         to a node.
                                       type: string
                                     timeAdded:
-                                      description: TimeAdded represents the time at
-                                        which the taint was added. It is only written
-                                        for NoExecute taints.
+                                      description: |-
+                                        TimeAdded represents the time at which the taint was added.
+                                        It is only written for NoExecute taints.
                                       format: date-time
                                       type: string
                                     value:
@@ -279,9 +284,9 @@ spec:
                                   type: object
                                 type: array
                               unschedulable:
-                                description: 'Unschedulable controls node schedulability
-                                  of new pods. By default, node is schedulable. More
-                                  info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
+                                description: |-
+                                  Unschedulable controls node schedulability of new pods. By default, node is schedulable.
+                                  More info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration
                                 type: boolean
                             type: object
                         type: object

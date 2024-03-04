@@ -333,10 +333,6 @@ var _ = Describe("Fluent Operator", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResource), operatorManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            OperatorManagedResourceName,
 					Namespace:       namespace,

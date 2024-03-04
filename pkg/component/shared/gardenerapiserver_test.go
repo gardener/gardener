@@ -439,6 +439,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "gardener-apiserver",
 							Namespace:   namespace,
@@ -453,6 +454,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "gardener-apiserver",
 							Namespace: namespace,
@@ -486,6 +488,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationCompleting,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "gardener-apiserver",
 							Namespace:   namespace,

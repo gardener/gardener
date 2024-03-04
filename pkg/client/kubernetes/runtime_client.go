@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -30,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 const (
@@ -53,14 +51,14 @@ func setCacheOptionsDefaults(options *cache.Options) {
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
-		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
-		// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
-		// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
-		// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
-		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(
+		httpClient, err := rest.HTTPClientFor(config)
+		if err != nil {
+			return fmt.Errorf("failed to get HTTP client for config: %w", err)
+		}
+
+		mapper, err := apiutil.NewDynamicRESTMapper(
 			config,
-			thirdpartyapiutil.WithLazyDiscovery,
-			thirdpartyapiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
+			httpClient,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)

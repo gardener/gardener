@@ -165,10 +165,6 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
@@ -201,10 +197,6 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceNameTarget,
 					Namespace:       namespace,
@@ -272,10 +264,6 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
@@ -331,10 +319,6 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
@@ -385,7 +369,7 @@ var _ = Describe("Vali", func() {
 			valiPVC = &corev1.PersistentVolumeClaim{
 				ObjectMeta: valiPVCObjectMeta,
 				Spec: corev1.PersistentVolumeClaimSpec{
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: map[corev1.ResourceName]resource.Quantity{
 							"storage": resource.MustParse("100Gi"),
 						},
@@ -1437,7 +1421,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							"ReadWriteOnce",
 						},
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: map[corev1.ResourceName]resource.Quantity{
 								corev1.ResourceStorage: resource.MustParse("60Gi"),
 							},

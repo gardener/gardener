@@ -240,10 +240,6 @@ resources:
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
 				Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedSecretETCDEncryptionConfiguration.Name,
 						Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,

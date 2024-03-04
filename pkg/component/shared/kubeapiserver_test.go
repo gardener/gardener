@@ -1123,6 +1123,7 @@ exemptions:
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,
@@ -1137,6 +1138,7 @@ exemptions:
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: namespace,
@@ -1170,6 +1172,7 @@ exemptions:
 				gardencorev1beta1.RotationCompleting,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,

@@ -426,10 +426,6 @@ func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespac
 func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values, k8sGreaterEqual126 bool) {
 	By("Check Gardener Access Secret")
 	accessSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "shoot-access-gardener-admission-controller",
 			Namespace: namespace,

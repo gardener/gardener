@@ -242,10 +242,6 @@ var _ = Describe("dnsrecord", func() {
 			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "DNSRecord",
-					APIVersion: "extensions.gardener.cloud/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            shootName + "-" + v1beta1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
@@ -275,10 +271,6 @@ var _ = Describe("dnsrecord", func() {
 			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
@@ -358,10 +350,6 @@ var _ = Describe("dnsrecord", func() {
 			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "DNSRecord",
-					APIVersion: "extensions.gardener.cloud/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            shootName + "-" + v1beta1constants.DNSRecordInternalName,
 					Namespace:       seedNamespace,
@@ -391,10 +379,6 @@ var _ = Describe("dnsrecord", func() {
 			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
 					Namespace:       seedNamespace,

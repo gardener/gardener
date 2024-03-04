@@ -28,9 +28,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -58,7 +60,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Seed controller tests", func() {
@@ -89,7 +90,9 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		By("Setup manager")
-		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(restConfig)
+		httpClient, err := rest.HTTPClientFor(restConfig)
+		Expect(err).NotTo(HaveOccurred())
+		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{

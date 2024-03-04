@@ -212,9 +212,9 @@ type: Opaque
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-b2209acf"
+					return "kube-proxy-config-fd4a356e"
 				}
-				return "kube-proxy-config-ff9faa85"
+				return "kube-proxy-config-eaba5162"
 			}
 			configMapYAMLFor = func(ipvsEnabled bool) string {
 				out := `apiVersion: v1
@@ -241,8 +241,11 @@ data:
     conntrack:
       maxPerCore: 524288
       min: null
+      tcpBeLiberal: false
       tcpCloseWaitTimeout: null
       tcpEstablishedTimeout: null
+      udpStreamTimeout: 0s
+      udpTimeout: 0s
     detectLocal:
       bridgeInterface: ""
       interfaceNamePrefix: ""
@@ -284,6 +287,11 @@ data:
     mode: iptables`
 				}
 				out += `
+    nftables:
+      masqueradeAll: false
+      masqueradeBit: null
+      minSyncPeriod: 0s
+      syncPeriod: 0s
     nodePortAddresses: null
     oomScoreAdj: null
     portRange: ""
@@ -385,14 +393,14 @@ metadata:
 					if ipvsEnabled {
 						annotations = []string{
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					} else {
 						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
@@ -678,10 +686,6 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceCentral.Name,
 					Namespace:       managedResourceCentral.Namespace,
@@ -726,10 +730,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedPoolMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -778,10 +778,6 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
 			expectedMR := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceCentral.Name,
 					Namespace:       managedResourceCentral.Namespace,
@@ -823,10 +819,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				poolExpectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -901,10 +893,6 @@ status: {}
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -938,10 +926,6 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceForMajorMinorVersionOnly), managedResourceForMajorMinorVersionOnly)).To(Succeed())
 				expectedMrForMajorMinorVersionOnly := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceForMajorMinorVersionOnly.Name,
 						Namespace:       managedResourceForMajorMinorVersionOnly.Namespace,

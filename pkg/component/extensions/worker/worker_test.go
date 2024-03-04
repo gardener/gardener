@@ -365,10 +365,6 @@ var _ = Describe("Worker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -412,10 +408,6 @@ var _ = Describe("Worker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -459,10 +451,6 @@ var _ = Describe("Worker", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -520,10 +508,6 @@ var _ = Describe("Worker", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,

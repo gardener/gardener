@@ -435,10 +435,6 @@ var _ = Describe("VpnSeedServer", func() {
 			maxUnavailable := intstr.FromInt32(0)
 			deploy := &appsv1.Deployment{
 				ObjectMeta: *deploymentObjectMeta,
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Deployment",
-					APIVersion: "apps/v1",
-				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             ptr.To(values.Replicas),
 					RevisionHistoryLimit: ptr.To(int32(1)),
@@ -463,10 +459,6 @@ var _ = Describe("VpnSeedServer", func() {
 		statefulSet = func(nodeNetwork string) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: *deploymentObjectMeta,
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "StatefulSet",
-					APIVersion: "apps/v1",
-				},
 				Spec: appsv1.StatefulSetSpec{
 					PodManagementPolicy:  appsv1.ParallelPodManagement,
 					Replicas:             ptr.To(int32(3)),
@@ -488,10 +480,6 @@ var _ = Describe("VpnSeedServer", func() {
 		destinationRule = func() *istionetworkingv1beta1.DestinationRule {
 			return &istionetworkingv1beta1.DestinationRule{
 				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace, ResourceVersion: "1"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-					Kind:       "DestinationRule",
-				},
 				Spec: istioapinetworkingv1beta1.DestinationRule{
 					ExportTo: []string{"*"},
 					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
@@ -544,10 +532,6 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 					ResourceVersion: "1",
 				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "PodDisruptionBudget",
-					APIVersion: "policy/v1",
-				},
 				Spec: policyv1.PodDisruptionBudgetSpec{
 					MaxUnavailable: &maxUnavailable,
 					Selector: &metav1.LabelSelector{
@@ -577,10 +561,6 @@ var _ = Describe("VpnSeedServer", func() {
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":15000}]`,
 				},
 				ResourceVersion: "1",
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Service",
-				APIVersion: "v1",
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeClusterIP,
@@ -621,10 +601,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Name:            DeploymentName + "-vpa",
 				Namespace:       namespace,
 				ResourceVersion: "1",
-			},
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -997,10 +973,6 @@ func seedConfigMap(listenAddress, listenAddressV6 string, dnsLookUpFamily string
 			Name:            "vpn-seed-server-envoy-config",
 			Namespace:       namespace,
 			ResourceVersion: "1",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
 		},
 		Data: map[string]string{
 			"envoy.yaml": `static_resources:

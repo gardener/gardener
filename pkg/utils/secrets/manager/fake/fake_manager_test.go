@@ -56,10 +56,6 @@ var _ = Describe("FakeManager", func() {
 					secret, found := m.Get(name, opts...)
 					Expect(found).To(BeTrue())
 					Expect(secret).To(Equal(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            expectedSecretName,
 							Namespace:       namespace,
@@ -113,7 +109,6 @@ var _ = Describe("FakeManager", func() {
 
 			obj := &corev1.Secret{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), obj)).To(Succeed())
-			secret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
 			Expect(obj).To(Equal(secret))
 		})
 
@@ -130,10 +125,6 @@ var _ = Describe("FakeManager", func() {
 			secret, err := m.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            existingSecret.Name,
 					Namespace:       existingSecret.Namespace,

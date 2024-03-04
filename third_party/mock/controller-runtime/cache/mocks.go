@@ -135,6 +135,20 @@ func (mr *MockCacheMockRecorder) List(arg0, arg1 any, arg2 ...any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCache)(nil).List), varargs...)
 }
 
+// RemoveInformer mocks base method.
+func (m *MockCache) RemoveInformer(arg0 context.Context, arg1 client.Object) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveInformer", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveInformer indicates an expected call of RemoveInformer.
+func (mr *MockCacheMockRecorder) RemoveInformer(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveInformer", reflect.TypeOf((*MockCache)(nil).RemoveInformer), arg0, arg1)
+}
+
 // Start mocks base method.
 func (m *MockCache) Start(arg0 context.Context) error {
 	m.ctrl.T.Helper()

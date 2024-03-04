@@ -71,10 +71,6 @@ metadata:
 		clusterIdentity = NewForShoot(c, namespace, identity)
 
 		managedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceSecretName,
 				Namespace:       namespace,
@@ -90,10 +86,6 @@ metadata:
 			Immutable: ptr.To(true),
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
 				Namespace:       namespace,

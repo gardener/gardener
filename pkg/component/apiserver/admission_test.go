@@ -58,10 +58,6 @@ var _ = Describe("Admission", func() {
 			actualSecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 			Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secret.Name,
 					Namespace:       secret.Namespace,
@@ -89,10 +85,6 @@ var _ = Describe("Admission", func() {
 			actualSecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 			Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secret.Name,
 					Namespace:       secret.Namespace,
@@ -116,10 +108,6 @@ var _ = Describe("Admission", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 			Expect(configMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,
@@ -177,10 +165,6 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 			Expect(configMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,
@@ -260,10 +244,6 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 			Expect(configMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,
@@ -330,10 +310,6 @@ kubeConfigFile: ""
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 			Expect(configMap).To(DeepEqual(&corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "ConfigMap",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            configMap.Name,
 					Namespace:       configMap.Namespace,

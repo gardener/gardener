@@ -70,10 +70,6 @@ var _ = Describe("EventLogger", func() {
 
 		clusterRoleForShoot = func() *rbacv1.ClusterRole {
 			return &rbacv1.ClusterRole{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "rbac.authorization.k8s.io/v1",
-					Kind:       "ClusterRole",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					Labels: map[string]string{
@@ -101,10 +97,6 @@ var _ = Describe("EventLogger", func() {
 		}
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: rbacv1.SchemeGroupVersion.String(),
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:logging:event-logger",
 				Labels: map[string]string{
@@ -127,10 +119,6 @@ var _ = Describe("EventLogger", func() {
 
 		roleBindingFor = func(clusterType component.ClusterType, namespace string, removeResourceVersion bool) *rbacv1.RoleBinding {
 			obj := &rbacv1.RoleBinding{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: rbacv1.SchemeGroupVersion.String(),
-					Kind:       "RoleBinding",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener.cloud:logging:event-logger",
 					Namespace: namespace,
@@ -313,10 +301,6 @@ var _ = Describe("EventLogger", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
@@ -346,10 +330,6 @@ var _ = Describe("EventLogger", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
 			Expect(eventLoggerServiceAccount).To(DeepEqual(&corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: corev1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -365,10 +345,6 @@ var _ = Describe("EventLogger", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(seedEventLoggerRole), seedEventLoggerRole)).To(Succeed())
 			Expect(seedEventLoggerRole).To(DeepEqual(&rbacv1.Role{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: rbacv1.SchemeGroupVersion.String(),
-					Kind:       "Role",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -400,10 +376,6 @@ var _ = Describe("EventLogger", func() {
 			Expect(seedEventLoggerRoleBinding).To(DeepEqual(roleBindingFor(component.ClusterTypeSeed, namespace, false)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerDeployment), eventLoggerDeployment)).To(Succeed())
 			Expect(eventLoggerDeployment).To(DeepEqual(&appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Deployment",
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -511,10 +483,6 @@ var _ = Describe("EventLogger", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
 			Expect(vpa).To(DeepEqual(&vpaautoscalingv1.VerticalPodAutoscaler{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
-					Kind:       "VerticalPodAutoscaler",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            vpaName,
 					Namespace:       namespace,

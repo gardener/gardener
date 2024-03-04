@@ -187,7 +187,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		KubeInformerFactory: o.KubeInformerFactory,
 	}
 
-	if err := o.ApplyTo(apiConfig); err != nil {
+	if err := o.ApplyTo(apiConfig, kubeClient); err != nil {
 		return nil, err
 	}
 
@@ -368,7 +368,7 @@ func (o *Options) Run(ctx context.Context) error {
 }
 
 // ApplyTo applies the options to the given config.
-func (o *Options) ApplyTo(config *apiserver.Config) error {
+func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interface) error {
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
@@ -379,7 +379,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 
 	// For backward-compatibility, we also have to keep serving the /openapi/v2 endpoint since kubectl < 1.27 rely on
 	// this endpoint.
-	gardenerAPIServerConfig.OpenAPIConfig = gardenerAPIServerConfig.OpenAPIV3Config
+	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = gardenerAPIServerConfig.OpenAPIV3Config.Info.Title
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerAPIServerConfig.OpenAPIV3Config.Info.Version
 
@@ -398,7 +398,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	if err := o.Recommended.Audit.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
 		return err
 	}
-	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
+	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config, kubeClient, config.KubeInformerFactory); err != nil {
 		return err
 	}
 	if err := o.Recommended.CoreAPI.ApplyTo(gardenerAPIServerConfig); err != nil {

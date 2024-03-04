@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: clusterfilters.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -22,14 +22,19 @@ spec:
         description: ClusterFilter defines a cluster-level Filter configuration.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -105,12 +110,14 @@ spec:
                           description: Alias for the plugin
                           type: string
                         exclude:
-                          description: 'Exclude records which field matches the regular
-                            expression. Value Format: FIELD REGEX'
+                          description: |-
+                            Exclude records which field matches the regular expression.
+                            Value Format: FIELD REGEX
                           type: string
                         regex:
-                          description: 'Keep records which field matches the regular
-                            expression. Value Format: FIELD REGEX'
+                          description: |-
+                            Keep records which field matches the regular expression.
+                            Value Format: FIELD REGEX
                           type: string
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -156,18 +163,20 @@ spec:
                           description: If set, use dummy-meta data (for test/dev purposes)
                           type: boolean
                         k8sLoggingExclude:
-                          description: Allow Kubernetes Pods to exclude their logs
-                            from the log processor (read more about it in Kubernetes
-                            Annotations section).
+                          description: |-
+                            Allow Kubernetes Pods to exclude their logs from the log processor
+                            (read more about it in Kubernetes Annotations section).
                           type: boolean
                         k8sLoggingParser:
-                          description: Allow Kubernetes Pods to suggest a pre-defined
-                            Parser (read more about it in Kubernetes Annotations section)
+                          description: |-
+                            Allow Kubernetes Pods to suggest a pre-defined Parser
+                            (read more about it in Kubernetes Annotations section)
                           type: boolean
                         keepLog:
-                          description: When Keep_Log is disabled, the log field is
-                            removed from the incoming message once it has been successfully
-                            merged (Merge_Log must be enabled as well).
+                          description: |-
+                            When Keep_Log is disabled, the log field is removed
+                            from the incoming message once it has been successfully merged
+                            (Merge_Log must be enabled as well).
                           type: boolean
                         kubeCAFile:
                           description: CA certificate file
@@ -176,31 +185,29 @@ spec:
                           description: Absolute path to scan for certificate files
                           type: string
                         kubeMetaCacheTTL:
-                          description: configurable TTL for K8s cached metadata. By
-                            default, it is set to 0 which means TTL for cache entries
-                            is disabled and cache entries are evicted at random when
-                            capacity is reached. In order to enable this option, you
-                            should set the number to a time interval. For example,
-                            set this value to 60 or 60s and cache entries which have
-                            been created more than 60s will be evicted.
+                          description: |-
+                            configurable TTL for K8s cached metadata. By default, it is set to 0
+                            which means TTL for cache entries is disabled and cache entries are evicted at random
+                            when capacity is reached. In order to enable this option, you should set the number to a time interval.
+                            For example, set this value to 60 or 60s and cache entries which have been created more than 60s will be evicted.
                           type: string
                         kubeMetaPreloadCacheDir:
-                          description: If set, Kubernetes meta-data can be cached/pre-loaded
-                            from files in JSON format in this directory, named as
-                            namespace-pod.meta
+                          description: |-
+                            If set, Kubernetes meta-data can be cached/pre-loaded from files in JSON format in this directory,
+                            named as namespace-pod.meta
                           type: string
                         kubeTagPrefix:
-                          description: When the source records comes from Tail input
-                            plugin, this option allows to specify what's the prefix
-                            used in Tail configuration.
+                          description: |-
+                            When the source records comes from Tail input plugin,
+                            this option allows to specify what's the prefix used in Tail configuration.
                           type: string
                         kubeTokenFile:
                           description: Token file
                           type: string
                         kubeTokenTTL:
-                          description: configurable 'time to live' for the K8s token.
-                            By default, it is set to 600 seconds. After this time,
-                            the token is reloaded from Kube_Token_File or the Kube_Token_Command.
+                          description: |-
+                            configurable 'time to live' for the K8s token. By default, it is set to 600 seconds.
+                            After this time, the token is reloaded from Kube_Token_File or the Kube_Token_Command.
                           type: string
                         kubeURL:
                           description: API Server end-point
@@ -219,18 +226,15 @@ spec:
                             metadata.
                           type: boolean
                         mergeLog:
-                          description: When enabled, it checks if the log field content
-                            is a JSON string map, if so, it append the map fields
-                            as part of the log structure.
+                          description: |-
+                            When enabled, it checks if the log field content is a JSON string map,
+                            if so, it append the map fields as part of the log structure.
                           type: boolean
                         mergeLogKey:
-                          description: When Merge_Log is enabled, the filter tries
-                            to assume the log field from the incoming message is a
-                            JSON string message and make a structured representation
-                            of it at the same level of the log field in the map. Now
-                            if Merge_Log_Key is set (a string name), all the new structured
-                            fields taken from the original log content are inserted
-                            under the new key.
+                          description: |-
+                            When Merge_Log is enabled, the filter tries to assume the log field from the incoming message is a JSON string message
+                            and make a structured representation of it at the same level of the log field in the map.
+                            Now if Merge_Log_Key is set (a string name), all the new structured fields taken from the original log content are inserted under the new key.
                           type: string
                         mergeLogTrim:
                           description: When Merge_Log is enabled, trim (remove possible
@@ -242,10 +246,9 @@ spec:
                             for developers or testing only.
                           type: string
                         regexParser:
-                          description: Set an alternative Parser to process record
-                            Tag and extract pod_name, namespace_name, container_name
-                            and docker_id. The parser must be registered in a parsers
-                            file (refer to parser filter-kube-test as an example).
+                          description: |-
+                            Set an alternative Parser to process record Tag and extract pod_name, namespace_name, container_name and docker_id.
+                            The parser must be registered in a parsers file (refer to parser filter-kube-test as an example).
                           type: string
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -271,10 +274,10 @@ spec:
                             in Journald format.
                           type: boolean
                         useKubelet:
-                          description: This is an optional feature flag to get metadata
-                            information from kubelet instead of calling Kube Server
-                            API to enhance the log. This could mitigate the Kube API
-                            heavy traffic issue for large cluster.
+                          description: |-
+                            This is an optional feature flag to get metadata information from kubelet
+                            instead of calling Kube Server API to enhance the log.
+                            This could mitigate the Kube API heavy traffic issue for large cluster.
                           type: boolean
                       type: object
                     lua:
@@ -284,14 +287,14 @@ spec:
                           description: Alias for the plugin
                           type: string
                         call:
-                          description: Lua function name that will be triggered to
-                            do filtering. It's assumed that the function is declared
-                            inside the Script defined above.
+                          description: |-
+                            Lua function name that will be triggered to do filtering.
+                            It's assumed that the function is declared inside the Script defined above.
                           type: string
                         protectedMode:
-                          description: If enabled, Lua script will be executed in
-                            protected mode. It prevents to crash when invalid Lua
-                            script is executed. Default is true.
+                          description: |-
+                            If enabled, Lua script will be executed in protected mode.
+                            It prevents to crash when invalid Lua script is executed. Default is true.
                           type: boolean
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -310,8 +313,10 @@ spec:
                               description: The key to select.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              description: |-
+                                Name of the referent.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                             optional:
                               description: Specify whether the ConfigMap or its key
@@ -322,19 +327,18 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                         timeAsTable:
-                          description: By default when the Lua script is invoked,
-                            the record timestamp is passed as a Floating number which
-                            might lead to loss precision when the data is converted
-                            back. If you desire timestamp precision enabling this
-                            option will pass the timestamp as a Lua table with keys
-                            sec for seconds since epoch and nsec for nanoseconds.
+                          description: |-
+                            By default when the Lua script is invoked, the record timestamp is passed as a
+                            Floating number which might lead to loss precision when the data is converted back.
+                            If you desire timestamp precision enabling this option will pass the timestamp as
+                            a Lua table with keys sec for seconds since epoch and nsec for nanoseconds.
                           type: boolean
                         typeIntKey:
-                          description: If these keys are matched, the fields are converted
-                            to integer. If more than one key, delimit by space. Note
-                            that starting from Fluent Bit v1.6 integer data types
-                            are preserved and not converted to double as in previous
-                            versions.
+                          description: |-
+                            If these keys are matched, the fields are converted to integer.
+                            If more than one key, delimit by space.
+                            Note that starting from Fluent Bit v1.6 integer data types are preserved
+                            and not converted to double as in previous versions.
                           items:
                             type: string
                           type: array
@@ -417,9 +421,9 @@ spec:
                           pattern: ^(((f|F)alse)|(no_limits)|(no_retries)|([1-9]+[0-9]*))$
                           type: string
                         rules:
-                          description: Rules are applied in the order they appear,
-                            with each rule operating on the result of the previous
-                            rule.
+                          description: |-
+                            Rules are applied in the order they appear,
+                            with each rule operating on the result of the previous rule.
                           items:
                             description: The plugin supports the following rules
                             properties:
@@ -439,16 +443,16 @@ spec:
                               hardCopy:
                                 additionalProperties:
                                   type: string
-                                description: Copy a key/value pair with key KEY to
-                                  COPIED_KEY if KEY exists. If COPIED_KEY already
-                                  exists, this field is overwritten
+                                description: |-
+                                  Copy a key/value pair with key KEY to COPIED_KEY if KEY exists.
+                                  If COPIED_KEY already exists, this field is overwritten
                                 type: object
                               hardRename:
                                 additionalProperties:
                                   type: string
-                                description: Rename a key/value pair with key KEY
-                                  to RENAMED_KEY if KEY exists. If RENAMED_KEY already
-                                  exists, this field is overwritten
+                                description: |-
+                                  Rename a key/value pair with key KEY to RENAMED_KEY if KEY exists.
+                                  If RENAMED_KEY already exists, this field is overwritten
                                 type: object
                               remove:
                                 description: Remove a key/value pair with key KEY
@@ -486,16 +490,14 @@ spec:
                           description: Alias for the plugin
                           type: string
                         keyContent:
-                          description: Key name that holds the content to process.
-                            Note that a Multiline Parser definition can already specify
-                            the key_content to use, but this option allows to overwrite
-                            that value for the purpose of the filter.
+                          description: |-
+                            Key name that holds the content to process.
+                            Note that a Multiline Parser definition can already specify the key_content to use, but this option allows to overwrite that value for the purpose of the filter.
                           type: string
                         parser:
-                          description: Specify one or multiple Multiline Parsing definitions
-                            to apply to the content. You can specify multiple multiline
-                            parsers to detect different formats by separating them
-                            with a comma.
+                          description: |-
+                            Specify one or multiple Multiline Parsing definitions to apply to the content.
+                            You can specify multiple multiline parsers to detect different formats by separating them with a comma.
                           type: string
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -563,16 +565,19 @@ spec:
                           description: Specify field name in record to parse.
                           type: string
                         parser:
-                          description: Specify the parser name to interpret the field.
+                          description: |-
+                            Specify the parser name to interpret the field.
                             Multiple Parser entries are allowed (split by comma).
                           type: string
                         preserveKey:
-                          description: Keep original Key_Name field in the parsed
-                            result. If false, the field will be removed.
+                          description: |-
+                            Keep original Key_Name field in the parsed result.
+                            If false, the field will be removed.
                           type: boolean
                         reserveData:
-                          description: Keep all other original fields in the parsed
-                            result. If false, all other original fields will be removed.
+                          description: |-
+                            Keep all other original fields in the parsed result.
+                            If false, all other original fields will be removed.
                           type: boolean
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -640,11 +645,10 @@ spec:
                           description: Alias for the plugin
                           type: string
                         emitterName:
-                          description: When the filter emits a record under the new
-                            Tag, there is an internal emitter plugin that takes care
-                            of the job. Since this emitter expose metrics as any other
-                            component of the pipeline, you can use this property to
-                            configure an optional name for it.
+                          description: |-
+                            When the filter emits a record under the new Tag, there is an internal emitter
+                            plugin that takes care of the job. Since this emitter expose metrics as any other
+                            component of the pipeline, you can use this property to configure an optional name for it.
                           type: string
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit
@@ -657,9 +661,9 @@ spec:
                           pattern: ^(((f|F)alse)|(no_limits)|(no_retries)|([1-9]+[0-9]*))$
                           type: string
                         rules:
-                          description: 'Defines the matching criteria and the format
-                            of the Tag for the matching record. The Rule format have
-                            four components: KEY REGEX NEW_TAG KEEP.'
+                          description: |-
+                            Defines the matching criteria and the format of the Tag for the matching record.
+                            The Rule format have four components: KEY REGEX NEW_TAG KEEP.
                           items:
                             type: string
                           type: array
@@ -712,12 +716,14 @@ spec:
                 - trace
                 type: string
               match:
-                description: A pattern to match against the tags of incoming records.
+                description: |-
+                  A pattern to match against the tags of incoming records.
                   It's case-sensitive and support the star (*) character as a wildcard.
                 type: string
               matchRegex:
-                description: A regular expression to match against the tags of incoming
-                  records. Use this option if you want to use the full regex syntax.
+                description: |-
+                  A regular expression to match against the tags of incoming records.
+                  Use this option if you want to use the full regex syntax.
                 type: string
             type: object
         type: object

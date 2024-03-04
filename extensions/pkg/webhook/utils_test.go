@@ -364,7 +364,7 @@ var _ = Describe("Utils", func() {
 							Name: "pvc1",
 						},
 						Spec: corev1.PersistentVolumeClaimSpec{
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
 									"storage": resource.MustParse("10Gi"),
 								},
@@ -376,7 +376,7 @@ var _ = Describe("Utils", func() {
 							Name: "pvc2",
 						},
 						Spec: corev1.PersistentVolumeClaimSpec{
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
 									"storage": resource.MustParse("20Gi"),
 								},
@@ -392,7 +392,7 @@ var _ = Describe("Utils", func() {
 						Name: "pvc3",
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: map[corev1.ResourceName]resource.Quantity{
 								"storage": resource.MustParse("30Gi"),
 							},
@@ -409,7 +409,7 @@ var _ = Describe("Utils", func() {
 						Name: "pvc1",
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: map[corev1.ResourceName]resource.Quantity{
 								"storage": resource.MustParse("30Gi"),
 							},
@@ -423,7 +423,7 @@ var _ = Describe("Utils", func() {
 							Name: "pvc1",
 						},
 						Spec: corev1.PersistentVolumeClaimSpec{
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
 									"storage": resource.MustParse("30Gi"),
 								},
@@ -435,7 +435,7 @@ var _ = Describe("Utils", func() {
 							Name: "pvc2",
 						},
 						Spec: corev1.PersistentVolumeClaimSpec{
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
 									"storage": resource.MustParse("20Gi"),
 								},

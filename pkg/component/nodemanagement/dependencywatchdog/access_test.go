@@ -96,10 +96,6 @@ subjects:
 		})
 
 		expectedProbeSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            probeSecretName,
 				Namespace:       namespace,
@@ -134,10 +130,6 @@ users:
 		}
 
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "shoot-core-dependency-watchdog",
 				Namespace:       namespace,
@@ -156,10 +148,6 @@ users:
 			},
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "managedresource-shoot-core-dependency-watchdog-967328e8",
 				Namespace:       namespace,

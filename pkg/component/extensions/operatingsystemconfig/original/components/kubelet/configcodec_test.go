@@ -180,6 +180,7 @@ hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 imageGCHighThresholdPercent: 50
 imageGCLowThresholdPercent: 40
+imageMaximumGCAge: 0s
 imageMinimumGCAge: 2m0s
 kind: KubeletConfiguration
 kubeAPIBurst: 50

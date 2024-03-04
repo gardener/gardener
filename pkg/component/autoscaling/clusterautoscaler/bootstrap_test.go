@@ -88,10 +88,6 @@ rules:
 `
 
 			expectedSecret = &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceSecretName,
 					Namespace: namespace,
@@ -107,10 +103,6 @@ rules:
 				Immutable: ptr.To(true),
 			}
 			expectedMr = &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,

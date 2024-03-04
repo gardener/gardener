@@ -81,10 +81,6 @@ var _ = Describe("#SNI", func() {
 		}
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "DestinationRule",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
 				Namespace: namespace,
@@ -135,10 +131,6 @@ var _ = Describe("#SNI", func() {
 			}},
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "Gateway",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
 				Namespace: namespace,
@@ -164,10 +156,6 @@ var _ = Describe("#SNI", func() {
 			},
 		}
 		expectedVirtualService = &istionetworkingv1beta1.VirtualService{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "VirtualService",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
 				Namespace: namespace,
@@ -196,10 +184,6 @@ var _ = Describe("#SNI", func() {
 			},
 		}
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "kube-apiserver-sni",
 				Namespace:       namespace,

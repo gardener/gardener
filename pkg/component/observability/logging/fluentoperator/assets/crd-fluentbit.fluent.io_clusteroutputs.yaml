@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: clusteroutputs.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -22,14 +22,19 @@ spec:
         description: ClusterOutput is the Schema for the cluster-level outputs API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -37,8 +42,9 @@ spec:
             description: OutputSpec defines the desired state of ClusterOutput
             properties:
               alias:
-                description: A user friendly alias name for this output plugin. Used
-                  in metrics for distinction of each configured output.
+                description: |-
+                  A user friendly alias name for this output plugin.
+                  Used in metrics for distinction of each configured output.
                 type: string
               azureBlob:
                 description: AzureBlob defines AzureBlob Output Configuration
@@ -89,9 +95,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -117,9 +124,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -147,10 +154,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -191,9 +198,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -223,9 +231,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -316,10 +325,9 @@ spec:
                       and LogStreamName if set.
                     type: string
                   metricDimensions:
-                    description: Optional lists of lists for dimension keys to be
-                      added to all metrics. Use comma separated strings for one list
-                      of dimensions and semicolon separated strings for list of lists
-                      dimensions.
+                    description: |-
+                      Optional lists of lists for dimension keys to be added to all metrics. Use comma separated strings
+                      for one list of dimensions and semicolon separated strings for list of lists dimensions.
                     type: string
                   metricNamespace:
                     description: Optional string to represent the CloudWatch namespace.
@@ -349,8 +357,9 @@ spec:
                     description: Your Datadog API key.
                     type: string
                   compress:
-                    description: Compress  the payload in GZIP format. Datadog supports
-                      and recommends setting this to gzip.
+                    description: |-
+                      Compress  the payload in GZIP format.
+                      Datadog supports and recommends setting this to gzip.
                     type: string
                   dd_message_key:
                     description: By default, the plugin searches for the key 'log'
@@ -391,8 +400,9 @@ spec:
                       This property is ignored.
                     type: string
                   tls:
-                    description: TLS controls whether to use end-to-end security communications
-                      security protocol. Datadog recommends setting this to on.
+                    description: |-
+                      TLS controls whether to use end-to-end security communications security protocol.
+                      Datadog recommends setting this to on.
                     type: boolean
                 type: object
               es:
@@ -417,13 +427,12 @@ spec:
                       API for Amazon ElasticSearch Service.
                     type: string
                   bufferSize:
-                    description: Specify the buffer size used to read the response
-                      from the Elasticsearch HTTP service. This option is useful for
-                      debugging purposes where is required to read full responses,
-                      note that response size grows depending of the number of records
-                      inserted. To set an unlimited amount of memory set this value
-                      to False, otherwise the value must be according to the Unit
-                      Size specification.
+                    description: |-
+                      Specify the buffer size used to read the response from the Elasticsearch HTTP service.
+                      This option is useful for debugging purposes where is required to read full responses,
+                      note that response size grows depending of the number of records inserted.
+                      To set an unlimited amount of memory set this value to False,
+                      otherwise the value must be according to the Unit Size specification.
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
                   cloudAuth:
@@ -445,7 +454,8 @@ spec:
                       message record
                     type: boolean
                   generateID:
-                    description: When enabled, generate _id for outgoing records.
+                    description: |-
+                      When enabled, generate _id for outgoing records.
                       This prevents duplicate records when retrying ES.
                     type: boolean
                   host:
@@ -466,9 +476,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -494,9 +505,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -523,32 +535,32 @@ spec:
                       part of the Index name.
                     type: string
                   logstashFormat:
-                    description: 'Enable Logstash format compatibility. This option
-                      takes a boolean value: True/False, On/Off'
+                    description: |-
+                      Enable Logstash format compatibility.
+                      This option takes a boolean value: True/False, On/Off
                     type: boolean
                   logstashPrefix:
-                    description: 'When Logstash_Format is enabled, the Index name
-                      is composed using a prefix and the date, e.g: If Logstash_Prefix
-                      is equals to ''mydata'' your index will become ''mydata-YYYY.MM.DD''.
-                      The last string appended belongs to the date when the data is
-                      being generated.'
+                    description: |-
+                      When Logstash_Format is enabled, the Index name is composed using a prefix and the date,
+                      e.g: If Logstash_Prefix is equals to 'mydata' your index will become 'mydata-YYYY.MM.DD'.
+                      The last string appended belongs to the date when the data is being generated.
                     type: string
                   logstashPrefixKey:
                     description: Prefix keys with this string
                     type: string
                   path:
-                    description: Elasticsearch accepts new data on HTTP query path
-                      "/_bulk". But it is also possible to serve Elasticsearch behind
-                      a reverse proxy on a subpath. This option defines such path
-                      on the fluent-bit side. It simply adds a path prefix in the
-                      indexing HTTP POST URI.
+                    description: |-
+                      Elasticsearch accepts new data on HTTP query path "/_bulk".
+                      But it is also possible to serve Elasticsearch behind a reverse proxy on a subpath.
+                      This option defines such path on the fluent-bit side.
+                      It simply adds a path prefix in the indexing HTTP POST URI.
                     type: string
                   pipeline:
-                    description: Newer versions of Elasticsearch allows setting up
-                      filters called pipelines. This option allows defining which
-                      pipeline the database should use. For performance reasons is
-                      strongly suggested parsing and filtering on Fluent Bit side,
-                      avoid pipelines.
+                    description: |-
+                      Newer versions of Elasticsearch allows setting up filters called pipelines.
+                      This option allows defining which pipeline the database should use.
+                      For performance reasons is strongly suggested parsing
+                      and filtering on Fluent Bit side, avoid pipelines.
                     type: string
                   port:
                     description: TCP port of the target Elasticsearch instance
@@ -570,9 +582,9 @@ spec:
                       the key name for the tag.
                     type: string
                   timeKey:
-                    description: When Logstash_Format is enabled, each record will
-                      get a new timestamp field. The Time_Key property defines the
-                      name of that field.
+                    description: |-
+                      When Logstash_Format is enabled, each record will get a new timestamp field.
+                      The Time_Key property defines the name of that field.
                     type: string
                   timeKeyFormat:
                     description: When Logstash_Format is enabled, this property defines
@@ -597,9 +609,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -627,10 +639,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -779,9 +791,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -800,9 +813,10 @@ spec:
                     minimum: 1
                     type: integer
                   requireAckResponse:
-                    description: Send "chunk"-option and wait for "ack" response from
-                      server. Enables at-least-once and receiving server can control
-                      rate of traffic. (Requires Fluentd v0.14.0+ server)
+                    description: |-
+                      Send "chunk"-option and wait for "ack" response from server.
+                      Enables at-least-once and receiving server can control rate of traffic.
+                      (Requires Fluentd v0.14.0+ server)
                     type: boolean
                   selfHostname:
                     description: Default value of the auto-generated certificate common
@@ -834,9 +848,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -864,10 +878,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -901,9 +915,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -978,9 +993,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -1008,10 +1023,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1035,17 +1050,18 @@ spec:
                 description: HTTP defines HTTP Output configuration.
                 properties:
                   allowDuplicatedHeaders:
-                    description: Specify if duplicated headers are allowed. If a duplicated
-                      header is found, the latest key/value set is preserved.
+                    description: |-
+                      Specify if duplicated headers are allowed.
+                      If a duplicated header is found, the latest key/value set is preserved.
                     type: boolean
                   compress:
                     description: Set payload compression mechanism. Option available
                       is 'gzip'
                     type: string
                   format:
-                    description: Specify the data format to be used in the HTTP request
-                      body, by default it uses msgpack. Other supported formats are
-                      json, json_stream and json_lines and gelf.
+                    description: |-
+                      Specify the data format to be used in the HTTP request body, by default it uses msgpack.
+                      Other supported formats are json, json_stream and json_lines and gelf.
                     enum:
                     - msgpack
                     - json
@@ -1097,9 +1113,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1125,9 +1142,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1140,11 +1158,13 @@ spec:
                         type: object
                     type: object
                   jsonDateFormat:
-                    description: 'Specify the format of the date. Supported formats
-                      are double, epoch and iso8601 (eg: 2018-05-30T09:39:52.000681Z)'
+                    description: |-
+                      Specify the format of the date. Supported formats are double, epoch
+                      and iso8601 (eg: 2018-05-30T09:39:52.000681Z)
                     type: string
                   jsonDateKey:
-                    description: Specify the name of the time key in the output record.
+                    description: |-
+                      Specify the name of the time key in the output record.
                       To disable the time key just set the value to false.
                     type: string
                   port:
@@ -1154,14 +1174,14 @@ spec:
                     minimum: 1
                     type: integer
                   proxy:
-                    description: Specify an HTTP Proxy. The expected format of this
-                      value is http://host:port. Note that https is not supported
-                      yet.
+                    description: |-
+                      Specify an HTTP Proxy. The expected format of this value is http://host:port.
+                      Note that https is not supported yet.
                     type: string
                   tls:
-                    description: HTTP output plugin supports TTL/SSL, for more details
-                      about the properties available and general configuration, please
-                      refer to the TLS/SSL section.
+                    description: |-
+                      HTTP output plugin supports TTL/SSL, for more details about the properties available
+                      and general configuration, please refer to the TLS/SSL section.
                     properties:
                       caFile:
                         description: Absolute path to CA certificate file
@@ -1173,9 +1193,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -1203,10 +1223,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1261,9 +1281,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1290,9 +1311,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1318,9 +1340,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1374,9 +1397,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -1404,10 +1427,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1447,18 +1470,17 @@ spec:
                     description: Optional key to store the message
                     type: string
                   messageKeyField:
-                    description: If set, the value of Message_Key_Field in the record
-                      will indicate the message key. If not set nor found in the record,
-                      Message_Key will be used (if set).
+                    description: |-
+                      If set, the value of Message_Key_Field in the record will indicate the message key.
+                      If not set nor found in the record, Message_Key will be used (if set).
                     type: string
                   queueFullRetries:
-                    description: Fluent Bit queues data into rdkafka library, if for
-                      some reason the underlying library cannot flush the records
-                      the queue might fills up blocking new addition of records. The
-                      queue_full_retries option set the number of local retries to
-                      enqueue the data. The default value is 10 times, the interval
-                      between each retry is 1 second. Setting the queue_full_retries
-                      value to 0 set's an unlimited number of retries.
+                    description: |-
+                      Fluent Bit queues data into rdkafka library,
+                      if for some reason the underlying library cannot flush the records the queue might fills up blocking new addition of records.
+                      The queue_full_retries option set the number of local retries to enqueue the data.
+                      The default value is 10 times, the interval between each retry is 1 second.
+                      Setting the queue_full_retries value to 0 set's an unlimited number of retries.
                     format: int64
                     type: integer
                   rdkafka:
@@ -1473,19 +1495,17 @@ spec:
                     description: Set the key to store the record timestamp
                     type: string
                   topicKey:
-                    description: 'If multiple Topics exists, the value of Topic_Key
-                      in the record will indicate the topic to use. E.g: if Topic_Key
-                      is router and the record is {"key1": 123, "router": "route_2"},
-                      Fluent Bit will use topic route_2. Note that if the value of
-                      Topic_Key is not present in Topics, then by default the first
-                      topic in the Topics list will indicate the topic to be used.'
+                    description: |-
+                      If multiple Topics exists, the value of Topic_Key in the record will indicate the topic to use.
+                      E.g: if Topic_Key is router and the record is {"key1": 123, "router": "route_2"},
+                      Fluent Bit will use topic route_2. Note that if the value of Topic_Key is not present in Topics,
+                      then by default the first topic in the Topics list will indicate the topic to be used.
                     type: string
                   topics:
-                    description: Single entry or list of topics separated by comma
-                      (,) that Fluent Bit will use to send messages to Kafka. If only
-                      one topic is set, that one will be used for all records. Instead
-                      if multiple topics exists, the one set in the record by Topic_Key
-                      will be used.
+                    description: |-
+                      Single entry or list of topics separated by comma (,) that Fluent Bit will use to send messages to Kafka.
+                      If only one topic is set, that one will be used for all records.
+                      Instead if multiple topics exists, the one set in the record by Topic_Key will be used.
                     type: string
                 type: object
               kinesis:
@@ -1577,8 +1597,9 @@ spec:
                     description: Loki hostname or IP address.
                     type: string
                   httpPassword:
-                    description: Password for user defined in HTTP_User Set HTTP basic
-                      authentication password
+                    description: |-
+                      Password for user defined in HTTP_User
+                      Set HTTP basic authentication password
                     properties:
                       valueFrom:
                         description: ValueSource defines how to find a value's key.
@@ -1591,9 +1612,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1619,9 +1641,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1634,9 +1657,9 @@ spec:
                         type: object
                     type: object
                   labelKeys:
-                    description: Optional list of record keys that will be placed
-                      as stream labels. This configuration property is for records
-                      key only.
+                    description: |-
+                      Optional list of record keys that will be placed as stream labels.
+                      This configuration property is for records key only.
                     items:
                       type: string
                     type: array
@@ -1645,20 +1668,17 @@ spec:
                       how to extract labels from each record.
                     type: string
                   labels:
-                    description: Stream labels for API request. It can be multiple
-                      comma separated of strings specifying  key=value pairs. In addition
-                      to fixed parameters, it also allows to add custom record keys
-                      (similar to label_keys property).
+                    description: |-
+                      Stream labels for API request. It can be multiple comma separated of strings specifying  key=value pairs.
+                      In addition to fixed parameters, it also allows to add custom record keys (similar to label_keys property).
                     items:
                       type: string
                     type: array
                   lineFormat:
-                    description: Format to use when flattening the record to a log
-                      line. Valid values are json or key_value. If set to json,  the
-                      log line sent to Loki will be the Fluent Bit record dumped as
-                      JSON. If set to key_value, the log line will be each item in
-                      the record concatenated together (separated by a single space)
-                      in the format.
+                    description: |-
+                      Format to use when flattening the record to a log line. Valid values are json or key_value.
+                      If set to json,  the log line sent to Loki will be the Fluent Bit record dumped as JSON.
+                      If set to key_value, the log line will be each item in the record concatenated together (separated by a single space) in the format.
                     enum:
                     - json
                     - key_value
@@ -1675,9 +1695,9 @@ spec:
                       type: string
                     type: array
                   tenantID:
-                    description: Tenant ID used by default to push logs to Loki. If
-                      omitted or empty it assumes Loki is running in single-tenant
-                      mode and no X-Scope-OrgID header is sent.
+                    description: |-
+                      Tenant ID used by default to push logs to Loki.
+                      If omitted or empty it assumes Loki is running in single-tenant mode and no X-Scope-OrgID header is sent.
                     properties:
                       valueFrom:
                         description: ValueSource defines how to find a value's key.
@@ -1690,9 +1710,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1705,10 +1726,9 @@ spec:
                         type: object
                     type: object
                   tenantIDKey:
-                    description: Specify the name of the key from the original record
-                      that contains the Tenant ID. The value of the key is set as
-                      X-Scope-OrgID of HTTP header. It is useful to set Tenant ID
-                      dynamically.
+                    description: |-
+                      Specify the name of the key from the original record that contains the Tenant ID.
+                      The value of the key is set as X-Scope-OrgID of HTTP header. It is useful to set Tenant ID dynamically.
                     type: string
                   tls:
                     description: Fluent Bit provides integrated support for Transport
@@ -1725,9 +1745,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -1755,10 +1775,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1781,12 +1801,14 @@ spec:
                 - host
                 type: object
               match:
-                description: A pattern to match against the tags of incoming records.
+                description: |-
+                  A pattern to match against the tags of incoming records.
                   It's case sensitive and support the star (*) character as a wildcard.
                 type: string
               matchRegex:
-                description: A regular expression to match against the tags of incoming
-                  records. Use this option if you want to use the full regex syntax.
+                description: |-
+                  A regular expression to match against the tags of incoming records.
+                  Use this option if you want to use the full regex syntax.
                 type: string
               "null":
                 description: Null defines Null Output configuration.
@@ -1819,13 +1841,12 @@ spec:
                       API for Amazon OpenSearch Service.
                     type: string
                   bufferSize:
-                    description: Specify the buffer size used to read the response
-                      from the OpenSearch HTTP service. This option is useful for
-                      debugging purposes where is required to read full responses,
-                      note that response size grows depending of the number of records
-                      inserted. To set an unlimited amount of memory set this value
-                      to False, otherwise the value must be according to the Unit
-                      Size specification.
+                    description: |-
+                      Specify the buffer size used to read the response from the OpenSearch HTTP service.
+                      This option is useful for debugging purposes where is required to read full responses,
+                      note that response size grows depending of the number of records inserted.
+                      To set an unlimited amount of memory set this value to False,
+                      otherwise the value must be according to the Unit Size specification.
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
                   currentTimeIndex:
@@ -1833,7 +1854,8 @@ spec:
                       message record
                     type: boolean
                   generateID:
-                    description: When enabled, generate _id for outgoing records.
+                    description: |-
+                      When enabled, generate _id for outgoing records.
                       This prevents duplicate records when retrying OpenSearch.
                     type: boolean
                   host:
@@ -1854,9 +1876,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1882,9 +1905,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1911,30 +1935,31 @@ spec:
                       part of the Index name.
                     type: string
                   logstashFormat:
-                    description: 'Enable Logstash format compatibility. This option
-                      takes a boolean value: True/False, On/Off'
+                    description: |-
+                      Enable Logstash format compatibility.
+                      This option takes a boolean value: True/False, On/Off
                     type: boolean
                   logstashPrefix:
-                    description: 'When Logstash_Format is enabled, the Index name
-                      is composed using a prefix and the date, e.g: If Logstash_Prefix
-                      is equals to ''mydata'' your index will become ''mydata-YYYY.MM.DD''.
-                      The last string appended belongs to the date when the data is
-                      being generated.'
+                    description: |-
+                      When Logstash_Format is enabled, the Index name is composed using a prefix and the date,
+                      e.g: If Logstash_Prefix is equals to 'mydata' your index will become 'mydata-YYYY.MM.DD'.
+                      The last string appended belongs to the date when the data is being generated.
                     type: string
                   logstashPrefixKey:
                     description: Prefix keys with this string
                     type: string
                   path:
-                    description: OpenSearch accepts new data on HTTP query path "/_bulk".
-                      But it is also possible to serve OpenSearch behind a reverse
-                      proxy on a subpath. This option defines such path on the fluent-bit
-                      side. It simply adds a path prefix in the indexing HTTP POST
-                      URI.
+                    description: |-
+                      OpenSearch accepts new data on HTTP query path "/_bulk".
+                      But it is also possible to serve OpenSearch behind a reverse proxy on a subpath.
+                      This option defines such path on the fluent-bit side.
+                      It simply adds a path prefix in the indexing HTTP POST URI.
                     type: string
                   pipeline:
-                    description: OpenSearch allows to setup filters called pipelines.
-                      This option allows to define which pipeline the database should
-                      use. For performance reasons is strongly suggested to do parsing
+                    description: |-
+                      OpenSearch allows to setup filters called pipelines.
+                      This option allows to define which pipeline the database should use.
+                      For performance reasons is strongly suggested to do parsing
                       and filtering on Fluent Bit side, avoid pipelines.
                     type: string
                   port:
@@ -1958,9 +1983,9 @@ spec:
                       the key name for the tag.
                     type: string
                   timeKey:
-                    description: When Logstash_Format is enabled, each record will
-                      get a new timestamp field. The Time_Key property defines the
-                      name of that field.
+                    description: |-
+                      When Logstash_Format is enabled, each record will get a new timestamp field.
+                      The Time_Key property defines the name of that field.
                     type: string
                   timeKeyFormat:
                     description: When Logstash_Format is enabled, this property defines
@@ -1985,9 +2010,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -2015,10 +2040,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2090,9 +2115,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2118,9 +2144,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2151,11 +2178,9 @@ spec:
                     minimum: 1
                     type: integer
                   proxy:
-                    description: Specify an HTTP Proxy. The expected format of this
-                      value is http://HOST:PORT. Note that HTTPS is not currently
-                      supported. It is recommended not to set this and to configure
-                      the HTTP proxy environment variables instead as they support
-                      both HTTP and HTTPS.
+                    description: |-
+                      Specify an HTTP Proxy. The expected format of this value is http://HOST:PORT. Note that HTTPS is not currently supported.
+                      It is recommended not to set this and to configure the HTTP proxy environment variables instead as they support both HTTP and HTTPS.
                     type: string
                   tls:
                     description: Fluent Bit provides integrated support for Transport
@@ -2172,9 +2197,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -2202,10 +2227,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2276,7 +2301,9 @@ spec:
                       default: 127.0.0.1'
                     type: string
                   httpPasswd:
-                    description: Basic Auth Password. Requires HTTP_user to be se
+                    description: |-
+                      Basic Auth Password.
+                      Requires HTTP_user to be se
                     properties:
                       valueFrom:
                         description: ValueSource defines how to find a value's key.
@@ -2289,9 +2316,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2317,9 +2345,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2360,9 +2389,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -2390,10 +2419,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2426,10 +2455,9 @@ spec:
                 - host
                 type: object
               retry_limit:
-                description: RetryLimit represents configuration for the scheduler
-                  which can be set independently on each output section. This option
-                  allows to disable retries or impose a limit to try N times and then
-                  discard the data after reaching that limit.
+                description: |-
+                  RetryLimit represents configuration for the scheduler which can be set independently on each output section.
+                  This option allows to disable retries or impose a limit to try N times and then discard the data after reaching that limit.
                 type: string
               s3:
                 description: S3 defines S3 Output configuration.
@@ -2563,8 +2591,9 @@ spec:
                       option is gzip.
                     type: string
                   eventFields:
-                    description: Set event fields for the record. This option is an
-                      array and the format is "key_name record_accessor_pattern".
+                    description: |-
+                      Set event fields for the record. This option is an array and the format is "key_name
+                      record_accessor_pattern".
                     items:
                       type: string
                     type: array
@@ -2577,9 +2606,9 @@ spec:
                       to be indexed.
                     type: string
                   eventIndexKey:
-                    description: Set a record key that will populate the index field.
-                      If the key is found, it will have precedence over the value
-                      set in event_index.
+                    description: |-
+                      Set a record key that will populate the index field. If the key is found, it will have precedence
+                      over the value set in event_index.
                     type: string
                   eventKey:
                     description: Specify the key name that will be used to send a
@@ -2592,9 +2621,9 @@ spec:
                     description: Set the sourcetype value to assign to the event data.
                     type: string
                   eventSourcetypeKey:
-                    description: Set a record key that will populate 'sourcetype'.
-                      If the key is found, it will have precedence over the value
-                      set in event_sourcetype.
+                    description: |-
+                      Set a record key that will populate 'sourcetype'. If the key is found, it will have precedence
+                      over the value set in event_sourcetype.
                     type: string
                   host:
                     description: IP address or hostname of the target OpenSearch instance,
@@ -2606,10 +2635,9 @@ spec:
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
                   httpDebugBadRequest:
-                    description: If the HTTP server response code is 400 (bad request)
-                      and this flag is enabled, it will print the full HTTP request
-                      and response to the stdout interface. This feature is available
-                      for debugging purposes.
+                    description: |-
+                      If the HTTP server response code is 400 (bad request) and this flag is enabled, it will print the full HTTP request
+                      and response to the stdout interface. This feature is available for debugging purposes.
                     type: boolean
                   httpPassword:
                     description: Password for user defined in HTTP_User
@@ -2625,9 +2653,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2653,9 +2682,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2674,10 +2704,9 @@ spec:
                     minimum: 1
                     type: integer
                   splunkSendRaw:
-                    description: When enabled, the record keys and values are set
-                      in the top level of the map instead of under the event key.
-                      Refer to the Sending Raw Events section from the docs more details
-                      to make this option work properly.
+                    description: |-
+                      When enabled, the record keys and values are set in the top level of the map instead of under the event key. Refer to
+                      the Sending Raw Events section from the docs more details to make this option work properly.
                     type: boolean
                   splunkToken:
                     description: Specify the Authentication Token for the HTTP Event
@@ -2694,9 +2723,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2723,9 +2753,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -2753,10 +2783,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2858,9 +2888,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2886,9 +2917,10 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2998,9 +3030,9 @@ spec:
                       severity number.
                     type: string
                   tls:
-                    description: Syslog output plugin supports TTL/SSL, for more details
-                      about the properties available and general configuration, please
-                      refer to the TLS/SSL section.
+                    description: |-
+                      Syslog output plugin supports TTL/SSL, for more details about the properties available
+                      and general configuration, please refer to the TLS/SSL section.
                     properties:
                       caFile:
                         description: Absolute path to CA certificate file
@@ -3012,9 +3044,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -3042,10 +3074,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3082,15 +3114,17 @@ spec:
                       for Forward messages.
                     type: string
                   jsonDateFormat:
-                    description: 'Specify the format of the date. Supported formats
-                      are double, epoch and iso8601 (eg: 2018-05-30T09:39:52.000681Z)'
+                    description: |-
+                      Specify the format of the date. Supported formats are double, epoch
+                      and iso8601 (eg: 2018-05-30T09:39:52.000681Z)
                     enum:
                     - double
                     - epoch
                     - iso8601
                     type: string
                   jsonDateKey:
-                    description: TSpecify the name of the time key in the output record.
+                    description: |-
+                      TSpecify the name of the time key in the output record.
                       To disable the time key just set the value to false.
                     type: string
                   port:
@@ -3114,9 +3148,9 @@ spec:
                         description: Absolute path to Certificate file
                         type: string
                       debug:
-                        description: 'Set TLS debug verbosity level. It accept the
-                          following values: 0 (No debug), 1 (Error), 2 (State change),
-                          3 (Informational) and 4 Verbose'
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
                         enum:
                         - 0
                         - 1
@@ -3144,10 +3178,10 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
-                                    description: 'Name of the referent. More info:
-                                      https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind,
-                                      uid?'
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its

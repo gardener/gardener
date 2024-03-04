@@ -175,10 +175,6 @@ var _ = Describe("VPA", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		serviceAccountUpdater = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-updater",
 				Namespace: namespace,
@@ -189,10 +185,6 @@ var _ = Describe("VPA", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleUpdater = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:evictioner",
 				Labels: map[string]string{
@@ -213,10 +205,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingUpdater = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:evictioner",
 				Labels: map[string]string{
@@ -238,10 +226,6 @@ var _ = Describe("VPA", func() {
 			}},
 		}
 		shootAccessSecretUpdater = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-vpa-updater",
 				Namespace: namespace,
@@ -289,10 +273,6 @@ var _ = Describe("VPA", func() {
 			}
 
 			obj := &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-updater",
 					Namespace: namespace,
@@ -384,10 +364,6 @@ var _ = Describe("VPA", func() {
 			return obj
 		}
 		vpaUpdater = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-updater",
 				Namespace: namespace,
@@ -414,10 +390,6 @@ var _ = Describe("VPA", func() {
 		}
 
 		serviceAccountRecommender = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-recommender",
 				Namespace: namespace,
@@ -428,10 +400,6 @@ var _ = Describe("VPA", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleRecommenderMetricsReader = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:metrics-reader",
 				Labels: map[string]string{
@@ -447,10 +415,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingRecommenderMetricsReader = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:metrics-reader",
 				Labels: map[string]string{
@@ -472,10 +436,6 @@ var _ = Describe("VPA", func() {
 			}},
 		}
 		clusterRoleRecommenderCheckpointActor = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:checkpoint-actor",
 				Labels: map[string]string{
@@ -496,10 +456,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingRecommenderCheckpointActor = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:checkpoint-actor",
 				Labels: map[string]string{
@@ -521,10 +477,6 @@ var _ = Describe("VPA", func() {
 			}},
 		}
 		clusterRoleRecommenderStatusActor = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:status-actor",
 				Labels: map[string]string{
@@ -540,10 +492,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingRecommenderStatusActor = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:status-actor",
 				Labels: map[string]string{
@@ -568,10 +516,6 @@ var _ = Describe("VPA", func() {
 		}
 		serviceRecommenderFor = func(clusterType component.ClusterType) *corev1.Service {
 			obj := &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-recommender",
 					Namespace: namespace,
@@ -599,10 +543,6 @@ var _ = Describe("VPA", func() {
 			return obj
 		}
 		shootAccessSecretRecommender = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-vpa-recommender",
 				Namespace: namespace,
@@ -646,10 +586,6 @@ var _ = Describe("VPA", func() {
 			}
 
 			obj := &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-recommender",
 					Namespace: namespace,
@@ -732,10 +668,6 @@ var _ = Describe("VPA", func() {
 			return obj
 		}
 		vpaRecommender = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-recommender",
 				Namespace: namespace,
@@ -796,10 +728,6 @@ var _ = Describe("VPA", func() {
 		}
 
 		serviceAccountAdmissionController = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ServiceAccount",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-admission-controller",
 				Namespace: namespace,
@@ -810,10 +738,6 @@ var _ = Describe("VPA", func() {
 			AutomountServiceAccountToken: ptr.To(false),
 		}
 		clusterRoleAdmissionController = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:admission-controller",
 				Labels: map[string]string{
@@ -844,10 +768,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingAdmissionController = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:admission-controller",
 				Labels: map[string]string{
@@ -869,10 +789,6 @@ var _ = Describe("VPA", func() {
 			}},
 		}
 		shootAccessSecretAdmissionController = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-vpa-admission-controller",
 				Namespace: namespace,
@@ -889,10 +805,6 @@ var _ = Describe("VPA", func() {
 		}
 		serviceAdmissionControllerFor = func(clusterType component.ClusterType, topologyAwareRoutingEnabled bool) *corev1.Service {
 			obj := &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-webhook",
 					Namespace: namespace,
@@ -922,10 +834,6 @@ var _ = Describe("VPA", func() {
 		}
 		deploymentAdmissionControllerFor = func(withServiceAccount bool) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-admission-controller",
 					Namespace: namespace,
@@ -1058,10 +966,6 @@ var _ = Describe("VPA", func() {
 			return obj
 		}
 		podDisruptionBudgetAdmissionController = &policyv1.PodDisruptionBudget{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "policy/v1",
-				Kind:       "PodDisruptionBudget",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-admission-controller",
 				Namespace: namespace,
@@ -1077,10 +981,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		vpaAdmissionController = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "autoscaling.k8s.io/v1",
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpa-admission-controller",
 				Namespace: namespace,
@@ -1107,10 +1007,6 @@ var _ = Describe("VPA", func() {
 		}
 
 		clusterRoleGeneralActor = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:actor",
 				Labels: map[string]string{
@@ -1141,10 +1037,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingGeneralActor = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:actor",
 				Labels: map[string]string{
@@ -1173,10 +1065,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleGeneralTargetReader = &rbacv1.ClusterRole{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRole",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:target-reader",
 				Labels: map[string]string{
@@ -1212,10 +1100,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		clusterRoleBindingGeneralTargetReader = &rbacv1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "rbac.authorization.k8s.io/v1",
-				Kind:       "ClusterRoleBinding",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:vpa:target:target-reader",
 				Labels: map[string]string{
@@ -1249,10 +1133,6 @@ var _ = Describe("VPA", func() {
 			},
 		}
 		mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "admissionregistration.k8s.io/v1",
-				Kind:       "MutatingWebhookConfiguration",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "zzz-vpa-webhook-config-target",
 				Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
@@ -1335,10 +1215,6 @@ var _ = Describe("VPA", func() {
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					expectedMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
@@ -1492,10 +1368,6 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceName,
 						Namespace:       namespace,
@@ -1564,10 +1436,6 @@ var _ = Describe("VPA", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
 					expectedMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
