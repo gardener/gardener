@@ -136,8 +136,9 @@ var _ = Describe("Alertmanager", func() {
 				Name:      "alertmanager-" + name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"component": "alertmanager",
-					"role":      "monitoring",
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
 				},
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`,
@@ -147,8 +148,9 @@ var _ = Describe("Alertmanager", func() {
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeClusterIP,
 				Selector: map[string]string{
-					"component": "alertmanager",
-					"role":      "monitoring",
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
 				},
 				Ports: []corev1.ServicePort{{
 					Name: "metrics",
@@ -161,13 +163,15 @@ var _ = Describe("Alertmanager", func() {
 				Name:      name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"component": "alertmanager",
-					"role":      "monitoring",
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
 				},
 			},
 			Spec: monitoringv1.AlertmanagerSpec{
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 					Labels: map[string]string{
+						"alertmanager":                     name,
 						"component":                        "alertmanager",
 						"role":                             "monitoring",
 						"networking.gardener.cloud/to-dns": "allowed",
@@ -209,8 +213,9 @@ var _ = Describe("Alertmanager", func() {
 				Name:      "alertmanager-" + name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"component": "alertmanager",
-					"role":      "monitoring",
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
 				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -321,8 +326,9 @@ var _ = Describe("Alertmanager", func() {
 				Name:      "alertmanager-" + name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"component": "alertmanager",
-					"role":      "monitoring",
+					"component":    "alertmanager",
+					"role":         "monitoring",
+					"alertmanager": name,
 				},
 				Annotations: map[string]string{
 					"nginx.ingress.kubernetes.io/auth-type":   "basic",

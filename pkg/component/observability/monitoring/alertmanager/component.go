@@ -201,5 +201,6 @@ func (a *alertManager) getLabels() map[string]string {
 	return map[string]string{
 		"component":                "alertmanager",
 		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+		"alertmanager":             a.values.Name,
 	}
 }
