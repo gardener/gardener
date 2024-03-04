@@ -65,6 +65,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
 		valuesRecommender.Interval = vpaConfig.RecommenderInterval
 		valuesRecommender.RecommendationMarginFraction = vpaConfig.RecommendationMarginFraction
+		valuesRecommender.TargetCPUPercentile = vpaConfig.TargetCPUPercentile
 
 		valuesUpdater.EvictAfterOOMThreshold = vpaConfig.EvictAfterOOMThreshold
 		valuesUpdater.EvictionRateBurst = vpaConfig.EvictionRateBurst

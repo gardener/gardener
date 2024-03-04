@@ -11963,6 +11963,20 @@ Kubernetes meta/v1.Duration
 <p>RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>targetCPUPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+Doesn&rsquo;t affect CPU lower bound, CPU upper bound nor memory recommendations.
+(default: 0.9)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume

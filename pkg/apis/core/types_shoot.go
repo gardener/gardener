@@ -537,6 +537,10 @@ type VerticalPodAutoscaler struct {
 	UpdaterInterval *metav1.Duration
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	RecommenderInterval *metav1.Duration
+	// TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	// (default: 0.9)
+	TargetCPUPercentile *float64
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

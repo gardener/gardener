@@ -52,6 +52,9 @@ const (
 type ValuesRecommender struct {
 	// RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request.
 	RecommendationMarginFraction *float64
+	// TargetCPUPercentile is the CPU usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	TargetCPUPercentile *float64
 	// Image is the container image.
 	Image string
 	// Interval is the interval how often the recommender should run.
@@ -216,6 +219,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
 						"--memory-saver=true",
+						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{

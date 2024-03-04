@@ -664,6 +664,11 @@ type VerticalPodAutoscaler struct {
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	// +optional
 	RecommenderInterval *metav1.Duration `json:"recommenderInterval,omitempty" protobuf:"bytes,8,opt,name=recommenderInterval"`
+	// TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	// (default: 0.9)
+	// +optional
+	TargetCPUPercentile *float64 `json:"targetCPUPercentile,omitempty" protobuf:"fixed64,9,opt,name=targetCPUPercentile"`
 }
 
 const (
@@ -675,6 +680,8 @@ const (
 	DefaultEvictionTolerance = 0.5
 	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
 	DefaultRecommendationMarginFraction = 0.15
+	// DefaultTargetCPUPercentile is the default value for the TargetCPUPercentile field in the VPA configuration
+	DefaultTargetCPUPercentile = 0.9
 )
 
 var (

@@ -6129,6 +6129,7 @@ func autoConvert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in 
 	out.RecommendationMarginFraction = (*float64)(unsafe.Pointer(in.RecommendationMarginFraction))
 	out.UpdaterInterval = (*metav1.Duration)(unsafe.Pointer(in.UpdaterInterval))
 	out.RecommenderInterval = (*metav1.Duration)(unsafe.Pointer(in.RecommenderInterval))
+	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
 	return nil
 }
 
@@ -6146,6 +6147,7 @@ func autoConvert_core_VerticalPodAutoscaler_To_v1beta1_VerticalPodAutoscaler(in 
 	out.RecommendationMarginFraction = (*float64)(unsafe.Pointer(in.RecommendationMarginFraction))
 	out.UpdaterInterval = (*metav1.Duration)(unsafe.Pointer(in.UpdaterInterval))
 	out.RecommenderInterval = (*metav1.Duration)(unsafe.Pointer(in.RecommenderInterval))
+	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
 	return nil
 }
 
