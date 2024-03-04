@@ -48,7 +48,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Prometheus", func() {
+var _ = Describe("Alertmanager", func() {
 	var (
 		ctx context.Context
 
@@ -432,6 +432,11 @@ var _ = Describe("Prometheus", func() {
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(6))
 
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
 				})
 			})
@@ -442,6 +447,8 @@ var _ = Describe("Prometheus", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
+					alertManager.Spec.AlertmanagerConfiguration = nil
+
 					Expect(managedResourceSecret.Data).To(HaveLen(3))
 
 					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))

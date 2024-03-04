@@ -66,8 +66,11 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
 			LogLevel:                            "info",
 			ForceEnableClusterMode:              true,
-			AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: a.name()},
 		},
+	}
+
+	if a.hasSMTPSecret() {
+		obj.Spec.AlertmanagerConfiguration = &monitoringv1.AlertmanagerConfiguration{Name: a.name()}
 	}
 
 	if a.values.ClusterType == component.ClusterTypeShoot {
