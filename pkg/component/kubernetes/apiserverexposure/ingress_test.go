@@ -230,17 +230,17 @@ var _ = Describe("#Ingress", func() {
 			actualGateway := &istionetworkingv1beta1.Gateway{}
 			Expect(c.Get(ctx, objKey, actualGateway)).To(Succeed())
 			Expect(actualGateway.Labels).To(DeepEqual(expectedPassthroughGateway.Labels))
-			Expect(actualGateway.Spec).To(BeComparableTo(expectedPassthroughGateway.Spec, comptest.CmpOptsForGateway()))
+			Expect(&actualGateway.Spec).To(BeComparableTo(&expectedPassthroughGateway.Spec, comptest.CmpOptsForGateway()))
 
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
 			Expect(c.Get(ctx, objKey, actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService.Labels).To(DeepEqual(expectedPassthroughVirtualService.Labels))
-			Expect(actualVirtualService.Spec).To(BeComparableTo(expectedPassthroughVirtualService.Spec, comptest.CmpOptsForVirtualService()))
+			Expect(&actualVirtualService.Spec).To(BeComparableTo(&expectedPassthroughVirtualService.Spec, comptest.CmpOptsForVirtualService()))
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 			Expect(c.Get(ctx, objKey, actualDestinationRule)).To(Succeed())
 			Expect(actualDestinationRule.Labels).To(DeepEqual(expectedPassthroughDestinationRule.Labels))
-			Expect(actualDestinationRule.Spec).To(BeComparableTo(expectedPassthroughDestinationRule.Spec, comptest.CmpOptsForDestinationRule()))
+			Expect(&actualDestinationRule.Spec).To(BeComparableTo(&expectedPassthroughDestinationRule.Spec, comptest.CmpOptsForDestinationRule()))
 		})
 
 		It("should create the expected resources for backend protocol HTTPS", func() {
@@ -260,17 +260,17 @@ var _ = Describe("#Ingress", func() {
 			actualGateway := &istionetworkingv1beta1.Gateway{}
 			Expect(c.Get(ctx, objKey, actualGateway)).To(Succeed())
 			Expect(actualGateway.Labels).To(DeepEqual(expectedHTTPSBackendGateway.Labels))
-			Expect(actualGateway.Spec).To(BeComparableTo(expectedHTTPSBackendGateway.Spec, comptest.CmpOptsForGateway()))
+			Expect(&actualGateway.Spec).To(BeComparableTo(&expectedHTTPSBackendGateway.Spec, comptest.CmpOptsForGateway()))
 
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
 			Expect(c.Get(ctx, objKey, actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService.Labels).To(DeepEqual(expectedHTTPSBackendVirtualService.Labels))
-			Expect(actualVirtualService.Spec).To(BeComparableTo(expectedHTTPSBackendVirtualService.Spec, comptest.CmpOptsForVirtualService()))
+			Expect(&actualVirtualService.Spec).To(BeComparableTo(&expectedHTTPSBackendVirtualService.Spec, comptest.CmpOptsForVirtualService()))
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 			Expect(c.Get(ctx, httpsDRKey, actualDestinationRule)).To(Succeed())
 			Expect(actualDestinationRule.Labels).To(DeepEqual(expectedHTTPSBackendDestinationRule.Labels))
-			Expect(actualDestinationRule.Spec).To(BeComparableTo(expectedHTTPSBackendDestinationRule.Spec, comptest.CmpOptsForDestinationRule()))
+			Expect(&actualDestinationRule.Spec).To(BeComparableTo(&expectedHTTPSBackendDestinationRule.Spec, comptest.CmpOptsForDestinationRule()))
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: tlsSecret, Namespace: istioNamespace}, &corev1.Secret{})).To(Succeed())
 		})

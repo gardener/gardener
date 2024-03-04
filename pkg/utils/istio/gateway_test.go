@@ -56,7 +56,7 @@ var _ = Describe("Gateway", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(gateway.Labels).To(Equal(labels))
 		Expect(gateway.Spec.Selector).To(Equal(istioLabels))
-		Expect(len(gateway.Spec.Servers)).To(Equal(1))
+		Expect(gateway.Spec.Servers).To(HaveLen(1))
 		Expect(gateway.Spec.Servers[0].Hosts).To(Equal(hosts))
 		Expect(gateway.Spec.Servers[0].Port.Number).To(Equal(port))
 		Expect(gateway.Spec.Servers[0].Tls.CredentialName).To(Equal(tlsSecret))
