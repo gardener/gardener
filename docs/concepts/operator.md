@@ -24,12 +24,14 @@ Note that there can only be one `Garden` resource per system at a time.
 
 Please find an exemplary `Garden` resource [here](../../example/operator/20-garden.yaml).
 
-### Settings For Runtime Cluster
+### Configuration For Runtime Cluster
+
+#### Settings
 
 The `Garden` resource offers a few settings that are used to control the behaviour of `gardener-operator` in the runtime cluster.
 This section provides an overview over the available settings in `.spec.runtimeCluster.settings`:
 
-#### Load Balancer Services
+##### Load Balancer Services
 
 `gardener-operator` deploys Istio and relevant resources to the runtime cluster in order to expose the `virtual-garden-kube-apiserver` service (similar to how the `kube-apiservers` of shoot clusters are exposed).
 In most cases, the `cloud-controller-manager` (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
@@ -37,7 +39,7 @@ In most cases, the `cloud-controller-manager` (responsible for managing these lo
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
-#### Vertical Pod Autoscaler
+##### Vertical Pod Autoscaler
 
 `gardener-operator` heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 By default, the `Garden` controller deploys the VPA components into the `garden` namespace of the respective runtime cluster.
@@ -48,9 +50,16 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disa
 ⚠️ In any case, there must be a VPA available for your runtime cluster.
 Using a runtime cluster without VPA is not supported.
 
-#### Topology-Aware Traffic Routing
+##### Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
+
+#### Volumes
+
+It is possible to define the minimum size for `PersistentVolumeClaim`s in the runtime cluster created by `gardener-operator` via the `.spec.runtimeCluster.volume.minimumSize` field.
+This can be relevant in case the runtime cluster runs on an infrastructure that does only support disks of at least a certain size.
+
+### Configuration For Virtual Cluster
 
 #### ETCD Encryption Config
 

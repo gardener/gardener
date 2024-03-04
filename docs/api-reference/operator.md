@@ -1734,6 +1734,20 @@ Settings
 <p>Settings contains certain settings for this cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>volume</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Volume">
+Volume
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.RuntimeNetworking">RuntimeNetworking
@@ -2164,6 +2178,37 @@ Networking
 </td>
 <td>
 <p>Networking contains information about cluster networking such as CIDRs, etc.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Volume">Volume
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>minimumSize</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.</p>
 </td>
 </tr>
 </tbody>

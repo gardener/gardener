@@ -40,6 +40,8 @@ spec:
         enabled: true
       topologyAwareRouting:
         enabled: false
+  # volume:
+  #   minimumSize: 20Gi
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}
