@@ -682,6 +682,7 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alerti
 		ClusterType:        component.ClusterTypeSeed,
 		PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
 		StorageCapacity:    resource.MustParse(seed.GetValidVolumeSize("1Gi")),
+		Replicas:           1,
 		AlertingSMTPSecret: alertingSMTPSecret,
 	})
 
