@@ -154,11 +154,59 @@ The reconciler also manages a few observability-related components (more planned
 - `plutono`
 - `vali`
 - `prometheus-operator`
+- `alertmanager-garden` (read more [here](#observability))
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `.status.lastOperation` which indicates the status of an operation.
+
+##### Observability
+
+By default, the `alertmanager-garden` deployed by `gardener-operator` does not come with any configuration.
+It is the responsibility of the human operators to design and provide it.
+This can be done by creating `monitoring.coreos.com/v1alpha1.AlertmanagerConfig` resources labeled with `alertmanager=garden` (read more about them [here](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#alertmanagerconfig)), for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: config
+  namespace: garden
+  labels:
+    alertmanager: garden
+spec:
+  route:
+    receiver: dev-null
+    groupBy:
+    - alertname
+    - landscape
+    routes:
+    - continue: true
+      groupWait: 3m
+      groupInterval: 5m
+      repeatInterval: 12h
+      routes:
+      - receiver: ops
+        matchers:
+        - name: severity
+          value: warning
+          matchType: =
+        - name: topology
+          value: garden
+          matchType: =
+  receivers:
+  - name: dev-null
+  - name: ops
+    slackConfigs:
+    - apiURL: https://<slack-api-url>
+      channel: <channel-name>
+      username: Gardener-Alertmanager
+      iconEmoji: ":alert:"
+      title: "[{{ .Status | toUpper }}] Gardener Alert(s)"
+      text: "{{ range .Alerts }}*{{ .Annotations.summary }} ({{ .Status }})*\n{{ .Annotations.description }}\n\n{{ end }}"
+      sendResolved: true
+```
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 
