@@ -672,6 +672,8 @@ const (
 	// LabelCareConditionType is a key for a label on a ManagedResource indicating to which condition type its status
 	// should be aggregated.
 	LabelCareConditionType = "care.gardener.cloud/condition-type"
+	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
+	ObservabilityComponentsHealthy = "ObservabilityComponentsHealthy"
 
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"

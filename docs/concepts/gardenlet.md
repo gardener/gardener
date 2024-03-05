@@ -366,7 +366,7 @@ The following table explains which `ManagedResource`s are considered for which c
 
 | Condition Type                | `ManagedResource`s are considered when |
 |-------------------------------|----------------------------------------|
-| `SeedSystemComponentsHealthy` | `.spec.class=seed`                     |
+| `SeedSystemComponentsHealthy` | `.spec.class` is set                   |
 
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
@@ -451,7 +451,7 @@ The following table explains which `ManagedResource`s are considered for which c
 |----------------------------------|-----------------------------------------------------------------------------------------------------------------|
 | `ControlPlaneHealthy`            | `.spec.class=seed` and `care.gardener.cloud/condition-type` label either unset, or set to `ControlPlaneHealthy` |
 | `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                              |
-| `SystemComponentsHealthy`        | `.spec.class` and `care.gardener.cloud/condition-type` label either unet, or set to `SystemComponentsHealthy`   |
+| `SystemComponentsHealthy`        | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `SystemComponentsHealthy`              |
 
 ##### Constraints And Automatic Webhook Remediation
 

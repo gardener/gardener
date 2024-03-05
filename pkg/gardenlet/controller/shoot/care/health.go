@@ -494,8 +494,8 @@ func (h *Health) checkSystemComponents(
 	error,
 ) {
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
-		return managedResource.Spec.Class == nil &&
-			sets.New("", string(gardencorev1beta1.ShootSystemComponentsHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
+		return managedResource.Spec.Class == nil ||
+			managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootSystemComponentsHealthy)
 	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
 		return exitCondition, nil
 	}

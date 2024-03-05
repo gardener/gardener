@@ -78,7 +78,7 @@ func (p *prometheusOperator) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, ManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}, resources)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, ManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
 }
 
 func (p *prometheusOperator) Wait(ctx context.Context) error {

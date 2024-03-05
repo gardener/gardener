@@ -79,7 +79,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualGardenAccessSecret = g.newVirtualGardenAccessSecret()
-		conditionTypeLabels       = map[string]string{v1beta1constants.LabelCareConditionType: "ObservabilityComponentsHealthy"}
+		conditionTypeLabels       = map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}
 	)
 
 	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
