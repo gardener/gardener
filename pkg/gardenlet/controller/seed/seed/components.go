@@ -688,6 +688,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		Ingress: &prometheus.IngressValues{
 			Host:           seed.GetIngressFQDN("p-seed"),
 			SecretsManager: secretsManager,
+			SigningCA:      v1beta1constants.SecretNameCASeed,
 		},
 	}
 

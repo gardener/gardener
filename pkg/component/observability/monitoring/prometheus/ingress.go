@@ -41,7 +41,7 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
+		}, secretsmanager.SignedByCA(p.values.Ingress.SigningCA))
 		if err != nil {
 			return nil, err
 		}
