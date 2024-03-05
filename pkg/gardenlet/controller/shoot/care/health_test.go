@@ -159,36 +159,18 @@ var _ = Describe("health check", func() {
 	})
 
 	Describe("#ComputeRequiredMonitoringStatefulSets", func() {
-		var commonNames []interface{}
-		BeforeEach(func() {
-			commonNames = []interface{}{"prometheus"}
-		})
-
-		It("should return expected statefulsets when alert manager is not wanted", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets(false, semver.MustParse("1.90")).UnsortedList()).To(ConsistOf(commonNames...))
-		})
-
-		It("should return expected statefulsets when alert manager is wanted", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets(true, semver.MustParse("1.89")).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager")...))
-		})
-
-		It("should return expected statefulsets when alert manager is wanted when reconciled by Gardener >= v1.90", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets(true, semver.MustParse("1.90")).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager-shoot")...))
+		It("should return expected statefulsets", func() {
+			Expect(ComputeRequiredMonitoringStatefulSets().UnsortedList()).To(HaveExactElements("prometheus"))
 		})
 	})
 
 	Describe("#ComputeRequiredMonitoringSeedDeployments", func() {
-		var commonNames []interface{}
-		BeforeEach(func() {
-			commonNames = []interface{}{"plutono"}
-		})
-
 		It("should return expected deployments", func() {
-			Expect(ComputeRequiredMonitoringSeedDeployments(shoot).UnsortedList()).To(ConsistOf(append(commonNames, "kube-state-metrics")...))
+			Expect(ComputeRequiredMonitoringSeedDeployments(shoot).UnsortedList()).To(HaveExactElements("kube-state-metrics"))
 		})
 
 		It("should return expected deployments for workerless shoot", func() {
-			Expect(ComputeRequiredMonitoringSeedDeployments(workerlessShoot).UnsortedList()).To(ConsistOf(commonNames))
+			Expect(ComputeRequiredMonitoringSeedDeployments(workerlessShoot).UnsortedList()).To(BeEmpty())
 		})
 	})
 
