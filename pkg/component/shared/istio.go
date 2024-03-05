@@ -91,6 +91,8 @@ func NewIstio(
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
 	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
+	// In case the cluster's API server should be exposed via ingress domain for the dashboard terminal scenario,
+	// istio ingress gateway needs to be able to directly forward traffic to the runtime API server.
 	policyLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 
 	enforceSpreadAcrossHosts, err := ShouldEnforceSpreadAcrossHosts(ctx, cl, zones)
