@@ -12,7 +12,7 @@ require (
 	github.com/gardener/dependency-watchdog v1.2.1
 	github.com/gardener/etcd-druid v0.22.0
 	github.com/gardener/hvpa-controller/api v0.5.0
-	github.com/gardener/machine-controller-manager v0.50.0
+	github.com/gardener/machine-controller-manager v0.52.0
 	github.com/go-logr/logr v1.4.1
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
