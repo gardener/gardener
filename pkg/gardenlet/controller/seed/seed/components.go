@@ -628,28 +628,33 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 }
 
 func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
-	values := prometheus.Values{
-		Name:            "cache",
-		StorageCapacity: resource.MustParse(seed.GetValidVolumeSize("10Gi")),
-		Retention:       ptr.To(monitoringv1.Duration("1d")),
-		RetentionSize:   "5GB",
+	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "cache",
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		Replicas:          1,
+		Retention:         ptr.To(monitoringv1.Duration("1d")),
+		RetentionSize:     "5GB",
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
 		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
-	}
-
-	return r.newPrometheus(log, values, "prometheus")
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "prometheus",
+		},
+	})
 }
 
 func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
-	values := prometheus.Values{
-		Name:            "seed",
-		StorageCapacity: resource.MustParse(seed.GetValidVolumeSize("100Gi")),
-		RetentionSize:   "85GB",
-		VPAMinAllowed:   &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
+	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "seed",
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
+		Replicas:          1,
+		RetentionSize:     "85GB",
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-extensions-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 			// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
@@ -662,19 +667,22 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 			PodMonitors:   seedprometheus.CentralPodMonitors(),
 			ScrapeConfigs: seedprometheus.CentralScrapeConfigs(),
 		},
-	}
-
-	return r.newPrometheus(log, values, "seed-prometheus")
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "seed-prometheus",
+		},
+	})
 }
 
 func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
 	values := prometheus.Values{
-		Name:            "aggregate",
-		StorageCapacity: resource.MustParse(seed.GetValidVolumeSize("20Gi")),
-		Retention:       ptr.To(monitoringv1.Duration("30d")),
-		RetentionSize:   "15GB",
-		ExternalLabels:  map[string]string{"seed": seed.GetInfo().Name},
-		VPAMinAllowed:   &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		Name:              "aggregate",
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
+		Replicas:          1,
+		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		RetentionSize:     "15GB",
+		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		CentralConfigs: prometheus.CentralConfigs{
 			PrometheusRules: aggregateprometheus.CentralPrometheusRules(),
 			ScrapeConfigs:   aggregateprometheus.CentralScrapeConfigs(),
@@ -690,6 +698,9 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			SecretsManager: secretsManager,
 			SigningCA:      v1beta1constants.SecretNameCASeed,
 		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "aggregate-prometheus",
+		},
 	}
 
 	if globalMonitoringSecret != nil {
@@ -704,34 +715,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-seed"}
 	}
 
-	return r.newPrometheus(log, values, "aggregate-prometheus")
-}
-
-func (r *Reconciler) newPrometheus(log logr.Logger, values prometheus.Values, oldStatefulSetName string) (component.DeployWaiter, error) {
-	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
-	if err != nil {
-		return nil, err
-	}
-	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
-
-	values.Image = imagePrometheus.String()
-	values.Version = ptr.Deref(imagePrometheus.Version, "v0.0.0")
-	values.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystem600
-	// TODO(rfranzke): Remove this after v1.93 has been released.
-	values.DataMigration = monitoring.DataMigration{
-		Client:          r.SeedClientSet.Client(),
-		Namespace:       r.GardenNamespace,
-		StorageCapacity: values.StorageCapacity,
-		ImageAlpine:     imageAlpine.String(),
-		StatefulSetName: oldStatefulSetName,
-		FullName:        "prometheus-" + values.Name,
-		PVCNames:        []string{"prometheus-db-" + oldStatefulSetName + "-0"},
-	}
-
-	return prometheus.New(log, r.SeedClientSet.Client(), r.GardenNamespace, values), nil
+	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, values)
 }
 
 func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
