@@ -8259,7 +8259,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "List of addresses on which the Kube API server can be reached.",
+							Description: "List of addresses that are relevant to the shoot. These include the Kube API server address and also the service account issuer.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

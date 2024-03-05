@@ -11323,7 +11323,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>List of addresses on which the Kube API server can be reached.</p>
+<p>List of addresses that are relevant to the shoot.
+These include the Kube API server address and also the service account issuer.</p>
 </td>
 </tr>
 <tr>

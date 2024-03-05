@@ -64,14 +64,15 @@ import (
 
 // Builder is an object that builds Shoot objects.
 type Builder struct {
-	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
-	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
-	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
-	seed             *gardencorev1beta1.Seed
-	exposureClass    *gardencorev1beta1.ExposureClass
-	projectName      string
-	internalDomain   *gardenerutils.Domain
-	defaultDomains   []*gardenerutils.Domain
+	shootObjectFunc              func(context.Context) (*gardencorev1beta1.Shoot, error)
+	cloudProfileFunc             func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
+	shootSecretFunc              func(context.Context, string, string) (*corev1.Secret, error)
+	serviceAccountIssuerHostname func() (*string, error)
+	seed                         *gardencorev1beta1.Seed
+	exposureClass                *gardencorev1beta1.ExposureClass
+	projectName                  string
+	internalDomain               *gardenerutils.Domain
+	defaultDomains               []*gardenerutils.Domain
 }
 
 // Shoot is an object containing information about a Shoot cluster.
@@ -112,6 +113,7 @@ type Shoot struct {
 	CloudConfigExecutionMaxDelaySeconds int
 	ResourcesToEncrypt                  []string
 	EncryptedResources                  []string
+	ServiceAccountIssuerHostname        *string
 
 	Components *Components
 }

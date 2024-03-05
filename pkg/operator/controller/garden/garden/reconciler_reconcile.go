@@ -514,12 +514,14 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(ctx context.Context) error {
 		var (
-			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
-			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
+			serviceAccountConfig *gardencorev1beta1.ServiceAccountConfig
+			sniConfig            = kubeapiserver.SNIConfig{Enabled: false}
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
-			apiServerConfig = apiServer.KubeAPIServerConfig
+			if apiServer.ServiceAccountConfig != nil {
+				serviceAccountConfig = apiServer.KubeAPIServerConfig.ServiceAccountConfig
+			}
 
 			if apiServer.SNI != nil {
 				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
@@ -529,23 +531,27 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			}
 		}
 
+		externalHostname := gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0])
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
 			r.GardenNamespace,
 			kubeAPIServer,
-			apiServerConfig,
+			kubeapiserver.ComputeKubeAPIServerServiceAccountConfig(
+				serviceAccountConfig,
+				externalHostname,
+				helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
+			),
 			kubeapiserver.ServerCertificateConfig{
 				ExtraDNSNames: getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains),
 			},
 			sniConfig,
-			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
-			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			externalHostname,
+			externalHostname,
 			nil,
 			shared.NormalizeResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), gardenerutils.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
-			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)
 	}

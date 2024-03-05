@@ -162,6 +162,10 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 						Name: "internal",
 						URL:  "https://foo.bar.internal:9443",
 					},
+					{
+						Name: "service-account-issuer",
+						URL:  "https://foo.bar.issuer:9443",
+					},
 				},
 			},
 		}

@@ -16,12 +16,14 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -234,21 +236,26 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		nodes = network.Nodes
 	}
 
+	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
+	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
+	if err != nil {
+		return err
+	}
+
 	if err := shared.DeployKubeAPIServer(
 		ctx,
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
-		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
+		serviceAccountConfig,
 		b.computeKubeAPIServerServerCertificateConfig(),
 		b.computeKubeAPIServerSNIConfig(),
-		b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
+		externalHostname,
 		externalServer,
 		nodes,
 		b.Shoot.ResourcesToEncrypt,
 		b.Shoot.EncryptedResources,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		b.Shoot.HibernationEnabled,
 	); err != nil {
 		return err
@@ -286,6 +293,37 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
+	var config *gardencorev1beta1.ServiceAccountConfig
+	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil && b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil {
+		config = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.DeepCopy()
+	}
+
+	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo())
+	canManageIssuer := b.Shoot.ServiceAccountIssuerHostname != nil
+	if shouldManageIssuer && !canManageIssuer {
+		return kubeapiserver.ServiceAccountConfig{}, errors.New("shoot requires managed issuer, but gardener does not have shoot service account hostname configured")
+	}
+
+	var jwksURI *string
+	if shouldManageIssuer && canManageIssuer {
+		if config == nil {
+			config = &gardencorev1beta1.ServiceAccountConfig{}
+		}
+		config.Issuer = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
+		jwksURI = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
+	}
+
+	serviceAccountConfig := kubeapiserver.ComputeKubeAPIServerServiceAccountConfig(
+		config,
+		externalHostname,
+		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+	)
+	serviceAccountConfig.JWKSURI = jwksURI
+
+	return serviceAccountConfig, nil
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.

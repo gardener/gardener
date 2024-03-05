@@ -118,12 +118,13 @@ func ReadGardenSecrets(
 	error,
 ) {
 	var (
-		logInfo                             []string
-		secretsMap                          = make(map[string]*corev1.Secret)
-		numberOfInternalDomainSecrets       = 0
-		numberOfOpenVPNDiffieHellmanSecrets = 0
-		numberOfAlertingSecrets             = 0
-		numberOfGlobalMonitoringSecrets     = 0
+		logInfo                                  []string
+		secretsMap                               = make(map[string]*corev1.Secret)
+		numberOfInternalDomainSecrets            = 0
+		numberOfOpenVPNDiffieHellmanSecrets      = 0
+		numberOfAlertingSecrets                  = 0
+		numberOfGlobalMonitoringSecrets          = 0
+		numberOfShootServiceAccountIssuerSecrets = 0
 	)
 
 	secretList := &corev1.SecretList{}
@@ -203,6 +204,18 @@ func ReadGardenSecrets(
 			secretsMap[v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
+
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShootServiceAccountIssuer {
+			shootIssuer := secret
+			if hostname, ok := secret.Data["hostname"]; !ok {
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does not contain key 'hostname'", secret.Name)
+			} else if strings.TrimSpace(string(hostname)) == "" {
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does contain an empty 'hostname' key", secret.Name)
+			}
+			secretsMap[v1beta1constants.GardenRoleShootServiceAccountIssuer] = &shootIssuer
+			logInfo = append(logInfo, fmt.Sprintf("Shoot Service Account Issuer secret %q", secret.Name))
+			numberOfShootServiceAccountIssuerSecrets++
+		}
 	}
 
 	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
@@ -234,6 +247,12 @@ func ReadGardenSecrets(
 
 	if numberOfGlobalMonitoringSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
+	}
+
+	// The managed shoot service account issuer is configured centrally per Garden cluster.
+	// The presence of more than one secret is an ambiguous behaviour and should be disallowed.
+	if numberOfShootServiceAccountIssuerSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one shoot service account issuer secret, but found %d", numberOfShootServiceAccountIssuerSecrets)
 	}
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)

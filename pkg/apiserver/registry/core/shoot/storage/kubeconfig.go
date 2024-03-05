@@ -35,6 +35,7 @@ import (
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -106,8 +107,18 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		return nil, apierrors.NewInternalError(fmt.Errorf("cannot convert to *core.Shoot object - got type %T", shootObj))
 	}
 
-	if len(shoot.Status.AdvertisedAddresses) == 0 {
-		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+	// filter only addresses that actually advertise the kube-apiserver
+	// it is possible that the list of addresses also include URLs like the shoot's issuer URL
+	var kubeAPIServerAddresses []core.ShootAdvertisedAddress
+	for _, addr := range shoot.Status.AdvertisedAddresses {
+		if addr.Name == v1beta1constants.AdvertisedAddressExternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressInternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressUnmanaged {
+			kubeAPIServerAddresses = append(kubeAPIServerAddresses, addr)
+		}
+	}
+	if len(kubeAPIServerAddresses) == 0 {
+		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no suitable advertised address for kube-apiserver found in .status.advertisedAddresses")
 		return nil, apierrors.NewInvalid(r.gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
@@ -161,7 +172,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		}
 	)
 
-	for _, address := range shoot.Status.AdvertisedAddresses {
+	for _, address := range kubeAPIServerAddresses {
 		u, err := url.Parse(address.URL)
 		if err != nil {
 			return nil, err

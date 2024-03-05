@@ -2209,6 +2209,7 @@ rules:
 							AcceptedIssuers:       acceptedIssuers,
 							MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
+							JWKSURI:               ptr.To("https://foo.bar/jwks"),
 						},
 						ServiceNetworkCIDR: serviceNetworkCIDR,
 						Version:            version,
@@ -2267,6 +2268,7 @@ rules:
 						"--service-account-issuer="+serviceAccountIssuer,
 						"--service-account-issuer="+acceptedIssuers[0],
 						"--service-account-issuer="+acceptedIssuers[1],
+						"--service-account-jwks-uri=https://foo.bar/jwks",
 						"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
 						"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
 						"--service-account-key-file=/srv/kubernetes/service-account-key-bundle/bundle.key",
@@ -3520,6 +3522,105 @@ rules:
 			kapi.SetExternalHostname(v)
 			Expect(kapi.GetValues().ExternalHostname).To(Equal(v))
 		})
+	})
+
+	Describe("#ComputeKubeAPIServerServiceAccountConfig", func() {
+		externalHostname := "foo.bar"
+		DescribeTable("should have the expected ServiceAccountConfig config", func(
+			config *gardencorev1beta1.ServiceAccountConfig,
+			rotationPhase gardencorev1beta1.CredentialsRotationPhase,
+			expected ServiceAccountConfig,
+		) {
+			actual := ComputeKubeAPIServerServiceAccountConfig(config, externalHostname, rotationPhase)
+			Expect(actual).To(Equal(expected))
+		},
+			Entry("ServiceAccountConfig is nil",
+				nil,
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer: "https://" + externalHostname,
+				},
+			),
+			Entry("ServiceAccountConfig is default",
+				&gardencorev1beta1.ServiceAccountConfig{},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer: "https://" + externalHostname,
+				},
+			),
+			Entry("Service account key rotation phase is set",
+				&gardencorev1beta1.ServiceAccountConfig{},
+				gardencorev1beta1.RotationCompleting,
+				ServiceAccountConfig{
+					Issuer:        "https://" + externalHostname,
+					RotationPhase: gardencorev1beta1.RotationCompleting,
+				},
+			),
+			Entry("ExtendTokenExpiration and MaxTokenExpiration are set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					ExtendTokenExpiration: ptr.To(true),
+					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:                "https://" + externalHostname,
+					ExtendTokenExpiration: ptr.To(true),
+					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+				},
+			),
+			Entry("Issuer is set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer: ptr.To("issuer"),
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+			),
+			Entry("AcceptedIssuers is set and Issuer is not",
+				&gardencorev1beta1.ServiceAccountConfig{
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "https://" + externalHostname,
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+			),
+			Entry("AcceptedIssuers and Issuer are both set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer:          ptr.To("issuer"),
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"issuer1", "issuer2", "https://" + externalHostname},
+				},
+			),
+			Entry("Default Issuer is already part of AcceptedIssuers",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer:          ptr.To("issuer"),
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+			),
+			Entry("Default Issuer is already part of AcceptedIssuers but Issuer is not set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "https://" + externalHostname,
+					AcceptedIssuers: []string{},
+				},
+			),
+		)
 	})
 })
 

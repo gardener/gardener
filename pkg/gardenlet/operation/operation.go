@@ -70,7 +70,7 @@ func NewBuilder() *Builder {
 		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
-		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
+		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shootpkg.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 	}
@@ -144,7 +144,7 @@ func (b *Builder) WithSeedFrom(gardenClient client.Reader, seedName string) *Bui
 
 // WithShoot sets the shootFunc attribute at the Builder.
 func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
-	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed, _ *corev1.Secret) (*shootpkg.Shoot, error) {
 		return s, nil
 	}
 	return b
@@ -153,7 +153,7 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
 		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
@@ -165,6 +165,7 @@ func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
+			WithServiceAccountIssuerHostname(serviceAccountIssuerConfig).
 			Build(ctx, c)
 		if err != nil {
 			return nil, err
@@ -245,7 +246,7 @@ func (b *Builder) Build(
 	}
 	operation.Seed.KubernetesVersion = seedVersion
 
-	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed)
+	shoot, err := b.shootFunc(ctx, gardenClient, garden, seed, secrets[v1beta1constants.GardenRoleShootServiceAccountIssuer])
 	if err != nil {
 		return nil, err
 	}
@@ -448,47 +449,6 @@ var technicalIDPattern = regexp.MustCompile(fmt.Sprintf("^%s-?", v1beta1constant
 func (o *Operation) ComputeIngressHost(prefix string) string {
 	shortID := technicalIDPattern.ReplaceAllString(o.Shoot.GetInfo().Status.TechnicalID, "")
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
-}
-
-// ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
-func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAddress {
-	var addresses []gardencorev1beta1.ShootAdvertisedAddress
-
-	if o.Shoot == nil {
-		return addresses
-	}
-
-	if o.Shoot.ExternalClusterDomain != nil && len(*o.Shoot.ExternalClusterDomain) > 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "external",
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(*o.Shoot.ExternalClusterDomain),
-		})
-	}
-
-	if len(o.Shoot.InternalClusterDomain) > 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "internal",
-			URL:  "https://" + gardenerutils.GetAPIServerDomain(o.Shoot.InternalClusterDomain),
-		})
-	}
-
-	if len(o.APIServerAddress) > 0 && len(addresses) == 0 {
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
-			Name: "unmanaged",
-			URL:  "https://" + o.APIServerAddress,
-		})
-	}
-
-	return addresses
-}
-
-// UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
-// addresses on which the API server of the shoot is accessible.
-func (o *Operation) UpdateAdvertisedAddresses(ctx context.Context) error {
-	return o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-		shoot.Status.AdvertisedAddresses = o.ToAdvertisedAddresses()
-		return nil
-	})
 }
 
 // StoreSecret stores the passed secret under the given key from the operation. Calling this function is thread-safe.

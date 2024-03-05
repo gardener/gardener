@@ -964,6 +964,21 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#HasManagedIssuer", func() {
+		It("should return false when the shoot does not have managed issuer", func() {
+			Expect(HasManagedIssuer(&core.Shoot{})).To(BeFalse())
+		})
+
+		It("should return true when the shoot has managed issuer", func() {
+			shoot := &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
+				},
+			}
+			Expect(HasManagedIssuer(shoot)).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#ShootEnablesSSHAccess",
 		func(workers []core.Worker, workersSettings *core.WorkersSettings, expectedResult bool) {
 			shoot := &core.Shoot{

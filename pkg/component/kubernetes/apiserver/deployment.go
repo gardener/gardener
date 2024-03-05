@@ -450,6 +450,9 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	for _, issuer := range k.values.ServiceAccount.AcceptedIssuers {
 		out = append(out, fmt.Sprintf("--service-account-issuer=%s", issuer))
 	}
+	if k.values.ServiceAccount.JWKSURI != nil {
+		out = append(out, fmt.Sprintf("--service-account-jwks-uri=%s", *k.values.ServiceAccount.JWKSURI))
+	}
 	if k.values.ServiceAccount.ExtendTokenExpiration != nil {
 		out = append(out, fmt.Sprintf("--service-account-extend-token-expiration=%s", strconv.FormatBool(*k.values.ServiceAccount.ExtendTokenExpiration)))
 	}

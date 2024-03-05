@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"net"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -466,6 +467,106 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 			)
+		})
+
+		Describe("ServiceAccountConfig", func() {
+			DescribeTable("should have the expected ServiceAccount config",
+				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer.EXPECT().GetValues()
+					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+					kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
+					kubeAPIServer.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+				},
+
+				Entry("should default the issuer",
+					func() {},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer: "https://api.internal.foo.bar.com",
+					},
+				),
+				Entry("should set configuration correctly",
+					func() {
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+								Issuer:                ptr.To("foo"),
+								ExtendTokenExpiration: ptr.To(false),
+								MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+								AcceptedIssuers:       []string{"aa", "bb"},
+							},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:                "foo",
+						ExtendTokenExpiration: ptr.To(false),
+						MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+						AcceptedIssuers:       []string{"aa", "bb", "https://api.internal.foo.bar.com"},
+					},
+				),
+				Entry("should set managed issuer configuration",
+					func() {
+						botanist.Garden = &garden.Garden{
+							Project: &gardencorev1beta1.Project{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
+							},
+						}
+						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
+						botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							"authentication.gardener.cloud/issuer": "managed",
+						}
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+								ExtendTokenExpiration: ptr.To(false),
+								MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+								AcceptedIssuers:       []string{"aa", "bb"},
+							},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:                "https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer",
+						ExtendTokenExpiration: ptr.To(false),
+						MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+						AcceptedIssuers:       []string{"aa", "bb", "https://api.internal.foo.bar.com"},
+						JWKSURI:               ptr.To("https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer/jwks"),
+					},
+				),
+			)
+
+			It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
+				botanist.Garden = &garden.Garden{
+					Project: &gardencorev1beta1.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test",
+						},
+					},
+				}
+				botanist.Shoot.ServiceAccountIssuerHostname = nil
+				botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+				botanist.Shoot.GetInfo().Annotations = map[string]string{
+					"authentication.gardener.cloud/issuer": "managed",
+				}
+				botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+				}
+
+				err := botanist.DeployKubeAPIServer(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("shoot requires managed issuer, but gardener does not have shoot service account hostname configured"))
+			})
 		})
 
 		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
