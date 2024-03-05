@@ -24,6 +24,7 @@ import (
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -31,51 +32,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
-	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
-	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
-	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-)
-
-var (
-	requiredManagedResources = []string{
-		etcd.Druid,
-		clusteridentity.ManagedResourceControlName,
-		clusterautoscaler.ManagedResourceControlName,
-		kubestatemetrics.ManagedResourceName,
-		nginxingress.ManagedResourceName,
-		seedsystem.ManagedResourceName,
-		vpa.ManagedResourceControlName,
-		"istio",
-		prometheusoperator.ManagedResourceName,
-		"prometheus-cache",
-		"prometheus-seed",
-		"prometheus-aggregate",
-	}
-
-	optionalManagedResources = []string{
-		dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
-		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
-		hvpa.ManagedResourceName,
-		"istio-system",
-		fluentoperator.CustomResourcesManagedResourceName,
-		fluentoperator.OperatorManagedResourceName,
-		fluentoperator.FluentBitManagedResourceName,
-		valiconstants.ManagedResourceNameRuntime,
-		"alertmanager-seed",
-	}
 )
 
 var _ = Describe("Seed health", func() {
@@ -90,8 +48,6 @@ var _ = Describe("Seed health", func() {
 	)
 
 	BeforeEach(func() {
-		defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true)()
-
 		ctx = context.Background()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
@@ -127,38 +83,15 @@ var _ = Describe("Seed health", func() {
 	})
 
 	Describe("#Check", func() {
+		managedResourceName := "foo"
+
 		Context("When all managed resources are deployed successfully", func() {
 			JustBeforeEach(func() {
-				for _, name := range append(requiredManagedResources, optionalManagedResources...) {
-					Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())
-				}
+				Expect(c.Create(ctx, healthyManagedResource(managedResourceName))).To(Succeed())
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := NewHealth(seed, c, fakeClock, nil, false, true, true, true, nil)
-				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
-					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
-				})
-
-				updatedConditions := healthCheck.Check(ctx, conditions)
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
-			})
-		})
-
-		Context("When optional managed resources are turned off, and required resources are deployed successfully", func() {
-			JustBeforeEach(func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false)()
-				seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled = false
-				seed.Spec.Settings.DependencyWatchdog.Prober.Enabled = false
-
-				for _, name := range requiredManagedResources {
-					Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())
-				}
-			})
-
-			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := NewHealth(seed, c, fakeClock, nil, true, false, false, false, nil)
+				healthCheck := NewHealth(seed, c, fakeClock, nil, nil)
 				conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 					Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 				})
@@ -173,7 +106,7 @@ var _ = Describe("Seed health", func() {
 			var (
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
-						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, false, false, nil)
+						healthCheck := NewHealth(seed, c, fakeClock, nil, nil)
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -188,7 +121,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionFalse
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
+						healthCheck := NewHealth(seed, c, fakeClock, nil, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -203,7 +136,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionTrue
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
+						healthCheck := NewHealth(seed, c, fakeClock, nil, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -218,7 +151,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
+						healthCheck := NewHealth(seed, c, fakeClock, nil, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -233,7 +166,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(90 * time.Second)
 
-						healthCheck := NewHealth(seed, c, fakeClock, nil, false, false, false, false, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
+						healthCheck := NewHealth(seed, c, fakeClock, nil, map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute})
 						conditions := NewSeedConditions(fakeClock, gardencorev1beta1.SeedStatus{
 							Conditions: []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 						})
@@ -246,31 +179,9 @@ var _ = Describe("Seed health", func() {
 				}
 			)
 
-			Context("When optional managed resources are enabled in seed settings but not deployed", func() {
-				JustBeforeEach(func() {
-					for _, name := range requiredManagedResources {
-						Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())
-					}
-				})
-
-				tests("ResourceNotFound", "not found")
-			})
-
-			Context("When required managed resources are not deployed", func() {
-				JustBeforeEach(func() {
-					for _, name := range optionalManagedResources {
-						Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())
-					}
-				})
-
-				tests("ResourceNotFound", "not found")
-			})
-
 			Context("When all managed resources are deployed, but not healthy", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
-						Expect(c.Create(ctx, notHealthyManagedResource(name))).To(Succeed())
-					}
+					Expect(c.Create(ctx, notHealthyManagedResource(managedResourceName))).To(Succeed())
 				})
 
 				tests("NotHealthy", "Resources are not healthy")
@@ -278,9 +189,7 @@ var _ = Describe("Seed health", func() {
 
 			Context("When all managed resources are deployed but their resources are not applied", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
-						Expect(c.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
-					}
+					Expect(c.Create(ctx, notAppliedManagedResource(managedResourceName))).To(Succeed())
 				})
 
 				tests("NotApplied", "Resources are not applied")
@@ -288,9 +197,7 @@ var _ = Describe("Seed health", func() {
 
 			Context("When all managed resources are deployed but their resources are still progressing", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
-						Expect(c.Create(ctx, progressingManagedResource(name))).To(Succeed())
-					}
+					Expect(c.Create(ctx, progressingManagedResource(managedResourceName))).To(Succeed())
 				})
 
 				tests("ResourcesProgressing", "Resources are progressing")
@@ -298,12 +205,10 @@ var _ = Describe("Seed health", func() {
 
 			Context("When all managed resources are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
-						Expect(c.Create(ctx, managedResource(name, []gardencorev1beta1.Condition{{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionTrue}},
-						))).To(Succeed())
-					}
+					Expect(c.Create(ctx, managedResource(managedResourceName, []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
 				})
 
 				tests("MissingManagedResourceCondition", "is missing the following condition(s)")
@@ -453,6 +358,9 @@ func managedResource(name string, conditions []gardencorev1beta1.Condition) *res
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+		},
+		Spec: resourcesv1alpha1.ManagedResourceSpec{
+			Class: ptr.To("seed"),
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
 			Conditions: conditions,
