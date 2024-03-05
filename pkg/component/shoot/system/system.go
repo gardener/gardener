@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -457,7 +456,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 	for key := range apiGroupToReadableResourcesNames {
 		allAPIGroups = append(allAPIGroups, key)
 	}
-	sort.Strings(allAPIGroups)
+	slices.Sort(allAPIGroups)
 
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
