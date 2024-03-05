@@ -118,7 +118,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		}
 	}
 	if len(kubeAPIServerAddresses) == 0 {
-		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no suitable kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no suitable advertised address for kube-apiserver found in .status.advertisedAddresses")
 		return nil, apierrors.NewInvalid(r.gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 

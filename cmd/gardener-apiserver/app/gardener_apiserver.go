@@ -318,7 +318,7 @@ func (o *Options) Run(ctx context.Context) error {
 				return err
 			} else if err == nil {
 				// Namespace already exists
-				return nil
+				continue
 			}
 
 			if _, err := kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
