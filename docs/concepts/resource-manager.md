@@ -282,6 +282,7 @@ The following object kinds are considered for health checks:
 - [`VerticalPodAutoscaler`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)
 - [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
 - [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Certificate`](https://github.com/gardener/cert-management)
 
 #### Skipping Health Check
 

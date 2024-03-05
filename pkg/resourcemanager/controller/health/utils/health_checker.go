@@ -17,6 +17,7 @@ package utils
 import (
 	"context"
 
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -95,6 +96,8 @@ func CheckHealth(obj client.Object) (bool, error) {
 		return true, health.CheckAlertmanager(o)
 	case *vpaautoscalingv1.VerticalPodAutoscaler:
 		return true, health.CheckVerticalPodAutoscaler(o)
+	case *certv1alpha1.Certificate:
+		return true, health.CheckCertificate(o)
 	}
 
 	return false, nil
