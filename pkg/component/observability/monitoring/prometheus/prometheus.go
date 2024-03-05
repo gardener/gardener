@@ -94,6 +94,10 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 		},
 	}
 
+	if p.values.Ingress != nil {
+		obj.Spec.ExternalURL = "https://" + p.values.Ingress.Host
+	}
+
 	if p.values.Retention != nil {
 		obj.Spec.Retention = *p.values.Retention
 	}

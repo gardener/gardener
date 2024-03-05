@@ -540,9 +540,29 @@ honor_labels: true`
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(12))
+					prometheusObj := prometheusFor("")
+					prometheusObj.Spec.ExternalURL = "https://" + ingressHost
 
-					Expect(managedResource).To(contain(ingress))
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusObj,
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+						ingress,
+					))
 				})
 			})
 
