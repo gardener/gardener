@@ -386,7 +386,7 @@ var gardenletManagedPriorityClasses = []struct {
 }
 
 func priorityClassResources() []client.Object {
-	var out []client.Object
+	out := make([]client.Object, 0, len(gardenletManagedPriorityClasses))
 
 	for _, class := range gardenletManagedPriorityClasses {
 		out = append(out, &schedulingv1.PriorityClass{
@@ -428,7 +428,7 @@ func (s *shootSystem) shootInfoData() map[string]string {
 }
 
 func (s *shootSystem) readOnlyRBACResources() []client.Object {
-	apiGroupToReadableResourcesNames := make(map[string][]string)
+	apiGroupToReadableResourcesNames := make(map[string][]string, len(s.values.APIResourceList))
 	for _, api := range s.values.APIResourceList {
 		apiGroup := strings.Split(api.GroupVersion, "/")[0]
 		if apiGroup == corev1.SchemeGroupVersion.Version {
@@ -453,7 +453,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 	}
 
 	// Sort keys to get a stable order of the RBAC rules when iterating.
-	var allAPIGroups []string
+	allAPIGroups := make([]string, 0, len(apiGroupToReadableResourcesNames))
 	for key := range apiGroupToReadableResourcesNames {
 		allAPIGroups = append(allAPIGroups, key)
 	}
@@ -463,6 +463,7 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener.cloud:system:read-only",
 		},
+		Rules: make([]rbacv1.PolicyRule, 0, len(allAPIGroups)),
 	}
 
 	for _, apiGroup := range allAPIGroups {
