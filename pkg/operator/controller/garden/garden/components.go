@@ -25,6 +25,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -71,6 +72,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -125,6 +127,7 @@ type components struct {
 	vali                          component.Deployer
 	prometheusOperator            component.DeployWaiter
 	alertManager                  alertmanager.Interface
+	prometheus                    prometheus.Interface
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -267,6 +270,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.prometheus, err = r.newPrometheus(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1072,6 +1079,36 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 			PVCNames: []string{
 				"alertmanager-db-garden-alertmanager-0",
 				"alertmanager-db-garden-alertmanager-1",
+			},
+		},
+	})
+}
+
+func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "garden",
+		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
+		Replicas:          2,
+		Retention:         ptr.To(monitoringv1.Duration("10d")),
+		RetentionSize:     "190GB",
+		RuntimeVersion:    r.RuntimeVersion,
+		VPAMaxAllowed: &corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("4"),
+			corev1.ResourceMemory: resource.MustParse("50G"),
+		},
+		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
+		Ingress: &prometheus.IngressValues{
+			Host:                   "prometheus-garden." + ingressDomain,
+			SecretsManager:         secretsManager,
+			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "garden-prometheus",
+			PVCNames: []string{
+				"prometheus-db-garden-prometheus-0",
+				"prometheus-db-garden-prometheus-1",
 			},
 		},
 	})

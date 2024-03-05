@@ -222,7 +222,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
 		deployAlertmanager = g.Add(flow.Task{
-			Name: "Deploying alertmanager",
+			Name: "Deploying Alertmanager",
 			Fn: func(ctx context.Context) error {
 				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
 				if !found {
@@ -231,6 +231,19 @@ func (r *Reconciler) reconcile(
 
 				c.alertManager.SetIngressAuthSecret(credentialsSecret)
 				return c.alertManager.Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
+		})
+		deployPrometheus = g.Add(flow.Task{
+			Name: "Deploying Prometheus",
+			Fn: func(ctx context.Context) error {
+				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+				if !found {
+					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
+				}
+
+				c.prometheus.SetIngressAuthSecret(credentialsSecret)
+				return c.prometheus.Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
@@ -251,6 +264,7 @@ func (r *Reconciler) reconcile(
 			deployVali,
 			deployPrometheusOperator,
 			deployAlertmanager,
+			deployPrometheus,
 		)
 
 		deployEtcds = g.Add(flow.Task{
