@@ -40,6 +40,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			EvaluationInterval: "1m",
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
+				ScrapeTimeout:  p.values.ScrapeTimeout,
 				ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
 				ExternalLabels: p.values.ExternalLabels,
 				AdditionalScrapeConfigs: &corev1.SecretKeySelector{

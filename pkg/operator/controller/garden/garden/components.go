@@ -1092,7 +1092,9 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 		Replicas:          2,
 		Retention:         ptr.To(monitoringv1.Duration("10d")),
 		RetentionSize:     "190GB",
+		ScrapeTimeout:     "50s",
 		RuntimeVersion:    r.RuntimeVersion,
+		ExternalLabels:    map[string]string{"landscape": garden.Spec.VirtualCluster.Gardener.ClusterIdentity},
 		VPAMaxAllowed: &corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("4"),
 			corev1.ResourceMemory: resource.MustParse("50G"),

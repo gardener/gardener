@@ -76,6 +76,8 @@ type Values struct {
 	RetentionSize monitoringv1.ByteSize
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// ScrapeTimeout is the timeout duration when scraping targets.
+	ScrapeTimeout monitoringv1.Duration
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
 	VPAMinAllowed *corev1.ResourceList
 	// VPAMaxAllowed defines the resource list for the maxAllowed field for the prometheus container resource policy.

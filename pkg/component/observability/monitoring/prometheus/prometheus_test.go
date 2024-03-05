@@ -670,6 +670,37 @@ honor_labels: true`
 					))
 				})
 			})
+
+			When("scrape timeout is configured", func() {
+				BeforeEach(func() {
+					values.ScrapeTimeout = "10s"
+				})
+
+				It("should successfully deploy all resources", func() {
+					prometheusObj := prometheusFor("")
+					prometheusObj.Spec.ScrapeTimeout = "10s"
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(contain(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusObj,
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+					))
+				})
+			})
 		})
 	})
 
