@@ -61,6 +61,9 @@ spec:
             description: NodeTemplate contains subfields to track all node resources
               and other node info required to scale nodegroup from zero
             properties:
+              architecture:
+                description: CPU Architecture of the node belonging to nodeGroup
+                type: string
               capacity:
                 additionalProperties:
                   anyOf:

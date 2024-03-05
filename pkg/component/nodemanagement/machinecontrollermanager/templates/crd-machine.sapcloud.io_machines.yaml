@@ -256,7 +256,7 @@ spec:
                     format: date-time
                     type: string
                   phase:
-                    description: MachinePhase is a label for the condition of a machines
+                    description: MachinePhase is a label for the condition of a machine
                       at the current time.
                     type: string
                   timeoutActive:
