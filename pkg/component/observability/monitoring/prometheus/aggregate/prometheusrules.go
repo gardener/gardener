@@ -73,7 +73,7 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 								"visibility": "operator",
 							},
 							Annotations: map[string]string{
-								"description": "Node {{$labels.node}} in landscape {{$externalLabels.landscape}} is not healthy for over 10 min.",
+								"description": "Node {{$labels.node}} in landscape {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 mins.",
 								"summary":     "A node is not healthy.",
 							},
 						},
