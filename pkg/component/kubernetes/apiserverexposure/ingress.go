@@ -139,11 +139,13 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		}
 	}
 
+	// TODO(scheererj): Drop this after v1.92
 	return kubernetesutils.DeleteObjects(ctx, i.client, i.emptyIngress())
 }
 
 func (i *ingress) Destroy(ctx context.Context) error {
 	objects := []client.Object{
+		// TODO(scheererj): Drop ingress after v1.92
 		i.emptyIngress(),
 		i.emptyDestinationRule(),
 		i.emptyGateway(),
