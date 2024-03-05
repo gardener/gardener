@@ -135,10 +135,6 @@ The `gardener-resource-manager` can manage a resource in the following supported
 
 The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the `ManagedResource`.
 
-#### Skipping Health Check
-
-If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the health controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
-
 #### Resource Class and Reconcilation Scope
 
 By default, the `gardener-resource-manager` controller watches for `ManagedResource`s in all namespaces.
@@ -250,6 +246,46 @@ Here, several possibilities are supported:
 By default, cluster id is not used. If cluster id is specified, the format is `<cluster id>:<namespace>/<objectname>`.
 
 In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `.conrollers.managedResources.managedByLabelValue` field in the component configuration.
+
+### [`health` Controller](../../pkg/resourcemanager/controller/health)
+
+This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#ManagedResource-Controller) once.
+Its main job is to perform checks for maintaining the well [known conditions](#conditions) `ResourcesHealthy` and `ResourcesProgressing`.
+
+#### Progressing Checks
+
+In Kubernetes, applied changes must usually be rolled out first, e.g. when changing the base image in a `Deployment`.
+Progressing checks detect ongoing roll-outs and report them in the `ResourcesProgressing` condition of the corresponding `ManagedResource`.
+
+The following object kinds are considered for progressing checks:
+- `DaemonSet`
+- `Deployment`
+- `StatefulSet`
+- [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+
+#### Health Checks
+
+`gardener-resource-manager` can evaluate the health of specific resources, often by consulting the resources' conditions.
+Health check results are regularly updated in the `ResourcesHealthy` condition of the corresponding `ManagedResource`.
+
+The following object kinds are considered for health checks:
+- `CustomResourceDefinition`
+- `DaemonSet`
+- `Deployment`
+- `Job`
+- `Pod`
+- `ReplicaSet`
+- `ReplicationController`
+- `Service`
+- `StatefulSet`
+- [`VerticalPodAutoscaler`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)
+- [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+
+#### Skipping Health Check
+
+If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the `health` controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
 
 ### [Garbage Collector For Immutable `ConfigMap`s/`Secret`s](../../pkg/resourcemanager/controller/garbagecollector)
 
