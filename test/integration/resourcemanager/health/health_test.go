@@ -15,6 +15,7 @@
 package health_test
 
 import (
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -375,6 +376,7 @@ var _ = Describe("Health controller tests", func() {
 				daemonSet    *appsv1.DaemonSet
 				prometheus   *monitoringv1.Prometheus
 				alertManager *monitoringv1.Alertmanager
+				cert         *certv1alpha1.Certificate
 			)
 
 			JustBeforeEach(func() {
@@ -412,6 +414,12 @@ var _ = Describe("Health controller tests", func() {
 				alertManager.Status = *alertManagerStatus
 				Expect(testClient.Status().Update(ctx, alertManager)).To(Succeed())
 
+				cert = generateCertificateTestResource(managedResource.Name)
+				certStatus := cert.Status.DeepCopy()
+				Expect(testClient.Create(ctx, cert)).To(Succeed())
+				cert.Status = *certStatus
+				Expect(testClient.Status().Update(ctx, cert)).To(Succeed())
+
 				DeferCleanup(func() {
 					By("Delete test resources")
 					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
@@ -420,6 +428,7 @@ var _ = Describe("Health controller tests", func() {
 					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, prometheus)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, alertManager)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, cert)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
 				By("Add resources to ManagedResource status")
@@ -463,6 +472,14 @@ var _ = Describe("Health controller tests", func() {
 							Kind:       "Alertmanager",
 							Namespace:  alertManager.Namespace,
 							Name:       alertManager.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "cert.gardener.cloud/v1alpha1",
+							Kind:       "Certificate",
+							Namespace:  cert.Namespace,
+							Name:       cert.Name,
 						},
 					},
 				}
@@ -634,6 +651,34 @@ var _ = Describe("Health controller tests", func() {
 				alertManager.Status.UpdatedReplicas--
 				Expect(testClient.Patch(ctx, alertManager, patch)).To(Succeed())
 				Expect(testClient.Status().Patch(ctx, alertManager, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Certificate is not fully rolled out", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("CertificateProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Certificate is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				metav1.SetMetaDataAnnotation(&cert.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Patch(ctx, cert, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -830,6 +875,30 @@ func generateAlertmanagerTestResource(name string) *monitoringv1.Alertmanager {
 					ObservedGeneration: 42,
 				},
 			},
+		},
+	}
+}
+
+func generateCertificateTestResource(name string) *certv1alpha1.Certificate {
+	return &certv1alpha1.Certificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Spec: certv1alpha1.CertificateSpec{
+			DNSNames: []string{"foo.bar"},
+		},
+		Status: certv1alpha1.CertificateStatus{
+			State: "Ready",
+			Conditions: []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "CertificateIssued",
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			ObservedGeneration: 42,
 		},
 	}
 }

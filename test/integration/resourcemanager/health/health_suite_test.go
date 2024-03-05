@@ -16,10 +16,12 @@ package health_test
 
 import (
 	"context"
+	"go/build"
 	"path/filepath"
 	"testing"
 	"time"
 
+	_ "github.com/gardener/cert-management/pkg/apis/cert/crds"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -67,6 +69,9 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
+	certPkg, err := build.Import("github.com/gardener/cert-management/pkg/apis/cert/crds", "", build.FindOnly)
+	Expect(err).ToNot(HaveOccurred())
+
 	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
@@ -74,12 +79,12 @@ var _ = BeforeSuite(func() {
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-resources.gardener.cloud_managedresources.yaml"),
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_alertmanagers.yaml"),
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_prometheuses.yaml"),
+				filepath.Join(certPkg.Dir, "cert.gardener.cloud_certificates.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())

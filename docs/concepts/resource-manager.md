@@ -263,6 +263,7 @@ The following object kinds are considered for progressing checks:
 - `StatefulSet`
 - [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
 - [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Certificate`](https://github.com/gardener/cert-management)
 
 #### Health Checks
 

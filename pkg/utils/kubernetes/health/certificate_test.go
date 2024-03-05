@@ -24,12 +24,13 @@ import (
 )
 
 var _ = Describe("Certificate", func() {
-	Describe("#CheckCertificate", func() {
-		var certificate *certv1alpha1.Certificate
+	var certificate *certv1alpha1.Certificate
 
-		BeforeEach(func() {
-			certificate = &certv1alpha1.Certificate{}
-		})
+	BeforeEach(func() {
+		certificate = &certv1alpha1.Certificate{}
+	})
+
+	Describe("#CheckCertificate", func() {
 
 		It("should return no error because certificate is ready", func() {
 			certificate.Status.State = "Ready"
@@ -54,6 +55,23 @@ var _ = Describe("Certificate", func() {
 			}
 
 			Expect(health.CheckCertificate(certificate)).To(MatchError(`condition "Ready" has invalid status False (expected True) due to SomeReason: Some message`))
+		})
+	})
+
+	Describe("#IsCertificateProgressing", func() {
+		It("should return false because certificate is rolled out", func() {
+			result, reason := health.IsCertificateProgressing(certificate)
+			Expect(result).To(BeFalse())
+			Expect(reason).To(Equal("Certificate is fully rolled out"))
+		})
+
+		It("should return true because observed generation is outdated", func() {
+			certificate.Generation = 10
+			certificate.Status.ObservedGeneration = 1
+
+			result, reason := health.IsCertificateProgressing(certificate)
+			Expect(result).To(BeTrue())
+			Expect(reason).To(Equal(`observed generation outdated (1/10)`))
 		})
 	})
 })
