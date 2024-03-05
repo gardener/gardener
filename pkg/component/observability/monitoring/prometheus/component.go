@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -58,10 +59,14 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// Replicas is the number of replicas.
+	Replicas int32
 	// Retention is the duration for the data retention.
 	Retention *monitoringv1.Duration
 	// RetentionSize is the size for the data retention.
 	RetentionSize monitoringv1.ByteSize
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
 	VPAMinAllowed *corev1.ResourceList
 	// ExternalLabels is the set of external labels for the Prometheus configuration.
@@ -174,6 +179,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalScrapeConfigs(),
 		p.prometheus(takeOverExistingPV),
 		p.vpa(),
+		p.podDisruptionBudget(),
 		ingress,
 	)
 	if err != nil {
