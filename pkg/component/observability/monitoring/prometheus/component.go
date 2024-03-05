@@ -47,6 +47,15 @@ const (
 	ServicePortName = "web"
 )
 
+// Interface contains functions for a Prometheus deployer.
+type Interface interface {
+	component.DeployWaiter
+	// SetIngressAuthSecret sets the ingress auth secret name.
+	SetIngressAuthSecret(*corev1.Secret)
+	// SetIngressWildcardCertSecret sets the ingress wildcard cert secret name.
+	SetIngressWildcardCertSecret(*corev1.Secret)
+}
+
 // Values contains configuration values for the prometheus resources.
 type Values struct {
 	// Name is the name of the prometheus. It will be used for the resource names of Prometheus and ManagedResource.
@@ -130,7 +139,7 @@ type IngressValues struct {
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
-func New(log logr.Logger, client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(log logr.Logger, client client.Client, namespace string, values Values) Interface {
 	return &prometheus{
 		log:       log,
 		client:    client,
@@ -235,6 +244,18 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.name())
+}
+
+func (p *prometheus) SetIngressAuthSecret(secret *corev1.Secret) {
+	if p.values.Ingress != nil && secret != nil {
+		p.values.Ingress.AuthSecretName = secret.Name
+	}
+}
+
+func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
+	if p.values.Ingress != nil && secret != nil {
+		p.values.Ingress.WildcardCertSecretName = &secret.Name
+	}
 }
 
 func (p *prometheus) name() string {

@@ -42,7 +42,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -81,7 +80,7 @@ honor_labels: true`
 		ingressWildcardSecretName = "bar"
 
 		fakeClient client.Client
-		deployer   component.DeployWaiter
+		deployer   Interface
 		values     Values
 
 		fakeOps   *retryfake.Ops
@@ -556,39 +555,56 @@ honor_labels: true`
 			})
 
 			When("ingress is configured", func() {
-				BeforeEach(func() {
-					values.Ingress = &IngressValues{
-						AuthSecretName:         ingressAuthSecretName,
-						Host:                   ingressHost,
-						WildcardCertSecretName: &ingressWildcardSecretName,
-					}
-					deployer = New(logr.Discard(), fakeClient, namespace, values)
+				test := func() {
+					It("should successfully deploy all resources", func() {
+						prometheusObj := prometheusFor("")
+						prometheusObj.Spec.ExternalURL = "https://" + ingressHost
+
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						Expect(managedResource).To(consistOf(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheusObj,
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+							ingress,
+						))
+					})
+				}
+
+				Context("early initialization", func() {
+					BeforeEach(func() {
+						values.Ingress = &IngressValues{
+							AuthSecretName:         ingressAuthSecretName,
+							Host:                   ingressHost,
+							WildcardCertSecretName: &ingressWildcardSecretName,
+						}
+						deployer = New(logr.Discard(), fakeClient, namespace, values)
+					})
+
+					test()
 				})
 
-				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("")
-					prometheusObj.Spec.ExternalURL = "https://" + ingressHost
+				Context("late initialization", func() {
+					BeforeEach(func() {
+						values.Ingress = &IngressValues{Host: ingressHost}
+						deployer = New(logr.Discard(), fakeClient, namespace, values)
+						deployer.SetIngressAuthSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressAuthSecretName}})
+						deployer.SetIngressWildcardCertSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ingressWildcardSecretName}})
+					})
 
-					prometheusRule.Namespace = namespace
-					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
-					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
-					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
-					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
-
-					Expect(managedResource).To(consistOf(
-						serviceAccount,
-						service,
-						clusterRoleBinding,
-						prometheusObj,
-						vpa,
-						prometheusRule,
-						scrapeConfig,
-						serviceMonitor,
-						podMonitor,
-						secretAdditionalScrapeConfigs,
-						additionalConfigMap,
-						ingress,
-					))
+					test()
 				})
 			})
 

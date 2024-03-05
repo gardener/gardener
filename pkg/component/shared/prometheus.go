@@ -20,12 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 )
 
 // NewPrometheus creates a new prometheus deployer.
-func NewPrometheus(log logr.Logger, c client.Client, namespace string, values prometheus.Values) (component.DeployWaiter, error) {
+func NewPrometheus(log logr.Logger, c client.Client, namespace string, values prometheus.Values) (prometheus.Interface, error) {
 	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
