@@ -26,7 +26,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,24 +36,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
-	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
-	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
-	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
-	gardeneradmissioncontroller "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
-	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
-	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
-	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
-	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
@@ -63,41 +44,6 @@ import (
 )
 
 var (
-	gardenManagedResources = []string{
-		etcd.Druid,
-		runtimegardensystem.ManagedResourceName,
-		"istio-system",
-		"virtual-garden-istio",
-	}
-
-	virtualGardenManagedResources = []string{
-		resourcemanager.ManagedResourceName,
-		gardeneraccess.ManagedResourceName,
-		kubecontrollermanager.ManagedResourceName,
-		gardenerapiserver.ManagedResourceNameRuntime,
-		gardenerapiserver.ManagedResourceNameVirtual,
-		gardeneradmissioncontroller.ManagedResourceNameRuntime,
-		gardeneradmissioncontroller.ManagedResourceNameVirtual,
-		gardenercontrollermanager.ManagedResourceNameRuntime,
-		gardenercontrollermanager.ManagedResourceNameVirtual,
-		gardenerscheduler.ManagedResourceNameRuntime,
-		gardenerscheduler.ManagedResourceNameVirtual,
-		virtualgardensystem.ManagedResourceName,
-	}
-
-	observabilityManagedResources = []string{
-		hvpa.ManagedResourceName,
-		kubestatemetrics.ManagedResourceName,
-		fluentoperator.OperatorManagedResourceName,
-		fluentoperator.CustomResourcesManagedResourceName + "-garden",
-		fluentoperator.FluentBitManagedResourceName,
-		valiconstants.ManagedResourceNameRuntime,
-		plutono.ManagedResourceName,
-		gardenermetricsexporter.ManagedResourceNameRuntime,
-		gardenermetricsexporter.ManagedResourceNameVirtual,
-		prometheusoperator.ManagedResourceName,
-	}
-
 	virtualGardenDeployments = []string{
 		"virtual-garden-gardener-resource-manager",
 		"virtual-garden-kube-apiserver",
@@ -121,8 +67,6 @@ var _ = Describe("Garden health", func() {
 		gardenNamespace  string
 		gardenConditions GardenConditions
 
-		allManagedResources []string
-
 		apiserverAvailabilityCondition          gardencorev1beta1.Condition
 		runtimeComponentsHealthyCondition       gardencorev1beta1.Condition
 		virtualComponentsHealthyCondition       gardencorev1beta1.Condition
@@ -143,12 +87,6 @@ var _ = Describe("Garden health", func() {
 		gardenNamespace = "garden"
 
 		fakeClock = testclock.NewFakeClock(time.Now())
-
-		allManagedResources = sets.New[string]().
-			Insert(gardenManagedResources...).
-			Insert(virtualGardenManagedResources...).
-			Insert(observabilityManagedResources...).
-			UnsortedList()
 
 		apiserverAvailabilityCondition = gardencorev1beta1.Condition{
 			Type:               operatorv1alpha1.VirtualGardenAPIServerAvailable,
@@ -184,86 +122,10 @@ var _ = Describe("Garden health", func() {
 	Describe("#Check", func() {
 		Context("when all managed resources, deployments and ETCDs are deployed successfully", func() {
 			JustBeforeEach(func() {
-				for _, name := range allManagedResources {
-					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
-				}
-				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
-				}
-				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
-				}
-			})
+				Expect(runtimeClient.Create(ctx, healthyManagedResource("foo", "RuntimeComponentsHealthy"))).To(Succeed())
+				Expect(runtimeClient.Create(ctx, healthyManagedResource("bar", "VirtualComponentsHealthy"))).To(Succeed())
+				Expect(runtimeClient.Create(ctx, healthyManagedResource("baz", "ObservabilityComponentsRunning"))).To(Succeed())
 
-			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
-
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
-				))
-			})
-		})
-
-		Context("when optional managed resources are turned off, and required resources are deployed successfully", func() {
-			JustBeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false))
-				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
-					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: ptr.To(false),
-					},
-				}
-
-				for _, name := range allManagedResources {
-					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
-				}
-				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
-				}
-				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
-				}
-			})
-
-			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
-
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "RuntimeComponentsRunning", "All runtime components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "VirtualComponentsRunning", "All virtual garden components are healthy."),
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."),
-				))
-			})
-		})
-
-		Context("when optional managed resources are turned on, and all resources are deployed successfully", func() {
-			JustBeforeEach(func() {
-				garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
-					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: ptr.To(true),
-					},
-				}
-
-				for _, name := range append(allManagedResources, vpa.ManagedResourceControlName) {
-					Expect(runtimeClient.Create(ctx, healthyManagedResource(name))).To(Succeed())
-				}
 				for _, name := range virtualGardenDeployments {
 					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 				}
@@ -419,28 +281,14 @@ var _ = Describe("Garden health", func() {
 							))
 						})
 					})
-
 				}
 			)
 
-			Context("when managed resources are not deployed", func() {
+			Context("when all managed resources are unhealthy", func() {
 				JustBeforeEach(func() {
-					for _, name := range virtualGardenDeployments {
-						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
-					}
-					for _, name := range virtualGardenETCDs {
-						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, true))).To(Succeed())
-					}
-				})
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource("foo", "RuntimeComponentsHealthy"))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource("bar", "VirtualComponentsHealthy"))).To(Succeed())
 
-				tests("ResourceNotFound", "not found")
-			})
-
-			Context("when all managed resources are deployed, but not healthy", func() {
-				JustBeforeEach(func() {
-					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
-						Expect(runtimeClient.Create(ctx, notHealthyManagedResource(name))).To(Succeed())
-					}
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
@@ -452,11 +300,11 @@ var _ = Describe("Garden health", func() {
 				tests("NotHealthy", "Resources are not healthy")
 			})
 
-			Context("when all managed resources are deployed but their resources are not applied", func() {
+			Context("when all managed resources are not applied", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
-						Expect(runtimeClient.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
-					}
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource("foo", "RuntimeComponentsHealthy"))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource("bar", "VirtualComponentsHealthy"))).To(Succeed())
+
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
@@ -468,11 +316,11 @@ var _ = Describe("Garden health", func() {
 				tests("NotApplied", "Resources are not applied")
 			})
 
-			Context("when all managed resources are deployed but their resources are still progressing", func() {
+			Context("when all managed resources are still progressing", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
-						Expect(runtimeClient.Create(ctx, progressingManagedResource(name))).To(Succeed())
-					}
+					Expect(runtimeClient.Create(ctx, progressingManagedResource("foo", "RuntimeComponentsHealthy"))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, progressingManagedResource("bar", "VirtualComponentsHealthy"))).To(Succeed())
+
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
@@ -486,12 +334,15 @@ var _ = Describe("Garden health", func() {
 
 			Context("when all managed resources are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
-					for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
-						Expect(runtimeClient.Create(ctx, managedResource(name, []gardencorev1beta1.Condition{{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionTrue}},
-						))).To(Succeed())
-					}
+					Expect(runtimeClient.Create(ctx, managedResource("foo", "RuntimeComponentsHealthy", []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, managedResource("bar", "VirtualComponentsHealthy", []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
+
 					for _, name := range virtualGardenDeployments {
 						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
 					}
@@ -502,178 +353,156 @@ var _ = Describe("Garden health", func() {
 
 				tests("MissingManagedResourceCondition", "is missing the following condition(s)")
 			})
-		})
 
-		Context("when there are issues with deployments for virtual garden", func() {
-			It("should set VirtualComponentsHealthy conditions to false when the deployments are missing", func() {
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+			Context("when there are issues with deployments for virtual garden", func() {
+				It("should set VirtualComponentsHealthy conditions to false when the deployments are missing", func() {
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
-				))
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainElements(
+						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentMissing", "Missing required deployments: [virtual-garden-gardener-resource-manager virtual-garden-kube-apiserver virtual-garden-kube-controller-manager]"),
+					))
+				})
+
+				It("should set VirtualComponentsHealthy conditions to false when the deployments are existing but unhealthy", func() {
+					for _, name := range virtualGardenDeployments {
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, false))).To(Succeed())
+					}
+
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
+
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainElements(
+						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
+					))
+				})
 			})
 
-			It("should set VirtualComponentsHealthy conditions to false when the deployments are existing but unhealthy", func() {
-				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, false))).To(Succeed())
-				}
+			Context("when there are issues with ETCDs for virtual garden", func() {
+				JustBeforeEach(func() {
+					for _, name := range virtualGardenDeployments {
+						Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
+					}
+				})
 
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+				It("should set VirtualComponentsHealthy conditions to false when the ETCDs are missing", func() {
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "DeploymentUnhealthy", "is unhealthy: condition \"Available\" is missing"),
-				))
-			})
-		})
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainElements(
+						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdMissing", "Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
+					))
+				})
 
-		Context("when there are issues with ETCDs for virtual garden", func() {
-			JustBeforeEach(func() {
-				for _, name := range virtualGardenDeployments {
-					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, true))).To(Succeed())
-				}
-			})
+				It("should set VirtualComponentsHealthy conditions to false when the ETCDs are existing but unhealthy", func() {
+					for _, name := range virtualGardenETCDs {
+						Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, false))).To(Succeed())
+					}
 
-			It("should set VirtualComponentsHealthy conditions to false when the ETCDs are missing", func() {
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdMissing", "Missing required etcds: [virtual-garden-etcd-events virtual-garden-etcd-main]"),
-				))
-			})
-
-			It("should set VirtualComponentsHealthy conditions to false when the ETCDs are existing but unhealthy", func() {
-				for _, name := range virtualGardenETCDs {
-					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, false))).To(Succeed())
-				}
-
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
-
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainElements(
-					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdUnhealthy", "Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
-				))
-			})
-		})
-
-		Context("when there are issues with observability components", func() {
-			It("should set ObservabilityComponentsHealthy conditions to false when no ManagedResources are deployed", func() {
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
-
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("ResourceNotFound")))
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainElements(
+						beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, "EtcdUnhealthy", "Etcd extension resource \"virtual-garden-etcd-events\" is unhealthy: etcd \"virtual-garden-etcd-events\" is not ready yet"),
+					))
+				})
 			})
 
-			It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are unhealthy", func() {
-				for _, name := range observabilityManagedResources {
-					Expect(runtimeClient.Create(ctx, notHealthyManagedResource(name))).To(Succeed())
-				}
+			Context("when there are issues with observability components", func() {
+				It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are unhealthy", func() {
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource("baz", "ObservabilityComponentsHealthy"))).To(Succeed())
 
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotHealthy")))
-			})
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotHealthy")))
+				})
 
-			It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are not applied", func() {
-				for _, name := range observabilityManagedResources {
-					Expect(runtimeClient.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
-				}
+				It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are not applied", func() {
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource("baz", "ObservabilityComponentsHealthy"))).To(Succeed())
 
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotApplied")))
-			})
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("NotApplied")))
+				})
 
-			It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are progressing", func() {
-				for _, name := range observabilityManagedResources {
-					Expect(runtimeClient.Create(ctx, progressingManagedResource(name))).To(Succeed())
-				}
+				It("should set ObservabilityComponentsHealthy conditions to false when ManagedResources are progressing", func() {
+					Expect(runtimeClient.Create(ctx, progressingManagedResource("baz", "ObservabilityComponentsHealthy"))).To(Succeed())
 
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("ResourcesProgressing")))
-			})
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("ResourcesProgressing")))
+				})
 
-			It("should set ObservabilityComponentsHealthy conditions to false when some ManagedResources conditions are missing", func() {
-				for _, name := range observabilityManagedResources {
-					Expect(runtimeClient.Create(ctx, managedResource(name, []gardencorev1beta1.Condition{{
+				It("should set ObservabilityComponentsHealthy conditions to false when some ManagedResources conditions are missing", func() {
+					Expect(runtimeClient.Create(ctx, managedResource("baz", "ObservabilityComponentsHealthy", []gardencorev1beta1.Condition{{
 						Type:   resourcesv1alpha1.ResourcesApplied,
 						Status: gardencorev1beta1.ConditionTrue}},
 					))).To(Succeed())
-				}
 
-				updatedConditions := NewHealth(
-					garden,
-					runtimeClient,
-					gardenClientSet,
-					fakeClock,
-					nil,
-					gardenNamespace,
-				).Check(ctx, gardenConditions)
+					updatedConditions := NewHealth(
+						garden,
+						runtimeClient,
+						gardenClientSet,
+						fakeClock,
+						nil,
+						gardenNamespace,
+					).Check(ctx, gardenConditions)
 
-				Expect(updatedConditions).ToNot(BeEmpty())
-				Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("MissingManagedResourceCondition")))
+					Expect(updatedConditions).ToNot(BeEmpty())
+					Expect(updatedConditions).To(ContainCondition(OfType(operatorv1alpha1.ObservabilityComponentsHealthy), WithReason("MissingManagedResourceCondition")))
+				})
 			})
 		})
 	})
@@ -740,9 +569,10 @@ func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionSta
 	return And(WithStatus(status), WithReason(reason), WithMessage(message))
 }
 
-func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+func healthyManagedResource(name string, relevantCareCondition string) *resourcesv1alpha1.ManagedResource {
 	return managedResource(
 		name,
+		relevantCareCondition,
 		[]gardencorev1beta1.Condition{
 			{
 				Type:   resourcesv1alpha1.ResourcesApplied,
@@ -759,9 +589,10 @@ func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 		})
 }
 
-func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+func unhealthyManagedResource(name string, relevantCareCondition string) *resourcesv1alpha1.ManagedResource {
 	return managedResource(
 		name,
+		relevantCareCondition,
 		[]gardencorev1beta1.Condition{
 			{
 				Type:   resourcesv1alpha1.ResourcesApplied,
@@ -780,9 +611,10 @@ func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 		})
 }
 
-func notAppliedManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+func unappliedManagedResource(name string, relevantCareCondition string) *resourcesv1alpha1.ManagedResource {
 	return managedResource(
 		name,
+		relevantCareCondition,
 		[]gardencorev1beta1.Condition{
 			{
 				Type:    resourcesv1alpha1.ResourcesApplied,
@@ -801,9 +633,10 @@ func notAppliedManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 		})
 }
 
-func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+func progressingManagedResource(name string, relevantCareCondition string) *resourcesv1alpha1.ManagedResource {
 	return managedResource(
 		name,
+		relevantCareCondition,
 		[]gardencorev1beta1.Condition{
 			{
 				Type:   resourcesv1alpha1.ResourcesApplied,
@@ -822,16 +655,33 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 		})
 }
 
-func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
+func managedResource(name string, relevantCareCondition string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
 	namespace := v1beta1constants.GardenNamespace
 	if name == "istio-system" || strings.HasSuffix(name, "istio") {
 		namespace = v1beta1constants.IstioSystemNamespace
+	}
+
+	var (
+		class  *string
+		labels map[string]string
+	)
+
+	if relevantCareCondition != "" {
+		if relevantCareCondition == "RuntimeComponentsHealthy" {
+			class = ptr.To("seed")
+		} else {
+			labels = map[string]string{"care.gardener.cloud/condition-type": relevantCareCondition}
+		}
 	}
 
 	return &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: resourcesv1alpha1.ManagedResourceSpec{
+			Class: class,
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
 			Conditions: conditions,
