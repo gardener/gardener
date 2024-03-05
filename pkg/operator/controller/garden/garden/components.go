@@ -1071,6 +1071,7 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 		Ingress: &alertmanager.IngressValues{
 			Host:                   "alertmanager-garden." + ingressDomain,
 			SecretsManager:         secretsManager,
+			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
 		DataMigration: monitoring.DataMigration{

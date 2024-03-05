@@ -87,6 +87,9 @@ type IngressValues struct {
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
+	// SigningCA is the name of the CA that should be used the sign a self-signed server certificate. Only needed when
+	// no wildcard certificate secret is provdided.
+	SigningCA string
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string

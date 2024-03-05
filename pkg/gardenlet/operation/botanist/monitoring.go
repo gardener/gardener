@@ -56,6 +56,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		Ingress: &alertmanager.IngressValues{
 			Host:           b.ComputeAlertManagerHost(),
 			SecretsManager: b.SecretsManager,
+			SigningCA:      v1beta1constants.SecretNameCACluster,
 		},
 	})
 }
