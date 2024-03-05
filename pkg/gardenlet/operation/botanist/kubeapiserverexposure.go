@@ -113,10 +113,14 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		kubeapiserverexposure.IngressValues{
-			ServiceName:                  v1beta1constants.DeploymentNameKubeAPIServer,
-			Host:                         b.ComputeKubeAPIServerHost(),
-			IstioIngressGatewayLabels:    b.IstioLabels(),
-			IstioIngressGatewayNamespace: b.IstioNamespace(),
+			ServiceName: v1beta1constants.DeploymentNameKubeAPIServer,
+			Host:        b.ComputeKubeAPIServerHost(),
+			IstioIngressGatewayLabelsFunc: func() map[string]string {
+				return b.IstioLabels()
+			},
+			IstioIngressGatewayNamespaceFunc: func() string {
+				return b.IstioNamespace()
+			},
 		})
 }
 

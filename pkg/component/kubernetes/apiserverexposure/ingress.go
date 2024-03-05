@@ -39,10 +39,10 @@ import (
 type IngressValues struct {
 	// Host is the host where the kube-apiserver should be exposed.
 	Host string
-	// IstioIngressGatewayLabels are labels identifying the corresponding istio ingress gateway.
-	IstioIngressGatewayLabels map[string]string
-	// IstioIngressGatewayNamespace is the namespace of the corresponding istio ingress gateway.
-	IstioIngressGatewayNamespace string
+	// IstioIngressGatewayLabelsFunc is a function returingin the labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabelsFunc func() map[string]string
+	// IstioIngressGatewayNamespaceFunc is a function returning the namespace of the corresponding istio ingress gateway.
+	IstioIngressGatewayNamespaceFunc func() string
 	// ServiceName is the name of the service the ingress is using.
 	ServiceName string
 	// ServiceNamespace is the namespace of the service the ingress is using.
@@ -102,7 +102,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSTermination(gateway, getLabels(), i.values.IstioIngressGatewayLabels, []string{i.values.Host}, kubeapiserverconstants.Port, ptr.Deref(i.values.TLSSecretName, ""))); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSTermination(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host}, kubeapiserverconstants.Port, ptr.Deref(i.values.TLSSecretName, ""))); err != nil {
 			return err
 		}
 
@@ -130,7 +130,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), i.values.IstioIngressGatewayLabels, []string{i.values.Host}, kubeapiserverconstants.Port)); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, gateway, istio.GatewayWithTLSPassthrough(gateway, getLabels(), i.values.IstioIngressGatewayLabelsFunc(), []string{i.values.Host}, kubeapiserverconstants.Port)); err != nil {
 			return err
 		}
 
@@ -151,7 +151,7 @@ func (i *ingress) Destroy(ctx context.Context) error {
 		i.emptyGateway(),
 		i.emptyVirtualService(),
 	}
-	if i.values.TLSSecretName != nil {
+	if i.values.TLSSecretName != nil && i.values.IstioIngressGatewayNamespaceFunc != nil {
 		objects = append(objects, i.emptyWildcardSecret())
 	}
 	return kubernetesutils.DeleteObjects(ctx, i.client, objects...)
@@ -178,5 +178,5 @@ func (i *ingress) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 }
 
 func (i *ingress) emptyWildcardSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: *i.values.TLSSecretName, Namespace: i.values.IstioIngressGatewayNamespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: *i.values.TLSSecretName, Namespace: i.values.IstioIngressGatewayNamespaceFunc()}}
 }

@@ -214,12 +214,16 @@ var _ = Describe("#Ingress", func() {
 
 	getDeployer := func(serviceNamespace string, tlsSecretName *string) component.Deployer {
 		return NewIngress(c, namespace, IngressValues{
-			Host:                         host,
-			IstioIngressGatewayLabels:    istioLabels,
-			IstioIngressGatewayNamespace: istioNamespace,
-			ServiceName:                  "foo",
-			ServiceNamespace:             serviceNamespace,
-			TLSSecretName:                tlsSecretName,
+			Host: host,
+			IstioIngressGatewayLabelsFunc: func() map[string]string {
+				return istioLabels
+			},
+			IstioIngressGatewayNamespaceFunc: func() string {
+				return istioNamespace
+			},
+			ServiceName:      "foo",
+			ServiceNamespace: serviceNamespace,
+			TLSSecretName:    tlsSecretName,
 		})
 	}
 

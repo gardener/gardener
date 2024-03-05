@@ -855,12 +855,16 @@ func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSec
 	values := kubeapiserverexposure.IngressValues{ServiceNamespace: metav1.NamespaceDefault}
 	if wildCardCertSecret != nil {
 		values = kubeapiserverexposure.IngressValues{
-			Host:                         seed.GetIngressFQDN("api-seed"),
-			IstioIngressGatewayLabels:    istioDefaultLabels,
-			IstioIngressGatewayNamespace: istioDefaultNamespace,
-			ServiceName:                  "kubernetes",
-			ServiceNamespace:             metav1.NamespaceDefault,
-			TLSSecretName:                &wildCardCertSecret.Name,
+			Host: seed.GetIngressFQDN("api-seed"),
+			IstioIngressGatewayLabelsFunc: func() map[string]string {
+				return istioDefaultLabels
+			},
+			IstioIngressGatewayNamespaceFunc: func() string {
+				return istioDefaultNamespace
+			},
+			ServiceName:      "kubernetes",
+			ServiceNamespace: metav1.NamespaceDefault,
+			TLSSecretName:    &wildCardCertSecret.Name,
 		}
 	}
 
