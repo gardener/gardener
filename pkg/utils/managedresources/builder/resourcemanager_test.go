@@ -30,11 +30,12 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Resource Manager", func() {
 	var (
-		ctx        = context.TODO()
+		ctx        = context.Background()
 		fakeClient client.Client
 	)
 
@@ -67,10 +68,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
 					Namespace:   namespace,
@@ -93,6 +90,7 @@ var _ = Describe("Resource Manager", func() {
 				WithKeyValues(data).
 				WithLabels(labels).
 				WithAnnotations(annotations).
+				CreateIfNotExists(false).
 				Unique()
 
 			secretBuilder.AddLabels(map[string]string{"one": "two"})
@@ -108,10 +106,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        uniqueSecretName,
 					Namespace:   namespace,
@@ -156,10 +150,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -184,10 +174,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 
 			Expect(actualSecret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
 					Namespace: namespace,
@@ -200,6 +186,53 @@ var _ = Describe("Resource Manager", func() {
 				Type:      corev1.SecretTypeOpaque,
 				Immutable: ptr.To(true),
 			}))
+		})
+
+		It("should update the secret if it exists", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
+				},
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			Expect(
+				NewSecret(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithKeyValues(map[string][]byte{
+						"bar": []byte("foo"),
+					}).
+					Reconcile(ctx),
+			).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
+
+			Expect(secret).To(Equal(&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "2",
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"bar": []byte("foo"),
+				},
+			}))
+		})
+
+		It("should fail to update the secret if it doesn't exist", func() {
+			secret := NewSecret(fakeClient).
+				WithNamespacedName(namespace, name).
+				WithLabels(labels).
+				CreateIfNotExists(false)
+
+			Expect(secret.Reconcile(ctx)).To(BeNotFoundError())
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 
@@ -281,10 +314,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -347,10 +376,6 @@ var _ = Describe("Resource Manager", func() {
 				expected := s.DeepCopy()
 				expected.ObjectMeta.ResourceVersion = "2"
 				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
-				expected.TypeMeta = metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				}
 				Expect(secret).To(Equal(expected))
 			}
 		})
@@ -382,10 +407,6 @@ var _ = Describe("Resource Manager", func() {
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -394,6 +415,64 @@ var _ = Describe("Resource Manager", func() {
 					ResourceVersion: "2",
 				},
 			}))
+		})
+
+		It("should update the managed resource if it exists", func() {
+			var (
+				existingLabels      = map[string]string{"existing": "label"}
+				existingAnnotations = map[string]string{"existing": "annotation"}
+			)
+
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   namespace,
+					Labels:      existingLabels,
+					Annotations: existingAnnotations,
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(
+				NewManagedResource(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithLabels(labels).
+					WithAnnotations(annotations).
+					CreateIfNotExists(false).
+					Reconcile(ctx),
+			).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+
+			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					Labels:          utils.MergeStringMaps(existingLabels, labels),
+					Annotations:     utils.MergeStringMaps(existingAnnotations, annotations),
+					ResourceVersion: "2",
+				},
+			}))
+		})
+
+		It("should fail updating the managed resource if it doesn't exists", func() {
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+
+			Expect(
+				NewManagedResource(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithLabels(labels).
+					WithAnnotations(annotations).
+					CreateIfNotExists(false).
+					Reconcile(ctx),
+			).To(BeNotFoundError())
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(BeNotFoundError())
 		})
 	})
 })

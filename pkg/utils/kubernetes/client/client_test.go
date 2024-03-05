@@ -36,13 +36,13 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 func TestClient(t *testing.T) {
@@ -637,7 +637,7 @@ var _ = Describe("Cleaner", func() {
 				return fakeClient.Update(ctx, object)
 			}
 
-			fn := func(kind string, objectList client.ObjectList) flow.TaskFn {
+			fn := func(_ string, objectList client.ObjectList) flow.TaskFn {
 				return func(ctx context.Context) error {
 					if err := fakeClient.List(ctx, objectList); err != nil {
 						return err

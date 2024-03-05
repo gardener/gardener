@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/controllerutils"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const resourceVersion = "42"
@@ -61,7 +61,7 @@ var _ = Describe("Finalizers", func() {
 			It(fmt.Sprintf("should succeed %v, %v", existingFinalizers, finalizer), func() {
 				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
 
-				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					Expect(patch.Type()).To(Equal(types.MergePatchType))
 					Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
 					return nil
@@ -82,7 +82,7 @@ var _ = Describe("Finalizers", func() {
 			It(fmt.Sprintf("should succeed %v", existingFinalizers), func() {
 				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
 
-				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					Expect(patch.Type()).To(Equal(types.MergePatchType))
 					Expect(patch.Data(o)).To(BeEquivalentTo(expectedPatchFinalizers))
 					return nil

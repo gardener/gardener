@@ -46,8 +46,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockkubelet "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
 	mockutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils/mock"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 const (
@@ -290,7 +290,7 @@ var _ = Describe("Mutator", func() {
 		DescribeTable("EnsureETCD", func(newObj, oldObj *druidv1alpha1.Etcd) {
 			c.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 
-			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) {
+			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, _, _ *druidv1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
 				if err != nil {
 					logger.Error(err, "Failed to get cluster object")
@@ -346,12 +346,12 @@ var _ = Describe("Mutator", func() {
 
 					// Create mock ensurer
 					ensurer.EXPECT().EnsureAdditionalProvisionUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldProvisionOSC.Spec.Units).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscUnits, _ *[]extensionsv1alpha1.Unit) error {
 							*oscUnits = append(*oscUnits, additionalUnit)
 							return nil
 						})
 					ensurer.EXPECT().EnsureAdditionalProvisionFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldProvisionOSC.Spec.Files).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscFiles, _ *[]extensionsv1alpha1.File) error {
 							*oscFiles = append(*oscFiles, additionalFile)
 							return nil
 						})
@@ -456,31 +456,31 @@ var _ = Describe("Mutator", func() {
 					// Create mock ensurer
 					ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), kubernetesVersionSemver, newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
 					ensurer.EXPECT().EnsureKubeletConfiguration(context.TODO(), gomock.Any(), kubernetesVersionSemver, newKubeletConfig, oldKubeletConfig).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, kubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, kubeletConfig, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 							*kubeletConfig = *mutatedKubeletConfig
 							return nil
 						},
 					)
 					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), ptr.To(newKubernetesGeneralConfigData), ptr.To(oldKubernetesGeneralConfigData)).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newData, data *string) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, newData, _ *string) error {
 							*newData = mutatedKubernetesGeneralConfigData
 							return nil
 						},
 					)
 					ensurer.EXPECT().EnsureAdditionalUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldOSC.Spec.Units).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscUnits, _ *[]extensionsv1alpha1.Unit) error {
 							*oscUnits = append(*oscUnits, additionalUnit)
 							return nil
 						})
 					ensurer.EXPECT().EnsureAdditionalFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldOSC.Spec.Files).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscFiles, _ *[]extensionsv1alpha1.File) error {
 							*oscFiles = append(*oscFiles, additionalFile)
 							return nil
 						})
 
 					ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any(), kubernetesVersionSemver).Return(true)
 					ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), kubernetesVersionSemver, gomock.Any(), newOSC.Namespace).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, data *string, _ string) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, data *string, _ string) error {
 							*data = cloudproviderconf
 							return nil
 						},
@@ -514,31 +514,31 @@ var _ = Describe("Mutator", func() {
 					// Create mock ensurer
 					ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), kubernetesVersionSemver, newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
 					ensurer.EXPECT().EnsureKubeletConfiguration(context.TODO(), gomock.Any(), kubernetesVersionSemver, newKubeletConfig, oldKubeletConfig).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, kubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, kubeletConfig, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 							*kubeletConfig = *mutatedKubeletConfig
 							return nil
 						},
 					)
 					ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), ptr.To(newKubernetesGeneralConfigData), ptr.To(oldKubernetesGeneralConfigData)).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newData, data *string) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, newData, _ *string) error {
 							*newData = ""
 							return nil
 						},
 					)
 					ensurer.EXPECT().EnsureAdditionalUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldOSC.Spec.Units).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscUnits, _ *[]extensionsv1alpha1.Unit) error {
 							*oscUnits = append(*oscUnits, additionalUnit)
 							return nil
 						})
 					ensurer.EXPECT().EnsureAdditionalFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldOSC.Spec.Files).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, oscFiles, _ *[]extensionsv1alpha1.File) error {
 							*oscFiles = append(*oscFiles, additionalFile)
 							return nil
 						})
 
 					ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any(), kubernetesVersionSemver).Return(true)
 					ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), kubernetesVersionSemver, gomock.Any(), newOSC.Namespace).DoAndReturn(
-						func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, data *string, _ string) error {
+						func(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, data *string, _ string) error {
 							*data = ""
 							return nil
 						},
@@ -605,7 +605,7 @@ func checkProvisionOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystem
 }
 
 func clientGet(result client.Object) interface{} {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 		switch obj.(type) {
 		case *extensionsv1alpha1.Cluster:
 			*obj.(*extensionsv1alpha1.Cluster) = *result.(*extensionsv1alpha1.Cluster)

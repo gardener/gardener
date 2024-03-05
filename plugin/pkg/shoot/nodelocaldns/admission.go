@@ -29,7 +29,7 @@ import (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootNodeLocalDNSEnabledByDefault, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootNodeLocalDNSEnabledByDefault, func(_ io.Reader) (admission.Interface, error) {
 		return New(), nil
 	})
 }

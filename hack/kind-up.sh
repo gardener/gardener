@@ -190,12 +190,10 @@ if [[ "$IPFAMILY" == "ipv6" ]] && [[ "$MULTI_ZONAL" == "true" ]]; then
   ADDITIONAL_ARGS="$ADDITIONAL_ARGS --set gardener.seed.istio.listenAddresses={::1,::10,::11,::12}"
 fi
 
-
-# TODO(acumino): update to kindest/node:v1.29.0 once we have a solution for adding seed authorizer in provider-local setup
-# For details check https://github.com/gardener/gardener/issues/8871
+# Adjust version of kindest/node image according to the latest supported Kubernetes version in Gardener
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --image "kindest/node:v1.29.0" \
+  --image "kindest/node:v1.29.2" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace

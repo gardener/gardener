@@ -80,7 +80,7 @@ var _ = Describe("Flow", func() {
 		It("should execute in the correct sequence", func() {
 			list := NewAtomicStringList()
 			mkListAppender := func(value string) flow.TaskFn {
-				return func(ctx context.Context) error {
+				return func(_ context.Context) error {
 					list.Append(value)
 					return nil
 				}
@@ -113,8 +113,8 @@ var _ = Describe("Flow", func() {
 				err2 = errors.New("err2")
 
 				g = flow.NewGraph("foo")
-				_ = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error { return err1 }})
-				_ = g.Add(flow.Task{Name: "y", Fn: func(ctx context.Context) error { return err2 }})
+				_ = g.Add(flow.Task{Name: "x", Fn: func(_ context.Context) error { return err1 }})
+				_ = g.Add(flow.Task{Name: "y", Fn: func(_ context.Context) error { return err2 }})
 				f = g.Compile()
 			)
 
@@ -127,7 +127,7 @@ var _ = Describe("Flow", func() {
 		It("should not process any function due to a canceled context", func() {
 			var (
 				g = flow.NewGraph("foo")
-				_ = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+				_ = g.Add(flow.Task{Name: "x", Fn: func(_ context.Context) error {
 					Fail("Task has been called")
 					return nil
 				}})
@@ -143,14 +143,14 @@ var _ = Describe("Flow", func() {
 			var (
 				errorContext = errorsutils.NewErrorContext("foo", []string{"x"})
 				g            = flow.NewGraph("foo")
-				_            = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+				_            = g.Add(flow.Task{Name: "x", Fn: func(_ context.Context) error {
 					return nil
 				}})
 				f       = g.Compile()
 				cleaned bool
 			)
 
-			Expect(f.Run(ctx, flow.Opts{ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
+			Expect(f.Run(ctx, flow.Opts{ErrorContext: errorContext, ErrorCleaner: func(_ context.Context, _ string) {
 				cleaned = true
 			}})).To(Succeed())
 
@@ -162,11 +162,11 @@ var _ = Describe("Flow", func() {
 				testCtx, cancelTestCtx = context.WithCancel(context.Background())
 
 				g = flow.NewGraph("foo")
-				x = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+				x = g.Add(flow.Task{Name: "x", Fn: func(_ context.Context) error {
 					cancelTestCtx()
 					return nil
 				}})
-				_ = g.Add(flow.Task{Name: "y", Fn: func(ctx context.Context) error {
+				_ = g.Add(flow.Task{Name: "y", Fn: func(_ context.Context) error {
 					Fail("Task has been called")
 					return nil
 				}, Dependencies: flow.NewTaskIDs(x)})

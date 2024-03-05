@@ -46,8 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -57,6 +55,8 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -456,8 +456,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
 					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -481,8 +479,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
 					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -516,8 +512,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					obj := e.DeepCopy()
 
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -636,7 +630,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 					obj.TypeMeta = metav1.TypeMeta{}
 					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-						DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+						DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 							Expect(actual).To(DeepEqual(obj))
 							return nil
 						})
@@ -830,19 +824,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				worker1OSCDownloader := expected[0]
-				worker1OSCDownloader.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker1OSCDownloader.Annotations = nil
 
 				worker1OSCOriginal := expected[1]
-				worker1OSCOriginal.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker1OSCOriginal.Annotations = nil
 
 				worker2OSCDownloader := expected[2]
-				worker2OSCDownloader.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker2OSCDownloader.Annotations = nil
 
 				worker2OSCOriginal := expected[3]
-				worker2OSCOriginal.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker2OSCOriginal.Annotations = nil
 
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
@@ -927,7 +917,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
 				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(multierror.Append(fakeErr)))
+				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(error(multierror.Append(fakeErr))))
 			})
 		})
 

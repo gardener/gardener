@@ -37,13 +37,13 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 const (
@@ -165,10 +165,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -185,10 +181,6 @@ var _ = Describe("DNSRecord", func() {
 			err = c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -216,10 +208,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -244,10 +232,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -264,10 +248,6 @@ var _ = Describe("DNSRecord", func() {
 			err = c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedSecret).To(DeepEqual(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -295,10 +275,6 @@ var _ = Describe("DNSRecord", func() {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -333,10 +309,6 @@ var _ = Describe("DNSRecord", func() {
 			expectedSpec.Values = []string{address, "8.8.8.8", "1.1.1.1"}
 
 			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -352,9 +324,6 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should deploy the DNSRecord with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
 			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -399,9 +368,6 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should deploy the DNSRecord with operation annotation if it is in error state", func() {
 			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -442,19 +408,42 @@ var _ = Describe("DNSRecord", func() {
 			Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 		})
 
+		It("should deploy the DNSRecord resource with ip stack annotation", func() {
+			values.IPStack = "ipv5"
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+						"dns.gardener.cloud/ip-stack":      "ipv5",
+					},
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+		})
+
 		It("should fail if creating the DNSRecord resource failed", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(secret))
 					return nil
 				})
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
 				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
 					return testErr
 				})
@@ -470,9 +459,6 @@ var _ = Describe("DNSRecord", func() {
 				values.ReconcileOnlyOnChangeOrError = true
 
 				expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-						Kind:       extensionsv1alpha1.DNSRecordResource},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: namespace,
@@ -729,7 +715,7 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(apierrors.NewNotFound(corev1.Resource("secrets"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(secret)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(secret))
 					return nil
 				})
@@ -738,7 +724,7 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(dns), gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{})).
 				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsrecords"), name))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(dns)).DoAndReturn(
-				func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(dns))
 					return nil
 				})

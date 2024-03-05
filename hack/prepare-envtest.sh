@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.28"}
+ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.29"}
 
 echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
 if ! command -v setup-envtest &> /dev/null ; then

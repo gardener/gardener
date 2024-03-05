@@ -664,6 +664,11 @@ type VerticalPodAutoscaler struct {
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	// +optional
 	RecommenderInterval *metav1.Duration `json:"recommenderInterval,omitempty" protobuf:"bytes,8,opt,name=recommenderInterval"`
+	// TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	// (default: 0.9)
+	// +optional
+	TargetCPUPercentile *float64 `json:"targetCPUPercentile,omitempty" protobuf:"fixed64,9,opt,name=targetCPUPercentile"`
 }
 
 const (
@@ -675,6 +680,8 @@ const (
 	DefaultEvictionTolerance = 0.5
 	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
 	DefaultRecommendationMarginFraction = 0.15
+	// DefaultTargetCPUPercentile is the default value for the TargetCPUPercentile field in the VPA configuration
+	DefaultTargetCPUPercentile = 0.9
 )
 
 var (
@@ -1440,6 +1447,28 @@ type Worker struct {
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
+	// +optional
+	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+}
+
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	// +optional
+	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty" protobuf:"fixed64,1,opt,name=scaleDownUtilizationThreshold"`
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	// +optional
+	ScaleDownGpuUtilizationThreshold *float64 `json:"scaleDownGpuUtilizationThreshold,omitempty" protobuf:"fixed64,2,opt,name=scaleDownGpuUtilizationThreshold"`
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty" protobuf:"bytes,3,opt,name=scaleDownUnneededTime"`
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnreadyTime"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	// +optional
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,5,opt,name=maxNodeProvisionTime"`
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.

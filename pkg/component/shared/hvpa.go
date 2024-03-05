@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/hvpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 )
 
 // NewHVPA instantiates a new `hvpa-controller` component.

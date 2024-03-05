@@ -176,3 +176,9 @@ func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, se
 
 	return nil
 }
+
+// GetIPStackForSeed returns the value for the AnnotationKeyIPStack annotation based on the given seed.
+// It falls back to IPv4 if no IP families are available.
+func GetIPStackForSeed(seed *gardencorev1beta1.Seed) string {
+	return getIPStackForFamilies(seed.Spec.Networks.IPFamilies)
+}

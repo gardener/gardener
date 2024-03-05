@@ -29,24 +29,24 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
-	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
-	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
-	"github.com/gardener/gardener/pkg/component/gardenermetricsexporter"
-	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
-	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
-	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/vpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
+	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
+	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
+	gardeneradmissioncontroller "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
+	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
+	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
+	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -81,7 +81,7 @@ var _ = Describe("Garden Care controller tests", func() {
 			fluentoperator.OperatorManagedResourceName,
 			fluentoperator.CustomResourcesManagedResourceName + "-garden",
 			fluentoperator.FluentBitManagedResourceName,
-			vali.ManagedResourceNameRuntime,
+			constants.ManagedResourceNameRuntime,
 			plutono.ManagedResourceName,
 			gardenermetricsexporter.ManagedResourceNameRuntime,
 			gardenermetricsexporter.ManagedResourceNameVirtual,

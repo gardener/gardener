@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -85,6 +86,8 @@ type Values struct {
 	Values []string
 	// TTL is the time to live in seconds of the DNSRecord.
 	TTL *int64
+	// IPStack is the indication of the IP stack used for the DNSRecord. It can be ipv4, ipv6 or dual-stack.
+	IPStack string
 }
 
 // New creates a new instance that implements component.DeployMigrateWaiter.
@@ -149,6 +152,10 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			d.isTimestampInvalidOrAfterLastUpdateTime() {
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
+		}
+
+		if d.values.IPStack != "" {
+			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, gardenerutils.AnnotationKeyIPStack, d.values.IPStack)
 		}
 
 		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{

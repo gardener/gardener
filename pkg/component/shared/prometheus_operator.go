@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 )
 
 // NewPrometheusOperator instantiates a new prometheus-operator component.

@@ -245,7 +245,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			// `maintain` operation annotation needs to be removed so that if reason for failure is fixed and maintenance is triggered
 			// again via `maintain` operation annotation then it should not fail with the reason that annotation is already present.
 			// Removal of annotation during shoot status patch is possible cause only spec is kept in original form during status update
-			// https://github.com/gardener/gardener/blob/a2f7de0badaae6170d7b9b84c163b8cab43a84d2/pkg/registry/core/shoot/strategy.go#L258-L267
+			// https://github.com/gardener/gardener/blob/a2f7de0badaae6170d7b9b84c163b8cab43a84d2/pkg/apiserver/registry/core/shoot/strategy.go#L258-L267
 			if hasMaintainNowAnnotation(shoot) {
 				delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 			}
@@ -730,7 +730,7 @@ func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMach
 		// auto-update strategy: "major"
 		getHigherVersionAutoUpdate = v1beta1helper.GetOverallLatestVersionForAutoUpdate
 		// cannot force update the overall latest version if it is expired
-		getHigherVersionForceUpdate = func(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
+		getHigherVersionForceUpdate = func(_ []gardencorev1beta1.ExpirableVersion, _ string) (bool, string, error) {
 			return false, "", fmt.Errorf("either the machine image %q is reaching end of life and migration to another machine image is required or there is a misconfiguration in the CloudProfile. If it is the latter, make sure the machine image in the CloudProfile has at least one version that is not expired, not in preview and greater or equal to the current Shoot image version %q", shootMachineImage.Name, *shootMachineImage.Version)
 		}
 	}

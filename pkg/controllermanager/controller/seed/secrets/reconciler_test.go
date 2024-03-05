@@ -33,12 +33,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/secrets"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
+	mockclientgo "github.com/gardener/gardener/third_party/mock/client-go/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -168,7 +168,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should sync secrets if namespace exists and is controlled by seed", func() {
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					(&corev1.SecretList{Items: []corev1.Secret{*oldSecret, *addedSecret}}).DeepCopyInto(list)
 					return nil
 				})
@@ -188,7 +188,7 @@ var _ = Describe("Reconciler", func() {
 				cl.EXPECT().Create(gomock.Any(), copySecretWithNamespace(addedSecret, namespace.Name))
 
 				// expect deletion for deleted secret in Garden namespace
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					(&corev1.SecretList{Items: []corev1.Secret{*deletedSecret}}).DeepCopyInto(list)
 					return nil
 				})
@@ -225,7 +225,7 @@ var _ = Describe("Reconciler", func() {
 					secret2 = createSecret("2", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
 				)
 
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					(&corev1.SecretList{Items: []corev1.Secret{*secret1, *secret2}}).DeepCopyInto(list)
 					return nil
 				})
@@ -237,7 +237,7 @@ var _ = Describe("Reconciler", func() {
 				cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace.Name, secret2.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(gomock.Any(), copySecretWithNamespace(secret2, namespace.Name))
 
-				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+				cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace.Name), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					(&corev1.SecretList{}).DeepCopyInto(list)
 					return nil
 				})

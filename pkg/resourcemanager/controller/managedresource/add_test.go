@@ -32,9 +32,9 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#MapSecretToManagedResources", func() {
@@ -98,7 +98,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})
@@ -120,7 +120,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})

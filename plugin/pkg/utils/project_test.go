@@ -19,13 +19,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -71,7 +70,7 @@ var _ = Describe("Project", func() {
 
 		It("should return a 'not found' error", func() {
 			result, err := utils.ProjectForNamespaceFromLister(lister, namespaceName)
-			Expect(err).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: "core.gardener.cloud", Resource: "Project"}, namespaceName)))
+			Expect(err).To(BeNotFoundError())
 			Expect(result).To(BeNil())
 		})
 	})

@@ -933,6 +933,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationMarginFraction).To(PointTo(Equal(0.15)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetCPUPercentile).To(PointTo(Equal(0.9)))
 		})
 
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
@@ -944,6 +945,7 @@ var _ = Describe("Shoot defaulting", func() {
 				RecommendationMarginFraction: &recommendationMarginFraction,
 				UpdaterInterval:              &metav1.Duration{Duration: 2 * time.Minute},
 				RecommenderInterval:          &metav1.Duration{Duration: 2 * time.Minute},
+				TargetCPUPercentile:          ptr.To(float64(0.333)),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -956,6 +958,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationMarginFraction).To(PointTo(Equal(recommendationMarginFraction)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetCPUPercentile).To(PointTo(Equal(0.333)))
 		})
 	})
 })

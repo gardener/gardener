@@ -96,6 +96,12 @@ spec:
       - ReadonlyFilesystem
       - DiskPressure
       - KernelDeadlock
+    clusterAutoscaler:
+      scaleDownUtilizationThreshold: 0.5
+      scaleDownGpuUtilizationThreshold: 0.5
+      scaleDownUnneededTime: 30m
+      scaleDownUnreadyTime: 1h
+      maxNodeProvisionTime: 15m
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
@@ -114,6 +120,8 @@ The provider extension (respectively, machine-controller-manager) is still respo
 The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu`, and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
+
+The `spec.pools[].clusterAutoscaler` field contains `cluster-autoscaler` settings that are to be applied only to specific worker group. `cluster-autoscaler` expects to find these settings as annotations on the `MachineDeployment`, and so providers must pass these values to the corresponding `MachineDeployment` via annotations. The keys for these annotations can be found [here](https://github.com/gardener/gardener/blob/master/pkg/apis/extensions/v1alpha1/types_worker.go) and the values for the corresponding annotations should be the same as what is passed into the field. Providers can use the helper function [`extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations`](https://github.com/gardener/gardener/blob/master/pkg/apis/extensions/v1alpha1/helper/helper.go#L73) that returns the annotation map to be used.
 
 The controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
 
@@ -309,7 +317,7 @@ You can take a look at the below referenced example implementation for the AWS p
 All of the described behaviour is mostly the same for every provider.
 The only difference is maybe the version/configuration of the provider-specific `machine-controller-manager` sidecar container, and the machine class specification itself.
 You can take a look at our [extension library](../../extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
-Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
+Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/nodemanagement/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
 

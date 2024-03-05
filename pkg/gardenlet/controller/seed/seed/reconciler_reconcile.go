@@ -26,6 +26,7 @@ import (
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -44,11 +45,11 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -360,11 +361,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying monitoring components",
-			Fn:           c.monitoring.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-		})
-		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
 			Fn: func(ctx context.Context) error {
 				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label
@@ -505,6 +501,36 @@ func (r *Reconciler) runReconcileSeedFlow(
 				)
 			},
 			Dependencies: flow.NewTaskIDs(deploySeedPrometheus),
+		})
+		deployAggregatePrometheus = g.Add(flow.Task{
+			Name: "Deploying aggregate Prometheus",
+			Fn:   c.aggregatePrometheus.Deploy,
+		})
+		// TODO(rfranzke): Remove this after v1.93 has been released.
+		_ = g.Add(flow.Task{
+			Name: "Cleaning up legacy aggregate Prometheus resources",
+			Fn: func(ctx context.Context) error {
+				if err := kubernetesutils.DeleteObjects(ctx, r.SeedClientSet.Client(),
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-rules", Namespace: r.GardenNamespace}},
+					&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-config", Namespace: r.GardenNamespace}},
+					&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-web", Namespace: r.GardenNamespace}},
+					&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
+					&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
+					&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
+					&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus"}},
+					&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus", Namespace: r.GardenNamespace}},
+					&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
+				); err != nil {
+					return err
+				}
+
+				return r.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{
+					secretsmanager.LabelKeyName:            "aggregate-prometheus-tls",
+					secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+					secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+				})
+			},
+			Dependencies: flow.NewTaskIDs(deployAggregatePrometheus),
 		})
 		deployAlertmanager = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",

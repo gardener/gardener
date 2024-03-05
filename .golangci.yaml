@@ -202,7 +202,7 @@ linters-settings:
         alias: settingsv1alpha1lister
       - pkg: github.com/gardener/gardener/pkg/controllerutils/(\w+)
         alias: ${1}utils
-      - pkg: github.com/gardener/gardener/pkg/envtest
+      - pkg: github.com/gardener/gardener/test/envtest
         alias: gardenerenvtest
       - pkg: github.com/gardener/gardener/pkg/extensions
         alias: gardenerextensions
@@ -210,29 +210,29 @@ linters-settings:
         alias: gardenletbootstraputil
       - pkg: github.com/gardener/gardener/pkg/healthz
         alias: gardenerhealthz
-      - pkg: github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer
+      - pkg: github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer
         alias: mockauthorizer
-      - pkg: github.com/gardener/gardener/pkg/mock/\w+/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/\w+/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/core/v1
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/core/v1
         alias: mockcorev1
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/tools/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/tools/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/util/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/util/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/.*/(\w+)/mock$
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/component/(\w+)/constants
         alias: ${1}constants
-      - pkg: github.com/gardener/gardener/pkg/operation/(\w+)
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/(\w+)
         alias: ${1}pkg
       - pkg: github.com/gardener/gardener/pkg/operator/client
         alias: operatorclient
-      - pkg: github.com/gardener/gardener/pkg/registry/(\w+)/rest
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/(\w+)/rest
         alias: ${1}rest
-      - pkg: github.com/gardener/gardener/pkg/registry/\w+/([^r]\w+)
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/([^r]\w+)
         alias: ${1}registry
-      - pkg: github.com/gardener/gardener/pkg/registry/\w+/(\w+)/storage$
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/(\w+)/storage$
         alias: ${1}store
       - pkg: github.com/gardener/gardener/pkg/resourcemanager/client
         alias: resourcemanagerclient

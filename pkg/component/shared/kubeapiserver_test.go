@@ -42,8 +42,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -1123,6 +1123,7 @@ exemptions:
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,
@@ -1137,6 +1138,7 @@ exemptions:
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: namespace,
@@ -1170,6 +1172,7 @@ exemptions:
 				gardencorev1beta1.RotationCompleting,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,
@@ -1298,7 +1301,7 @@ exemptions:
 			)
 
 			DescribeTable("should have the expected ServiceAccountConfig config",
-				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool, errMatcher gomegatypes.GomegaMatcher) {
+				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -1323,7 +1326,6 @@ exemptions:
 					nil,
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("ServiceAccountConfig is nil",
 					func() {
@@ -1331,7 +1333,6 @@ exemptions:
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("service account key rotation phase is set",
 					func() {
@@ -1343,7 +1344,6 @@ exemptions:
 						RotationPhase: gardencorev1beta1.RotationCompleting,
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Issuer is not provided",
 					func() {
@@ -1360,7 +1360,6 @@ exemptions:
 						MaxTokenExpiration:    &maxTokenExpiration,
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Issuer is provided",
 					func() {
@@ -1375,7 +1374,6 @@ exemptions:
 						AcceptedIssuers: []string{"https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers is provided and Issuer is not",
 					func() {
@@ -1390,7 +1388,6 @@ exemptions:
 						AcceptedIssuers: []string{"issuer1", "issuer2"},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers and Issuer are provided",
 					func() {
@@ -1406,7 +1403,6 @@ exemptions:
 						AcceptedIssuers: []string{"issuer1", "issuer2", "https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Default Issuer is already part of AcceptedIssuers",
 					func() {
@@ -1422,7 +1418,6 @@ exemptions:
 						AcceptedIssuers: []string{"https://" + externalHostname},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("Default Issuer is already part of AcceptedIssuers but no Issuer is provided",
 					func() {
@@ -1437,7 +1432,6 @@ exemptions:
 						AcceptedIssuers: []string{},
 					},
 					false,
-					Not(HaveOccurred()),
 				),
 				Entry("AcceptedIssuers is not provided",
 					func() {
@@ -1447,7 +1441,6 @@ exemptions:
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
 					false,
-					Not(HaveOccurred()),
 				),
 			)
 		})

@@ -54,6 +54,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -71,7 +72,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
-	dwd "github.com/gardener/gardener/pkg/component/dependencywatchdog"
+	dwd "github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -88,7 +89,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 const (
@@ -104,7 +104,7 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			log, err := cmdutils.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err
@@ -169,16 +169,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			RecoverPanic: ptr.To(true),
 		},
 
-		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
-			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
-			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
-			return thirdpartyapiutil.NewDynamicRESTMapper(
-				config,
-				thirdpartyapiutil.WithLazyDiscovery,
-			)
-		},
-
+		MapperProvider: apiutil.NewDynamicRESTMapper,
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				DisableFor: []client.Object{
@@ -343,15 +334,7 @@ func (g *garden) Start(ctx context.Context) error {
 			}, nil
 		}
 
-		opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-			// TODO(ary1992): The new rest mapper implementation doesn't return a NoKindMatchError but a ErrGroupDiscoveryFailed
-			// when an API GroupVersion is not present in the cluster. Remove the old restmapper usage once the upstream issue
-			// (https://github.com/kubernetes-sigs/controller-runtime/pull/2425) is fixed.
-			return thirdpartyapiutil.NewDynamicRESTMapper(
-				config,
-				thirdpartyapiutil.WithLazyDiscovery,
-			)
-		}
+		opts.MapperProvider = apiutil.NewDynamicRESTMapper
 	})
 	if err != nil {
 		return fmt.Errorf("failed creating garden cluster object: %w", err)
@@ -502,17 +485,15 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 				return err
 			}
 
-			//Delete old DWD secrets
-			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
-				return err
-			}
-
-			if err := kubernetesutils.DeleteObjects(ctx, seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}}); err != nil {
+			// Delete old DWD secrets
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}},
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}},
+			); err != nil {
 				return err
 			}
 
 			// Fetch and update the GRM configmap
-			grmConfigMap := &corev1.ConfigMap{}
 			var grmCMName string
 			var grmCMVolumeIndex int
 			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
@@ -525,6 +506,8 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 			if len(grmCMName) == 0 {
 				return nil
 			}
+
+			grmConfigMap := &corev1.ConfigMap{}
 			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: grmCMName}, grmConfigMap); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil

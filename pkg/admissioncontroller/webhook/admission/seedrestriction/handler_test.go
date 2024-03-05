@@ -50,9 +50,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("handler", func() {
@@ -1438,7 +1438,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error because reading a shoot failed", func() {
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
+							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(_ context.Context, list *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
@@ -1458,7 +1458,7 @@ var _ = Describe("handler", func() {
 						It("should return an error because extracting the seed template failed", func() {
 							managedSeeds[1].Spec.Gardenlet = nil
 
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
+							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(_ context.Context, list *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
@@ -1497,7 +1497,7 @@ var _ = Describe("handler", func() {
 								},
 							}
 
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
+							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(_ context.Context, list *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
@@ -1536,7 +1536,7 @@ var _ = Describe("handler", func() {
 								},
 							}
 
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
+							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(_ context.Context, list *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})

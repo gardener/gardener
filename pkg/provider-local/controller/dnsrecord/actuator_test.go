@@ -31,8 +31,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	. "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var _ = Describe("Actuator", func() {

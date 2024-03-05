@@ -57,6 +57,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/openapi"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -67,7 +68,6 @@ import (
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/openapi"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -86,7 +86,7 @@ To do that reliably and to offer a certain quality of service, it requires to co
 the main components of a Kubernetes cluster (etcd, API server, controller manager, scheduler).
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			verflag.PrintAndExitIfRequested()
 
 			if err := opts.Validate(); err != nil {
@@ -187,7 +187,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		KubeInformerFactory: o.KubeInformerFactory,
 	}
 
-	if err := o.ApplyTo(apiConfig); err != nil {
+	if err := o.ApplyTo(apiConfig, kubeClient); err != nil {
 		return nil, err
 	}
 
@@ -224,7 +224,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 	}
 
 	// Initialize admission plugins
-	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
+	o.Recommended.ExtraAdmissionInitializers = func(_ *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				o.CoreInformerFactory,
@@ -312,7 +312,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(context genericapiserver.PostStartHookContext) error {
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
 		if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
@@ -330,7 +330,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(context genericapiserver.PostStartHookContext) error {
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(_ genericapiserver.PostStartHookContext) error {
 		if clusterIdentity, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
@@ -368,7 +368,7 @@ func (o *Options) Run(ctx context.Context) error {
 }
 
 // ApplyTo applies the options to the given config.
-func (o *Options) ApplyTo(config *apiserver.Config) error {
+func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interface) error {
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
@@ -379,7 +379,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 
 	// For backward-compatibility, we also have to keep serving the /openapi/v2 endpoint since kubectl < 1.27 rely on
 	// this endpoint.
-	gardenerAPIServerConfig.OpenAPIConfig = gardenerAPIServerConfig.OpenAPIV3Config
+	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = gardenerAPIServerConfig.OpenAPIV3Config.Info.Title
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerAPIServerConfig.OpenAPIV3Config.Info.Version
 
@@ -398,7 +398,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	if err := o.Recommended.Audit.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
 		return err
 	}
-	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
+	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config, kubeClient, config.KubeInformerFactory); err != nil {
 		return err
 	}
 	if err := o.Recommended.CoreAPI.ApplyTo(gardenerAPIServerConfig); err != nil {

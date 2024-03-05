@@ -28,19 +28,19 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/seedsystem"
-	"github.com/gardener/gardener/pkg/component/vpa"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
@@ -56,6 +56,7 @@ var requiredManagedResourcesSeed = sets.New(
 	prometheusoperator.ManagedResourceName,
 	"prometheus-cache",
 	"prometheus-seed",
+	"prometheus-aggregate",
 )
 
 // health contains information needed to execute health checks for a seed.
@@ -140,7 +141,7 @@ func (h *health) checkSystemComponents(
 		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
 	}
 	if h.valiEnabled {
-		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
+		managedResources = append(managedResources, valiconstants.ManagedResourceNameRuntime)
 	}
 	if h.alertManagerEnabled {
 		managedResources = append(managedResources, "alertmanager-seed")

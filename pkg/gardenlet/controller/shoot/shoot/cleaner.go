@@ -112,7 +112,7 @@ func (c *cleaner) DeleteMachineResources(ctx context.Context) error {
 
 // WaitUntilMachineResourcesDeleted waits until all MachineControllerManager resources in the shoot namespace have been deleted.
 func (c *cleaner) WaitUntilMachineResourcesDeleted(ctx context.Context) error {
-	return utilclient.ApplyToObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
+	return utilclient.ApplyToObjectKinds(ctx, func(_ string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
 			return kubernetesutils.WaitUntilResourcesDeleted(ctx, c.seedClient, objectList, DefaultInterval, client.InNamespace(c.seedNamespace))
 		}

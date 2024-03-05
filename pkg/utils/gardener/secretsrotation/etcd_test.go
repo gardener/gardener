@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
+	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -163,7 +163,7 @@ var _ = Describe("ETCD", func() {
 			endpointSlice1ResourceVersion = endpointSlice1.ResourceVersion
 			endpointSlice2ResourceVersion = endpointSlice2.ResourceVersion
 
-			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: kubeAPIServerDeploymentName, Namespace: kubeAPIServerNamespace}}
+			kubeAPIServerDeployment = &appsv1.Deployment{TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"}, ObjectMeta: metav1.ObjectMeta{Name: kubeAPIServerDeploymentName, Namespace: kubeAPIServerNamespace}}
 			Expect(runtimeClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 

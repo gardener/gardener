@@ -21,7 +21,6 @@ rules:
   # - sync out API packages without conversion and defaulting code (i.e. like k/k's staging mechanism)
   - github.com/gardener/gardener/pkg/gardenlet/apis/config
   - github.com/gardener/gardener/pkg/logger
-  - github.com/gardener/gardener/pkg/mock
   - github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
   - github.com/gardener/gardener/pkg/utils
-  - github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil
+  - github.com/gardener/gardener/third_party/mock

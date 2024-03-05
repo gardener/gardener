@@ -53,7 +53,7 @@ var _ = Describe("Scheduler tests", func() {
 				return shoot.Spec.SeedName
 			}).Should(BeNil())
 
-			Eventually(func(g Gomega) string {
+			Eventually(func() string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				Expect(shoot.Status.LastOperation).NotTo(BeNil())
 				Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))
@@ -144,7 +144,7 @@ var _ = Describe("Scheduler tests", func() {
 				return shoot.Spec.SeedName
 			}).Should(BeNil())
 
-			Eventually(func(g Gomega) string {
+			Eventually(func() string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				Expect(shoot.Status.LastOperation).NotTo(BeNil())
 				Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))
@@ -453,7 +453,7 @@ us-central-3: 220`,
 					return shoot.Spec.SeedName
 				}).Should(BeNil())
 
-				Eventually(func(g Gomega) string {
+				Eventually(func() string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					Expect(shoot.Status.LastOperation).NotTo(BeNil())
 					Expect(shoot.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeCreate))

@@ -75,7 +75,7 @@ var _ = Describe("Handler", func() {
 
 	Describe("#Default", func() {
 		DescribeTable("should not mutate because preconditions are not met",
-			func(mutatePod func(), expectedReason string) {
+			func(mutatePod func()) {
 				mutatePod()
 
 				Expect(handler.Default(ctx, pod)).To(Succeed())
@@ -88,12 +88,10 @@ var _ = Describe("Handler", func() {
 
 			Entry("service account name is empty",
 				func() { pod.Spec.ServiceAccountName = "" },
-				"service account not specified or defaulted",
 			),
 
 			Entry("service account name is default",
 				func() { pod.Spec.ServiceAccountName = "default" },
-				"service account not specified or defaulted",
 			),
 		)
 

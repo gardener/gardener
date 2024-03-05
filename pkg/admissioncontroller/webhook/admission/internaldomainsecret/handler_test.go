@@ -37,8 +37,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
@@ -282,7 +282,7 @@ var _ = Describe("handler", func() {
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, limitOne client.ListOption) error {
+			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil
 			})
@@ -358,7 +358,7 @@ var _ = Describe("handler", func() {
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
 				client.Limit(1),
-			).DoAndReturn(func(_ context.Context, list client.ObjectList, limitOne client.ListOption) error {
+			).DoAndReturn(func(_ context.Context, list client.ObjectList, _ client.ListOption) error {
 				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list.(*metav1.PartialObjectMetadataList))
 				return nil
 			})

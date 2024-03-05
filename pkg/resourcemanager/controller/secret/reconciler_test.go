@@ -29,10 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("SecretReconciler", func() {
@@ -98,7 +98,7 @@ var _ = Describe("SecretReconciler", func() {
 			secret.Finalizers = []string{classFilter.FinalizerName()}
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -116,7 +116,7 @@ var _ = Describe("SecretReconciler", func() {
 
 		It("should do nothing if secret has no finalizer", func() {
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
 					secret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})

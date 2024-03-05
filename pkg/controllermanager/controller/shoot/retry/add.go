@@ -48,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // ShootPredicate reacts only on 'CREATE' and 'UPDATE' Shoot events.
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -64,8 +64,8 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 
 			return shootFailedDueToRateLimits(shoot) && !isShootFailed(oldShoot)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 

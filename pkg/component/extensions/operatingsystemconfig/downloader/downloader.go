@@ -30,7 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -224,7 +224,7 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				{
 					APIGroups: []string{""},
 					Resources: []string{"secrets"},
-					ResourceNames: append(secretNames, Name, vali.ValitailTokenSecretName,
+					ResourceNames: append(secretNames, Name, valiconstants.ValitailTokenSecretName,
 						// This is needed for migration from cloud-config-downloader to gardener-node-agent: The CCD
 						// token will be used to fetch the GNA token, hence it needs permissions to read the secret.
 						"gardener-node-agent",

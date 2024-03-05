@@ -37,7 +37,7 @@ func HasOperationAnnotation() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return filter(e.ObjectNew)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {

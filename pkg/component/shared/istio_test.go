@@ -28,7 +28,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/istio"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"

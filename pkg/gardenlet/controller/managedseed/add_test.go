@@ -36,8 +36,8 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {

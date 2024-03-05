@@ -39,10 +39,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -128,6 +128,12 @@ func (r *Reconciler) reconcile(
 			Name: "Generating generic token kubeconfig",
 			Fn: func(ctx context.Context) error {
 				return r.generateGenericTokenKubeconfig(ctx, garden, secretsManager)
+			},
+		})
+		generateObservabilityIngressPassword = g.Add(flow.Task{
+			Name: "Generating observability ingress password",
+			Fn: func(ctx context.Context) error {
+				return r.generateObservabilityIngressPassword(ctx, secretsManager)
 			},
 		})
 		deployEtcdCRD = g.Add(flow.Task{
@@ -217,6 +223,7 @@ func (r *Reconciler) reconcile(
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
+			generateObservabilityIngressPassword,
 			deployRuntimeSystemResources,
 			deployFluentCRD,
 			deployPrometheusCRD,
@@ -558,7 +565,7 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 			secretsManager,
 			resourceManager,
 			r.GardenNamespace,
-			func(ctx context.Context) (int32, error) {
+			func(_ context.Context) (int32, error) {
 				return 2, nil
 			},
 			func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })

@@ -40,16 +40,16 @@ func MachineNodeInfoHasChanged() predicate.Predicate {
 	}
 
 	return predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
 		UpdateFunc: func(event event.UpdateEvent) bool {
 			return statusHasChanged(event.ObjectOld, event.ObjectNew)
 		},
-		GenericFunc: func(event event.GenericEvent) bool {
+		GenericFunc: func(_ event.GenericEvent) bool {
 			return false
 		},
-		DeleteFunc: func(event event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
 	}

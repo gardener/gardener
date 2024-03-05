@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 

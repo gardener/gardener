@@ -22,7 +22,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -75,7 +75,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"secrets"},
-					ResourceNames: append([]string{nodeagentv1alpha1.AccessSecretName, vali.ValitailTokenSecretName}, secretNames...),
+					ResourceNames: append([]string{nodeagentv1alpha1.AccessSecretName, valiconstants.ValitailTokenSecretName}, secretNames...),
 					Verbs:         []string{"get", "list", "watch"},
 				},
 				{

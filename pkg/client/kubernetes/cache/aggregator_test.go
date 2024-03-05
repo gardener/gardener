@@ -31,7 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("Aggregator", func() {
@@ -162,11 +162,11 @@ var _ = Describe("Aggregator", func() {
 			ctx, cancel := context.WithCancel(ctx)
 			testChan := make(chan struct{})
 
-			fallback.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			fallback.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})
-			secretCache.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			secretCache.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})

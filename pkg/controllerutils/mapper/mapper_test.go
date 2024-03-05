@@ -32,8 +32,8 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 func TestHandler(t *testing.T) {
@@ -100,7 +100,7 @@ var _ = Describe("Controller Mapper", func() {
 		It("should find no objects for the passed cluster because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
-					GenericFunc: func(event event.GenericEvent) bool {
+					GenericFunc: func(_ event.GenericEvent) bool {
 						return false
 					},
 				},

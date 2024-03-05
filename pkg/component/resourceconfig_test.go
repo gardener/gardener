@@ -126,10 +126,6 @@ var _ = Describe("ResourceConfig", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					expectedMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
@@ -184,10 +180,6 @@ var _ = Describe("ResourceConfig", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					expectedMr := &resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,

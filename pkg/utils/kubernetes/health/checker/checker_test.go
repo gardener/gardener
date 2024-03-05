@@ -491,7 +491,7 @@ var _ = Describe("HealthChecker", func() {
 		)
 
 		DescribeTable("#CheckShootMonitoringControlPlane",
-			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, workerless, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
 				for _, obj := range deployments {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 				}
@@ -515,24 +515,18 @@ var _ = Describe("HealthChecker", func() {
 			Entry("all healthy",
 				requiredMonitoringControlPlaneDeployments,
 				requiredMonitoringControlPlaneStatefulSets,
-				false,
-				true,
 				BeNil()),
 			Entry("required deployment missing",
 				[]*appsv1.Deployment{
 					plutonoDeployment,
 				},
 				requiredMonitoringControlPlaneStatefulSets,
-				false,
-				true,
 				PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{kubeStateMetricsShootDeployment}))),
 			Entry("required stateful set set missing",
 				requiredMonitoringControlPlaneDeployments,
 				[]*appsv1.StatefulSet{
 					prometheusStatefulSet,
 				},
-				false,
-				true,
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 			Entry("deployment unhealthy",
 				[]*appsv1.Deployment{
@@ -540,8 +534,6 @@ var _ = Describe("HealthChecker", func() {
 					kubeStateMetricsShootDeployment,
 				},
 				requiredMonitoringControlPlaneStatefulSets,
-				false,
-				true,
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 			Entry("stateful set unhealthy",
 				requiredMonitoringControlPlaneDeployments,
@@ -549,8 +541,6 @@ var _ = Describe("HealthChecker", func() {
 					newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 					prometheusStatefulSet,
 				},
-				false,
-				true,
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		)
 	})

@@ -38,11 +38,11 @@ func HasFinalizer(finalizer string) predicate.Predicate {
 			// removed and we don't need to reconcile the secret.
 			return controllerutil.ContainsFinalizer(e.ObjectNew, finalizer)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			// If the secret is already deleted, all finalizers are already gone and we don't need to reconcile it.
 			return false
 		},
-		GenericFunc: func(e event.GenericEvent) bool {
+		GenericFunc: func(_ event.GenericEvent) bool {
 			return false
 		},
 	}

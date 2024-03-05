@@ -46,6 +46,7 @@ func ReconcileWebhookConfig(
 	managedResourceName string,
 	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
+	createIfNotExists bool,
 ) error {
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
@@ -68,10 +69,14 @@ func ReconcileWebhookConfig(
 		return err
 	}
 
-	if err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
-		return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	f := managedresources.Create
+	if !createIfNotExists {
+		f = managedresources.Update
 	}
 
+	if err := f(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
+		return fmt.Errorf("failed reconciling managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	}
 	return nil
 }
 
@@ -114,7 +119,11 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster)
+			// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
+			if err := ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			return nil
 		})
 	}
 

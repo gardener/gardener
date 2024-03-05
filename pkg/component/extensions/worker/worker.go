@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -202,6 +203,26 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		var autoscalerOptions *extensionsv1alpha1.ClusterAutoscalerOptions
+		if workerPool.ClusterAutoscaler != nil {
+			autoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
+			if workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
+				autoscalerOptions.ScaleDownUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold))
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold != nil {
+				autoscalerOptions.ScaleDownGpuUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold))
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownUnneededTime != nil {
+				autoscalerOptions.ScaleDownUnneededTime = workerPool.ClusterAutoscaler.ScaleDownUnneededTime
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownUnreadyTime != nil {
+				autoscalerOptions.ScaleDownUnreadyTime = workerPool.ClusterAutoscaler.ScaleDownUnreadyTime
+			}
+			if workerPool.ClusterAutoscaler.MaxNodeProvisionTime != nil {
+				autoscalerOptions.MaxNodeProvisionTime = workerPool.ClusterAutoscaler.MaxNodeProvisionTime
+			}
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -226,6 +247,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 			Architecture:                     workerPool.Machine.Architecture,
+			ClusterAutoscaler:                autoscalerOptions,
 		})
 	}
 

@@ -77,10 +77,11 @@ var _ = Describe("Certificates tests", func() {
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		fakeClock *testclock.FakeClock
 
-		extensionName      string
-		extensionNamespace *corev1.Namespace
-		shootNamespace     *corev1.Namespace
-		cluster            *extensionsv1alpha1.Cluster
+		extensionName          string
+		extensionNamespace     *corev1.Namespace
+		shootNamespaceTemplate *corev1.Namespace
+		shootNamespace         *corev1.Namespace
+		cluster                *extensionsv1alpha1.Cluster
 
 		seedWebhook              admissionregistrationv1.MutatingWebhook
 		shootMutatingWebhook     admissionregistrationv1.MutatingWebhook
@@ -113,7 +114,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		shootNamespace = &corev1.Namespace{
+		shootNamespaceTemplate = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot--foo--",
 				Labels: utils.MergeStringMaps(shootNamespaceSelector, map[string]string{
@@ -121,6 +122,7 @@ var _ = Describe("Certificates tests", func() {
 				}),
 			},
 		}
+		shootNamespace = shootNamespaceTemplate.DeepCopy()
 		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
 		log.Info("Created shoot Namespace for test", "namespaceName", shootNamespace.Name)
 
@@ -286,10 +288,15 @@ var _ = Describe("Certificates tests", func() {
 		})
 
 		Context("certificate rotation", func() {
+			var shootNamespace2 *corev1.Namespace
+
 			BeforeEach(func() {
+				shootNamespace2 = shootNamespaceTemplate.DeepCopy()
+				cluster2 := cluster.DeepCopy()
+
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -300,6 +307,18 @@ var _ = Describe("Certificates tests", func() {
 					&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 					&secretsutils.Clock, fakeClock,
 				))
+
+				By("Prepare another shoot namespace that is incomplete", func() {
+					Expect(testClient.Create(ctx, shootNamespace2)).To(Succeed())
+
+					cluster2.Name = shootNamespace2.Name
+					Expect(testClient.Create(ctx, cluster2)).To(Succeed())
+
+					DeferCleanup(func() {
+						Expect(testClient.Delete(ctx, cluster2)).To(Or(Succeed(), BeNotFoundError()))
+						Expect(testClient.Delete(ctx, shootNamespace2)).To(Or(Succeed(), BeNotFoundError()))
+					})
+				})
 			})
 
 			It("should rotate the certificates and update the webhook configs", func() {
@@ -331,6 +350,10 @@ var _ = Describe("Certificates tests", func() {
 					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 					return shootWebhookConfig.MutatingWebhookConfig.Webhooks[0].ClientConfig.CABundle
 				}).Should(Not(BeEmpty()))
+
+				By("Verify managed resource in incomplete shoot namespace was not created", func() {
+					Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace2.Name)).To(BeNotFoundError())
+				})
 
 				By("Read re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
@@ -478,7 +501,7 @@ var _ = Describe("Certificates tests", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -583,7 +606,7 @@ func newSeedWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.Service{}}},
 		Target:   extensionswebhook.TargetSeed,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 
@@ -594,7 +617,7 @@ func newShootMutatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, err
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 
@@ -606,7 +629,7 @@ func newShootValidatingWebhook(_ manager.Manager) (*extensionswebhook.Webhook, e
 		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
-		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
+		Handler:  http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
 	}, nil
 }
 

@@ -42,7 +42,7 @@ func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Inform
 			g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(_, newObj interface{}) {
 			newManagedSeed, ok := newObj.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return

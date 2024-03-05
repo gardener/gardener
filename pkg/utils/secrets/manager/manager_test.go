@@ -367,12 +367,12 @@ var _ = Describe("Manager", func() {
 			Expect(Secret(objectMeta, data)).To(Equal(&corev1.Secret{
 				ObjectMeta: objectMeta,
 				Data:       data,
-				Type:       corev1.SecretTypeOpaque,
+				Type:       expectedType,
 				Immutable:  ptr.To(true),
 			}))
 		},
 
 		Entry("regular secret", map[string][]byte{"some": []byte("data")}, corev1.SecretTypeOpaque),
-		Entry("tls secret", map[string][]byte{"tls.key": nil, "tls.crt": nil}, corev1.SecretTypeTLS),
+		Entry("tls secret", map[string][]byte{"tls.key": []byte("key"), "tls.crt": []byte("cert")}, corev1.SecretTypeTLS),
 	)
 })

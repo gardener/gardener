@@ -30,7 +30,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
+	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -200,7 +200,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 		"pathCredentialsCACert": downloader.PathCredentialsCACert,
 		"pathAuthToken":         PathAuthToken,
 		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
-		"secretName":            vali.ValitailTokenSecretName,
+		"secretName":            valiconstants.ValitailTokenSecretName,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}

@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -350,6 +350,16 @@ func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsM
 		return nil
 	}
 	return client.IgnoreNotFound(r.RuntimeClientSet.Client().Delete(ctx, secret))
+}
+
+func (r *Reconciler) generateObservabilityIngressPassword(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	_, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	return err
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {

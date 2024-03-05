@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -73,7 +72,7 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err
@@ -96,7 +95,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 		Use:   "bootstrap",
 		Short: "Bootstrap the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			log, err := utils.InitRun(cmd, opts, "gardener-node-init")
 			if err != nil {
 				return err
@@ -154,11 +153,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Fetching hostname")
-	hostName, err := os.Hostname()
+	hostName, err := nodeagent.GetHostName()
 	if err != nil {
 		return fmt.Errorf("failed fetching hostname: %w", err)
 	}
-	hostName = strings.ToLower(hostName)
 	log.Info("Fetched hostname", "hostname", hostName)
 
 	log.Info("Fetching name of node (if already registered)")

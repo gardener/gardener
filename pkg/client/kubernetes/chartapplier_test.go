@@ -34,8 +34,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 //go:embed testdata/*
@@ -128,7 +128,7 @@ var _ = Describe("chart applier", func() {
 				}
 
 				m := kubernetes.MergeFuncs{
-					corev1.SchemeGroupVersion.WithKind("ConfigMap").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
+					corev1.SchemeGroupVersion.WithKind("ConfigMap").GroupKind(): func(newObj, _ *unstructured.Unstructured) {
 						newObj.SetAnnotations(map[string]string{"new": "new-value"})
 					},
 				}

@@ -42,10 +42,10 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "nodeagent_groups"
 )
 
-CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
-
 # setup virtual GOPATH
 source $(dirname $0)/vgopath-setup.sh
+
+CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
@@ -515,8 +515,8 @@ openapi_definitions() {
     --input-dirs=k8s.io/apimachinery/pkg/version \
     --input-dirs=k8s.io/apimachinery/pkg/runtime \
     --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
-    --report-filename=${PROJECT_ROOT}/pkg/openapi/api_violations.report \
-    --output-package=github.com/gardener/gardener/pkg/openapi \
+    --report-filename=${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report \
+    --output-package=github.com/gardener/gardener/pkg/apiserver/openapi \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 }

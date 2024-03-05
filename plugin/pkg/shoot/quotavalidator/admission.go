@@ -52,7 +52,7 @@ var (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootQuotaValidator, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootQuotaValidator, func(_ io.Reader) (admission.Interface, error) {
 		return New(timeutils.DefaultOps())
 	})
 }

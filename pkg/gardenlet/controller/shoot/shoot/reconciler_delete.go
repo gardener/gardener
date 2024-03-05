@@ -30,8 +30,8 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/operation"
-	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -333,6 +333,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           botanist.ScaleKubeControllerManagerToOne,
 			SkipIf:       !cleanupShootResources || !kubeControllerManagerDeploymentFound,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
+		})
+		deleteAlertmanager = g.Add(flow.Task{
+			Name:         "Deleting Shoot alertmanager",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Alertmanager.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting shoot monitoring stack in Seed",
@@ -677,6 +682,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 
 		syncPoint = flow.NewTaskIDs(
+			deleteAlertmanager,
 			deleteSeedMonitoring,
 			deletePlutono,
 			destroySeedLogging,

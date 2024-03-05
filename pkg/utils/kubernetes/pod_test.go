@@ -215,7 +215,7 @@ var _ = Describe("Pod Utils", func() {
 		It("should do nothing if there are no containers", func() {
 			podSpec.InitContainers = nil
 			podSpec.Containers = nil
-			VisitContainers(&podSpec, func(container *corev1.Container) {
+			VisitContainers(&podSpec, func(_ *corev1.Container) {
 				Fail("called visitor")
 			})
 		})

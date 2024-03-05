@@ -322,9 +322,7 @@ var _ = Describe("Extension", func() {
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
-				Errors: []error{fakeError, fakeError},
-			}))
+			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(error(&multierror.Error{Errors: []error{fakeError, fakeError}})))
 		})
 	})
 
@@ -360,9 +358,7 @@ var _ = Describe("Extension", func() {
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
-				Errors: []error{fakeError},
-			}))
+			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(MatchError(error(&multierror.Error{Errors: []error{fakeError}})))
 		})
 	})
 

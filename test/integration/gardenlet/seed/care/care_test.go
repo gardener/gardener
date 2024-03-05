@@ -16,39 +16,36 @@ package care_test
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/seedsystem"
-	"github.com/gardener/gardener/pkg/component/vpa"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Seed Care controller tests", func() {
@@ -84,9 +81,7 @@ var _ = Describe("Seed Care controller tests", func() {
 					},
 				},
 			},
-			MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-				return thirdpartyapiutil.NewDynamicRESTMapper(config)
-			},
+			MapperProvider: apiutil.NewDynamicRESTMapper,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()
@@ -195,6 +190,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			prometheusoperator.ManagedResourceName,
 			"prometheus-cache",
 			"prometheus-seed",
+			"prometheus-aggregate",
 		}
 
 		test := func(managedResourceNames []string) {

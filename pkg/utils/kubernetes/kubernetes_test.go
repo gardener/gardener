@@ -48,9 +48,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
+	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -643,7 +643,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return nil
 						}),
@@ -666,7 +666,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return errors.New("foo")
 						}),

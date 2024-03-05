@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var logger = log.Log.WithName("controlplane-webhook-test")
@@ -138,7 +138,7 @@ var _ = Describe("Handler", func() {
 		It("should return a patch response if the resource was changed by mutator", func() {
 			// Create mock mutator
 			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
-			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb client.Object) error {
+			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(_ context.Context, obj, _ client.Object) error {
 				obj.SetAnnotations(map[string]string{"foo": "bar"})
 				return nil
 			})

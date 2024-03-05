@@ -88,7 +88,7 @@ func (e *errorClient) Patch(ctx context.Context, obj client.Object, patch client
 
 var _ = Describe("managedresources", func() {
 	var (
-		ctx     = context.TODO()
+		ctx     = context.Background()
 		fakeErr = fmt.Errorf("fake")
 
 		namespace   = "test"
@@ -135,10 +135,6 @@ var _ = Describe("managedresources", func() {
 			actual := &resourcesv1alpha1.ManagedResource{}
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), actual)).To(Succeed())
 			Expect(actual).To(Equal(&resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -150,6 +146,20 @@ var _ = Describe("managedresources", func() {
 					KeepObjects:  ptr.To(keepObjects),
 				},
 			}))
+		})
+	})
+
+	Describe("#Update", func() {
+		It("should fail to update managed resource because it doesn't exist", func() {
+			Expect(Update(ctx, fakeClient, namespace, name, nil, false, "", data, nil, nil, nil)).To(BeNotFoundError())
+
+			// Even though the update of the managed resource is expected to fail,
+			// the secret is still created because it is immutable.
+			secretList := &corev1.SecretList{}
+			Expect(fakeClient.List(ctx, secretList, client.Limit(1))).To(Succeed())
+			Expect(secretList.Items[0].Name).To(HavePrefix(name))
+
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		})
 	})
 
@@ -167,10 +177,6 @@ var _ = Describe("managedresources", func() {
 		It("should successfully create secret and managed resource", func() {
 			secretName, _ := NewSecret(fakeClient, namespace, name, data, true)
 			expectedMR := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ManagedResource",
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -196,7 +202,6 @@ var _ = Describe("managedresources", func() {
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -250,10 +255,6 @@ var _ = Describe("managedresources", func() {
 		BeforeEach(func() {
 			secretName, _ = NewSecret(fakeClient, namespace, name, data, true)
 			expectedMR = &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ManagedResource",
-					APIVersion: "resources.gardener.cloud/v1alpha1",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
@@ -291,7 +292,6 @@ var _ = Describe("managedresources", func() {
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
@@ -325,7 +325,6 @@ var _ = Describe("managedresources", func() {
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,

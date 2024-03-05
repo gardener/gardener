@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: infrastructures.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -39,20 +39,26 @@ spec:
         description: Infrastructure is a specification for cloud provider infrastructure.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: Specification of the Infrastructure. If the object's deletion
-              timestamp is set, this field is immutable.
+            description: |-
+              Specification of the Infrastructure.
+              If the object's deletion timestamp is set, this field is immutable.
             properties:
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
@@ -139,10 +145,9 @@ spec:
                   type: object
                 type: array
               egressCIDRs:
-                description: EgressCIDRs is a list of CIDRs used by the shoot as the
-                  source IP for egress traffic. For certain environments the egress
-                  IPs may not be stable in which case the extension controller may
-                  opt to not populate this field.
+                description: |-
+                  EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic. For certain environments the egress
+                  IPs may not be stable in which case the extension controller may opt to not populate this field.
                 items:
                   type: string
                 type: array
@@ -203,11 +208,10 @@ spec:
                 - type
                 type: object
               nodesCIDR:
-                description: NodesCIDR is the CIDR of the node network that was optionally
-                  created by the acting extension controller. This might be needed
-                  in environments in which the CIDR for the network for the shoot
-                  worker node cannot be statically defined in the Shoot resource but
-                  must be computed dynamically.
+                description: |-
+                  NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
+                  This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
+                  be statically defined in the Shoot resource but must be computed dynamically.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed

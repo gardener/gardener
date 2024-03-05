@@ -44,9 +44,9 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Bootstrap", func() {
@@ -173,7 +173,7 @@ var _ = Describe("Bootstrap", func() {
 				return approvedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &approvedCSR, nil
 			})
 
@@ -212,7 +212,7 @@ var _ = Describe("Bootstrap", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 
@@ -230,7 +230,7 @@ var _ = Describe("Bootstrap", func() {
 				return failedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &failedCSR, nil
 			})
 

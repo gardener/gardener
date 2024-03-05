@@ -25,8 +25,9 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -44,6 +45,7 @@ func (r *Reconciler) newIngressDNSRecord(ctx context.Context, log logr.Logger, s
 		DNSName:                      seed.GetIngressFQDN("*"),
 		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
 		ReconcileOnlyOnChangeOrError: true,
+		IPStack:                      gardenerutils.GetIPStackForSeed(seed.GetInfo()),
 	}
 
 	if provider := seed.GetInfo().Spec.DNS.Provider; provider != nil {

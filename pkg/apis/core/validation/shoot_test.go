@@ -1456,6 +1456,64 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 			})
+
+			Describe("ClusterAutoscaler options validation", func() {
+				var (
+					negativeDuration = metav1.Duration{Duration: -time.Second}
+					positiveDuration = metav1.Duration{Duration: time.Second}
+				)
+
+				DescribeTable("cluster autoscaler values",
+					func(caOptions core.ClusterAutoscalerOptions, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateClusterAutoscalerOptions(&caOptions, nil)).To(matcher)
+					},
+					Entry("valid with empty options", core.ClusterAutoscalerOptions{}, BeEmpty()),
+					Entry("valid with nil options", nil, BeEmpty()),
+					Entry("valid with all options", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold:    ptr.To(float64(0.5)),
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+						ScaleDownUnneededTime:            ptr.To(positiveDuration),
+						ScaleDownUnreadyTime:             ptr.To(positiveDuration),
+						MaxNodeProvisionTime:             ptr.To(positiveDuration),
+					}, BeEmpty()),
+					Entry("valid with ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+					Entry("invalid > 1 ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+					Entry("valid with ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(-0.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), -0.5, "can not be negative"))),
+					Entry("invalid > 1 ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
+						ScaleDownGpuUtilizationThreshold: ptr.To(float64(1.5)),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+					Entry("valid with ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnneededTime"), negativeDuration, "can not be negative"))),
+					Entry("valid with ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnreadyTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative ScaleDownUnreadyTime", core.ClusterAutoscalerOptions{
+						ScaleDownUnreadyTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUnreadyTime"), negativeDuration, "can not be negative"))),
+					Entry("valid with MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
+						MaxNodeProvisionTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, BeEmpty()),
+					Entry("invalid negative MaxNodeProvisionTime", core.ClusterAutoscalerOptions{
+						MaxNodeProvisionTime: ptr.To(negativeDuration),
+					}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				)
+			})
 		})
 
 		Context("dns section", func() {
@@ -2831,70 +2889,67 @@ var _ = Describe("Shoot Validation Tests", func() {
 			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}
-			version                             = "1.27.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
 			DescribeTable("cluster autoscaler values",
-				func(clusterAutoscaler core.ClusterAutoscaler, supportedVersionForIgnoreTaints string, matcher gomegatypes.GomegaMatcher) {
+				func(clusterAutoscaler core.ClusterAutoscaler, matcher gomegatypes.GomegaMatcher) {
 					Expect(ValidateClusterAutoscaler(clusterAutoscaler, nil)).To(matcher)
 				},
-				Entry("valid", core.ClusterAutoscaler{}, version, BeEmpty()),
+				Entry("valid", core.ClusterAutoscaler{}, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
-				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
-				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &positiveInteger,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("invalid with negative maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &negativeInteger,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
+				}, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
 					Expander: &expanderLeastWaste,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("valid with expander most pods", core.ClusterAutoscaler{
 					Expander: &expanderMostPods,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("valid with expander priority", core.ClusterAutoscaler{
 					Expander: &expanderPriority,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("valid with expander random", core.ClusterAutoscaler{
 					Expander: &expanderRandom,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("valid with ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: ignoreTaintsUnique,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("duplicate ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: ignoreTaintsDuplicate,
-				}, version, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), ignoreTaintsDuplicate[1]))),
+				}, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), ignoreTaintsDuplicate[1]))),
 				Entry("invalid with ignore taint",
 					core.ClusterAutoscaler{
 						IgnoreTaints: ignoreTaintsInvalid,
 					},
-					version,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("ignoreTaints[0]"),
 					}))),
 				),
-				Entry("valid with expander priority and least-waste", core.ClusterAutoscaler{Expander: &expanderPriorityAndLeastWaste}, version, BeEmpty()),
+				Entry("valid with expander priority and least-waste", core.ClusterAutoscaler{Expander: &expanderPriorityAndLeastWaste}, BeEmpty()),
 				Entry("invalid expander in multiple expander string",
 					core.ClusterAutoscaler{
 						Expander: &invalidExpander,
 					},
-					version,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("expander"),
@@ -2904,7 +2959,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					core.ClusterAutoscaler{
 						Expander: &invalidMultipleExpanderString,
 					},
-					version,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("expander"),
@@ -2912,16 +2966,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 				),
 				Entry("valid with newPodScaleUpDelay", core.ClusterAutoscaler{
 					NewPodScaleUpDelay: &metav1.Duration{Duration: time.Minute},
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("invalid with negative newPodScaleUpDelay", core.ClusterAutoscaler{
 					NewPodScaleUpDelay: &negativeDuration,
-				}, version, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
+				}, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &positiveInteger,
-				}, version, BeEmpty()),
+				}, BeEmpty()),
 				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &negativeInteger,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
+				}, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
 			)
 
 			Describe("taint validation", func() {

@@ -39,11 +39,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Certificates", func() {
@@ -152,7 +152,7 @@ var _ = Describe("Certificates", func() {
 				return approvedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &approvedCSR, nil
 			})
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
@@ -183,7 +183,7 @@ var _ = Describe("Certificates", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 
@@ -198,7 +198,7 @@ var _ = Describe("Certificates", func() {
 				return failedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &failedCSR, nil
 			})
 
@@ -213,7 +213,7 @@ var _ = Describe("Certificates", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 

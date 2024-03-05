@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 		guestBookApp = applications.GuestBookTest{}
 	)
 
-	CBeforeEach(func(c context.Context) {
+	CBeforeEach(func(_ context.Context) {
 		validateConfig()
 	}, 1*time.Minute)
 	CJustBeforeEach(func(ctx context.Context) {
