@@ -62,6 +62,7 @@ const (
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.81.0
+	// beta: v1.91.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
 	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the
@@ -122,7 +123,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:                 {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:                 {Default: true, PreRelease: featuregate.Beta},
 	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	APIServerFastRollout:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseGardenerNodeAgent:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
