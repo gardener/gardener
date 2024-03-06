@@ -24,6 +24,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -46,6 +47,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -575,6 +578,37 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 	}
 
+	if k.values.NamePrefix != "" {
+		serviceMonitor := k.emptyServiceMonitor()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), serviceMonitor, func() error {
+			serviceMonitor.Labels = monitoringutils.Labels(garden.Label)
+			serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port:      portNameMetrics,
+					Scheme:    "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
+						Key:                  resourcesv1alpha1.DataKeyToken,
+					}},
+					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"rest_client_requests_total",
+						"process_max_fds",
+						"process_open_fds",
+					),
+				}},
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
@@ -588,6 +622,7 @@ func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.newShootAccessSecret().Secret,
+		k.emptyServiceMonitor(),
 	)
 }
 
@@ -628,6 +663,10 @@ func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.Manage
 func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
 	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
+}
+
+func (k *kubeControllerManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(k.values.NamePrefix+v1beta1constants.DeploymentNameKubeControllerManager, k.namespace, garden.Label)}
 }
 
 func getLabels() map[string]string {

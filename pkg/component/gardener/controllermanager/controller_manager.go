@@ -110,6 +110,7 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 		g.service(),
 		g.verticalPodAutoscaler(),
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, controllerManagerConfigConfigMap.Name),
+		g.serviceMonitor(),
 	)
 	if err != nil {
 		return err

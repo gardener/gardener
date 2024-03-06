@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -444,29 +445,30 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 	}
 
 	actualShootAccessSecret := &corev1.Secret{}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualShootAccessSecret)).To(Succeed())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualShootAccessSecret)).To(Succeed())
 	accessSecret.ResourceVersion = "1"
-	Expect(actualShootAccessSecret).To(Equal(accessSecret))
+	ExpectWithOffset(1, actualShootAccessSecret).To(Equal(accessSecret))
 
 	By("Check Runtime Cluster Resources")
 	serverCert, ok := fakeSecretManager.Get("gardener-admission-controller-cert")
-	Expect(ok).To(BeTrue())
+	ExpectWithOffset(1, ok).To(BeTrue())
 
 	runtimeMr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
 		Name:      managedResourceNameRuntime,
 		Namespace: namespace,
 	}}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeMr), runtimeMr)).To(Succeed())
-	Expect(runtimeMr.Labels).To(Equal(map[string]string{
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeMr), runtimeMr)).To(Succeed())
+	ExpectWithOffset(1, runtimeMr.Labels).To(Equal(map[string]string{
 		"gardener.cloud/role":                "seed-system-component",
 		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
 	}))
-	Expect(runtimeMr).To(consistOf(
+	ExpectWithOffset(1, runtimeMr).To(consistOf(
 		configMap(namespace, testValues),
 		deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues),
 		service(namespace, testValues),
 		vpa(namespace),
 		podDisruptionBudget(namespace, k8sGreaterEqual126),
+		serviceMonitor(namespace),
 	))
 
 	runtimeManagedResourceSecret := &corev1.Secret{
@@ -475,22 +477,22 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 			Namespace: namespace,
 		},
 	}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
-	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-	Expect(runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
+	ExpectWithOffset(1, runtimeManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+	ExpectWithOffset(1, runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 	By("Check Virtual Cluster Resources")
 	virtualMr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
 		Name:      managedResourceNameVirtual,
 		Namespace: namespace,
 	}}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualMr), virtualMr)).To(Succeed())
-	Expect(virtualMr.Labels).To(Equal(map[string]string{
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualMr), virtualMr)).To(Succeed())
+	ExpectWithOffset(1, virtualMr.Labels).To(Equal(map[string]string{
 		"origin":                             "gardener",
 		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
 	}))
 	caGardener, ok := fakeSecretManager.Get("ca-gardener")
-	Expect(virtualMr).To(consistOf(
+	ExpectWithOffset(1, virtualMr).To(consistOf(
 		clusterRole(),
 		clusterRoleBinding(),
 		validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues),
@@ -502,10 +504,10 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 			Namespace: namespace,
 		},
 	}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualManagedResourceSecret), virtualManagedResourceSecret)).To(Succeed())
-	Expect(ok).To(BeTrue())
-	Expect(virtualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-	Expect(virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualManagedResourceSecret), virtualManagedResourceSecret)).To(Succeed())
+	ExpectWithOffset(1, ok).To(BeTrue())
+	ExpectWithOffset(1, virtualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+	ExpectWithOffset(1, virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
@@ -780,6 +782,27 @@ func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) *policyv1.Po
 	}
 
 	return pdb
+}
+
+func serviceMonitor(namespace string) *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "garden-gardener-admission-controller",
+			Namespace: namespace,
+			Labels:    map[string]string{"prometheus": "garden"},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "admission-controller"}},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "metrics",
+				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(gardener_admission_controller_.+|rest_client_.+|controller_runtime_.+|go_.+)$`,
+				}},
+			}},
+		},
+	}
 }
 
 func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {

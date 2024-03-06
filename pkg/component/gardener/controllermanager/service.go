@@ -20,7 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const serviceName = DeploymentName
+const (
+	serviceName     = DeploymentName
+	portNameMetrics = "metrics"
+)
 
 func (g *gardenerControllerManager) service() *corev1.Service {
 	service := &corev1.Service{
@@ -33,7 +36,7 @@ func (g *gardenerControllerManager) service() *corev1.Service {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: GetLabels(),
 			Ports: []corev1.ServicePort{{
-				Name:       "metrics",
+				Name:       portNameMetrics,
 				Port:       int32(metricsPort),
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(metricsPort),

@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
@@ -79,6 +80,7 @@ var _ = Describe("GardenerScheduler", func() {
 
 		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
 		serviceRuntime         *corev1.Service
+		serviceMonitor         *monitoringv1.ServiceMonitor
 		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
 
 		clusterRole        *rbacv1.ClusterRole
@@ -179,7 +181,24 @@ var _ = Describe("GardenerScheduler", func() {
 				}},
 			},
 		}
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-scheduler",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "scheduler"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(rest_client_.+|controller_runtime_.+|workqueue_.+|go_.+)$`,
+					}},
+				}},
+			},
+		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-scheduler-vpa",
@@ -196,7 +215,7 @@ var _ = Describe("GardenerScheduler", func() {
 					Name:       "gardener-scheduler",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -379,6 +398,7 @@ var _ = Describe("GardenerScheduler", func() {
 				expectedRuntimeObject = []client.Object{
 					configMap(namespace, values),
 					serviceRuntime,
+					serviceMonitor,
 					vpa,
 					deployment(namespace, "gardener-scheduler-config-3cf6616e", values),
 				}

@@ -120,6 +120,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		a.service(),
 		a.vpa(),
 		admissionConfigConfigMap,
+		a.serviceMonitor(),
 	)
 	if err != nil {
 		return err
