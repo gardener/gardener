@@ -98,6 +98,8 @@ func CheckHealth(obj client.Object) (bool, error) {
 		return true, health.CheckVerticalPodAutoscaler(o)
 	case *certv1alpha1.Certificate:
 		return true, health.CheckCertificate(o)
+	case *certv1alpha1.Issuer:
+		return true, health.CheckCertificateIssuer(o)
 	}
 
 	return false, nil

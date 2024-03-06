@@ -561,4 +561,25 @@ var _ = Describe("CheckHealth", func() {
 
 		testSuite()
 	})
+
+	Context("Certificate Issuer", func() {
+		BeforeEach(func() {
+			healthy = &certv1alpha1.Issuer{
+				Status: certv1alpha1.IssuerStatus{
+					State: "Ready",
+				},
+			}
+
+			unhealthy = &certv1alpha1.Issuer{}
+			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Issuer{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+			}
+		})
+
+		testSuite()
+	})
 })

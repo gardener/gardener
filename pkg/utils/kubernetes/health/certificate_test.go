@@ -74,4 +74,22 @@ var _ = Describe("Certificate", func() {
 			Expect(reason).To(Equal(`observed generation outdated (1/10)`))
 		})
 	})
+
+	Describe("#CheckCertificateIssuer", func() {
+		var issuer *certv1alpha1.Issuer
+
+		BeforeEach(func() {
+			issuer = &certv1alpha1.Issuer{}
+		})
+
+		It("should return no error because issuer is ready", func() {
+			issuer.Status.State = "Ready"
+
+			Expect(health.CheckCertificateIssuer(issuer)).ToNot(HaveOccurred())
+		})
+
+		It("should return an error because issuer is not ready", func() {
+			Expect(health.CheckCertificateIssuer(issuer)).To(MatchError(`issuer state is "" ("Ready" expected)`))
+		})
+	})
 })

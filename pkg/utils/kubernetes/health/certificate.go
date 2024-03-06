@@ -47,3 +47,12 @@ func IsCertificateProgressing(cert *certv1alpha1.Certificate) (bool, string) {
 
 	return false, "Certificate is fully rolled out"
 }
+
+// CheckCertificateIssuer checks whether the given issuer object is healthy.
+func CheckCertificateIssuer(issuer *certv1alpha1.Issuer) error {
+	if issuerState := issuer.Status.State; issuerState != certv1alpha1.StateReady {
+		return fmt.Errorf("issuer state is %q (%q expected)", issuerState, certv1alpha1.StateReady)
+	}
+
+	return nil
+}
