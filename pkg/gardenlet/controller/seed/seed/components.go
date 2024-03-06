@@ -370,6 +370,48 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		}
 	}
 
+	// TODO(scheererj): Remove this after v1.95 has been released.
+	// Allow temporary creation of ingress gateway copy to easy migration
+
+	// Map all ingress gateway namespace names to the corresponding gateway values for easier access
+	namespaceToGatewayValues := map[string]istio.IngressGatewayValues{}
+	for _, values := range istioDeployer.GetValues().IngressGateway {
+		namespaceToGatewayValues[values.Namespace] = values
+	}
+
+	// Search for istio namespaces with an annotation to copy them and add them to the list with a different namespace
+	for _, label := range []string{"istio", v1beta1constants.LabelExposureClassHandlerName} {
+		namespaceList := &metav1.PartialObjectMetadataList{}
+		namespaceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NamespaceList"))
+		if err := r.SeedClientSet.Client().List(ctx, namespaceList, client.HasLabels{label}); err != nil {
+			return nil, nil, "", err
+		}
+		for _, ns := range namespaceList.Items {
+			if targetNamespace, ok := ns.Annotations["alpha.istio-ingress.gardener.cloud/migrate-to"]; ok && targetNamespace != "" {
+				if gatewayValues, ok := namespaceToGatewayValues[ns.Name]; ok {
+					var zone *string
+					if len(gatewayValues.Zones) == 1 {
+						zone = ptr.To(gatewayValues.Zones[0])
+					}
+					if err := sharedcomponent.AddIstioIngressGateway(
+						ctx,
+						r.SeedClientSet.Client(),
+						istioDeployer,
+						targetNamespace,
+						gatewayValues.Annotations,
+						gatewayValues.Labels,
+						gatewayValues.ExternalTrafficPolicy,
+						nil,
+						zone,
+						seed.IsDualStack(),
+					); err != nil {
+						return nil, nil, "", err
+					}
+				}
+			}
+		}
+	}
+
 	return istioDeployer, labels, istioDeployer.GetValues().IngressGateway[0].Namespace, nil
 }
 
