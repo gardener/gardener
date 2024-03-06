@@ -198,6 +198,9 @@ func (r *Reconciler) reconcileBackupBucket(
 	} else if extensionBackupBucket.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupbucket status
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+		if !metav1.HasAnnotation(extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation) {
+			mustReconcileExtensionBackupBucket = true
+		}
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
