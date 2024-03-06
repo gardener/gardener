@@ -27,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -489,6 +490,89 @@ var _ = Describe("Etcd", func() {
 			}
 
 			return obj
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-virtual-garden-etcd-" + testRole,
+				Namespace: testNamespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"name":     "etcd",
+					"instance": "virtual-garden-" + etcdName,
+				}},
+				Endpoints: []monitoringv1.Endpoint{
+					{
+						Port:   "client",
+						Scheme: "https",
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+							InsecureSkipVerify: true,
+							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
+								Key:                  secretsutils.DataKeyCertificate,
+							}},
+							KeySecret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
+								Key:                  secretsutils.DataKeyPrivateKey,
+							},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+								TargetLabel:  "role",
+							},
+							{
+								Action:      "replace",
+								Replacement: "virtual-garden-etcd",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+							Action: "labeldrop",
+							Regex:  `^instance$`,
+						}},
+					},
+					{
+						Port:   "backuprestore",
+						Scheme: "https",
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+							InsecureSkipVerify: true,
+							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
+								Key:                  secretsutils.DataKeyCertificate,
+							}},
+							KeySecret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
+								Key:                  secretsutils.DataKeyPrivateKey,
+							},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+								TargetLabel:  "role",
+							},
+
+							{
+								Action:      "replace",
+								Replacement: "virtual-garden-etcd-backup",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								Action: "labeldrop",
+								Regex:  `^instance$`,
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__name__"},
+								Action:       "keep",
+								Regex:        `^(etcdbr_defragmentation_duration_seconds_.+|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_.+|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_.+|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_.+|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$`,
+							},
+						},
+					},
+				},
+			},
 		}
 	)
 
@@ -1030,7 +1114,7 @@ var _ = Describe("Etcd", func() {
 			})
 		}
 
-		Context("with backup", func() {
+		When("backup is configured", func() {
 			var backupConfig = &BackupConfig{
 				Provider:                     "prov",
 				SecretRefName:                "secret-key",
@@ -1136,7 +1220,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("when HA setup is configured", func() {
+		When("HA setup is configured", func() {
 			var (
 				rotationPhase gardencorev1beta1.CredentialsRotationPhase
 			)
@@ -1311,7 +1395,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("when etcd cluster is hibernated", func() {
+		When("etcd cluster is hibernated", func() {
 			BeforeEach(func() {
 				secretNamesToTimes := map[string]time.Time{}
 
@@ -1433,7 +1517,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("when TopologyAwareRoutingEnabled=true", func() {
+		When("TopologyAwareRoutingEnabled=true", func() {
 			It("should successfully deploy with expected etcd client service annotations and labels", func() {
 				oldTimeNow := TimeNow
 				defer func() { TimeNow = oldTimeNow }()
@@ -1487,6 +1571,77 @@ var _ = Describe("Etcd", func() {
 				Expect(etcd.Deploy(ctx)).To(Succeed())
 			})
 		})
+
+		When("name prefix is set", func() {
+			It("should successfully deploy the service monitor", func() {
+				oldTimeNow := TimeNow
+				defer func() { TimeNow = oldTimeNow }()
+				TimeNow = func() time.Time { return now }
+
+				class := ClassImportant
+				updateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
+
+				replicas = ptr.To[int32](1)
+
+				etcd = New(log, c, testNamespace, sm, Values{
+					Role:                        testRole,
+					Class:                       class,
+					Replicas:                    replicas,
+					StorageCapacity:             storageCapacity,
+					StorageClassName:            &storageClassName,
+					DefragmentationSchedule:     &defragmentationSchedule,
+					CARotationPhase:             "",
+					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
+					PriorityClassName:           priorityClassName,
+					TopologyAwareRoutingEnabled: true,
+					NamePrefix:                  "virtual-garden-",
+				})
+				newSetHVPAConfigFunc(updateMode)()
+
+				DeferCleanup(test.WithVar(&etcdName, "virtual-garden-"+etcdName))
+				DeferCleanup(test.WithVar(&hvpaName, "virtual-garden-"+hvpaName))
+
+				etcdObj := etcdObjFor(
+					class,
+					1,
+					nil,
+					"",
+					"",
+					nil,
+					nil,
+					secretNameCA,
+					secretNameClient,
+					secretNameServer,
+					nil,
+					nil,
+					true,
+				)
+				etcdObj.Name = etcdName
+				etcdObj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-virtual-garden-etcd")
+
+				hvpaObj := hvpaFor(class, 1, updateMode)
+				hvpaObj.Name = hvpaName
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(etcdObj))
+					}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(hvpaObj))
+					}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, "garden-virtual-garden-etcd-main"), gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor))
+					}),
+				)
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -1527,6 +1682,7 @@ var _ = Describe("Etcd", func() {
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
 				c.EXPECT().Delete(ctx, etcdRes),
 			)
 			Expect(etcd.Destroy(ctx)).To(Succeed())
@@ -1543,12 +1699,25 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail when the service monitor deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
+			gomock.InOrder(
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}).Return(fakeErr),
+			)
+
+			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail when the etcd deletion fails", func() {
 			defer test.WithVar(&gardener.TimeNow, nowFunc)()
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
 				c.EXPECT().Delete(ctx, etcdRes).Return(fakeErr),
 			)
 
