@@ -147,8 +147,6 @@ github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nos
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/gardener/cert-management v0.12.0 h1:pMT15xtMFKmaKlzgBohBYOwoE29HC/S3QJKmLLU8zG4=
 github.com/gardener/cert-management v0.12.0/go.mod h1:jSqNDV4H1SR/9lLS412Uhqp0+ibPe6rgRupoDDDOxeg=
-github.com/gardener/controller-manager-library v0.2.1-0.20231213134107-496e1a49d791 h1:Neqc/RIUyM8sQx3+VgIA+OGA/iOfZ90R5wD67m5mE4k=
-github.com/gardener/controller-manager-library v0.2.1-0.20231213134107-496e1a49d791/go.mod h1:aepVXNhGH90BjVr9IGDACutA2Kqy9/2rqZZuE2FqJMo=
 github.com/gardener/dependency-watchdog v1.2.1 h1:Q0zqinZNImBuNYfNQGAXkUh5qrfJyrynO5QjUTzO/7w=
 github.com/gardener/dependency-watchdog v1.2.1/go.mod h1:RgU0VmsdBHxRU8IO9VsLxEinz58xEJdEz5hxvMqLKHQ=
 github.com/gardener/etcd-druid v0.22.0 h1:DVe+Zjrb93r9vI1uUiCTMHBffIUoMAKhNzFZNC6hsQ8=
