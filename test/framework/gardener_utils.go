@@ -20,6 +20,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -215,7 +216,7 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 }
 
 // ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found anymore.
-func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
+func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot, seedClient client.Client) (rErr error) {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 	if err := f.AnnotateShoot(ctx, shoot, map[string]string{v1beta1constants.ShootIgnore: "true"}); err != nil {
@@ -224,6 +225,19 @@ func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Conte
 
 	if err := f.DeleteShoot(ctx, shoot); err != nil {
 		return err
+	}
+
+	// TODO(acumino): Remove this once prometheus is moved to golang component based deployment.
+	{
+		ingress := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus",
+				Namespace: shoot.Status.TechnicalID,
+			},
+		}
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, ingress)); err != nil {
+			return fmt.Errorf("error deleting ingress %s: %w", client.ObjectKeyFromObject(ingress), err)
+		}
 	}
 
 	patch := client.MergeFrom(shoot.DeepCopy())
