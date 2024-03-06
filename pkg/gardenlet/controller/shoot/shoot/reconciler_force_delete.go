@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -78,8 +79,9 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 	}
 
 	var (
-		defaultInterval = 5 * time.Second
-		defaultTimeout  = 30 * time.Second
+		defaultInterval         = 5 * time.Second
+		defaultTimeout          = 30 * time.Second
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 
 		cleaner = NewCleaner(log, botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace)
 
@@ -93,6 +95,21 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Name:         "Waiting until extension resources have been deleted",
 			Fn:           cleaner.WaitUntilExtensionObjectsDeleted,
 			Dependencies: flow.NewTaskIDs(deleteExtensionObjects),
+		})
+		destroyIngressDomainDNSRecord = g.Add(flow.Task{
+			Name:   "Destroying nginx ingress DNS record",
+			Fn:     botanist.DestroyIngressDNSRecord,
+			SkipIf: !nonTerminatingNamespace,
+		})
+		destroyExternalDomainDNSRecord = g.Add(flow.Task{
+			Name:   "Destroying external domain DNS record",
+			Fn:     botanist.DestroyExternalDNSRecord,
+			SkipIf: !nonTerminatingNamespace,
+		})
+		destroyInternalDomainDNSRecord = g.Add(flow.Task{
+			Name:   "Destroying internal domain DNS record",
+			Fn:     botanist.DestroyInternalDNSRecord,
+			SkipIf: !nonTerminatingNamespace,
 		})
 		deleteMachineControllerManager = g.Add(flow.Task{
 			Name: "Deleting machine-controller-manager",
@@ -117,11 +134,6 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Fn:           flow.TaskFn(cleaner.WaitUntilMachineResourcesDeleted).Timeout(defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})
-		deleteCluster = g.Add(flow.Task{
-			Name:         "Deleting Cluster resource",
-			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted),
-		})
 		setKeepObjectsForManagedResources = g.Add(flow.Task{
 			Name:         "Configuring managed resources to not keep their objects when deleted",
 			Fn:           flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -136,6 +148,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Name:         "Waiting until managed resources have been deleted",
 			Fn:           cleaner.WaitUntilManagedResourcesDeleted,
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
+		})
+		deleteCluster = g.Add(flow.Task{
+			Name:         "Deleting Cluster resource",
+			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, destroyIngressDomainDNSRecord, destroyExternalDomainDNSRecord, destroyInternalDomainDNSRecord, waitUntilManagedResourcesDeleted),
 		})
 
 		syncPoint = flow.NewTaskIDs(
