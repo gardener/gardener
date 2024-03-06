@@ -75,6 +75,7 @@ var _ = BeforeSuite(func() {
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_alertmanagers.yaml"),
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_prometheuses.yaml"),
 				filepath.Join("crds", "10-crd-cert.gardener.cloud_certificates.yaml"),
+				filepath.Join("crds", "10-crd-cert.gardener.cloud_issuers.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,

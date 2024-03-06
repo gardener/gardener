@@ -377,6 +377,7 @@ var _ = Describe("Health controller tests", func() {
 				prometheus   *monitoringv1.Prometheus
 				alertManager *monitoringv1.Alertmanager
 				cert         *certv1alpha1.Certificate
+				issuer       *certv1alpha1.Issuer
 			)
 
 			JustBeforeEach(func() {
@@ -420,6 +421,12 @@ var _ = Describe("Health controller tests", func() {
 				cert.Status = *certStatus
 				Expect(testClient.Status().Update(ctx, cert)).To(Succeed())
 
+				issuer = generateCertificateIssuerTestResource(managedResource.Name)
+				issuerStatus := issuer.Status.DeepCopy()
+				Expect(testClient.Create(ctx, issuer)).To(Succeed())
+				issuer.Status = *issuerStatus
+				Expect(testClient.Status().Update(ctx, issuer)).To(Succeed())
+
 				DeferCleanup(func() {
 					By("Delete test resources")
 					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
@@ -429,6 +436,7 @@ var _ = Describe("Health controller tests", func() {
 					Expect(testClient.Delete(ctx, prometheus)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, alertManager)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, cert)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, issuer)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
 				By("Add resources to ManagedResource status")
@@ -480,6 +488,14 @@ var _ = Describe("Health controller tests", func() {
 							Kind:       "Certificate",
 							Namespace:  cert.Namespace,
 							Name:       cert.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "cert.gardener.cloud/v1alpha1",
+							Kind:       "Issuer",
+							Namespace:  issuer.Namespace,
+							Name:       issuer.Name,
 						},
 					},
 				}
@@ -674,6 +690,34 @@ var _ = Describe("Health controller tests", func() {
 			})
 
 			It("sets Progressing to false even if Certificate is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				metav1.SetMetaDataAnnotation(&cert.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Patch(ctx, cert, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Issuer is not fully rolled out", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("CertificateProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Issuer is not fully rolled out but skip-health-check annotation is present", func() {
 				patch := client.MergeFrom(cert.DeepCopy())
 				metav1.SetMetaDataAnnotation(&cert.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
 				cert.Status.ObservedGeneration = cert.Generation - 1
@@ -898,6 +942,19 @@ func generateCertificateTestResource(name string) *certv1alpha1.Certificate {
 					LastTransitionTime: metav1.Now(),
 				},
 			},
+			ObservedGeneration: 42,
+		},
+	}
+}
+
+func generateCertificateIssuerTestResource(name string) *certv1alpha1.Issuer {
+	return &certv1alpha1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Status: certv1alpha1.IssuerStatus{
+			State:              "Ready",
 			ObservedGeneration: 42,
 		},
 	}

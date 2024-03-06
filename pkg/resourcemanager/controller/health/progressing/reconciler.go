@@ -125,6 +125,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			obj = &monitoringv1.Alertmanager{}
 		case "Certificate":
 			obj = &certv1alpha1.Certificate{}
+		case "Issuer":
+			obj = &certv1alpha1.Issuer{}
 		default:
 			continue
 		}
@@ -227,6 +229,9 @@ func (r *Reconciler) checkProgressing(ctx context.Context, obj client.Object) (b
 
 	case *certv1alpha1.Certificate:
 		progressing, reason = health.IsCertificateProgressing(o)
+
+	case *certv1alpha1.Issuer:
+		progressing, reason = health.IsCertificateIssuerProgressing(o)
 	}
 
 	return progressing, reason, nil

@@ -88,6 +88,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		"prometheuses":  &monitoringv1.Prometheus{},
 		"alertmanagers": &monitoringv1.Alertmanager{},
 		"certificates":  &certv1alpha1.Certificate{},
+		"issuers":       &certv1alpha1.Issuer{},
 	} {
 		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
 

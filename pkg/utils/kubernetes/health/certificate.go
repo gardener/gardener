@@ -56,3 +56,12 @@ func CheckCertificateIssuer(issuer *certv1alpha1.Issuer) error {
 
 	return nil
 }
+
+// IsCertificateIssuerProgressing returns false if the Issuer's generation matches the observed generation.
+func IsCertificateIssuerProgressing(issuer *certv1alpha1.Issuer) (bool, string) {
+	if issuer.Status.ObservedGeneration < issuer.Generation {
+		return true, fmt.Sprintf("observed generation outdated (%d/%d)", issuer.Status.ObservedGeneration, issuer.Generation)
+	}
+
+	return false, "Issuer is fully rolled out"
+}
