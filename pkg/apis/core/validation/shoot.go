@@ -883,10 +883,6 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
-	if kubernetes.AllowPrivilegedContainers != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "allowPrivilegedContainers field should not be set"))
-	}
-
 	if workerless {
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
 	} else {

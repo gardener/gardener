@@ -810,14 +810,6 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Context("allowPrivilegedContainers field is not set", func() {
-		It("should not set the field", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-		})
-	})
-
 	Describe("Worker defaulting", func() {
 		var (
 			maxSurge       = intstr.FromInt32(2)

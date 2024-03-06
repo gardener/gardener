@@ -6348,20 +6348,6 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <tbody>
 <tr>
 <td>
-<code>allowPrivilegedContainers</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.</p>
-<p>Deprecated: This field is deprecated and will be removed in a future version.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>clusterAutoscaler</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">
