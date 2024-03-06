@@ -44,7 +44,7 @@ the cloud provider account of the Gardener user.
 
 Cloud services, like AWS, Azure, Alicloud, GCP and others, support identity
 federation with external to them identity providers via trust configuration
-using the OIDC protocol. This way the remotely running workloads can use JWTs
+using the OIDC protocol. This way, the remotely running workloads can use JWTs
 issued from the external identity provider to authenticate with the cloud
 service, hence no static credentials like service keys are used. More details
 for the cloud providers, can be found at their documentation:
@@ -87,14 +87,14 @@ the credentials of Gardener users.
 - Manage shoot clusters without credentials provided by the user.
 - Replace static credentials for gardener system components, e.g. DNS and backup
   controllers.
-- Rotate credentials regularly. Rotating the token signing keys, will
-  effectively invalidate all previously issued tokens.
+- Rotate credentials regularly. Rotating the token signing keys will effectively
+  invalidate all previously issued tokens.
 - Offload Gardener users from the burden to store and manage static credentials
   for their accounts.
 
 ### Non-Goals
 
-- Register gardener as trusted identity in the shoot clusters.
+- Register Gardener as trusted identity in the shoot clusters.
 - The tokens to be usable for authentication with the Gardener API.
 - Compatibility with gardenctl integration with cloud provider CLIs.
 - OIDC compliance - just as Kubernetes, Gardener goal is not to have full OIDC
@@ -105,10 +105,10 @@ the credentials of Gardener users.
 
 In short, Gardener API server will generate JWTs on request by gardenlet.
 Gardenlet will ensure that the tokens can be consumed conveniently by the
-various components in the seed clusters, for example will write them in secrets.
-Service provider extensions will be responsible for making adjustments so that
-the token is consumable by the service SDK. For shoot clusters, it would be
-natural that the `cloudprovider` secret is reused as storage target for the
+various components in the seed clusters. For example, it will write them into
+secrets. Service provider extensions will be responsible for making adjustments
+so that the token is consumable by the service SDK. For shoot clusters, it would
+be natural that the `cloudprovider` secret is reused as storage target for the
 token.
 
 Gardenlet will take care to refresh the token regularly and on time so that the
@@ -134,7 +134,7 @@ frequent token renewals as well as tokens with too long validity.
 Similarly to `providerConfig` in other APIs, `WorkloadIdentity` resource will
 feature a `config` field that will be of byte array type allowing service
 provider specific configurations. Usually, the clients for services supporting
-identity federation needs additional information about the service account and
+identity federation need additional information about the service account and
 the federated identity in order to successfully use the JWT. This information is
 known to the service account owners and they will provide it via this `config`
 field, for example when AWS is the service the AWS IAM Role ARN needs to be
@@ -174,9 +174,9 @@ status:
 JWTs will be available when the clients send `create` requests on the
 `WorkloadIdentity/token` subresource. As the clients will be providing various
 custom information that will be used for the generation of the JWT, yet another
-custom resource `TokenRequest` in the API group `security.gardener.cloud` will
-be used. It is envisioned this resource to contain just metadata for the context
-where the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
+resource `TokenRequest` in the API group `security.gardener.cloud` will be used.
+It is envisioned this resource to contain just metadata for the context where
+the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
 server must verify the provided metadata and it can enhance the JWT with
 additional information derived from the context, for example with information
 for the project and the seed of the shoot cluster. Gardener API can also add
@@ -216,7 +216,7 @@ as infrastructure service credentials:
 - new optional field `SecretBinding.workloadIdentityRef` will be introduced, it
   will refer to a `WorkloadIdentity` resource by its name and namespace. The
   value of the field will not be immutable and will allow existing shoots to
-  change the workloadidentity they are using to allow rotation by the Gardener
+  change the `WorkloadIdentity` they are using to allow rotation by the Gardener
   users.
 - validation will ensure that either `secretRef` or `workloadIdentityRef` is
   set, but not both.
@@ -243,7 +243,7 @@ extension is using workload identity letting extension controllers know when a
 JWT or other kind of credentials are used.
 
 Similar approach can be taken to provide alternative to
-`shoot.spec.dns.providers.secretName`, e.g. a new filed `workloadIdentity` will
+`shoot.spec.dns.providers.secretName`, e.g. a new field `workloadIdentity` will
 extended the `shoot.spec.dns.providers`.
 
 ```yaml
@@ -266,7 +266,7 @@ A new component, positively the metadata server from
 metadata discovery documents `/.well-known/openid-configuration` and `jwks_uri`.
 This component will be only provided with access to the public keys or any other
 public information, it will not hold or have access to any private information
-related to token generation and singing. To support keys rotation, it will serve
+related to token generation and signing. To support key rotation, it will serve
 also the older set of public keys so that already issued but still valid and not
 expired tokens can be used for identity federation with external services.
 
@@ -277,9 +277,9 @@ external services that do not automatically rediscover the OIDC issuer metadata
 when the token is signed with still unknown to them key.
 
 The Kubernetes API server extended by the Gardener API server is already issuing
-JWTs for the kubernetes service accounts. To completely separate workload
-identity JWTs from service accounts JWTs, Gardener API will accept issuer URL
-parameter which value should not be the same as the issuer of the kubernetes
+JWTs for the Kubernetes service accounts. To completely separate workload
+identity JWTs from service accounts JWTs, Gardener API will accept an issuer URL
+parameter which value should not be the same as the issuer of the Kubernetes
 service accounts. The workload identity issuer url should not be among the
 accepted issuers of the Kubernetes API server. Other configuration options for
 the Gardener API server will be the private key used to sign the tokens, the
@@ -292,7 +292,7 @@ workload identity JWTs because:
 
 - the issuer of the tokens is not accepted
 - the tokens are not signed by trusted key
-- workload identity JWTs are not referring to any kubernetes service account
+- workload identity JWTs are not referring to any Kubernetes service account
 - Gardener API will not serve the purpose of authentication or authorization
   webhook, it will also not implement any authentication or authorization based
   on the workload identity JWTs, it will just generate and sign them.
@@ -316,7 +316,7 @@ A sample payload of a token will look like:
     "iss": "https://workload-identity.gardener-local.gardener.cloud",
     "sub": "gardener.cloud:workloadidentity:<workloadidentity-namespace>:<workloadidentity-name>:<workloadidentity-uid>",
     "gardener.cloud": {
-        "workloadidentity": {
+        "workloadIdentity": {
             "name": "<workloadidentity-name>",
             "namespace": "<workloadidentity-namespace>",
             "uid": "<workloadidentity-uid>",
@@ -353,15 +353,14 @@ identity tokens only for `WorkloadIdentity` that they are responsible for.
 As the tokens will usually have lifetime shorter than the period between two
 reconciliations, it is essential that the token creation and management are
 decoupled from the current control loops of gardenlet and implemented by a
-dedicated controller, also running in the gardenlet controller manager. Forced
-renewal of the tokens will be performed when the resource referring
-`WorkloadIdentity`s is annotated with
-`gardener.cloud/operation=renew-workload-identity-token`. The annotation is
-deliberately not set on the `WorkloadIdentity` because single `WorkloadIdentity`
-can be used by multiple shoots potentially running on different seeds, i.e.
-multiple controllers would be responsible to react on the annotation which is
-usually fine, but all of them would have to negotiate when the operation is
-completed and the annotation to be removed.
+dedicated controller, also running as part of the gardenlet. Forced renewal of
+the tokens will be performed when the resource referring `WorkloadIdentity`s is
+annotated with `gardener.cloud/operation=renew-workload-identity-token`. The
+annotation is deliberately not set on the `WorkloadIdentity` because single
+`WorkloadIdentity` can be used by multiple shoots potentially running on
+different seeds, i.e. multiple controllers would be responsible to react on the
+annotation which is usually fine, but all of them would have to negotiate when
+the operation is completed and the annotation to be removed.
 
 To achieve the restriction only gardenlet to create or refresh tokens in the
 seed cluster, but not any other controller running there, a new CRD
@@ -372,14 +371,13 @@ the only component having write access to this CRD, while extension controllers
 and other components relying on workload identities should request no more than
 read access. This `WorkloadIdentityBinding` CRD will be reconciled by a
 dedicated controller named `workloadidentity-refresher` from Gardenlet
-controller manager responsible to request OIDC tokens and write them into the
-target store. The workload identity `spec.config` will be also written into the
-target store.
+responsible to request OIDC tokens and write them into the target store. The
+workload identity `spec.config` will be also written into the target store.
 
 At the time this GEP is written, it is envisioned only secrets to be used as
-store targets. The token will be available on the data key `wiToken` in the
-secret, while the service provider config will be at `wiConfig`. These secrets
-will be labeled with
+store targets. The token will be available on the data key
+`workloadIdentityToken` in the secret, while the service provider config will be
+at `workloadIdentityConfig`. These secrets will be labeled with
 `workloadidentity.security.gardener.cloud/provider=(aws|gcp|...)` so that the
 extensions can easily select them and make adjustments via admission webhooks,
 e.g. transform the service provider config and the token into canonical form
@@ -438,8 +436,8 @@ Gardenlet will take care also for the extensions using workload identities via
 `shoot.spec.extensions.workloadIdentity`. For each such extension, it will
 create a `WorkloadIdentityBinding.extensions.gardener.cloud` resource in the
 control plane namespace named with the type of the extension. The name of the
-store might follow some established convention, but gardenlet have the freedom
-to generate a name, the requirement is the name to be stable across
+store might follow some established convention, but gardenlet has the freedom to
+generate a name. The only requirement is that the name remains stable across
 reconciliations. Extension controllers can request read access for the
 `WorkloadIdentityBinding` and read the name of the store themselves.
 
@@ -465,16 +463,16 @@ domains.
 
 ### SPIFFE/SPIRE
 
-It should be possible to run SPIRE server in the gardener landscape, presumably
+It should be possible to run SPIRE server in the Gardener landscape, presumably
 in the runtime cluster, and SPIRE agents on each seed clusters.
 
-However, this would come with decent overhead
+However, this would come with decent overhead:
 
 - Bootstrapping the system and managing the credentials for different agents
   will need to be automated.
 - The solution could easily lock-in to the SPIFFE/SPIRE as identity issuer and
   make it hard to change the implementation, if needed.
-- It is a 3rd party solution not so similar to kubernetes that needs to be
+- It is a 3rd party solution not so similar to Kubernetes that needs to be
   learned, operated and maintained.
 - Limited flexibility to inject Gardener own data in the tokens. Eventually
   could be achieved with custom plugins.
@@ -483,13 +481,13 @@ However, this would come with decent overhead
 - SPIRE agents associate the identities with the nodes where the workload is
   running, but in Gardener we are more interested in the Seeds and the workload
   itself, not the nodes. With custom plugins it should be possible to make it
-  fit the gardener case.
+  fit the Gardener case.
 - SPIRE server needs a database to store various information about the cluster,
   operating additional stateful component will require certain investment.
 - Seems to be not so friendly when the server and agents are running in
   different clusters, especially on different clouds, as node attestation done
   by the server needs somehow to evaluate the nodes with the cloud providers.
-  With custom plugins it should be possible to make it fit gardener case.
+  With custom plugins it should be possible to make it fit Gardener case.
 
 ### Kubernetes Service Account Tokens From Garden Cluster
 
@@ -497,7 +495,7 @@ Using a dedicated resource instead of the `ServiceAccount` from k8s core API is
 preferred because of several reasons:
 
 - Requesting a workload identity token should be accessible only by workloads
-  running in the gardener environment, i.e. they should not be exported and used
+  running in the Gardener environment, i.e. they should not be exported and used
   by other tools, services, application, etc. Gardener users are already granted
   with access to create tokens for `ServiceAccounts` in their project namespace
   and this cannot be restricted without introducing breaking changes.
@@ -507,7 +505,7 @@ preferred because of several reasons:
 
 ### Kubernetes Service Account Tokens From Seed Cluster
 
-A gardener landscape is highly dynamic and seed clusters are added and removed
+A Gardener landscape is highly dynamic and seed clusters are added and removed
 regularly. Also, shoot clusters are migrated between different seeds on demand.
 Managing trust configuration toward multiple seeds (tens or even hundreds of
 seeds), is cumbersome work, especially when the ones responsible for the trust
