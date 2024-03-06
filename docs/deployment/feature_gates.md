@@ -29,7 +29,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | MachineControllerManagerDeployment | `false` | `Alpha` | `1.73` |        |
 | MachineControllerManagerDeployment | `true`  | `Beta`  | `1.81` | `1.81` |
 | MachineControllerManagerDeployment | `true`  | `GA`    | `1.82` |        |
-| ShootForceDeletion                 | `false` | `Alpha` | `1.81` |        |
+| ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
+| ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | APIServerFastRollout               | `true`  | `Beta`  | `1.82` | `1.89` |
 | APIServerFastRollout               | `true`  | `GA`    | `1.90` |        |
 | UseGardenerNodeAgent               | `false` | `Alpha` | `1.82` | `1.88` |
