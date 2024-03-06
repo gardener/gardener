@@ -43,6 +43,8 @@ import (
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -235,16 +237,8 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
 		deployPrometheus = g.Add(flow.Task{
-			Name: "Deploying Prometheus",
-			Fn: func(ctx context.Context) error {
-				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-				if !found {
-					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-				}
-
-				c.prometheus.SetIngressAuthSecret(credentialsSecret)
-				return c.prometheus.Deploy(ctx)
-			},
+			Name:         "Deploying Prometheus",
+			Fn:           r.deployGardenPrometheus(secretsManager, c.prometheus),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
@@ -602,7 +596,8 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 			func(_ context.Context) (int32, error) {
 				return 2, nil
 			},
-			func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })
+			func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer },
+		)
 	}
 }
 
@@ -617,6 +612,22 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 		)
+	}
+}
+
+func (r *Reconciler) deployGardenPrometheus(secretsManager secretsmanager.Interface, prometheus prometheus.Interface) flow.TaskFn {
+	return func(ctx context.Context) error {
+		if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
+			return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
+		}
+
+		credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
+		}
+
+		prometheus.SetIngressAuthSecret(credentialsSecret)
+		return prometheus.Deploy(ctx)
 	}
 }
 

@@ -415,6 +415,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		}
 	}
 
+	if k.values.NamePrefix != "" {
+		if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
+			return err
+		}
+	}
+
 	if !k.values.IsWorkerless {
 		data, err := k.computeShootResourcesData()
 		if err != nil {
@@ -439,6 +445,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyServiceAccount(),
 		k.emptyRoleHAVPN(),
 		k.emptyRoleBindingHAVPN(),
+		k.emptyServiceMonitor(),
 	)
 }
 

@@ -31,9 +31,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -75,7 +78,12 @@ func (r *Reconciler) delete(
 		})
 		destroyPrometheus = g.Add(flow.Task{
 			Name: "Destroying Prometheus",
-			Fn:   component.OpDestroyAndWait(c.prometheus).Destroy,
+			Fn: func(ctx context.Context) error {
+				if err := component.OpDestroyAndWait(c.prometheus).Destroy(ctx); err != nil {
+					return err
+				}
+				return kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Secret)
+			},
 		})
 
 		destroyGardenerScheduler = g.Add(flow.Task{
