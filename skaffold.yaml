@@ -23,12 +23,12 @@ build:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
       components:
-      - name: version
-        envTemplate:
-          template: "{{.GARDENER_VERSION}}"
-      - name: sha
-        gitCommit:
-          variant: AbbrevCommitSha
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
       ko:
@@ -73,41 +73,6 @@ build:
             - pkg/apiserver
             - pkg/apiserver/admission/initializer
             - pkg/apiserver/features
-            - pkg/apiserver/storage
-            - pkg/chartrenderer
-            - pkg/client/core/clientset/versioned
-            - pkg/client/core/clientset/versioned/scheme
-            - pkg/client/core/clientset/versioned/typed/core/v1beta1
-            - pkg/client/core/informers/externalversions
-            - pkg/client/core/informers/externalversions/core
-            - pkg/client/core/informers/externalversions/core/v1beta1
-            - pkg/client/core/informers/externalversions/internalinterfaces
-            - pkg/client/core/listers/core/v1beta1
-            - pkg/client/kubernetes
-            - pkg/client/kubernetes/cache
-            - pkg/client/seedmanagement/clientset/versioned
-            - pkg/client/seedmanagement/clientset/versioned/scheme
-            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
-            - pkg/client/seedmanagement/informers/externalversions
-            - pkg/client/seedmanagement/informers/externalversions/internalinterfaces
-            - pkg/client/seedmanagement/informers/externalversions/seedmanagement
-            - pkg/client/seedmanagement/informers/externalversions/seedmanagement/v1alpha1
-            - pkg/client/seedmanagement/listers/seedmanagement/v1alpha1
-            - pkg/client/settings/clientset/versioned
-            - pkg/client/settings/clientset/versioned/scheme
-            - pkg/client/settings/clientset/versioned/typed/settings/v1alpha1
-            - pkg/client/settings/informers/externalversions
-            - pkg/client/settings/informers/externalversions/internalinterfaces
-            - pkg/client/settings/informers/externalversions/settings
-            - pkg/client/settings/informers/externalversions/settings/v1alpha1
-            - pkg/client/settings/listers/settings/v1alpha1
-            - pkg/controllerutils
-            - pkg/features
-            - pkg/gardenlet/apis/config
-            - pkg/gardenlet/apis/config/helper
-            - pkg/gardenlet/apis/config/v1alpha1
-            - pkg/gardenlet/apis/config/validation
-            - pkg/logger
             - pkg/apiserver/openapi
             - pkg/apiserver/registry/core/backupbucket
             - pkg/apiserver/registry/core/backupbucket/storage
@@ -151,6 +116,41 @@ build:
             - pkg/apiserver/registry/settings/openidconnectpreset
             - pkg/apiserver/registry/settings/openidconnectpreset/storage
             - pkg/apiserver/registry/settings/rest
+            - pkg/apiserver/storage
+            - pkg/chartrenderer
+            - pkg/client/core/clientset/versioned
+            - pkg/client/core/clientset/versioned/scheme
+            - pkg/client/core/clientset/versioned/typed/core/v1beta1
+            - pkg/client/core/informers/externalversions
+            - pkg/client/core/informers/externalversions/core
+            - pkg/client/core/informers/externalversions/core/v1beta1
+            - pkg/client/core/informers/externalversions/internalinterfaces
+            - pkg/client/core/listers/core/v1beta1
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/client/seedmanagement/clientset/versioned
+            - pkg/client/seedmanagement/clientset/versioned/scheme
+            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
+            - pkg/client/seedmanagement/informers/externalversions
+            - pkg/client/seedmanagement/informers/externalversions/internalinterfaces
+            - pkg/client/seedmanagement/informers/externalversions/seedmanagement
+            - pkg/client/seedmanagement/informers/externalversions/seedmanagement/v1alpha1
+            - pkg/client/seedmanagement/listers/seedmanagement/v1alpha1
+            - pkg/client/settings/clientset/versioned
+            - pkg/client/settings/clientset/versioned/scheme
+            - pkg/client/settings/clientset/versioned/typed/settings/v1alpha1
+            - pkg/client/settings/informers/externalversions
+            - pkg/client/settings/informers/externalversions/internalinterfaces
+            - pkg/client/settings/informers/externalversions/settings
+            - pkg/client/settings/informers/externalversions/settings/v1alpha1
+            - pkg/client/settings/listers/settings/v1alpha1
+            - pkg/controllerutils
+            - pkg/features
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/helper
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/gardenlet/apis/config/validation
+            - pkg/logger
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
             - pkg/utils/context
@@ -534,12 +534,12 @@ build:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
       components:
-      - name: version
-        envTemplate:
-          template: "{{.GARDENER_VERSION}}"
-      - name: sha
-        gitCommit:
-          variant: AbbrevCommitSha
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-local
       ko:
@@ -619,8 +619,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/proxy
-            - pkg/component/observability/logging/vali/constants
             - pkg/component/nodemanagement/machinecontrollermanager
+            - pkg/component/observability/logging/vali/constants
             - pkg/controller/service
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -785,12 +785,12 @@ build:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
       components:
-      - name: version
-        envTemplate:
-          template: "{{.GARDENER_VERSION}}"
-      - name: sha
-        gitCommit:
-          variant: AbbrevCommitSha
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
   artifacts:
     - image: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
       ko:
@@ -837,14 +837,11 @@ build:
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver
-            - pkg/component/networking/apiserverproxy
-            - pkg/component/garden/backupentry
-            - pkg/component/observability/monitoring/blackboxexporter
             - pkg/component/autoscaling/clusterautoscaler
+            - pkg/component/autoscaling/hvpa
+            - pkg/component/autoscaling/vpa
+            - pkg/component/autoscaling/vpa/constants
             - pkg/component/clusteridentity
-            - pkg/component/networking/coredns
-            - pkg/component/networking/coredns/constants
-            - pkg/component/nodemanagement/dependencywatchdog
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
@@ -876,51 +873,54 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
+            - pkg/component/garden/backupentry
             - pkg/component/gardener/access
             - pkg/component/gardener/apiserver
-            - pkg/component/autoscaling/hvpa
-            - pkg/component/networking/istio
+            - pkg/component/gardener/resourcemanager
+            - pkg/component/gardener/resourcemanager/constants
             - pkg/component/kubernetes/apiserver
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/apiserverexposure
             - pkg/component/kubernetes/controllermanager
-            - pkg/component/kubernetes/proxy
             - pkg/component/kubernetes/dashboard
+            - pkg/component/kubernetes/proxy
             - pkg/component/kubernetes/scheduler
-            - pkg/component/observability/monitoring/kubestatemetrics
+            - pkg/component/networking/apiserverproxy
+            - pkg/component/networking/coredns
+            - pkg/component/networking/coredns/constants
+            - pkg/component/networking/istio
+            - pkg/component/networking/nginxingress
+            - pkg/component/networking/nodelocaldns
+            - pkg/component/networking/nodelocaldns/constants
+            - pkg/component/networking/vpn/authzserver
+            - pkg/component/networking/vpn/seedserver
+            - pkg/component/networking/vpn/shoot
+            - pkg/component/nodemanagement/dependencywatchdog
+            - pkg/component/nodemanagement/machinecontrollermanager
+            - pkg/component/nodemanagement/nodeproblemdetector
             - pkg/component/observability/logging
             - pkg/component/observability/logging/eventlogger
             - pkg/component/observability/logging/fluentoperator
             - pkg/component/observability/logging/fluentoperator/customresources
             - pkg/component/observability/logging/vali
             - pkg/component/observability/logging/vali/constants
-            - pkg/component/nodemanagement/machinecontrollermanager
-            - pkg/component/observability/monitoring/metricsserver
             - pkg/component/observability/monitoring
             - pkg/component/observability/monitoring/alertmanager
+            - pkg/component/observability/monitoring/blackboxexporter
+            - pkg/component/observability/monitoring/kubestatemetrics
+            - pkg/component/observability/monitoring/metricsserver
+            - pkg/component/observability/monitoring/nodeexporter
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
             - pkg/component/observability/monitoring/prometheus/cache
             - pkg/component/observability/monitoring/prometheus/seed
             - pkg/component/observability/monitoring/prometheusoperator
             - pkg/component/observability/monitoring/utils
-            - pkg/component/shoot/namespaces
-            - pkg/component/networking/nginxingress
-            - pkg/component/observability/monitoring/nodeexporter
-            - pkg/component/networking/nodelocaldns
-            - pkg/component/networking/nodelocaldns/constants
-            - pkg/component/nodemanagement/nodeproblemdetector
             - pkg/component/observability/plutono
-            - pkg/component/gardener/resourcemanager
-            - pkg/component/gardener/resourcemanager/constants
             - pkg/component/seed/system
             - pkg/component/shared
+            - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
-            - pkg/component/autoscaling/vpa
-            - pkg/component/autoscaling/vpa/constants
-            - pkg/component/networking/vpn/authzserver
-            - pkg/component/networking/vpn/seedserver
-            - pkg/component/networking/vpn/shoot
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
@@ -960,16 +960,16 @@ build:
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state
             - pkg/gardenlet/features
-            - pkg/healthz
-            - pkg/logger
-            - pkg/nodeagent/apis/config
-            - pkg/nodeagent/apis/config/v1alpha1
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist
             - pkg/gardenlet/operation/botanist/matchers
             - pkg/gardenlet/operation/garden
             - pkg/gardenlet/operation/seed
             - pkg/gardenlet/operation/shoot
+            - pkg/healthz
+            - pkg/logger
+            - pkg/nodeagent/apis/config
+            - pkg/nodeagent/apis/config/v1alpha1
             - pkg/operator/client
             - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1
