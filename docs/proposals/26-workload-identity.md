@@ -123,12 +123,12 @@ Gardener as an OIDC compatible token issuer.
 
 ### API Changes
 
-A new resource `WorkloadIdentity` in `security.gardener.cloud` API Group will be
-implemented. It will specify different characteristics of the JWT, like the
-value for the `aud` claim. The `WorkloadIdentity` resource will allow the token
-duration to be set by Gardener users so they can use tokens with shorter or
-longer validity compared to the default one. This duration will be ensured to be
-between certain limits of minimal and maximal validity, in order to avoid
+A new resource `WorkloadIdentity` in `authentication.gardener.cloud` API Group
+will be implemented. It will specify different characteristics of the JWT, like
+the value for the `aud` claim. The `WorkloadIdentity` resource will allow the
+token duration to be set by Gardener users so they can use tokens with shorter
+or longer validity compared to the default one. This duration will be ensured to
+be between certain limits of minimal and maximal validity, in order to avoid
 frequent token renewals as well as tokens with too long validity.
 
 Similarly to `providerConfig` in other APIs, `WorkloadIdentity` resource will
@@ -151,7 +151,7 @@ otherwise Gardener users will have to deduce it themselves which could turn out
 to be error prone.
 
 ```yaml
-apiVersion: security.gardener.cloud/v1alpha1
+apiVersion: authentication.gardener.cloud/v1alpha1
 kind: WorkloadIdentity
 metadata:
   name: banana-testing
@@ -164,7 +164,7 @@ spec:
   targetSystem: # Required field.
     type: aws # Required field.
     config: # Optional field of type []byte, extensions can make it mandatory via admission webhooks.
-      apiVersion: aws.security.gardener.cloud/v1alpha1
+      apiVersion: aws.authentication.gardener.cloud/v1alpha1
       kind: Config
       iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
 status:
@@ -174,9 +174,9 @@ status:
 JWTs will be available when the clients send `create` requests on the
 `WorkloadIdentity/token` subresource. As the clients will be providing various
 custom information that will be used for the generation of the JWT, yet another
-resource `TokenRequest` in the API group `security.gardener.cloud` will be used.
-It is envisioned this resource to contain just metadata for the context where
-the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
+resource `TokenRequest` in the API group `authentication.gardener.cloud` will be
+used. It is envisioned this resource to contain just metadata for the context
+where the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
 server must verify the provided metadata and it can enhance the JWT with
 additional information derived from the context, for example with information
 for the project and the seed of the shoot cluster. Gardener API can also add
@@ -188,7 +188,7 @@ client as response. The expiration timestamp of the token will be also available
 in the status via the `.status.expirationTimestamp` field.
 
 ```yaml
-apiVersion: security.gardener.cloud/v1alpha1
+apiVersion: authentication.gardener.cloud/v1alpha1
 kind: TokenRequest
 metadata:
   name: ""
@@ -378,10 +378,10 @@ At the time this GEP is written, it is envisioned only secrets to be used as
 store targets. The token will be available on the data key
 `workloadIdentityToken` in the secret, while the service provider config will be
 at `workloadIdentityConfig`. These secrets will be labeled with
-`workloadidentity.security.gardener.cloud/provider=(aws|gcp|...)` so that the
-extensions can easily select them and make adjustments via admission webhooks,
-e.g. transform the service provider config and the token into canonical form
-usable by the respective service provider SDK.
+`workloadidentity.authentication.gardener.cloud/provider=(aws|gcp|...)` so that
+the extensions can easily select them and make adjustments via admission
+webhooks, e.g. transform the service provider config and the token into
+canonical form usable by the respective service provider SDK.
 
 The secret `cloudprovider` will be reused as target store when the shoot is
 using workload identity tokens as infrastructure credentials, the flow should be
@@ -412,7 +412,7 @@ metadata:
 spec:
   type: aws
   config:
-    apiVersion: aws.security.gardener.cloud/v1alpha1
+    apiVersion: aws.authentication.gardener.cloud/v1alpha1
     kind: Config
     iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
   contextObject: # Optional field, various metadata about context of use of the token
