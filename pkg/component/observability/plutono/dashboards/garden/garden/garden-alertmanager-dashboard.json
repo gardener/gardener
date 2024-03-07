@@ -81,7 +81,7 @@
       "pluginVersion": "7.3.1",
       "targets": [
         {
-          "expr": "count(up{job=\"gardener-alertmanager\"})",
+          "expr": "count(up{job=\"alertmanager-garden\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1972,7 +1972,7 @@
           "value": ["$__all"]
         },
         "datasource": "$datasource",
-        "definition": "label_values(up{job=\"gardener-alertmanager\"},instance)",
+        "definition": "label_values(up{job=\"alertmanager-garden\"},instance)",
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -1980,7 +1980,7 @@
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(up{job=\"gardener-alertmanager\"},instance)",
+        "query": "label_values(up{job=\"alertmanager-garden\"},instance)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
