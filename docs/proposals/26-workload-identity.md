@@ -180,7 +180,7 @@ where the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
 server must verify the provided metadata and it can enhance the JWT with
 additional information derived from the context, for example with information
 for the project and the seed of the shoot cluster. Gardener API can also add
-global information like a landscape identifier. As `WorkloadIdentity` already
+global information like a garden cluster identity. As `WorkloadIdentity` already
 specifies duration of the token, `TokenRequest` will not feature such field.
 `TokenRequest` resources will never be persisted in the storage layer, the
 generated token will be written in the `.status.token` field and returned to the
@@ -190,9 +190,6 @@ in the status via the `.status.expirationTimestamp` field.
 ```yaml
 apiVersion: authentication.gardener.cloud/v1alpha1
 kind: TokenRequest
-metadata:
-  name: ""
-  namespace: ""
 spec:
   contextObject: # Optional field, various metadata about context of use of the token
     apiVersion: core.gardener.cloud/v1beta1
@@ -274,7 +271,12 @@ On key rotation, the new key pair might need to be published but not used to
 sign the tokens, this is needed to ensure enough time for the external services
 to discover the new public key. This rotation strategy could be useful for
 external services that do not automatically rediscover the OIDC issuer metadata
-when the token is signed with still unknown to them key.
+when the token is signed with still unknown to them key. The major infrastructure
+providers do not document how often they are running OIDC rediscovery, but
+hands-on experience shows that some are doing it immediately, while others need
+several minutes. As workload identity is not limited only to the major
+infrastructure providers, therefore the duration of this period will be
+configurable but at least one day long.
 
 The Kubernetes API server extended by the Gardener API server is already issuing
 JWTs for the Kubernetes service accounts. To completely separate workload
@@ -284,7 +286,10 @@ service accounts. The workload identity issuer url should not be among the
 accepted issuers of the Kubernetes API server. Other configuration options for
 the Gardener API server will be the private key used to sign the tokens, the
 minimal, maximal and the default durations for each token. The private key also
-should not be shared with the Kubernetes API server.
+should not be shared with the Kubernetes API server. When `gardener-operator` is
+used to manage the Garden cluster, it will be also responsible for the Workload
+Identity token signing key rotation, a strategy similar to the one for the
+Kubernetes Service Account token signing key should be used.
 
 When Gardener API server is using own issuer and signing keys, the service
 account token authenticator of the Kubernetes API server will not reject the
@@ -301,7 +306,7 @@ Gardener API server will use the global configurations, `WorkloadIdentity` and
 `TokenRequest` specifications to issue JSON Web Tokens. Later, if a use case is
 identified, it could feature custom claims in the `gardener.cloud` claim
 namespace that contain additional information about the context of use of the
-token, e.g. metadata about the shoot, seed, project, landscape, etc.
+token, e.g. metadata about the shoot, seed, project, garden, etc.
 
 A sample payload of a token will look like:
 
@@ -334,8 +339,8 @@ A sample payload of a token will look like:
             "name": "<seed-name>",
             "uid": "<seed-uid>",
         },
-        "landscape": {
-            "id": "<gardener-landscape-id>",
+        "garden": {
+            "id": "<garden-cluster-identity>",
         },
     }
 }
