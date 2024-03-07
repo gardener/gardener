@@ -71,6 +71,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
@@ -129,6 +130,7 @@ type components struct {
 	prometheusOperator            component.DeployWaiter
 	alertManager                  alertmanager.Interface
 	prometheus                    prometheus.Interface
+	blackboxExporter              blackboxexporter.Interface
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -275,6 +277,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.prometheus, err = r.newPrometheus(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.blackboxExporter, err = r.newBlackboxExporter()
 	if err != nil {
 		return
 	}
@@ -1120,4 +1126,20 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 			},
 		},
 	})
+}
+
+func (r *Reconciler) newBlackboxExporter() (blackboxexporter.Interface, error) {
+	return sharedcomponent.NewBlackboxExporter(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		blackboxexporter.Values{
+			ClusterType:       component.ClusterTypeSeed,
+			VPAEnabled:        true,
+			KubernetesVersion: r.RuntimeVersion,
+			PodLabels: map[string]string{
+				gardenerutils.NetworkPolicyLabel(gardenerapiserver.DeploymentName, 8443): v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+		},
+	)
 }

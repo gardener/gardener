@@ -446,6 +446,11 @@ func (r *Reconciler) reconcile(
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD, waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying blackbox-exporter",
+			Fn:           c.blackboxExporter.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady),
+		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",

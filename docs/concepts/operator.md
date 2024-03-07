@@ -155,6 +155,7 @@ The reconciler also manages a few observability-related components (more planned
 - `prometheus-operator`
 - `alertmanager-garden` (read more [here](#observability))
 - `prometheus-garden` (read more [here](#observability))
+- `blackbox-exporter`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.

@@ -85,6 +85,10 @@ func (r *Reconciler) delete(
 				return kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Secret)
 			},
 		})
+		destroyBlackboxExporter = g.Add(flow.Task{
+			Name: "Destroying blackbox-exporter",
+			Fn:   component.OpDestroyAndWait(c.blackboxExporter).Destroy,
+		})
 
 		destroyGardenerScheduler = g.Add(flow.Task{
 			Name: "Destroying Gardener Scheduler",
@@ -236,6 +240,7 @@ func (r *Reconciler) delete(
 			destroyFluentOperator,
 			destroyVali,
 			destroyPrometheusOperator,
+			destroyBlackboxExporter,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{
