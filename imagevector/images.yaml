@@ -310,10 +310,11 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
   tag: "0.23.2"
+# TODO(DockToFuture): When updating coredns to v1.12.x check if the NET_BIND_SERVICE capability can be removed.
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: registry.k8s.io/coredns/coredns
-  tag: "v1.10.1"
+  tag: "v1.11.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
