@@ -188,18 +188,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Replicating global monitoring secret to garden namespace in seed", "secret", client.ObjectKeyFromObject(globalMonitoringSecretGarden))
-	globalMonitoringSecretSeed := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-" + globalMonitoringSecretGarden.Name, Namespace: r.GardenNamespace}}
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClientSet.Client(), globalMonitoringSecretSeed, func() error {
-		globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
-		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
-		globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
-
-		if _, ok := globalMonitoringSecretSeed.Data[secretsutils.DataKeySHA1Auth]; !ok {
-			globalMonitoringSecretSeed.Data[secretsutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretsutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretsutils.DataKeyPassword])
-		}
-
-		return nil
-	}); err != nil {
+	globalMonitoringSecretSeed, err := gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.SeedClientSet.Client(), "seed-", r.GardenNamespace, globalMonitoringSecretGarden)
+	if err != nil {
 		return err
 	}
 

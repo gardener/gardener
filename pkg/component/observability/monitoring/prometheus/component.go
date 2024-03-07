@@ -54,6 +54,8 @@ type Interface interface {
 	SetIngressAuthSecret(*corev1.Secret)
 	// SetIngressWildcardCertSecret sets the ingress wildcard cert secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
+	// SetCentralScrapeConfigs sets the central scrape configs.
+	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -258,6 +260,10 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 	if p.values.Ingress != nil && secret != nil {
 		p.values.Ingress.WildcardCertSecretName = &secret.Name
 	}
+}
+
+func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
+	p.values.CentralConfigs.ScrapeConfigs = configs
 }
 
 func (p *prometheus) name() string {

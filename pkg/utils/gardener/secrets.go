@@ -19,13 +19,16 @@ import (
 	"errors"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var (
@@ -49,4 +52,22 @@ func FetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 	}
 
 	return kubeconfig, nil
+}
+
+// ReplicateGlobalMonitoringSecret replicates the global monitoring secret into the given namespace and prefixes it with
+// the given prefix.
+func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, prefix, namespace string, globalMonitoringSecret *corev1.Secret) (*corev1.Secret, error) {
+	globalMonitoringSecretReplica := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: prefix + globalMonitoringSecret.Name, Namespace: namespace}}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, globalMonitoringSecretReplica, func() error {
+		globalMonitoringSecretReplica.Type = globalMonitoringSecret.Type
+		globalMonitoringSecretReplica.Data = globalMonitoringSecret.Data
+		globalMonitoringSecretReplica.Immutable = globalMonitoringSecret.Immutable
+
+		if _, ok := globalMonitoringSecretReplica.Data[secretsutils.DataKeySHA1Auth]; !ok {
+			globalMonitoringSecretReplica.Data[secretsutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecret.Data[secretsutils.DataKeyUserName], globalMonitoringSecret.Data[secretsutils.DataKeyPassword])
+		}
+
+		return nil
+	})
+	return globalMonitoringSecretReplica, err
 }

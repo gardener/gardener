@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -138,6 +139,7 @@ func (r *Reconciler) reconcile(
 				return r.generateObservabilityIngressPassword(ctx, secretsManager)
 			},
 		})
+
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
 			Fn:   c.etcdCRD.Deploy,
@@ -163,6 +165,7 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying custom resource definitions for prometheus-operator",
 			Fn:   c.prometheusCRD.Deploy,
 		})
+
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
@@ -198,49 +201,6 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		deployFluentOperator = g.Add(flow.Task{
-			Name:         "Deploying fluent-operator",
-			Fn:           c.fluentOperator.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
-		})
-		deployFluentOperatorCustomResources = g.Add(flow.Task{
-			Name:         "Deploying fluent-operator CustomResources",
-			Fn:           c.fluentOperatorCustomResources.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
-		})
-		deployFluentBit = g.Add(flow.Task{
-			Name:         "Deploying fluent-bit",
-			Fn:           c.fluentBit.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
-		})
-		deployVali = g.Add(flow.Task{
-			Name:         "Deploying Vali",
-			Fn:           c.vali.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		deployPrometheusOperator = g.Add(flow.Task{
-			Name:         "Deploying prometheus-operator",
-			Fn:           c.prometheusOperator.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
-		})
-		deployAlertmanager = g.Add(flow.Task{
-			Name: "Deploying Alertmanager",
-			Fn: func(ctx context.Context) error {
-				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-				if !found {
-					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-				}
-
-				c.alertManager.SetIngressAuthSecret(credentialsSecret)
-				return c.alertManager.Deploy(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
-		})
-		deployPrometheus = g.Add(flow.Task{
-			Name:         "Deploying Prometheus",
-			Fn:           r.deployGardenPrometheus(secretsManager, c.prometheus),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
-		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			generateObservabilityIngressPassword,
@@ -252,13 +212,6 @@ func (r *Reconciler) reconcile(
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
-			deployFluentOperator,
-			deployFluentOperatorCustomResources,
-			deployFluentBit,
-			deployVali,
-			deployPrometheusOperator,
-			deployAlertmanager,
-			deployPrometheus,
 		)
 
 		deployEtcds = g.Add(flow.Task{
@@ -448,6 +401,53 @@ func (r *Reconciler) reconcile(
 		})
 
 		_ = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator",
+			Fn:           c.fluentOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator CustomResources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying fluent-bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Vali",
+			Fn:           c.vali.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying prometheus-operator",
+			Fn:           c.prometheusOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Alertmanager",
+			Fn: func(ctx context.Context) error {
+				credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+				if !found {
+					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
+				}
+
+				c.alertManager.SetIngressAuthSecret(credentialsSecret)
+				return c.alertManager.Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Prometheus",
+			Fn: func(ctx context.Context) error {
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheus, virtualClusterClient)
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD, waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
+		})
+
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",
 			Fn:           c.kubeStateMetrics.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady),
@@ -615,20 +615,54 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 	}
 }
 
-func (r *Reconciler) deployGardenPrometheus(secretsManager secretsmanager.Interface, prometheus prometheus.Interface) flow.TaskFn {
-	return func(ctx context.Context) error {
-		if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
-			return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
-		}
-
-		credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
-		}
-
-		prometheus.SetIngressAuthSecret(credentialsSecret)
-		return prometheus.Deploy(ctx)
+func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger, secretsManager secretsmanager.Interface, prometheus prometheus.Interface, virtualGardenClient client.Client) error {
+	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
+		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
+
+	// fetch auth secret for ingress
+	credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
+	}
+	prometheus.SetIngressAuthSecret(credentialsSecret)
+
+	// fetch global monitoring secret for prometheus-aggregate scrape config
+	secretList := &corev1.SecretList{}
+	if err := virtualGardenClient.List(ctx, secretList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring}); err != nil {
+		return fmt.Errorf("failed listing secrets in virtual garden for looking up global monitoring secret: %w", err)
+	}
+
+	var (
+		globalMonitoringSecretRuntime *corev1.Secret
+		err                           error
+	)
+
+	if len(secretList.Items) > 0 {
+		globalMonitoringSecret := &secretList.Items[0]
+
+		log.Info("Replicating global monitoring secret to garden namespace in runtime cluster", "secret", client.ObjectKeyFromObject(globalMonitoringSecret))
+		globalMonitoringSecretRuntime, err = gardenerutils.ReplicateGlobalMonitoringSecret(ctx, r.RuntimeClientSet.Client(), "global-", r.GardenNamespace, globalMonitoringSecret)
+		if err != nil {
+			return err
+		}
+	}
+
+	// fetch ingress urls for prometheus-aggregate scrape config
+	seedList := &gardencorev1beta1.SeedList{}
+	if err := virtualGardenClient.List(ctx, seedList); err != nil {
+		return fmt.Errorf("failed listing secrets in virtual garden: %w", err)
+	}
+
+	var prometheusAggregateTargets []monitoringv1alpha1.Target
+	for _, seed := range seedList.Items {
+		if seed.Spec.Ingress != nil {
+			prometheusAggregateTargets = append(prometheusAggregateTargets, monitoringv1alpha1.Target(v1beta1constants.IngressDomainPrefixPrometheusAggregate+"."+seed.Spec.Ingress.Domain))
+		}
+	}
+
+	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, globalMonitoringSecretRuntime))
+	return prometheus.Deploy(ctx)
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

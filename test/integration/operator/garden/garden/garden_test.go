@@ -123,8 +123,12 @@ var _ = Describe("Garden controller tests", func() {
 		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
 
+		scheme := runtime.NewScheme()
+		Expect(operatorclient.AddRuntimeSchemeToScheme(scheme)).To(Succeed())
+		Expect(operatorclient.AddVirtualSchemeToScheme(scheme)).To(Succeed())
+
 		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:  operatorclient.RuntimeScheme,
+			Scheme:  scheme,
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				Mapper: mapper,

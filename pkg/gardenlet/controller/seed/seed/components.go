@@ -694,7 +694,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-web", 9090):                                                       v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		Ingress: &prometheus.IngressValues{
-			Host:           seed.GetIngressFQDN("p-seed"),
+			Host:           seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
 			SecretsManager: secretsManager,
 			SigningCA:      v1beta1constants.SecretNameCASeed,
 		},
