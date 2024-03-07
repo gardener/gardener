@@ -17,27 +17,32 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/imagevector"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	shootblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 )
 
 // DefaultBlackboxExporter returns a deployer for the blackbox-exporter.
 func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	return blackboxexporter.New(
+	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		blackboxexporter.Values{
-			Image:             image.String(),
+			ClusterType:       component.ClusterTypeShoot,
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
+			PodLabels: map[string]string{
+				v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			PriorityClassName: "system-cluster-critical",
+			Config:            shootblackboxexporter.Config(),
 		},
-	), nil
+	)
 }
 
 // ReconcileBlackboxExporter deploys or destroys the blackbox-exporter component depending on whether shoot monitoring is enabled or not.

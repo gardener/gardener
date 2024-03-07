@@ -16,9 +16,12 @@ package blackboxexporter
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,11 +44,11 @@ import (
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-blackbox-exporter"
-
 	labelValue        = "blackbox-exporter"
 	labelKeyComponent = "component"
+
+	volumeMountPathConfig = "/etc/blackbox_exporter"
+	dataKeyConfig         = "blackbox.yaml"
 )
 
 // Interface contains functions for a blackbox-exporter deployer.
@@ -58,10 +61,18 @@ type Interface interface {
 type Values struct {
 	// Image is the container image used for blackbox-exporter.
 	Image string
-	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
+	// ClusterType is the type of the cluster.
+	ClusterType component.ClusterType
+	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the cluster.
 	VPAEnabled bool
-	// KubernetesVersion is the Kubernetes version of the Shoot.
+	// KubernetesVersion is the Kubernetes version of the cluster.
 	KubernetesVersion *semver.Version
+	// Config is blackbox exporter configuration.
+	Config blackboxexporterconfig.Config
+	// PodLabels are additional labels for the pod.
+	PodLabels map[string]string
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 }
 
 // New creates a new instance of DeployWaiter for blackbox-exporter.
@@ -89,11 +100,31 @@ func (b *blackboxExporter) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, b.client, b.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		return managedresources.CreateForSeedWithLabels(ctx, b.client, b.namespace, b.managedResourceName(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
+	}
+	return managedresources.CreateForShoot(ctx, b.client, b.namespace, b.managedResourceName(), managedresources.LabelValueGardener, false, data)
 }
 
 func (b *blackboxExporter) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, b.client, b.namespace, ManagedResourceName)
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		return managedresources.DeleteForSeed(ctx, b.client, b.namespace, b.managedResourceName())
+	}
+	return managedresources.DeleteForShoot(ctx, b.client, b.namespace, b.managedResourceName())
+}
+
+func (b *blackboxExporter) managedResourceName() string {
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		return "blackbox-exporter"
+	}
+	return "shoot-core-blackbox-exporter"
+}
+
+func (b *blackboxExporter) namespaceName() string {
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		return b.namespace
+	}
+	return metav1.NamespaceSystem
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -104,24 +135,32 @@ func (b *blackboxExporter) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, b.managedResourceName())
 }
 
 func (b *blackboxExporter) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, b.managedResourceName())
 }
 
 func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
-	var (
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	if b.values.ClusterType == component.ClusterTypeShoot {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	}
 
+	configRaw, err := yaml.Marshal(&b.values.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: b.namespaceName(),
 				Labels:    getLabels(),
 			},
 			AutomountServiceAccountToken: ptr.To(false),
@@ -130,27 +169,13 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter-config",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: b.namespaceName(),
 				Labels: map[string]string{
 					v1beta1constants.LabelApp:  "prometheus",
 					v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
 				},
 			},
-			Data: map[string]string{
-				`blackbox.yaml`: `modules:
-  http_kubernetes_service:
-    prober: http
-    timeout: 10s
-    http:
-      headers:
-        Accept: "*/*"
-        Accept-Language: "en-US"
-      tls_config:
-        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      preferred_ip_protocol: "ip4"
-`,
-			},
+			Data: map[string]string{dataKeyConfig: string(configRaw)},
 		}
 	)
 
@@ -160,52 +185,33 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
-				Labels: utils.MergeStringMaps(
-					getLabels(),
-					map[string]string{
-						resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-					},
-				),
+				Namespace: b.namespaceName(),
+				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             ptr.To[int32](1),
 				RevisionHistoryLimit: ptr.To[int32](2),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						labelKeyComponent: labelValue,
-					},
-				},
+				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{labelKeyComponent: labelValue}},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{},
-						Labels: utils.MergeStringMaps(
-							getLabels(),
-							map[string]string{
-								v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-								v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-						),
+						Labels:      utils.MergeStringMaps(getLabels(), b.values.PodLabels),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
-						PriorityClassName:  "system-cluster-critical",
+						PriorityClassName:  b.values.PriorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](65534),
 							SupplementalGroups: []int64{1},
-							SeccompProfile: &corev1.SeccompProfile{
-								Type: corev1.SeccompProfileTypeRuntimeDefault,
-							},
+							SeccompProfile:     &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
 						Containers: []corev1.Container{
 							{
 								Name:  "blackbox-exporter",
 								Image: b.values.Image,
 								Args: []string{
-									"--config.file=/etc/blackbox_exporter/blackbox.yaml",
+									fmt.Sprintf("--config.file=%s/%s", volumeMountPathConfig, dataKeyConfig),
 									"--log.level=debug",
 								},
 								ImagePullPolicy: corev1.PullIfNotPresent,
@@ -228,7 +234,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "blackbox-exporter-config",
-										MountPath: "/etc/blackbox_exporter",
+										MountPath: volumeMountPathConfig,
 									},
 								},
 							},
@@ -261,7 +267,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: b.namespaceName(),
 				Labels: map[string]string{
 					labelKeyComponent: labelValue,
 				},
@@ -284,7 +290,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: b.namespaceName(),
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
 					labelKeyComponent:           labelValue,
@@ -299,16 +305,14 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
 	utilruntime.Must(references.InjectAnnotations(deployment))
+	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
 
 	if b.values.VPAEnabled {
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: b.namespaceName(),
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -317,13 +321,13 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 					Name:       deployment.Name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-							ControlledValues: &vpaControlledValues,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 					},
 				},
