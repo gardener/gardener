@@ -716,7 +716,20 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 			continue
 		}
 
-		if persistentVolume.Spec.ClaimRef == nil {
+		if persistentVolume.Status.Phase == corev1.VolumeReleased && persistentVolume.Spec.ClaimRef != nil {
+			// check if namespace is already gone - if yes, just clean them up
+			if err := seedClient.Get(ctx, client.ObjectKey{Name: persistentVolume.Spec.ClaimRef.Namespace}, &corev1.Namespace{}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed checking if namespace %s still exists (due to PV %s): %w", persistentVolume.Spec.ClaimRef.Namespace, client.ObjectKeyFromObject(&persistentVolume), err)
+				}
+
+				taskFns = append(taskFns, func(ctx context.Context) error {
+					log.Info("Deleting orphaned persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume))
+					return client.IgnoreNotFound(seedClient.Delete(ctx, &persistentVolume))
+				})
+				continue
+			}
+		} else if persistentVolume.Spec.ClaimRef == nil {
 			persistentVolumeNamesWithoutClaimRef = append(persistentVolumeNamesWithoutClaimRef, persistentVolume.Name)
 			continue
 		}
