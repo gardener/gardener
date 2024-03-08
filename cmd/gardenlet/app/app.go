@@ -696,7 +696,10 @@ func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Clie
 
 // TODO(rfranzke): Remove this code after gardener v1.92 has been released.
 func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedClient client.Client) error {
-	labelMigrationPVCName := "disk-migration.monitoring.gardener.cloud/pvc-name"
+	var (
+		labelMigrationNamespace = "disk-migration.monitoring.gardener.cloud/namespace"
+		labelMigrationPVCName   = "disk-migration.monitoring.gardener.cloud/pvc-name"
+	)
 
 	persistentVolumeList := &corev1.PersistentVolumeList{}
 	if err := seedClient.List(ctx, persistentVolumeList, client.HasLabels{labelMigrationPVCName}); err != nil {
@@ -711,8 +714,7 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 	for _, pv := range persistentVolumeList.Items {
 		persistentVolume := pv
 
-		labelValue := persistentVolume.Labels[labelMigrationPVCName]
-		if len(strings.Split(labelValue, "/")) == 2 {
+		if persistentVolume.Labels[labelMigrationNamespace] != "" {
 			continue
 		}
 
@@ -735,9 +737,9 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 		}
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			log.Info("Adding missing namespace to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
+			log.Info("Adding missing namespace label to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
 			patch := client.MergeFrom(persistentVolume.DeepCopy())
-			metav1.SetMetaDataLabel(&persistentVolume.ObjectMeta, labelMigrationPVCName, persistentVolume.Spec.ClaimRef.Namespace+"/"+labelValue)
+			metav1.SetMetaDataLabel(&persistentVolume.ObjectMeta, labelMigrationNamespace, persistentVolume.Spec.ClaimRef.Namespace)
 			return seedClient.Patch(ctx, &persistentVolume, patch)
 		})
 	}
@@ -749,8 +751,8 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 	if len(persistentVolumeNamesWithoutClaimRef) > 0 {
 		return fmt.Errorf("found persistent volumes with missing namespace in migration label and `.spec.claimRef=nil` - "+
 			"cannot automatically determine the namespace this PV originated from. "+
-			"A human operator needs to manually add the namespace and update the label to %s=<namespace>-<current-label-value>. "+
-			"The names of such PVs are: %+v", labelMigrationPVCName, persistentVolumeNamesWithoutClaimRef)
+			"A human operator needs to manually add the namespace and update the label to %s=<namespace> - "+
+			"The names of such PVs are: %+v", labelMigrationNamespace, persistentVolumeNamesWithoutClaimRef)
 	}
 
 	return nil
