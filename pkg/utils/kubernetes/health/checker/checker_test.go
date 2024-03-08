@@ -256,12 +256,6 @@ var _ = Describe("HealthChecker", func() {
 		)
 
 		var (
-			valiStatefulSet = newStatefulSet(namespace, v1beta1constants.StatefulSetNameVali, v1beta1constants.GardenRoleLogging, true)
-
-			requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
-				valiStatefulSet,
-			}
-
 			eventLoggerDepployment = newDeployment(namespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
 
 			requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
@@ -270,71 +264,37 @@ var _ = Describe("HealthChecker", func() {
 		)
 
 		DescribeTable("#CheckLoggingControlPlane",
-			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, eventLoggingEnabled, valiEnabled bool, conditionMatcher types.GomegaMatcher) {
+			func(deployments []*appsv1.Deployment, eventLoggingEnabled bool, conditionMatcher types.GomegaMatcher) {
 				for _, obj := range deployments {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
-				}
-				for _, obj := range statefulSets {
-					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 				}
 
 				checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
 
-				exitCondition, err := checker.CheckLoggingControlPlane(ctx, namespace, eventLoggingEnabled, valiEnabled, condition)
+				exitCondition, err := checker.CheckLoggingControlPlane(ctx, namespace, eventLoggingEnabled, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},
 			Entry("all healthy",
 				requiredLoggingControlPlaneDeployments,
-				requiredLoggingControlPlaneStatefulSets,
-				true,
 				true,
 				BeNil(),
-			),
-			Entry("required stateful set missing",
-				requiredLoggingControlPlaneDeployments,
-				nil,
-				true,
-				true,
-				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 			),
 			Entry("required deployment is missing",
 				nil,
-				requiredLoggingControlPlaneStatefulSets,
-				true,
 				true,
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 			),
-			Entry("stateful set unhealthy",
-				requiredLoggingControlPlaneDeployments,
-				[]*appsv1.StatefulSet{
-					newStatefulSet(valiStatefulSet.Namespace, valiStatefulSet.Name, roleOf(valiStatefulSet), false),
-				},
-				true,
-				true,
-				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-			),
-			Entry("stateful set unhealthy",
+			Entry("deployment set unhealthy",
 				[]*appsv1.Deployment{
 					newDeployment(eventLoggerDepployment.Namespace, eventLoggerDepployment.Name, roleOf(eventLoggerDepployment), false),
 				},
-				requiredLoggingControlPlaneStatefulSets,
-				true,
 				true,
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 			),
-			Entry("vali is disabled in gardenlet config, omit stateful set check",
-				requiredLoggingControlPlaneDeployments,
-				[]*appsv1.StatefulSet{},
-				true,
-				false,
-				BeNil(),
-			),
 			Entry("event logging is disabled in gardenlet config, omit deployment check",
 				[]*appsv1.Deployment{},
-				requiredLoggingControlPlaneStatefulSets,
 				false,
-				true,
 				BeNil(),
 			),
 		)

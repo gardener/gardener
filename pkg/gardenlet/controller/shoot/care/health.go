@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -30,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
@@ -72,7 +70,6 @@ var (
 
 	commonMonitoringDeployments = sets.New(
 		v1beta1constants.DeploymentNameKubeStateMetrics,
-		v1beta1constants.DeploymentNamePlutono,
 	)
 )
 
@@ -143,14 +140,20 @@ func (h *Health) Check(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
+	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+		updatedConditions := managedResourceListingFailedConditions(h.clock, conditions.ConvertToSlice(), err)
+		return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
+	}
+
 	// Health checks that can be executed in all cases.
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, healthCheckOutdatedThreshold)
+			newControlPlane, err := h.checkControlPlane(ctx, conditions.controlPlaneHealthy, extensionConditionsControlPlaneHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 			conditions.controlPlaneHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.controlPlaneHealthy, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, healthCheckOutdatedThreshold)
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, conditions.observabilityComponentsHealthy, extensionConditionsObservabilityComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 			conditions.observabilityComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.observabilityComponentsHealthy, newObservabilityComponents, err)
 			return nil
 		},
@@ -165,7 +168,7 @@ func (h *Health) Check(
 				return nil
 			},
 			func(ctx context.Context) error {
-				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, healthCheckOutdatedThreshold)
+				newSystemComponents, err := h.checkSystemComponents(ctx, shootClient, conditions.systemComponentsHealthy, extensionConditionsSystemComponentsHealthy, managedResourceList.Items, healthCheckOutdatedThreshold)
 				conditions.systemComponentsHealthy = v1beta1helper.NewConditionOrError(h.clock, conditions.systemComponentsHealthy, newSystemComponents, err)
 				return nil
 			},
@@ -397,8 +400,12 @@ func (h *Health) checkControlPlane(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
 	if err != nil {
 		return nil, err
@@ -406,6 +413,13 @@ func (h *Health) checkControlPlane(
 
 	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
+	}
+
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Spec.Class != nil &&
+			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
@@ -423,19 +437,18 @@ func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
-		gardenerVersion, err := semver.NewVersion(h.shoot.GetInfo().Status.Gardener.Version)
-		if err != nil {
-			return nil, err
-		}
-
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
 			h.shoot.SeedNamespace,
 			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
-			ComputeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager, gardenerVersion),
+			ComputeRequiredMonitoringStatefulSets(),
 			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
@@ -448,12 +461,18 @@ func (h *Health) checkObservabilityComponents(
 			ctx,
 			h.shoot.SeedNamespace,
 			gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration),
-			gardenlethelper.IsValiEnabled(h.gardenletConfiguration),
 			condition,
 		); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
+
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootObservabilityComponentsHealthy)
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+		return exitCondition, nil
+	}
+
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -468,24 +487,17 @@ func (h *Health) checkSystemComponents(
 	shootClient kubernetes.Interface,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
+	managedResources []resourcesv1alpha1.ManagedResource,
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	mrList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := h.seedClient.Client().List(ctx, mrList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
-		return nil, err
-	}
-
-	for _, mr := range mrList.Items {
-		if mr.Spec.Class != nil {
-			continue
-		}
-
-		if exitCondition := h.healthChecker.CheckManagedResource(condition, &mr, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
-			return exitCondition, nil
-		}
+	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
+		return managedResource.Spec.Class == nil ||
+			managedResource.Labels[v1beta1constants.LabelCareConditionType] == string(gardencorev1beta1.ShootSystemComponentsHealthy)
+	}, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration)); exitCondition != nil {
+		return exitCondition, nil
 	}
 
 	if exitCondition := h.healthChecker.CheckExtensionCondition(condition, extensionConditions, healthCheckOutdatedThreshold); exitCondition != nil {
@@ -537,25 +549,9 @@ func (h *Health) checkWorkers(
 	return &c, nil
 }
 
-var constraintGardenerGreaterEqual190 *semver.Constraints
-
-func init() {
-	var err error
-	constraintGardenerGreaterEqual190, err = semver.NewConstraint(">= 1.90-0")
-	utilruntime.Must(err)
-}
-
 // ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
-func ComputeRequiredMonitoringStatefulSets(wantsAlertmanager bool, gardenerVersion *semver.Version) sets.Set[string] {
-	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
-	if wantsAlertmanager {
-		if constraintGardenerGreaterEqual190.Check(gardenerVersion) {
-			requiredMonitoringStatefulSets.Insert("alertmanager-shoot")
-		} else {
-			requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
-		}
-	}
-	return requiredMonitoringStatefulSets
+func ComputeRequiredMonitoringStatefulSets() sets.Set[string] {
+	return sets.New(v1beta1constants.StatefulSetNamePrometheus)
 }
 
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.
@@ -875,6 +871,14 @@ func shootHibernatedConditions(clock clock.Clock, conditions []gardencorev1beta1
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
+}
+
+func managedResourceListingFailedConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition, err error) []gardencorev1beta1.Condition {
+	outConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		outConditions = append(outConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionFalse, "ManagedResourceListingFailed", fmt.Sprintf("Failed listing ManagedResources: %s", err.Error())))
+	}
+	return outConditions
 }
 
 func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOperation) string {

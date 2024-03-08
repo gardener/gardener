@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +genclient
@@ -1699,7 +1701,7 @@ const (
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the health of core control plane components.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
 	// ShootObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
-	ShootObservabilityComponentsHealthy ConditionType = "ObservabilityComponentsHealthy"
+	ShootObservabilityComponentsHealthy ConditionType = v1beta1constants.ObservabilityComponentsHealthy
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.

@@ -103,6 +103,7 @@ func DeployResourceConfigs(
 	namespace string,
 	clusterType ClusterType,
 	managedResourceName string,
+	managedResourceLabels map[string]string,
 	registry *managedresources.Registry,
 	allResources ResourceConfigs,
 ) error {
@@ -116,7 +117,7 @@ func DeployResourceConfigs(
 			}
 		}
 
-		return managedresources.CreateForSeed(ctx, c, namespace, managedResourceName, false, registry.SerializedObjects())
+		return managedresources.CreateForSeedWithLabels(ctx, c, namespace, managedResourceName, false, managedResourceLabels, registry.SerializedObjects())
 	}
 
 	for _, r := range allResources {

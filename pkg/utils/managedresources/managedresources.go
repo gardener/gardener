@@ -189,6 +189,17 @@ func CreateForSeed(ctx context.Context, client client.Client, namespace, name st
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
+// CreateForSeedWithLabels deploys a ManagedResource CR for the seed's gardener-resource-manager and allows providing
+// additional labels.
+func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
 // CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 // The origin is used to identify the creator of the managed resource. Gardener acts on resources
 // with "origin=gardener" label. External callers (extension controllers or other components)
@@ -197,6 +208,19 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name, 
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
 		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
+// CreateForShootWithLabels deploys a ManagedResource CR for the shoot's gardener-resource-manager. The origin is used
+// to identify the creator of the managed resource. Gardener acts on resources with "origin=gardener" label. External
+// callers (extension controllers or other components) of this function should provide their own unique origin value.
+// This function allows providing additional labels.
+func CreateForShootWithLabels(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)

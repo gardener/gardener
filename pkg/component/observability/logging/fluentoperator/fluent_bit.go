@@ -307,7 +307,7 @@ end
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, f.client, f.namespace, FluentBitManagedResourceName, false, serializedResources)
+	return managedresources.CreateForSeedWithLabels(ctx, f.client, f.namespace, FluentBitManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
 }
 
 func (f *fluentBit) Destroy(ctx context.Context) error {

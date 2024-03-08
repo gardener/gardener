@@ -164,6 +164,8 @@ type Values struct {
 	ControllerSyncPeriods ControllerSyncPeriods
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	RuntimeConfig map[string]bool
+	// ManagedResourceLabels are labels added to the ManagedResource.
+	ManagedResourceLabels map[string]string
 }
 
 // ControllerWorkers is used for configuring the workers for controllers.

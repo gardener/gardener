@@ -67,6 +67,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		nil,
 		kubecontrollermanager.ControllerWorkers{},
 		kubecontrollermanager.ControllerSyncPeriods{},
+		nil,
 	)
 }
 

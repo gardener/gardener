@@ -90,8 +90,9 @@ subjects:
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
 		access = New(fakeClient, namespace, sm, Values{
-			ServerOutOfCluster: serverOutOfCluster,
-			ServerInCluster:    serverInCluster,
+			ServerOutOfCluster:    serverOutOfCluster,
+			ServerInCluster:       serverInCluster,
+			ManagedResourceLabels: map[string]string{"foo": "bar"},
 		})
 
 		expectedGardenerSecret = &corev1.Secret{
@@ -182,7 +183,10 @@ users:
 				Name:            managedResourceName,
 				Namespace:       namespace,
 				ResourceVersion: "1",
-				Labels:          map[string]string{"origin": "gardener"},
+				Labels: map[string]string{
+					"origin": "gardener",
+					"foo":    "bar",
+				},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs:   []corev1.LocalObjectReference{},

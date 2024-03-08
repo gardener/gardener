@@ -86,7 +86,7 @@ func (c *customResources) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, c.client, c.namespace, c.getManagedResourceName(), false, serializedResources)
+	return managedresources.CreateForSeedWithLabels(ctx, c.client, c.namespace, c.getManagedResourceName(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
 }
 
 func (c *customResources) Destroy(ctx context.Context) error {

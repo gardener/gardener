@@ -551,15 +551,16 @@ namespace: kube-system
 		sm = fakesecretsmanager.New(c, namespace)
 
 		values = Values{
-			RuntimeVersion:    runtimeKubernetesVersion,
-			TargetVersion:     semverVersion,
-			Image:             image,
-			Config:            &kcmConfig,
-			PriorityClassName: priorityClassName,
-			HVPAConfig:        hvpaConfigDisabled,
-			IsWorkerless:      isWorkerless,
-			PodNetwork:        podCIDR,
-			ServiceNetwork:    serviceCIDR,
+			RuntimeVersion:        runtimeKubernetesVersion,
+			TargetVersion:         semverVersion,
+			Image:                 image,
+			Config:                &kcmConfig,
+			PriorityClassName:     priorityClassName,
+			HVPAConfig:            hvpaConfigDisabled,
+			IsWorkerless:          isWorkerless,
+			PodNetwork:            podCIDR,
+			ServiceNetwork:        serviceCIDR,
+			ManagedResourceLabels: map[string]string{"foo": "bar"},
 		}
 		kubeControllerManager = New(
 			testLogger,
@@ -582,9 +583,12 @@ namespace: kube-system
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            managedResourceName,
-				Namespace:       namespace,
-				Labels:          map[string]string{"origin": "gardener"},
+				Name:      managedResourceName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"origin": "gardener",
+					"foo":    "bar",
+				},
 				ResourceVersion: "1",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{

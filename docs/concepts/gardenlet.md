@@ -361,6 +361,13 @@ If at least one `ManagedResource` is unhealthy and there is threshold configurat
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
+In order to compute the condition statuses, this reconciler considers `ManagedResource`s (in the `garden` and `istio-system` namespace) and their status, see [this document](resource-manager.md#conditions) for more information.
+The following table explains which `ManagedResource`s are considered for which condition type:
+
+| Condition Type                | `ManagedResource`s are considered when |
+|-------------------------------|----------------------------------------|
+| `SeedSystemComponentsHealthy` | `.spec.class` is set                   |
+
 #### ["Lease" Reconciler](../../pkg/gardenlet/controller/seed/lease)
 
 This reconciler checks whether the connection to the seed cluster's `/healthz` endpoint works.
@@ -436,6 +443,15 @@ If at least one check fails and there is threshold configuration for the conditi
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
+
+Besides directly checking the status of `Deployment`s, `Etcd`s, `StatefulSet`s in the shoot namespace, this reconciler also considers `ManagedResource`s (in the shoot namespace) and their status in order to compute the condition statuses, see [this document](resource-manager.md#conditions) for more information.
+The following table explains which `ManagedResource`s are considered for which condition type:
+
+| Condition Type                   | `ManagedResource`s are considered when                                                                          |
+|----------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `ControlPlaneHealthy`            | `.spec.class=seed` and `care.gardener.cloud/condition-type` label either unset, or set to `ControlPlaneHealthy` |
+| `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                              |
+| `SystemComponentsHealthy`        | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `SystemComponentsHealthy`              |
 
 ##### Constraints And Automatic Webhook Remediation
 

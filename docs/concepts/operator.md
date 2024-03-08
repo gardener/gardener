@@ -214,9 +214,9 @@ This reconciler performs four "care" actions related to `Garden`s.
 
 It maintains the following conditions:
 
+- `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `RuntimeComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualComponentsHealthy`: The virtual components are considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy. Additionally, the conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
-- `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
 - `ObservabilityComponentsHealthy`: This condition is considered healthy when the respective `Deployment`s (for example `plutono`) and `StatefulSet`s (for example `prometheus`, `vali`) exist and are healthy.
 
 If all checks for a certain condition are succeeded, then its `status` will be set to `True`.
@@ -230,6 +230,15 @@ If at least one check fails and there is threshold configuration for the conditi
 
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
+
+In order to compute the condition statuses, this reconciler considers `ManagedResource`s (in the `garden` and `istio-system` namespace) and their status, see [this document](resource-manager.md#conditions) for more information.
+The following table explains which `ManagedResource`s are considered for which condition type:
+
+| Condition Type                   | `ManagedResource`s are considered when                                                                               |
+|----------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `RuntimeComponentsHealthy`       | `.spec.class=seed` and `care.gardener.cloud/condition-type` label either unset, or set to `RuntimeComponentsHealthy` |
+| `VirtualComponentsHealthy`       | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `VirtualComponentsHealthy`                  |
+| `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                                   |
 
 #### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
 

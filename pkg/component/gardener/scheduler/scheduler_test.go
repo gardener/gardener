@@ -332,7 +332,10 @@ var _ = Describe("GardenerScheduler", func() {
 						Namespace:       managedResourceRuntime.Namespace,
 						ResourceVersion: "2",
 						Generation:      1,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						Labels: map[string]string{
+							"gardener.cloud/role":                "seed-system-component",
+							"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class:       ptr.To("seed"),
@@ -354,7 +357,10 @@ var _ = Describe("GardenerScheduler", func() {
 						Namespace:       managedResourceVirtual.Namespace,
 						ResourceVersion: "2",
 						Generation:      1,
-						Labels:          map[string]string{"origin": "gardener"},
+						Labels: map[string]string{
+							"origin":                             "gardener",
+							"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},

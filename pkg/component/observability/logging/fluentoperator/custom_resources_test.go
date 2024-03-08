@@ -183,9 +183,12 @@ var _ = Describe("Custom Resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            customResourcesManagedResourceName,
-					Namespace:       namespace,
-					Labels:          map[string]string{v1beta1constants.GardenRole: "seed-system-component"},
+					Name:      customResourcesManagedResourceName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole:          "seed-system-component",
+						"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+					},
 					ResourceVersion: "1",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{

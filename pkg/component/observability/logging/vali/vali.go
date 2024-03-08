@@ -268,7 +268,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, valiconstants.ManagedResourceNameRuntime, false, registry.SerializedObjects())
+	return managedresources.CreateForSeedWithLabels(ctx, v.client, v.namespace, valiconstants.ManagedResourceNameRuntime, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {

@@ -94,6 +94,8 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 
+		managedResourceLabels = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
+
 		configMapAuditPolicy              = g.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapAdmissionConfigs         = g.emptyConfigMap(configMapAdmissionNamePrefix)
 		secretAdmissionKubeconfigs        = g.emptySecret(secretAdmissionKubeconfigsNamePrefix)
@@ -160,7 +162,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, managedResourceLabels, runtimeResources); err != nil {
 		return err
 	}
 
@@ -185,7 +187,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
+	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, managedResourceLabels, virtualResources)
 }
 
 func (g *gardenerAPIServer) Destroy(ctx context.Context) error {

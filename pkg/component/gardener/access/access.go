@@ -66,6 +66,8 @@ type Values struct {
 	ServerOutOfCluster string
 	// ServerInCluster is the in-cluster address of a kube-apiserver.
 	ServerInCluster string
+	// ManagedResourceLabels are labels added to the ManagedResource.
+	ManagedResourceLabels map[string]string
 }
 
 type accessNameToServer struct {
@@ -109,7 +111,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, managedresources.LabelValueGardener, true, data)
+	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, ManagedResourceName, managedresources.LabelValueGardener, true, g.values.ManagedResourceLabels, data)
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
