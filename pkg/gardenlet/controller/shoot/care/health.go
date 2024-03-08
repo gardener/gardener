@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -29,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
@@ -424,11 +426,16 @@ func (h *Health) checkObservabilityComponents(
 	healthCheckOutdatedThreshold *metav1.Duration,
 ) (*gardencorev1beta1.Condition, error) {
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
+		gardenerVersion, err := semver.NewVersion(h.shoot.GetInfo().Status.Gardener.Version)
+		if err != nil {
+			return nil, err
+		}
+
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
 			h.shoot.SeedNamespace,
 			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
-			ComputeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager),
+			ComputeRequiredMonitoringStatefulSets(h.shoot.WantsAlertmanager, gardenerVersion),
 			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
@@ -530,11 +537,23 @@ func (h *Health) checkWorkers(
 	return &c, nil
 }
 
+var constraintGardenerGreaterEqual190 *semver.Constraints
+
+func init() {
+	var err error
+	constraintGardenerGreaterEqual190, err = semver.NewConstraint(">= 1.90-0")
+	utilruntime.Must(err)
+}
+
 // ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
-func ComputeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
+func ComputeRequiredMonitoringStatefulSets(wantsAlertmanager bool, gardenerVersion *semver.Version) sets.Set[string] {
 	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
-		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
+		if constraintGardenerGreaterEqual190.Check(gardenerVersion) {
+			requiredMonitoringStatefulSets.Insert("alertmanager-shoot")
+		} else {
+			requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
+		}
 	}
 	return requiredMonitoringStatefulSets
 }
