@@ -167,6 +167,29 @@ check_registry_cache_availability() {
   done
 }
 
+# The default StorageClass which comes with `kind' is configured to use
+# rancher.io/local-path (see [1]) provisioner, which defaults to `hostPath'
+# volume (see [2]).  However, `hostPath' does not expose any metrics via
+# kubelet, while `local' (see [3]) does. On the other hand `kind' does not
+# expose any mechanism for configuring the StorageClass it comes with (see [4]).
+#
+# This function annotates the default StorageClass with `defaultVolumeType: local',
+# so that we can later scrape the various `kubelet_volume_stats_*' metrics
+# exposed by kubelet (see [5]).
+#
+# References:
+#
+# [1]: https://github.com/rancher/local-path-provisioner
+# [2]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+# [3]: https://kubernetes.io/docs/concepts/storage/volumes/#local
+# [4]: https://github.com/kubernetes-sigs/kind/blob/main/pkg/cluster/internal/create/actions/installstorage/storage.go
+# [5]: https://kubernetes.io/docs/reference/instrumentation/metrics/
+_setup_kind_sc_default_volume_type() {
+    kubectl get storageclasses standard -o yaml | \
+        yq '.metadata.annotations.defaultVolumeType = "local"' | \
+        kubectl apply -f -
+}
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
@@ -195,6 +218,9 @@ kind create cluster \
   --name "$CLUSTER_NAME" \
   --image "kindest/node:v1.29.2" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+
+# Configure the default StorageClass in the kind cluster
+_setup_kind_sc_default_volume_type
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
 # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
