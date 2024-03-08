@@ -544,6 +544,16 @@ const (
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
 
+	// LabelShootNamespace is a constant for a label key that indicates a relationstip to a shoot in the specified namespace.
+	LabelShootNamespace = "shoot.gardener.cloud/namespace"
+	// LabelShootName is a constant for a label key that indicates a relationstip to a shoot with the specified name.
+	LabelShootName = "shoot.gardener.cloud/name"
+
+	// LabelPublicKeys is a constant for a label key that indicates that a resource contains public keys.
+	LabelPublicKeys = "authentication.gardener.cloud/public-keys"
+	// LabelPublicKeys is a constant for a label value that indicates that a resource contains service account public signing keys.
+	LabelPublicKeysServiceAccount = "serviceaccount"
+
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
 
