@@ -54,7 +54,7 @@ type DataMigration struct {
 	ImageAlpine string
 	// StatefulSetName is the name of the old StatefulSet.
 	StatefulSetName string
-	// PVCNames is the list of the old PersistentVolumeClaims.
+	// PVCNames is the list of names of the old PersistentVolumeClaims.
 	PVCNames []string
 }
 
@@ -69,10 +69,6 @@ func (d *DataMigration) name() string {
 // ExistingPVTakeOverPrerequisites performs the PV take over prerequisites.
 func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log logr.Logger) (bool, []*corev1.PersistentVolume, []*corev1.PersistentVolumeClaim, error) {
 	log = log.WithValues("kind", d.kind())
-
-	if d.StatefulSetName == "" || len(d.PVCNames) == 0 {
-		return false, nil, nil, nil
-	}
 
 	var (
 		pvs      []*corev1.PersistentVolume

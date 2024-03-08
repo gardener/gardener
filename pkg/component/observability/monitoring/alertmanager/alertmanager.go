@@ -74,6 +74,8 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 	}
 
 	if a.values.Replicas > 1 {
+		// The `alertmanager-operated` service is automatically created by `prometheus-operator` and not managed by our
+		// code. It is used to enable peer/mesh communication when more than 1 replica is used.
 		obj.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-9094"] = v1beta1constants.LabelNetworkPolicyAllowed
 		obj.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-9094"] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
