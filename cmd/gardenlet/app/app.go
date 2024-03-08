@@ -395,6 +395,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Reconciling labels for PVC migrations")
+	if err := reconcileLabelsForPVCMigrations(ctx, log, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -683,6 +688,37 @@ func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Clie
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			return managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, "shoot-core")
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// TODO(rfranzke): Remove this code after gardener v1.92 has been released.
+func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	labelMigrationPVCName := "disk-migration.monitoring.gardener.cloud/pvc-name"
+
+	persistentVolumeList := &corev1.PersistentVolumeList{}
+	if err := seedClient.List(ctx, persistentVolumeList, client.HasLabels{labelMigrationPVCName}); err != nil {
+		return fmt.Errorf("failed listing persistent volumes with label %s: %w", labelMigrationPVCName, err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, pv := range persistentVolumeList.Items {
+		persistentVolume := pv
+
+		labelValue := persistentVolume.Labels[labelMigrationPVCName]
+		if len(strings.Split(labelValue, "/")) == 2 {
+			continue
+		}
+
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			log.Info("Adding missing namespace to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
+			patch := client.MergeFrom(persistentVolume.DeepCopy())
+			metav1.SetMetaDataLabel(&persistentVolume.ObjectMeta, labelMigrationPVCName, persistentVolume.Spec.ClaimRef.Namespace+"/"+labelValue)
+			return seedClient.Patch(ctx, &persistentVolume, patch)
 		})
 	}
 
