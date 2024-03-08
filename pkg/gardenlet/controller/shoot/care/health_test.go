@@ -165,11 +165,15 @@ var _ = Describe("health check", func() {
 		})
 
 		It("should return expected statefulsets when alert manager is not wanted", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets(false).UnsortedList()).To(ConsistOf(commonNames...))
+			Expect(ComputeRequiredMonitoringStatefulSets(false, semver.MustParse("1.90")).UnsortedList()).To(ConsistOf(commonNames...))
 		})
 
 		It("should return expected statefulsets when alert manager is wanted", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets(true).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager")...))
+			Expect(ComputeRequiredMonitoringStatefulSets(true, semver.MustParse("1.89")).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager")...))
+		})
+
+		It("should return expected statefulsets when alert manager is wanted when reconciled by Gardener >= v1.90", func() {
+			Expect(ComputeRequiredMonitoringStatefulSets(true, semver.MustParse("1.90")).UnsortedList()).To(ConsistOf(append(commonNames, "alertmanager-shoot")...))
 		})
 	})
 
