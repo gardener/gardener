@@ -703,7 +703,10 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 		return fmt.Errorf("failed listing persistent volumes with label %s: %w", labelMigrationPVCName, err)
 	}
 
-	var taskFns []flow.TaskFn
+	var (
+		persistentVolumeNamesWithoutClaimRef []string
+		taskFns                              []flow.TaskFn
+	)
 
 	for _, pv := range persistentVolumeList.Items {
 		persistentVolume := pv
@@ -713,6 +716,10 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 			continue
 		}
 
+		if persistentVolume.Spec.ClaimRef == nil {
+			persistentVolumeNamesWithoutClaimRef = append(persistentVolumeNamesWithoutClaimRef, persistentVolume.Name)
+			continue
+		}
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			log.Info("Adding missing namespace to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
@@ -722,7 +729,18 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 		})
 	}
 
-	return flow.Parallel(taskFns...)(ctx)
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return err
+	}
+
+	if len(persistentVolumeNamesWithoutClaimRef) > 0 {
+		return fmt.Errorf("found persistent volumes with missing namespace in migration label and `.spec.claimRef=nil` - "+
+			"cannot automatically determine the namespace this PV originated from. "+
+			"A human operator needs to manually add the namespace and update the label to %s=<namespace>-<current-label-value>. "+
+			"The names of such PVs are: %+v", labelMigrationPVCName, persistentVolumeNamesWithoutClaimRef)
+	}
+
+	return nil
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
