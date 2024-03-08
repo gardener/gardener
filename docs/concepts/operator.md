@@ -108,8 +108,7 @@ The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-mana
 
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.
 
-The `virtual-garden-kube-apiserver` `Deployment` is exposed via a `Service` of type `LoadBalancer` with the same name.
-In the future, we will switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
+The `virtual-garden-kube-apiserver` `Deployment` is exposed via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
 
 Similar to the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
 Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver` or `.spec.virtualCluster.kubernetes.kubeControllerManager` for the `kube-controller-manager`.
@@ -122,7 +121,7 @@ Third-party components that need to communicate with the virtual cluster can lev
 Please note, that this functionality is restricted to the `garden` namespace. The current `Secret` name of the generic kubeconfig can be found in the annotations (key: `generic-token-kubeconfig.secret.gardener.cloud/name`) of the `Garden` resource.
 
 For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
-**The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**
+**The respective DNS record is not managed by `gardener-operator` and should be created manually. It should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.**
 The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
 
 Apart from the control plane components of the virtual cluster, the reconcile also deploys the control plane components of Gardener.
