@@ -113,7 +113,7 @@ The `virtual-garden-kube-apiserver` `Deployment` is exposed via Istio, similar t
 Similar to the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
 Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver` or `.spec.virtualCluster.kubernetes.kubeControllerManager` for the `kube-controller-manager`.
 
-The `kube-controller-manager` only runs a very few controllers that are necessary in the scenario of the virtual garden.
+The `kube-controller-manager` only runs a few controllers that are necessary in the scenario of the virtual garden.
 Most prominently, **the `serviceaccount-token` controller is unconditionally disabled**.
 Hence, the usage of static `ServiceAccount` secrets is not supported generally.
 Instead, the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) should be used.
