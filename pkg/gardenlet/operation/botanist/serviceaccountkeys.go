@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +25,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // SyncPublicServiceAccountKeys retrieves the responses of /.well-known/openid-configuration and /openid/v1/jwks
@@ -80,7 +80,7 @@ func (b *Botanist) DeletePublicServiceAccountKeys(ctx context.Context) error {
 func (b *Botanist) emptyPublicServiceAccountKeysSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s--%s", b.Garden.Project.Name, b.Shoot.GetInfo().UID),
+			Name:      gardenerutils.ComputeManagedShootIssuerSecretName(b.Garden.Project.Name, b.Shoot.GetInfo().UID),
 			Namespace: gardencorev1beta1.GardenerShootIssuerNamespace,
 		},
 	}
