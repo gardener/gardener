@@ -80,6 +80,9 @@ type RuntimeCluster struct {
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+	// Volume contains settings for persistent volumes created in the runtime cluster.
+	// +optional
+	Volume *Volume `json:"volume,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
@@ -167,6 +170,13 @@ type SettingTopologyAwareRouting struct {
 	// Additionally, other components that are deployed to the runtime cluster via other means can read this field and
 	// according to its value enable/disable topology-aware routing for their Services.
 	Enabled bool `json:"enabled"`
+}
+
+// Volume contains settings for persistent volumes created in the runtime cluster.
+type Volume struct {
+	// MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.
+	// +optional
+	MinimumSize *resource.Quantity `json:"minimumSize,omitempty"`
 }
 
 // VirtualCluster contains configuration for the virtual cluster.

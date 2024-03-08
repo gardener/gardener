@@ -41,7 +41,7 @@ func (a *alertManager) ingress(ctx context.Context) (*networkingv1.Ingress, erro
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		}, secretsmanager.SignedByCA(a.values.Ingress.SigningCA))
 		if err != nil {
 			return nil, err
 		}

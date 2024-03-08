@@ -22,6 +22,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
@@ -482,4 +483,17 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 
 func hvpaEnabled() bool {
 	return features.DefaultFeatureGate.Enabled(features.HVPA)
+}
+
+func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
+	if volume == nil || volume.MinimumSize == nil {
+		return size
+	}
+
+	quantity, err := resource.ParseQuantity(size)
+	if err == nil && quantity.Cmp(*volume.MinimumSize) < 0 {
+		return volume.MinimumSize.String()
+	}
+
+	return size
 }

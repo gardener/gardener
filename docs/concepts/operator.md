@@ -24,12 +24,14 @@ Note that there can only be one `Garden` resource per system at a time.
 
 Please find an exemplary `Garden` resource [here](../../example/operator/20-garden.yaml).
 
-### Settings For Runtime Cluster
+### Configuration For Runtime Cluster
+
+#### Settings
 
 The `Garden` resource offers a few settings that are used to control the behaviour of `gardener-operator` in the runtime cluster.
 This section provides an overview over the available settings in `.spec.runtimeCluster.settings`:
 
-#### Load Balancer Services
+##### Load Balancer Services
 
 `gardener-operator` deploys Istio and relevant resources to the runtime cluster in order to expose the `virtual-garden-kube-apiserver` service (similar to how the `kube-apiservers` of shoot clusters are exposed).
 In most cases, the `cloud-controller-manager` (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
@@ -37,7 +39,7 @@ In most cases, the `cloud-controller-manager` (responsible for managing these lo
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
-#### Vertical Pod Autoscaler
+##### Vertical Pod Autoscaler
 
 `gardener-operator` heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 By default, the `Garden` controller deploys the VPA components into the `garden` namespace of the respective runtime cluster.
@@ -48,9 +50,16 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disa
 ⚠️ In any case, there must be a VPA available for your runtime cluster.
 Using a runtime cluster without VPA is not supported.
 
-#### Topology-Aware Traffic Routing
+##### Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
+
+#### Volumes
+
+It is possible to define the minimum size for `PersistentVolumeClaim`s in the runtime cluster created by `gardener-operator` via the `.spec.runtimeCluster.volume.minimumSize` field.
+This can be relevant in case the runtime cluster runs on an infrastructure that does only support disks of at least a certain size.
+
+### Configuration For Virtual Cluster
 
 #### ETCD Encryption Config
 
@@ -145,11 +154,59 @@ The reconciler also manages a few observability-related components (more planned
 - `plutono`
 - `vali`
 - `prometheus-operator`
+- `alertmanager-garden` (read more [here](#observability))
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `.status.lastOperation` which indicates the status of an operation.
+
+##### Observability
+
+By default, the `alertmanager-garden` deployed by `gardener-operator` does not come with any configuration.
+It is the responsibility of the human operators to design and provide it.
+This can be done by creating `monitoring.coreos.com/v1alpha1.AlertmanagerConfig` resources labeled with `alertmanager=garden` (read more about them [here](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#alertmanagerconfig)), for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: config
+  namespace: garden
+  labels:
+    alertmanager: garden
+spec:
+  route:
+    receiver: dev-null
+    groupBy:
+    - alertname
+    - landscape
+    routes:
+    - continue: true
+      groupWait: 3m
+      groupInterval: 5m
+      repeatInterval: 12h
+      routes:
+      - receiver: ops
+        matchers:
+        - name: severity
+          value: warning
+          matchType: =
+        - name: topology
+          value: garden
+          matchType: =
+  receivers:
+  - name: dev-null
+  - name: ops
+    slackConfigs:
+    - apiURL: https://<slack-api-url>
+      channel: <channel-name>
+      username: Gardener-Alertmanager
+      iconEmoji: ":alert:"
+      title: "[{{ .Status | toUpper }}] Gardener Alert(s)"
+      text: "{{ range .Alerts }}*{{ .Annotations.summary }} ({{ .Status }})*\n{{ .Annotations.description }}\n\n{{ end }}"
+      sendResolved: true
+```
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 

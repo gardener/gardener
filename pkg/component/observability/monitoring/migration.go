@@ -17,6 +17,7 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,8 +54,8 @@ type DataMigration struct {
 	ImageAlpine string
 	// StatefulSetName is the name of the old StatefulSet.
 	StatefulSetName string
-	// PVCName is the name of the old PersistentVolumeClaim.
-	PVCName string
+	// PVCNames is the list of names of the old PersistentVolumeClaims.
+	PVCNames []string
 }
 
 func (d *DataMigration) kind() string {
@@ -66,14 +67,33 @@ func (d *DataMigration) name() string {
 }
 
 // ExistingPVTakeOverPrerequisites performs the PV take over prerequisites.
-func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log logr.Logger) (bool, *corev1.PersistentVolume, *corev1.PersistentVolumeClaim, error) {
+func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log logr.Logger) (bool, []*corev1.PersistentVolume, []*corev1.PersistentVolumeClaim, error) {
 	log = log.WithValues("kind", d.kind())
 
-	if d.StatefulSetName == "" || d.PVCName == "" {
-		return false, nil, nil, nil
+	var (
+		pvs      []*corev1.PersistentVolume
+		oldPVCs  []*corev1.PersistentVolumeClaim
+		takeOver bool
+	)
+
+	for _, pvcName := range d.PVCNames {
+		mustTakeOver, pv, oldPVC, err := d.checkIfPVMustBeTookOver(ctx, log, pvcName)
+		if err != nil {
+			return false, nil, nil, err
+		}
+
+		pvs = append(pvs, pv)
+		oldPVCs = append(oldPVCs, oldPVC)
+		if mustTakeOver {
+			takeOver = true
+		}
 	}
 
-	oldPVC := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: d.PVCName, Namespace: d.Namespace}}
+	return takeOver, pvs, oldPVCs, nil
+}
+
+func (d *DataMigration) checkIfPVMustBeTookOver(ctx context.Context, log logr.Logger, pvcName string) (bool, *corev1.PersistentVolume, *corev1.PersistentVolumeClaim, error) {
+	oldPVC := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: pvcName, Namespace: d.Namespace}}
 	if err := d.Client.Get(ctx, client.ObjectKeyFromObject(oldPVC), oldPVC); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, nil, nil, err
@@ -84,7 +104,7 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 	if oldPVC.Spec.VolumeName == "" {
 		// When spec.volumeName is empty then the old PVC wasn't found - let's try finding the existing PV via the label
 		// potentially set in previous invocations of this function.
-		pv, err := d.findPersistentVolumeByLabel(ctx, log)
+		pv, err := d.findPersistentVolumeByLabel(ctx, log, pvcName)
 		if err != nil {
 			return false, nil, nil, err
 		}
@@ -114,8 +134,8 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 	return true, pv, oldPVC, nil
 }
 
-func (d *DataMigration) findPersistentVolumeByLabel(ctx context.Context, log logr.Logger) (*corev1.PersistentVolume, error) {
-	labelId := pvcNameId(d.Namespace, d.PVCName)
+func (d *DataMigration) findPersistentVolumeByLabel(ctx context.Context, log logr.Logger, pvcName string) (*corev1.PersistentVolume, error) {
+	labelId := pvcNameId(d.Namespace, pvcName)
 
 	pvList := &corev1.PersistentVolumeList{}
 	if err := d.Client.List(ctx, pvList, client.MatchingLabels{labelMigrationPVCName: labelId}); err != nil {
@@ -135,7 +155,7 @@ func (d *DataMigration) findPersistentVolumeByLabel(ctx context.Context, log log
 }
 
 // PrepareExistingPVTakeOver prepares the PV take over.
-func (d *DataMigration) PrepareExistingPVTakeOver(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume, oldPVC *corev1.PersistentVolumeClaim) error {
+func (d *DataMigration) PrepareExistingPVTakeOver(ctx context.Context, log logr.Logger, pvs []*corev1.PersistentVolume, oldPVCs []*corev1.PersistentVolumeClaim) error {
 	log = log.WithValues("kind", d.kind())
 
 	log.Info("Must take over old disk")
@@ -144,42 +164,50 @@ func (d *DataMigration) PrepareExistingPVTakeOver(ctx context.Context, log logr.
 		return err
 	}
 
-	log.Info("Setting persistentVolumeReclaimPolicy to 'Retain'", "persistentVolume", client.ObjectKeyFromObject(pv))
-	if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
-		obj.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimRetain
-	}); err != nil {
-		return err
+	for _, pv := range pvs {
+		log.Info("Setting persistentVolumeReclaimPolicy to 'Retain'", "persistentVolume", client.ObjectKeyFromObject(pv))
+		if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
+			obj.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimRetain
+		}); err != nil {
+			return err
+		}
 	}
 
-	if err := d.deleteOldPVCAndWaitUntilDeleted(ctx, log, oldPVC); err != nil {
-		return err
+	for _, oldPVC := range oldPVCs {
+		if err := d.deleteOldPVCAndWaitUntilDeleted(ctx, log, oldPVC); err != nil {
+			return err
+		}
 	}
 
-	if err := d.removeClaimRefFromPVAndWaitUntilAvailable(ctx, log, pv); err != nil {
-		return err
-	}
+	for i, pv := range pvs {
+		if err := d.removeClaimRefFromPVAndWaitUntilAvailable(ctx, log, pv); err != nil {
+			return err
+		}
 
-	if err := d.createNewPVCAndWaitUntilPVGotBound(ctx, log, pv); err != nil {
-		return err
+		if err := d.createNewPVCAndWaitUntilPVGotBound(ctx, log, i, pv); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // FinalizeExistingPVTakeOver finalizes the PV take over.
-func (d *DataMigration) FinalizeExistingPVTakeOver(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
+func (d *DataMigration) FinalizeExistingPVTakeOver(ctx context.Context, log logr.Logger, pvs []*corev1.PersistentVolume) error {
 	log = log.WithValues("kind", d.kind())
 
 	if err := d.waitForNewStatefulSetToBeRolledOut(ctx, log); err != nil {
 		return err
 	}
 
-	log.Info("Setting persistentVolumeReclaimPolicy to 'Delete' and removing migration label", "persistentVolume", client.ObjectKeyFromObject(pv))
-	if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
-		obj.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
-		delete(pv.Labels, labelMigrationPVCName)
-	}); err != nil {
-		return err
+	for _, pv := range pvs {
+		log.Info("Setting persistentVolumeReclaimPolicy to 'Delete' and removing migration label", "persistentVolume", client.ObjectKeyFromObject(pv))
+		if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
+			obj.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
+			delete(pv.Labels, labelMigrationPVCName)
+		}); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Migration complete")
@@ -200,8 +228,13 @@ func (d *DataMigration) deleteOldStatefulSetAndWaitUntilPodsDeleted(ctx context.
 
 	if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
 		podList := &corev1.PodList{}
-		if err := d.Client.List(ctx, podList, client.InNamespace(d.Namespace), client.MatchingLabels{"statefulset.kubernetes.io/pod-name": d.StatefulSetName + "-0"}); err != nil {
-			return retry.SevereError(err)
+
+		for i := range d.PVCNames {
+			podListTmp := &corev1.PodList{}
+			if err := d.Client.List(ctx, podListTmp, client.InNamespace(d.Namespace), client.MatchingLabels{"statefulset.kubernetes.io/pod-name": d.StatefulSetName + "-" + strconv.Itoa(i)}); err != nil {
+				return retry.SevereError(err)
+			}
+			podList.Items = append(podList.Items, podListTmp.Items...)
 		}
 
 		if length := len(podList.Items); length > 0 {
@@ -251,7 +284,7 @@ func (d *DataMigration) removeClaimRefFromPVAndWaitUntilAvailable(ctx context.Co
 
 	if pv.Spec.ClaimRef == nil {
 		log.Info("PV is already unclaimed, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
-	} else if pv.Spec.ClaimRef.Name == d.kind()+"-db-"+d.FullName+"-0" {
+	} else if strings.HasPrefix(pv.Spec.ClaimRef.Name, d.kind()+"-db-"+d.FullName) {
 		log.Info("PV is already claimed by new PVC, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
 	} else {
 		patch := client.MergeFrom(pv.DeepCopy())
@@ -285,8 +318,8 @@ func (d *DataMigration) removeClaimRefFromPVAndWaitUntilAvailable(ctx context.Co
 	return nil
 }
 
-func (d *DataMigration) createNewPVCAndWaitUntilPVGotBound(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
-	newPVC := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: d.kind() + "-db-" + d.FullName + "-0", Namespace: d.Namespace}}
+func (d *DataMigration) createNewPVCAndWaitUntilPVGotBound(ctx context.Context, log logr.Logger, i int, pv *corev1.PersistentVolume) error {
+	newPVC := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: d.kind() + "-db-" + d.FullName + "-" + strconv.Itoa(i), Namespace: d.Namespace}}
 	log.Info("Creating new PVC to bind the PV", "persistentVolumeClaim", client.ObjectKeyFromObject(newPVC))
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, newPVC, func() error {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -62,6 +63,8 @@ type Values struct {
 	StorageCapacity resource.Quantity
 	// Replicas is the number of replicas.
 	Replicas int32
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
 	// AlertingSMTPSecret is the alerting SMTP secret.
 	AlertingSMTPSecret *corev1.Secret
 	// EmailReceivers is a list of email addresses to which alerts should be sent. If this list is empty, the alerts
@@ -84,6 +87,9 @@ type IngressValues struct {
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
+	// SigningCA is the name of the CA that should be used to sign a self-signed server certificate. Only needed when
+	// no wildcard certificate secret is provided.
+	SigningCA string
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
@@ -113,7 +119,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	)
 
 	// TODO(rfranzke): Remove this migration code after all AlertManagers have been migrated.
-	takeOverExistingPV, pv, oldPVC, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
+	takeOverExistingPV, pvs, oldPVCs, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -127,6 +133,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		a.service(),
 		a.alertManager(takeOverExistingPV),
 		a.vpa(),
+		a.podDisruptionBudget(),
 		a.config(),
 		a.smtpSecret(),
 		ingress,
@@ -136,7 +143,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pv, oldPVC); err != nil {
+		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pvs, oldPVCs); err != nil {
 			return err
 		}
 
@@ -148,7 +155,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 	}
 
 	if takeOverExistingPV {
-		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pv); err != nil {
+		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
 			return err
 		}
 
@@ -201,5 +208,6 @@ func (a *alertManager) getLabels() map[string]string {
 	return map[string]string{
 		"component":                "alertmanager",
 		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
+		"alertmanager":             a.values.Name,
 	}
 }

@@ -213,6 +213,19 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  volume:
+                    description: Volume contains settings for persistent volumes created
+                      in the runtime cluster.
+                    properties:
+                      minimumSize:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: MinimumSize defines the minimum size that should
+                          be used for PVCs in the runtime cluster.
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    type: object
                 required:
                 - ingress
                 - networking

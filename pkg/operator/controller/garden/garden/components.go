@@ -68,6 +68,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
@@ -122,6 +124,7 @@ type components struct {
 	plutono                       plutono.Interface
 	vali                          component.Deployer
 	prometheusOperator            component.DeployWaiter
+	alertManager                  alertmanager.Interface
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -131,12 +134,24 @@ func (r *Reconciler) instantiateComponents(
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
 	applier kubernetes.Applier,
-	wildcardCert *corev1.Secret,
+	wildcardCertSecret *corev1.Secret,
 	enableSeedAuthorizer bool,
 ) (
 	c components,
 	err error,
 ) {
+	var wildcardCertSecretName *string
+	if wildcardCertSecret != nil {
+		wildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
+	}
+
+	var ingressDomain string
+	if domains := garden.Spec.RuntimeCluster.Ingress.Domains; len(domains) > 0 {
+		ingressDomain = domains[0]
+	} else {
+		ingressDomain = *garden.Spec.RuntimeCluster.Ingress.Domain
+	}
+
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
@@ -250,11 +265,15 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(garden, secretsManager, wildcardCert)
+	c.plutono, err = r.newPlutono(secretsManager, ingressDomain, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
 	c.prometheusOperator, err = r.newPrometheusOperator()
+	if err != nil {
+		return
+	}
+	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, ingressDomain, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -822,19 +841,7 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
 }
 
-func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCert *corev1.Secret) (plutono.Interface, error) {
-	var wildcardCertName *string
-	if wildcardCert != nil {
-		wildcardCertName = ptr.To(wildcardCert.GetName())
-	}
-
-	var accessDomain string
-	if domains := garden.Spec.RuntimeCluster.Ingress.Domains; len(domains) > 0 {
-		accessDomain = domains[0]
-	} else {
-		accessDomain = *garden.Spec.RuntimeCluster.Ingress.Domain
-	}
-
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (plutono.Interface, error) {
 	return sharedcomponent.NewPlutono(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -842,7 +849,7 @@ func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager 
 		component.ClusterTypeSeed,
 		1,
 		"",
-		fmt.Sprintf("%s.%s", "plutono-garden", accessDomain),
+		"plutono-garden."+ingressDomain,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		false,
 		false,
@@ -850,7 +857,7 @@ func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager 
 		false,
 		false,
 		false,
-		wildcardCertName,
+		wildcardCertSecretName,
 	)
 }
 
@@ -1051,4 +1058,28 @@ func (r *Reconciler) newPrometheusOperator() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
+}
+
+func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (alertmanager.Interface, error) {
+	return sharedcomponent.NewAlertmanager(log, r.RuntimeClientSet.Client(), r.GardenNamespace, alertmanager.Values{
+		Name:              "garden",
+		ClusterType:       component.ClusterTypeSeed,
+		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "1Gi")),
+		Replicas:          2,
+		RuntimeVersion:    r.RuntimeVersion,
+		Ingress: &alertmanager.IngressValues{
+			Host:                   "alertmanager-garden." + ingressDomain,
+			SecretsManager:         secretsManager,
+			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "garden-alertmanager",
+			PVCNames: []string{
+				"alertmanager-db-garden-alertmanager-0",
+				"alertmanager-db-garden-alertmanager-1",
+			},
+		},
+	})
 }
