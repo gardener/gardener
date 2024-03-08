@@ -65,7 +65,7 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 						},
 						{
 							Alert: "NodeNotHealthy",
-							Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!="ToBeDeletedByClusterAutoscaler", key!="` + v1beta1constants.LabelNodeCriticalComponent + `"}))[30m:]) > 5`),
+							Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!="deployment.machine.sapcloud.io/prefer-no-schedule", key!="ToBeDeletedByClusterAutoscaler", key!="` + v1beta1constants.LabelNodeCriticalComponent + `"}))[30m:]) > 9`),
 							For:   ptr.To(monitoringv1.Duration("0m")),
 							Labels: map[string]string{
 								"severity":   "warning",
@@ -73,7 +73,7 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 								"visibility": "operator",
 							},
 							Annotations: map[string]string{
-								"description": "Node {{$labels.node}} in landscape {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 mins.",
+								"description": "Node {{$labels.node}} in landscape {{$externalLabels.landscape}} was not healthy for ten scrapes in the past 30 mins.",
 								"summary":     "A node is not healthy.",
 							},
 						},
