@@ -103,9 +103,10 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 
 	// PV was found, so let's label it so that we can find it in future invocations of this function (even after the old
 	// PVC has already been deleted).
-	log.Info("Adding PVC name to PV labels", "persistentVolume", client.ObjectKeyFromObject(pv), "label", labelMigrationPVCName, "persistentVolumeClaim", client.ObjectKeyFromObject(oldPVC))
+	labelId := pvcNameId(oldPVC.Namespace, oldPVC.Name)
+	log.Info("Adding PVC namespace and name to PV labels", "persistentVolume", client.ObjectKeyFromObject(pv), "label", labelMigrationPVCName, "value", labelId, "persistentVolumeClaim", client.ObjectKeyFromObject(oldPVC))
 	if err := d.patchPV(ctx, pv, func(_ *corev1.PersistentVolume) {
-		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationPVCName, oldPVC.Name)
+		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationPVCName, labelId)
 	}); err != nil {
 		return false, nil, nil, err
 	}
@@ -114,20 +115,22 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 }
 
 func (d *DataMigration) findPersistentVolumeByLabel(ctx context.Context, log logr.Logger) (*corev1.PersistentVolume, error) {
+	labelId := pvcNameId(d.Namespace, d.PVCName)
+
 	pvList := &corev1.PersistentVolumeList{}
-	if err := d.Client.List(ctx, pvList, client.MatchingLabels{labelMigrationPVCName: d.PVCName}); err != nil {
+	if err := d.Client.List(ctx, pvList, client.MatchingLabels{labelMigrationPVCName: labelId}); err != nil {
 		return nil, err
 	}
 
 	switch len(pvList.Items) {
 	case 0:
-		log.Info("Old PV not found via label, nothing to migrate", "label", labelMigrationPVCName)
+		log.Info("Old PV not found via label, nothing to migrate", "label", labelMigrationPVCName, "value", labelId)
 		return nil, nil
 	case 1:
-		log.Info("Existing PV found via label", "persistentVolume", client.ObjectKeyFromObject(&pvList.Items[0]), "label", labelMigrationPVCName)
+		log.Info("Existing PV found via label", "persistentVolume", client.ObjectKeyFromObject(&pvList.Items[0]), "label", labelMigrationPVCName, "value", labelId)
 		return &pvList.Items[0], nil
 	default:
-		return nil, fmt.Errorf("more than one PV found with label %s=%s", labelMigrationPVCName, d.PVCName)
+		return nil, fmt.Errorf("more than one PV found with label %s=%s", labelMigrationPVCName, labelId)
 	}
 }
 
@@ -360,4 +363,8 @@ func (d *DataMigration) waitForNewStatefulSetToBeRolledOut(ctx context.Context, 
 
 	log.Info("New StatefulSet is healthy now and no longer progressing", "statefulSet", client.ObjectKeyFromObject(statefulSet))
 	return nil
+}
+
+func pvcNameId(namespace, name string) string {
+	return namespace + "/" + name
 }
