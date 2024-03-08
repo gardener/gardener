@@ -36,7 +36,10 @@ import (
 
 // TODO(rfranzke): Remove this file after all Prometheis and AlertManagers have been migrated.
 
-const labelMigrationPVCName = "disk-migration.monitoring.gardener.cloud/pvc-name"
+const (
+	labelMigrationNamespace = "disk-migration.monitoring.gardener.cloud/namespace"
+	labelMigrationPVCName   = "disk-migration.monitoring.gardener.cloud/pvc-name"
+)
 
 // DataMigration is a struct for migrating data from existing disks.
 type DataMigration struct {
@@ -103,9 +106,10 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 
 	// PV was found, so let's label it so that we can find it in future invocations of this function (even after the old
 	// PVC has already been deleted).
-	log.Info("Adding PVC name to PV labels", "persistentVolume", client.ObjectKeyFromObject(pv), "label", labelMigrationPVCName, "persistentVolumeClaim", client.ObjectKeyFromObject(oldPVC))
+	log.Info("Adding PVC namespace and name to PV labels", "persistentVolume", client.ObjectKeyFromObject(pv), "persistentVolumeClaim", client.ObjectKeyFromObject(oldPVC))
 	if err := d.patchPV(ctx, pv, func(_ *corev1.PersistentVolume) {
-		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationPVCName, oldPVC.Name)
+		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationNamespace, d.Namespace)
+		metav1.SetMetaDataLabel(&pv.ObjectMeta, labelMigrationPVCName, d.PVCName)
 	}); err != nil {
 		return false, nil, nil, err
 	}
@@ -115,19 +119,19 @@ func (d *DataMigration) ExistingPVTakeOverPrerequisites(ctx context.Context, log
 
 func (d *DataMigration) findPersistentVolumeByLabel(ctx context.Context, log logr.Logger) (*corev1.PersistentVolume, error) {
 	pvList := &corev1.PersistentVolumeList{}
-	if err := d.Client.List(ctx, pvList, client.MatchingLabels{labelMigrationPVCName: d.PVCName}); err != nil {
+	if err := d.Client.List(ctx, pvList, client.MatchingLabels{labelMigrationNamespace: d.Namespace, labelMigrationPVCName: d.PVCName}); err != nil {
 		return nil, err
 	}
 
 	switch len(pvList.Items) {
 	case 0:
-		log.Info("Old PV not found via label, nothing to migrate", "label", labelMigrationPVCName)
+		log.Info("Old PV not found via label, nothing to migrate", "namespaceName", d.Namespace, "pvcName", d.PVCName)
 		return nil, nil
 	case 1:
-		log.Info("Existing PV found via label", "persistentVolume", client.ObjectKeyFromObject(&pvList.Items[0]), "label", labelMigrationPVCName)
+		log.Info("Existing PV found via label", "persistentVolume", client.ObjectKeyFromObject(&pvList.Items[0]), "namespaceName", d.Namespace, "pvcName", d.PVCName)
 		return &pvList.Items[0], nil
 	default:
-		return nil, fmt.Errorf("more than one PV found with label %s=%s", labelMigrationPVCName, d.PVCName)
+		return nil, fmt.Errorf("more than one PV found with labels %s=%s and %s=%s", labelMigrationNamespace, d.Namespace, labelMigrationPVCName, d.PVCName)
 	}
 }
 
@@ -174,6 +178,7 @@ func (d *DataMigration) FinalizeExistingPVTakeOver(ctx context.Context, log logr
 	log.Info("Setting persistentVolumeReclaimPolicy to 'Delete' and removing migration label", "persistentVolume", client.ObjectKeyFromObject(pv))
 	if err := d.patchPV(ctx, pv, func(obj *corev1.PersistentVolume) {
 		obj.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
+		delete(pv.Labels, labelMigrationNamespace)
 		delete(pv.Labels, labelMigrationPVCName)
 	}); err != nil {
 		return err

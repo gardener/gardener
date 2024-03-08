@@ -395,6 +395,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Reconciling labels for PVC migrations")
+	if err := reconcileLabelsForPVCMigrations(ctx, log, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -687,6 +692,70 @@ func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Clie
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// TODO(rfranzke): Remove this code after gardener v1.92 has been released.
+func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	var (
+		labelMigrationNamespace = "disk-migration.monitoring.gardener.cloud/namespace"
+		labelMigrationPVCName   = "disk-migration.monitoring.gardener.cloud/pvc-name"
+	)
+
+	persistentVolumeList := &corev1.PersistentVolumeList{}
+	if err := seedClient.List(ctx, persistentVolumeList, client.HasLabels{labelMigrationPVCName}); err != nil {
+		return fmt.Errorf("failed listing persistent volumes with label %s: %w", labelMigrationPVCName, err)
+	}
+
+	var (
+		persistentVolumeNamesWithoutClaimRef []string
+		taskFns                              []flow.TaskFn
+	)
+
+	for _, pv := range persistentVolumeList.Items {
+		persistentVolume := pv
+
+		if persistentVolume.Labels[labelMigrationNamespace] != "" {
+			continue
+		}
+
+		if persistentVolume.Status.Phase == corev1.VolumeReleased && persistentVolume.Spec.ClaimRef != nil {
+			// check if namespace is already gone - if yes, just clean them up
+			if err := seedClient.Get(ctx, client.ObjectKey{Name: persistentVolume.Spec.ClaimRef.Namespace}, &corev1.Namespace{}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed checking if namespace %s still exists (due to PV %s): %w", persistentVolume.Spec.ClaimRef.Namespace, client.ObjectKeyFromObject(&persistentVolume), err)
+				}
+
+				taskFns = append(taskFns, func(ctx context.Context) error {
+					log.Info("Deleting orphaned persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume))
+					return client.IgnoreNotFound(seedClient.Delete(ctx, &persistentVolume))
+				})
+				continue
+			}
+		} else if persistentVolume.Spec.ClaimRef == nil {
+			persistentVolumeNamesWithoutClaimRef = append(persistentVolumeNamesWithoutClaimRef, persistentVolume.Name)
+			continue
+		}
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			log.Info("Adding missing namespace label to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
+			patch := client.MergeFrom(persistentVolume.DeepCopy())
+			metav1.SetMetaDataLabel(&persistentVolume.ObjectMeta, labelMigrationNamespace, persistentVolume.Spec.ClaimRef.Namespace)
+			return seedClient.Patch(ctx, &persistentVolume, patch)
+		})
+	}
+
+	if err := flow.Parallel(taskFns...)(ctx); err != nil {
+		return err
+	}
+
+	if len(persistentVolumeNamesWithoutClaimRef) > 0 {
+		return fmt.Errorf("found persistent volumes with missing namespace in migration label and `.spec.claimRef=nil` - "+
+			"cannot automatically determine the namespace this PV originated from. "+
+			"A human operator needs to manually add the namespace and update the label to %s=<namespace> - "+
+			"The names of such PVs are: %+v", labelMigrationNamespace, persistentVolumeNamesWithoutClaimRef)
+	}
+
+	return nil
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
