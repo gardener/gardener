@@ -469,11 +469,17 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources, waitUntilWorkerDeleted),
 		})
+		deleteDWDResources = g.Add(flow.Task{
+			Name:         "Deleting DWD managed resource and secrets",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.DependencyWatchdogAccess.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       botanist.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
+		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deleteManagedResources),
+			Dependencies: flow.NewTaskIDs(deleteDWDResources),
 		})
 		deleteExtensionResourcesBeforeKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extension resources before kube-apiserver",
