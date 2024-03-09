@@ -83,6 +83,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -568,6 +569,7 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 
 			patch := client.MergeFrom(grmDeploy.DeepCopy())
 			grmDeploy.Spec.Template.Spec.Volumes[grmCMVolumeIndex].ConfigMap.Name = newGRMConfigMap.Name
+			utilruntime.Must(references.InjectAnnotations(grmDeploy))
 
 			return seedClient.Patch(ctx, grmDeploy, patch)
 		})
