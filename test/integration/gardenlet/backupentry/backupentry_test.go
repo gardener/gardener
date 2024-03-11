@@ -177,7 +177,6 @@ var _ = Describe("BackupEntry controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo-",
 				Labels:       map[string]string{testID: testRunID},
-				Generation:   1,
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				Provider: gardencorev1beta1.BackupBucketProvider{

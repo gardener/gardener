@@ -767,9 +767,8 @@ func generatePodTestResource(name string) *corev1.Pod {
 func generateDeploymentTestResource(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(int32(1)),
@@ -811,9 +810,8 @@ func generatePodForDeployment(deployment *appsv1.Deployment) *corev1.Pod {
 func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: ptr.To(int32(1)),
@@ -836,9 +834,8 @@ func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
 func generateDaemonSetTestResource(name string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -860,9 +857,8 @@ func generateDaemonSetTestResource(name string) *appsv1.DaemonSet {
 func generatePrometheusTestResource(name string) *monitoringv1.Prometheus {
 	return &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
@@ -894,9 +890,8 @@ func generatePrometheusTestResource(name string) *monitoringv1.Prometheus {
 func generateAlertmanagerTestResource(name string) *monitoringv1.Alertmanager {
 	return &monitoringv1.Alertmanager{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: monitoringv1.AlertmanagerSpec{
 			Replicas: ptr.To(int32(1)),
