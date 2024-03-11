@@ -551,7 +551,7 @@ const (
 
 	// LabelPublicKeys is a constant for a label key that indicates that a resource contains public keys.
 	LabelPublicKeys = "authentication.gardener.cloud/public-keys"
-	// LabelPublicKeys is a constant for a label value that indicates that a resource contains service account public signing keys.
+	// LabelPublicKeysServiceAccount is a constant for a label value that indicates that a resource contains service account public signing keys.
 	LabelPublicKeysServiceAccount = "serviceaccount"
 
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.

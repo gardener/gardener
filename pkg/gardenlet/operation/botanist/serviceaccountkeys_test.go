@@ -142,7 +142,7 @@ var _ = Describe("ServiceAccountKeys", func() {
 					"foo": []byte("bar"),
 				},
 			}
-			Expect(gardenClient.Create(ctx, secret))
+			Expect(gardenClient.Create(ctx, secret)).To(Succeed())
 			Expect(botanist.SyncPublicServiceAccountKeys(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			expectedSecret.ResourceVersion = "2"
