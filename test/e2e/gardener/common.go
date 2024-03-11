@@ -68,6 +68,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
 				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",
+				v1beta1constants.AnnotationAuthenticationIssuer:                        v1beta1constants.AnnotationAuthenticationIssuerManaged,
 			},
 		},
 		Spec: gardencorev1beta1.ShootSpec{
