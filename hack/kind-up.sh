@@ -245,6 +245,11 @@ _setup_kind_with_lpp_resize_support() {
         kustomize edit set image rancher/local-path-provisioner:master-head="${_local_latest_image}" && \
         kustomize build . | \
         kubectl apply -f -
+
+    # The default manifests from rancher/local-path come with another
+    # StorageClass, which we don't need, so make sure to remove it.
+    kubectl delete storageclass local-path
+
     cd "${_oldpwd}"
     rm -rf "${_workdir}"
 }
