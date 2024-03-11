@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -117,7 +118,7 @@ func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c clie
 		return err
 	}
 
-	var orphanedLeases []client.Object
+	var taskFns []flow.TaskFn
 
 	for _, l := range leaseList.Items {
 		if len(l.OwnerReferences) > 0 {
@@ -125,17 +126,21 @@ func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c clie
 		}
 		lease := l.DeepCopy()
 
-		if err := c.Get(ctx, client.ObjectKey{Name: lease.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Node"}}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed getting node %s when checking for potential orphaned Lease %s: %w", lease.Name, client.ObjectKeyFromObject(lease), err)
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			if err := c.Get(ctx, client.ObjectKey{Name: lease.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Node"}}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed getting node %s when checking for potential orphaned Lease %s: %w", lease.Name, client.ObjectKeyFromObject(lease), err)
+				}
+
+				g.log.Info("Detected orphaned Lease object, cleaning it up", "nodeName", lease.Name, "lease", client.ObjectKeyFromObject(lease))
+				return kubernetesutils.DeleteObject(ctx, c, lease)
 			}
 
-			g.log.Info("Detected orphaned Lease object, cleaning it up", "nodeName", lease.Name, "lease", client.ObjectKeyFromObject(lease))
-			orphanedLeases = append(orphanedLeases, lease)
-		}
+			return nil
+		})
 	}
 
-	return kubernetesutils.DeleteObjects(ctx, c, orphanedLeases...)
+	return flow.ParallelN(100, taskFns...)(ctx)
 }
 
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
