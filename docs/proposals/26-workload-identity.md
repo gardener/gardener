@@ -271,12 +271,13 @@ On key rotation, the new key pair might need to be published but not used to
 sign the tokens, this is needed to ensure enough time for the external services
 to discover the new public key. This rotation strategy could be useful for
 external services that do not automatically rediscover the OIDC issuer metadata
-when the token is signed with still unknown to them key. The major infrastructure
-providers do not document how often they are running OIDC rediscovery, but
-hands-on experience shows that some are doing it immediately, while others need
-several minutes. As workload identity is not limited only to the major
-infrastructure providers, therefore the duration of this period will be
-configurable but at least one day long.
+when the token is signed with still unknown to them key. The major
+infrastructure providers do not document publicly how often they are running
+OIDC rediscovery, but a hands-on experience shows that some are doing it
+immediately, while others need several minutes. As workload identity is not
+limited only to the major infrastructure providers, therefore the duration of
+this period will be configurable and it would be recommended to be at least one
+day long.
 
 The Kubernetes API server extended by the Gardener API server is already issuing
 JWTs for the Kubernetes service accounts. To completely separate workload
@@ -289,7 +290,7 @@ minimal, maximal and the default durations for each token. The private key also
 should not be shared with the Kubernetes API server. When `gardener-operator` is
 used to manage the Garden cluster, it will be also responsible for the Workload
 Identity token signing key rotation, a strategy similar to the one for the
-Kubernetes Service Account token signing key should be used.
+Kubernetes Service Account token signing key rotation will be used.
 
 When Gardener API server is using own issuer and signing keys, the service
 account token authenticator of the Kubernetes API server will not reject the
