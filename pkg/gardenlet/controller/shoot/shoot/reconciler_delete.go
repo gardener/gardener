@@ -624,6 +624,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           botanist.Shoot.Components.ControlPlane.ResourceManager.Destroy,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Delete public service account signing keys from Garden cluster",
+			Fn:           botanist.DeletePublicServiceAccountKeys,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+		})
 
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name: "Destroying shoot control plane exposure",

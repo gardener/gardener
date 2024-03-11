@@ -410,6 +410,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Sync public service account signing keys to Garden cluster",
+			Fn:           botanist.SyncPublicServiceAccountKeys,
+			SkipIf:       o.Shoot.HibernationEnabled || !v1beta1helper.HasManagedIssuer(botanist.Shoot.GetInfo()),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling resources after modification of encryption config or to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {

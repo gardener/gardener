@@ -183,6 +183,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Dependencies: flow.NewTaskIDs(syncPoint, waitUntilEtcdsDeleted, deleteKubernetesResources),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Delete public service account signing keys from Garden cluster",
+			Fn:           botanist.DeletePublicServiceAccountKeys,
+			Dependencies: flow.NewTaskIDs(syncPoint),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace has been deleted",
 			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
