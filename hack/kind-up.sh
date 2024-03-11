@@ -185,8 +185,9 @@ check_registry_cache_availability() {
 # [4]: https://github.com/kubernetes-sigs/kind/blob/main/pkg/cluster/internal/create/actions/installstorage/storage.go
 # [5]: https://kubernetes.io/docs/reference/instrumentation/metrics/
 _setup_kind_sc_default_volume_type() {
+    echo "Configuring default StorageClass for kind cluster ..."
     kubectl get storageclasses standard -o yaml | \
-        yq '.metadata.annotations.defaultVolumeType = "local"' | \
+        yq '.metadata.annotations.defaultVolumeType = "local" | .allowVolumeExpansion = true' | \
         kubectl apply -f -
 }
 
