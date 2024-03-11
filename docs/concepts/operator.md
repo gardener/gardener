@@ -37,7 +37,7 @@ This section provides an overview over the available settings in `.spec.runtimeC
 In most cases, the `cloud-controller-manager` (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
 [This document](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) provides a good overview and many examples.
 
-By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
+By setting the `.spec.runtimeCluster.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
 ##### Vertical Pod Autoscaler
 
@@ -45,7 +45,7 @@ By setting the `.spec.settings.loadBalancerServices.annotations` field the Garde
 By default, the `Garden` controller deploys the VPA components into the `garden` namespace of the respective runtime cluster.
 In case you want to manage the VPA deployment on your own or have a custom one, then you might want to disable the automatic deployment of `gardener-operator`.
 Otherwise, you might end up with two VPAs which will cause erratic behaviour.
-By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disable the automatic deployment.
+By setting the `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=false` you can disable the automatic deployment.
 
 ⚠️ In any case, there must be a VPA available for your runtime cluster.
 Using a runtime cluster without VPA is not supported.
@@ -117,21 +117,20 @@ The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-mana
 
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.
 
-The `virtual-garden-kube-apiserver` `Deployment` is exposed via a `Service` of type `LoadBalancer` with the same name.
-In the future, we will switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
+The `virtual-garden-kube-apiserver` `Deployment` is exposed via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
 
 Similar to the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
 Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver` or `.spec.virtualCluster.kubernetes.kubeControllerManager` for the `kube-controller-manager`.
 
-The `kube-controller-manager` only runs a very few controllers that are necessary in the scenario of the virtual garden.
+The `kube-controller-manager` only runs a few controllers that are necessary in the scenario of the virtual garden.
 Most prominently, **the `serviceaccount-token` controller is unconditionally disabled**.
 Hence, the usage of static `ServiceAccount` secrets is not supported generally.
 Instead, the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) should be used.
 Third-party components that need to communicate with the virtual cluster can leverage the [`gardener-resource-manager`'s `TokenRequestor` controller](resource-manager.md#tokenrequestor-controller) and the generic kubeconfig, just like it works for `Shoot`s.
 Please note, that this functionality is restricted to the `garden` namespace. The current `Secret` name of the generic kubeconfig can be found in the annotations (key: `generic-token-kubeconfig.secret.gardener.cloud/name`) of the `Garden` resource.
 
-For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
-**The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**
+For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domains`.
+**The respective DNS record is not managed by `gardener-operator` and should be created manually. It should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.**
 The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
 
 Apart from the control plane components of the virtual cluster, the reconcile also deploys the control plane components of Gardener.
