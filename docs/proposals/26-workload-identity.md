@@ -43,7 +43,7 @@ manager will no longer require static credentials to create virtual machines in
 the cloud provider account of the Gardener user.
 
 Cloud services, like AWS, Azure, Alicloud, GCP and others, support identity
-federation with external to them identity providers via trust configuration
+federation with identity providers external to them via trust configuration
 using the OIDC protocol. This way, the remotely running workloads can use JWTs
 issued from the external identity provider to authenticate with the cloud
 service, hence no static credentials like service keys are used. More details
@@ -293,7 +293,7 @@ Identity token signing key rotation, a strategy similar to the one for the
 Kubernetes Service Account token signing key rotation will be used.
 
 When Gardener API server is using own issuer and signing keys, the service
-account token authenticator of the Kubernetes API server will not reject the
+account token authenticator of the Kubernetes API server will reject the
 workload identity JWTs because:
 
 - the issuer of the tokens is not accepted
@@ -368,8 +368,8 @@ different seeds, i.e. multiple controllers would be responsible to react on the
 annotation which is usually fine, but all of them would have to negotiate when
 the operation is completed and the annotation to be removed.
 
-To achieve the restriction only gardenlet to create or refresh tokens in the
-seed cluster, but not any other controller running there, a new CRD
+To achieve the restriction that only `gardenlet` creates or refreshes tokens in
+the seed cluster, but not any other controller running there, a new CRD
 `WorkloadIdentityBinding` in the seed will be implemented. This CRD will refer
 to the `WorkloadIdentity` in the Garden cluster that is source of the token, as
 well as specify target store where the tokens to be written. Gardenlet will be
@@ -449,7 +449,7 @@ reconciliations. Extension controllers can request read access for the
 
 Similar approach will be considered also when workload identity is used for DNS
 purposes, however no detailed proposal will be made as of now as usage of the
-DNS secrets needs to be understand better, considering also internal and default
+DNS secrets needs to be understood better, considering also internal and default
 domains.
 
 ### Use cases
