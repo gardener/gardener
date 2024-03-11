@@ -343,6 +343,42 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
+	// Gardenlets can create secrets that contain the public info of a shoot's
+	// service account issuer in the gardener-system-shoot-issuer namespace.
+	if request.Namespace == gardencorev1beta1.GardenerShootIssuerNamespace {
+		secret := &corev1.Secret{}
+		if err := h.Decoder.Decode(request, secret); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		var (
+			shootName      string
+			shootNamespace string
+			ok             bool
+		)
+		if shootName, ok = secret.Labels[v1beta1constants.LabelShootName]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelShootName))
+		}
+		if shootNamespace, ok = secret.Labels[v1beta1constants.LabelShootNamespace]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelShootNamespace))
+		}
+		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelPublicKeys))
+		} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s value must be set to %s", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+		}
+
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, shoot.Spec.SeedName)
+	}
+
 	// Check if the secret is a bootstrap token for a ManagedSeed.
 	if strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) && request.Namespace == metav1.NamespaceSystem {
 		secret := &corev1.Secret{}

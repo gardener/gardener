@@ -75,6 +75,8 @@ var _ = Describe("graph", func() {
 		seed1DNSProviderSecretRef = corev1.SecretReference{Namespace: "seed1secret3", Name: "seed1secret3"}
 		seed1LeaseNamespace       = "gardener-system-seed-lease"
 
+		shootIssuerNamespace = "gardener-system-shoot-issuer"
+
 		shoot1                           *gardencorev1beta1.Shoot
 		shoot1DNSProvider1               = gardencorev1beta1.DNSProvider{SecretName: ptr.To("dnssecret1")}
 		shoot1DNSProvider2               = gardencorev1beta1.DNSProvider{SecretName: ptr.To("dnssecret2")}
@@ -87,10 +89,12 @@ var _ = Describe("graph", func() {
 		shoot1SecretNameSSHKeypair       string
 		shoot1SecretNameOldSSHKeypair    string
 		shoot1SecretNameMonitoring       string
+		shoot1SecretNameManagedIssuer    string
 		shoot1InternalSecretNameCAClient string
 		shoot1ConfigMapNameCACluster     string
 
-		project1 *gardencorev1beta1.Project
+		namespace1 *corev1.Namespace
+		project1   *gardencorev1beta1.Project
 
 		backupBucket1                   *gardencorev1beta1.BackupBucket
 		backupBucket1SecretRef          = corev1.SecretReference{Namespace: "baz", Name: "foo"}
@@ -173,8 +177,25 @@ var _ = Describe("graph", func() {
 			},
 		}
 
+		namespace1 = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "namespace1",
+				Labels: map[string]string{
+					"project.gardener.cloud/name": "project1",
+				},
+			},
+		}
+		Expect(fakeClient.Create(ctx, namespace1)).To(Succeed())
+
 		shoot1 = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: "namespace1"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot1",
+				Namespace: namespace1.Name,
+				UID:       "uid1",
+				Annotations: map[string]string{
+					"authentication.gardener.cloud/issuer": "managed",
+				},
+			},
 			Spec: gardencorev1beta1.ShootSpec{
 				CloudProfileName: "cloudprofile1",
 				DNS: &gardencorev1beta1.DNS{
@@ -205,9 +226,11 @@ var _ = Describe("graph", func() {
 		project1 = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: ptr.To("projectnamespace1"),
+				Namespace: ptr.To(namespace1.Name),
 			},
 		}
+
+		shoot1SecretNameManagedIssuer = fmt.Sprintf("%s--%s", project1.Name, shoot1.UID)
 
 		backupBucket1 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{Name: "backupbucket1"},
@@ -401,8 +424,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 	It("should behave as expected for gardencorev1beta1.Shoot", func() {
 		By("Add")
 		fakeInformerShoot.Add(shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(18))
-		Expect(graph.graph.Edges().Len()).To(Equal(17))
+		Expect(graph.graph.Nodes().Len()).To(Equal(19))
+		Expect(graph.graph.Edges().Len()).To(Equal(18))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -416,6 +439,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -425,8 +449,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy := shoot1.DeepCopy()
 		shoot1Copy.Spec.SecretBindingName = nil
 		fakeInformerShoot.Add(shoot1Copy)
-		Expect(graph.graph.Nodes().Len()).To(Equal(17))
-		Expect(graph.graph.Edges().Len()).To(Equal(16))
+		Expect(graph.graph.Nodes().Len()).To(Equal(18))
+		Expect(graph.graph.Edges().Len()).To(Equal(17))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -439,6 +463,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -448,8 +473,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Spec.CloudProfileName = "foo"
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(18))
-		Expect(graph.graph.Edges().Len()).To(Equal(17))
+		Expect(graph.graph.Nodes().Len()).To(Equal(19))
+		Expect(graph.graph.Edges().Len()).To(Equal(18))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1Copy.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -464,6 +489,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -473,8 +499,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Spec.SecretBindingName = ptr.To("bar")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(18))
-		Expect(graph.graph.Edges().Len()).To(Equal(17))
+		Expect(graph.graph.Nodes().Len()).To(Equal(19))
+		Expect(graph.graph.Edges().Len()).To(Equal(18))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1Copy.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
@@ -489,6 +515,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -498,8 +525,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Spec.Kubernetes.KubeAPIServer = nil
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(17))
-		Expect(graph.graph.Edges().Len()).To(Equal(16))
+		Expect(graph.graph.Nodes().Len()).To(Equal(18))
+		Expect(graph.graph.Edges().Len()).To(Equal(17))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -513,6 +540,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -522,8 +550,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Spec.DNS = nil
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(15))
-		Expect(graph.graph.Edges().Len()).To(Equal(14))
+		Expect(graph.graph.Nodes().Len()).To(Equal(16))
+		Expect(graph.graph.Edges().Len()).To(Equal(15))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -537,6 +565,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
@@ -545,79 +574,6 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		By("Update (resources)")
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Spec.Resources = nil
-		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(13))
-		Expect(graph.graph.Edges().Len()).To(Equal(12))
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-
-		By("Update (no seed name)")
-		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SeedName = nil
-		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(12))
-		Expect(graph.graph.Edges().Len()).To(Equal(11))
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-
-		By("Update (new seed name)")
-		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SeedName = ptr.To("newseed")
-		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(13))
-		Expect(graph.graph.Edges().Len()).To(Equal(12))
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "newseed")).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
-
-		By("Update (new seed name in status)")
-		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Status.SeedName = ptr.To("seed-in-status")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(14))
 		Expect(graph.graph.Edges().Len()).To(Equal(13))
@@ -634,6 +590,110 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+
+		By("Update (no seed name)")
+		shoot1Copy = shoot1.DeepCopy()
+		shoot1.Spec.SeedName = nil
+		fakeInformerShoot.Update(shoot1Copy, shoot1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(13))
+		Expect(graph.graph.Edges().Len()).To(Equal(12))
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+
+		By("Update (new seed name)")
+		shoot1Copy = shoot1.DeepCopy()
+		shoot1.Spec.SeedName = ptr.To("newseed")
+		fakeInformerShoot.Update(shoot1Copy, shoot1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(14))
+		Expect(graph.graph.Edges().Len()).To(Equal(13))
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "newseed")).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+
+		By("Update (new seed name in status)")
+		shoot1Copy = shoot1.DeepCopy()
+		shoot1.Status.SeedName = ptr.To("seed-in-status")
+		fakeInformerShoot.Update(shoot1Copy, shoot1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(15))
+		Expect(graph.graph.Edges().Len()).To(Equal(14))
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "newseed")).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "seed-in-status")).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+
+		By("Remove managed issuer annotation")
+		shoot1Copy = shoot1.DeepCopy()
+		shoot1.Annotations = map[string]string{}
+		fakeInformerShoot.Update(shoot1Copy, shoot1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(14))
+		Expect(graph.graph.Edges().Len()).To(Equal(13))
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1Resource3.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameKubeconfig, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "newseed")).To(BeTrue())
@@ -658,6 +718,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
@@ -1146,7 +1207,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerShoot.Add(shoot1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+17, edges+17
+			nodes, edges = nodes+17, edges+18
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
@@ -1160,6 +1221,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
@@ -1298,6 +1360,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
@@ -1311,6 +1374,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerProject.Update(project1Copy, project1)
 			lock.Lock()
 			defer lock.Unlock()
+			nodes = nodes + 1
 			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1Copy.Spec.Namespace, BeFalse()})
 			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace, BeTrue()})
 		}()
@@ -1453,6 +1517,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameOldSSHKeypair, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1SecretNameMonitoring, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shootIssuerNamespace, shoot1SecretNameManagedIssuer, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeInternalSecret, shoot1.Namespace, shoot1InternalSecretNameCAClient, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
 			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
