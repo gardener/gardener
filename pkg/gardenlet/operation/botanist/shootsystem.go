@@ -50,7 +50,7 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 
 // DeployShootSystem deploys the shoot system resources.
 func (b *Botanist) DeployShootSystem(ctx context.Context) error {
-	_, apiResourceList, err := b.ShootClientSet.Kubernetes().Discovery().ServerGroupsAndResources()
+	apiResourceList, err := b.ShootClientSet.Kubernetes().Discovery().ServerPreferredResources()
 	if err != nil {
 		return fmt.Errorf("failed to discover the API: %w", err)
 	}
