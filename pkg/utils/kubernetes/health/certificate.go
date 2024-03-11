@@ -38,8 +38,7 @@ func CheckCertificate(cert *certv1alpha1.Certificate) error {
 	return nil
 }
 
-// IsCertificateProgressing returns false if the Certificate has been requested successfully.
-// If the certificate's state indicates not ready, it returns true.
+// IsCertificateProgressing returns false if the Certificate's generation matches the observed generation.
 func IsCertificateProgressing(cert *certv1alpha1.Certificate) (bool, string) {
 	if cert.Status.ObservedGeneration < cert.Generation {
 		return true, fmt.Sprintf("observed generation outdated (%d/%d)", cert.Status.ObservedGeneration, cert.Generation)

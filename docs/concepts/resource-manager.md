@@ -249,7 +249,7 @@ In addition to the origin annotation, all objects managed by the resource manage
 
 ### [`health` Controller](../../pkg/resourcemanager/controller/health)
 
-This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#ManagedResource-Controller) once.
+This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#ManagedResource-Controller) at least once.
 Its main job is to perform checks for maintaining the well [known conditions](#conditions) `ResourcesHealthy` and `ResourcesProgressing`.
 
 #### Progressing Checks
@@ -268,7 +268,7 @@ The following object kinds are considered for progressing checks:
 
 #### Health Checks
 
-`gardener-resource-manager` can evaluate the health of specific resources, often by consulting the resources' conditions.
+`gardener-resource-manager` can evaluate the health of specific resources, often by consulting their conditions.
 Health check results are regularly updated in the `ResourcesHealthy` condition of the corresponding `ManagedResource`.
 
 The following object kinds are considered for health checks:
@@ -289,7 +289,7 @@ The following object kinds are considered for health checks:
 
 #### Skipping Health Check
 
-If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the `health` controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
+If a resource owned by a `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the `health` controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
 
 ### [Garbage Collector For Immutable `ConfigMap`s/`Secret`s](../../pkg/resourcemanager/controller/garbagecollector)
 

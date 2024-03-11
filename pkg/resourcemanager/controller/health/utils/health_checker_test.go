@@ -549,6 +549,7 @@ var _ = Describe("CheckHealth", func() {
 					Conditions: []metav1.Condition{unhealthyReadyCondition},
 				},
 			}
+
 			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Certificate{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{

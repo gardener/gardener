@@ -84,7 +84,6 @@ var _ = Describe("Cert Management", func() {
 		})
 
 		Describe("#CheckCertificateIssuer", func() {
-
 			It("should return no error because issuer is ready", func() {
 				issuer.Status.State = "Ready"
 
