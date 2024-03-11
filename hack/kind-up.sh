@@ -248,7 +248,7 @@ _setup_kind_with_lpp_resize_support() {
 
     # The default manifests from rancher/local-path come with another
     # StorageClass, which we don't need, so make sure to remove it.
-    kubectl delete storageclass local-path
+    kubectl delete --ignore-not-found=true storageclass local-path
 
     cd "${_oldpwd}"
     rm -rf "${_workdir}"
