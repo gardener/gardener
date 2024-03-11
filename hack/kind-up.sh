@@ -18,6 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+WITH_LPP_RESIZE_SUPPORT=${WITH_LPP_RESIZE_SUPPORT:-false}
 REGISTRY_CACHE=${CI:-false}
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
@@ -52,6 +53,10 @@ parse_flags() {
     --multi-zonal)
       MULTI_ZONAL=true
       ;;
+    --with-lpp-resize-support)
+        shift
+        WITH_LPP_RESIZE_SUPPORT="${1}"
+        ;;
     esac
 
     shift
@@ -187,8 +192,61 @@ check_registry_cache_availability() {
 _setup_kind_sc_default_volume_type() {
     echo "Configuring default StorageClass for kind cluster ..."
     kubectl get storageclasses standard -o yaml | \
-        yq '.metadata.annotations.defaultVolumeType = "local" | .allowVolumeExpansion = true' | \
+        yq '.metadata.annotations.defaultVolumeType = "local"' | \
         kubectl apply -f -
+}
+
+# The rancher.io/local-path provisioner at the moment does not support volume
+# resizing (see [1]). There is an open PR, which is scheduled for the next
+# release around May, 2024 (see [2]). Until [2] is merged we will use a custom
+# local-path provisioner with support for volume resizing.
+#
+# This function should be called after setting up the containerd registries on
+# the kind nodes.
+#
+# References:
+#
+# [1]: https://github.com/rancher/local-path-provisioner
+# [2]: https://github.com/rancher/local-path-provisioner/pull/350
+_setup_kind_with_lpp_resize_support() {
+    if [ "${WITH_LPP_RESIZE_SUPPORT}" != "true" ]; then
+        return
+    fi
+
+    echo "Configuring kind local-path provisioner with volume resize support ..."
+
+    # First configure allowVolumeExpansion on the default StorageClass
+    kubectl get storageclasses standard -o yaml | \
+        yq '.allowVolumeExpansion = true' | \
+        kubectl apply -f -
+
+    local _workdir=$( mktemp -d )
+    local _oldpwd="${PWD}"
+
+    # The fork of LPP with resize support
+    local _lpp_repo="https://github.com/marjus45/local-path-provisioner.git"
+    local _lpp_branch="feature-external-resizer"
+
+    # Build the latest image
+    cd "${_workdir}" && \
+        git clone "${_lpp_repo}" && \
+        cd local-path-provisioner && \
+        git checkout -b "${_lpp_branch}" "origin/${_lpp_branch}" && \
+        make
+
+    # Push to the local registry
+    local _latest_image=$( cat ./bin/latest_image )
+    local _local_latest_image="localhost:5001/${_latest_image}"
+    docker image tag "${_latest_image}" "${_local_latest_image}"
+    docker push "${_local_latest_image}"
+
+    # Apply the latest manifests and use our own image
+    cd deploy && \
+        kustomize edit set image rancher/local-path-provisioner:master-head="${_local_latest_image}" && \
+        kustomize build . | \
+        kubectl apply -f -
+    cd "${_oldpwd}"
+    rm -rf "${_workdir}"
 }
 
 parse_flags "$@"
@@ -336,6 +394,7 @@ kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
 setup_containerd_registry_mirrors
+_setup_kind_with_lpp_resize_support
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\
