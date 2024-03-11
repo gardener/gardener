@@ -24,8 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type internalNameService struct {
@@ -33,7 +31,7 @@ type internalNameService struct {
 	namespace string
 }
 
-// NewInternalNameService creates a new instance of Deployer for the service pointing to kubernetes.default.svc.cluster.local.
+// NewInternalNameService creates a new instance of Deployer for the service kubernetes.default.svc.cluster.local.
 func NewInternalNameService(c client.Client, namespace string) component.Deployer {
 	return &internalNameService{
 		client:    c,
@@ -42,17 +40,15 @@ func NewInternalNameService(c client.Client, namespace string) component.Deploye
 }
 
 func (in *internalNameService) Deploy(ctx context.Context) error {
-	svc := in.emptyService()
+	svc := in.emptyKubernetesDefaultService()
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, in.client, svc, func() error {
-		svc.Labels = utils.MergeStringMaps(svc.Labels, getLabels())
-		svc.Spec = corev1.ServiceSpec{
-			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: kubernetesutils.FQDNForService("kubernetes", metav1.NamespaceDefault),
-		}
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, in.client, svc, func() error {
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "networking.istio.io/exportTo", "*")
 		return nil
-	})
-	return err
+	}); err != nil {
+		return err
+	}
+	return client.IgnoreNotFound(in.client.Delete(ctx, in.emptyService()))
 }
 
 func (in *internalNameService) Destroy(ctx context.Context) error {
@@ -61,4 +57,8 @@ func (in *internalNameService) Destroy(ctx context.Context) error {
 
 func (in *internalNameService) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: in.namespace}}
+}
+
+func (in *internalNameService) emptyKubernetesDefaultService() *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: metav1.NamespaceDefault}}
 }

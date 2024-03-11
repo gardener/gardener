@@ -388,6 +388,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
 			inIstioSystemNamespace:    true,
+			inIstioIngressNamespace:   true,
 			inShootNamespaces:         true,
 			inExtensionNamespaces:     true,
 			inCustomNamespace:         true,

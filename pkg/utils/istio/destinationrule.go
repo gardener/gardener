@@ -24,6 +24,11 @@ import (
 
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost string) func() error {
+	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, destinationHost, istioapinetworkingv1beta1.ClientTLSSettings_DISABLE)
+}
+
+// DestinationRuleWithLocalityPreferenceAndTLS returns a function setting the given attributes to a destination rule object.
+func DestinationRuleWithLocalityPreferenceAndTLS(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost string, tlsMode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) func() error {
 	return func() error {
 		destinationRule.Labels = labels
 		destinationRule.Spec = istioapinetworkingv1beta1.DestinationRule{
@@ -50,7 +55,7 @@ func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1bet
 					MinHealthPercent: 0,
 				},
 				Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
-					Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
+					Mode: tlsMode,
 				},
 			},
 		}

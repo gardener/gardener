@@ -98,6 +98,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 
 	networkPolicyLabels := map[string]string{
 		"networking.gardener.cloud/to-dns":                                     "allowed",
+		"networking.gardener.cloud/to-runtime-apiserver":                       "allowed",
 		"networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012": "allowed",
 		testValues.kubeAPIServerPolicyLabel:                                    "allowed",
 	}

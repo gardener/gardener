@@ -56,6 +56,7 @@ func CmpOptsForGateway() cmp.Option {
 func CmpOptsForVirtualService() cmp.Option {
 	return cmpopts.IgnoreUnexported(
 		istioapinetworkingv1beta1.VirtualService{},
+		istioapinetworkingv1beta1.HTTPMatchRequest{},
 		istioapinetworkingv1beta1.HTTPRoute{},
 		istioapinetworkingv1beta1.HTTPRouteDestination{},
 		istioapinetworkingv1beta1.Destination{},
@@ -63,6 +64,7 @@ func CmpOptsForVirtualService() cmp.Option {
 		istioapinetworkingv1beta1.TLSRoute{},
 		istioapinetworkingv1beta1.TLSMatchAttributes{},
 		istioapinetworkingv1beta1.RouteDestination{},
+		istioapinetworkingv1beta1.StringMatch{},
 		istioapimetav1alpha1.IstioStatus{},
 	)
 }
