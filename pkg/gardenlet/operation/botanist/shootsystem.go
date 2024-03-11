@@ -20,6 +20,7 @@ import (
 	"slices"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
 
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -52,7 +53,15 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 func (b *Botanist) DeployShootSystem(ctx context.Context) error {
 	apiResourceList, err := b.ShootClientSet.Kubernetes().Discovery().ServerPreferredResources()
 	if err != nil {
-		return fmt.Errorf("failed to discover the API: %w", err)
+		groupLookupFailures, isLookupFailure := discovery.GroupDiscoveryFailedErrorGroups(err)
+		if !isLookupFailure {
+			return fmt.Errorf("failed to discover the API: %w", err)
+		}
+
+		b.Logger.Info("API discovery for read-only ClusterRole failed for some groups, continuing nevertheless")
+		for group, failureErr := range groupLookupFailures {
+			b.Logger.Info("API discovery failure", "group", group.String(), "discoveryFailureReason", failureErr.Error())
+		}
 	}
 
 	b.Shoot.Components.SystemComponents.Resources.SetAPIResourceList(apiResourceList)
