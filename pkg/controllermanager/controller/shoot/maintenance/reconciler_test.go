@@ -1347,11 +1347,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should maintain feature gates", func() {
 			result := maintainFeatureGatesForShoot(shoot)
 			Expect(result).To(ConsistOf(
-				ContainSubstring("Feature gate %q is removed from %q, not supported in Kubernetes version %q", unsupportedfeatureGate1, "spec.kubernetes.kubeAPIServer.featureGates", "1.13.5"),
-				ContainSubstring("Feature gates: %s are removed from %q, not supported in Kubernetes version %q", fmt.Sprintf("%s, %s", unsupportedfeatureGate1, unsupportedfeatureGate2), "spec.kubernetes.kubeControllerManager.featureGates", "1.13.5"),
-				ContainSubstring("Feature gate %q is removed from %q, not supported in Kubernetes version %q", unsupportedfeatureGate1, "spec.kubernetes.kubeScheduler.featureGates", "1.13.5"),
-				ContainSubstring("Feature gate %q is removed from %q, not supported in Kubernetes version %q", unsupportedfeatureGate2, "spec.kubernetes.kubeProxy.featureGates", "1.13.5"),
-				ContainSubstring("Feature gate %q is removed from %q, not supported in Kubernetes version %q", unsupportedfeatureGate2, "spec.kubernetes.kubelet.featureGates", "1.13.5"),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.featureGates", "1.13.5", unsupportedfeatureGate1),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeControllerManager.featureGates", "1.13.5", fmt.Sprintf("%s, %s", unsupportedfeatureGate1, unsupportedfeatureGate2)),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeScheduler.featureGates", "1.13.5", unsupportedfeatureGate1),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeProxy.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate2),
 			))
 			Expect(shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
 				supportedfeatureGate1: true,
@@ -1405,6 +1405,9 @@ var _ = Describe("Shoot Maintenance", func() {
 								{
 									Name: unsupportedAdmissionPlugin1,
 								},
+								{
+									Name: unsupportedAdmissionPlugin2,
+								},
 							},
 						},
 					},
@@ -1415,19 +1418,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should maintain admission plugins", func() {
 			result := maintainAdmissionPlugins(shoot)
 			Expect(result).To(ConsistOf(
-				ContainSubstring("Admission plugin %q is removed from %q, not supported in Kubernetes version %q", unsupportedAdmissionPlugin1, "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5"),
-			))
-			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
-				HaveField("Name", Equal(supportedAdmissionPlugin1)),
-				HaveField("Name", Equal(supportedAdmissionPlugin2)),
-			))
-		})
-
-		It("should maintain admission plugins - when there are more than one unsupported", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, gardencorev1beta1.AdmissionPlugin{Name: unsupportedAdmissionPlugin2})
-			result := maintainAdmissionPlugins(shoot)
-			Expect(result).To(ConsistOf(
-				ContainSubstring("Admission plugins: %s are removed from %q, not supported in Kubernetes version %q", fmt.Sprintf("%s, %s", unsupportedAdmissionPlugin1, unsupportedAdmissionPlugin2), "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5"),
+				ContainSubstring("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5", fmt.Sprintf("%s, %s", unsupportedAdmissionPlugin1, unsupportedAdmissionPlugin2)),
 			))
 			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 				HaveField("Name", Equal(supportedAdmissionPlugin1)),

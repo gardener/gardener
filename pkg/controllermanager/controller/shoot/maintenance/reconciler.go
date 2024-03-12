@@ -202,7 +202,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			workerLog.Error(err, "Could not maintain Kubernetes version for worker pool")
 		} else {
 			if maintainedShoot.Spec.Provider.Workers[i].Kubernetes != nil && maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
-				if reasons := maintainFeatureGates(&maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, *maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubeletConfig.featureGates", i)); len(reasons) > 0 {
+				if reasons := maintainFeatureGates(&maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, *maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubelet.featureGates", i)); len(reasons) > 0 {
 					operations = append(operations, reasons...)
 				}
 			}
@@ -884,12 +884,8 @@ func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, versio
 
 	kubernetes.FeatureGates = validFeatureGates
 
-	if len(removedFeatureGates) == 1 {
-		reasons = append(reasons, fmt.Sprintf("Feature gate %q is removed from %q, not supported in Kubernetes version %q", removedFeatureGates[0], fieldPath, version))
-	} else if len(removedFeatureGates) > 1 {
-		slices.Sort(removedFeatureGates)
-		reasons = append(reasons, fmt.Sprintf("Feature gates: %s are removed from %q, not supported in Kubernetes version %q", strings.Join(removedFeatureGates, ", "), fieldPath, version))
-	}
+	slices.Sort(removedFeatureGates)
+	reasons = append(reasons, fmt.Sprintf("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", fieldPath, version, strings.Join(removedFeatureGates, ", ")))
 
 	return reasons
 }
@@ -915,12 +911,8 @@ func maintainAdmissionPlugins(shoot *gardencorev1beta1.Shoot) []string {
 
 		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = validAdmissionPlugins
 
-		if len(removedAdmissionPlugins) == 1 {
-			reasons = append(reasons, fmt.Sprintf("Admission plugin %q is removed from %q, not supported in Kubernetes version %q", removedAdmissionPlugins[0], "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version))
-		} else if len(removedAdmissionPlugins) > 1 {
-			slices.Sort(removedAdmissionPlugins)
-			reasons = append(reasons, fmt.Sprintf("Admission plugins: %s are removed from %q, not supported in Kubernetes version %q", strings.Join(removedAdmissionPlugins, ", "), "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version))
-		}
+		slices.Sort(removedAdmissionPlugins)
+		reasons = append(reasons, fmt.Sprintf("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version, strings.Join(removedAdmissionPlugins, ", ")))
 	}
 
 	return reasons
