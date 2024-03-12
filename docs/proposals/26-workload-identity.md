@@ -217,8 +217,9 @@ as infrastructure service credentials:
   users.
 - validation will ensure that either `secretRef` or `workloadIdentityRef` is
   set, but not both.
-- on update of the `workloadIdentityRef`, a validation will ensure that both the
-  old and the new `WorkloadIdentity` are for the same cloud provider account.
+- on update of the `workloadIdentityRef`, extension admission controller should
+  ensure that both the old and the new `WorkloadIdentity` are for the same cloud
+  provider account.
 
 From user experience point of view, now `SecretBinding` might not be the best
 name for this resource, as it is no longer limited to referring only secrets, as
