@@ -307,7 +307,7 @@ kind-extensions-down: $(KIND)
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
+kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
 		--cluster-name gardener-operator-local \
 		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig \
