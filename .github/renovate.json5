@@ -38,6 +38,13 @@
       "fileMatch": ["^hack\/.+\\.sh$"],
       "matchStrings": ["--image[=| ][\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
       "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection of container images in images.yaml.
+      "customType": "regex",
+      "fileMatch": ["^imagevector\/images.yaml$"],
+      "matchStrings": ["\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
+      "datasourceTemplate": "docker"
     }
   ],
   "separateMinorPatch": true,
@@ -97,6 +104,20 @@
           "test/**",
           "third_party/**"
       ],
+      "enabled": false
+    },
+    {
+      // Only patch level updates for container images in the imagevector. Minor and major versions are updated manually.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["imagevector\/images\\.yaml"],
+      "enabled": false
+    },
+    {
+      // Ignore dependency updates from europe-docker.pkg.dev/gardener-project/releases/gardener/ because these PRs are created by pipeline jobs.
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/.+"],
+      "matchFileNames": ["imagevector\/images\\.yaml"],
       "enabled": false
     }
   ]
