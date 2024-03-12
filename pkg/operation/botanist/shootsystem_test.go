@@ -22,10 +22,10 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/testing"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockshootsystem "github.com/gardener/gardener/pkg/component/shootsystem/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -75,8 +75,8 @@ var _ = Describe("ShootSystem", func() {
 		BeforeEach(func() {
 			shootSystem = mockshootsystem.NewMockInterface(ctrl)
 
-			fakeKubernetes := fake.NewSimpleClientset()
-			fakeKubernetes.Fake = testing.Fake{Resources: apiResourceList}
+			fakeDiscoveryClient := &fakeDiscoveryWithServerPreferredResources{apiResourceList: apiResourceList}
+			fakeKubernetes := test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)
 			botanist.ShootClientSet = kubernetesfake.NewClientSetBuilder().WithKubernetes(fakeKubernetes).Build()
 
 			botanist.Shoot = &shootpkg.Shoot{
@@ -101,3 +101,13 @@ var _ = Describe("ShootSystem", func() {
 		})
 	})
 })
+
+type fakeDiscoveryWithServerPreferredResources struct {
+	*fakediscovery.FakeDiscovery
+
+	apiResourceList []*metav1.APIResourceList
+}
+
+func (f *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+	return f.apiResourceList, nil
+}
