@@ -1,0 +1,28 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+    app: istio-ingressgateway
+    foo: bar
+  name: proxy-protocol-8132
+  namespace: test-ingress
+spec:
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar
+  configPatches:
+  - applyTo: LISTENER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 8132
+    patch:
+      operation: MERGE
+      value:
+        listener_filters:
+        - name: proxy_protocol
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
+            allow_requests_without_proxy_protocol: true
+        per_connection_buffer_limit_bytes: 32768
