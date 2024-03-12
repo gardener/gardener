@@ -49,11 +49,6 @@
       "matchPackagePatterns": ["golang"],
     },
     {
-      // Group tool updates in one PR.
-      "groupName": "Update tools",
-      "matchFileNames": ["hack\/tools\\.mk"]
-    },
-    {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
