@@ -52,7 +52,7 @@ func (b *Botanist) SyncPublicServiceAccountKeys(ctx context.Context) error {
 	}
 
 	secret := b.emptyPublicServiceAccountKeysSecret()
-	if _, err := controllerutil.CreateOrUpdate(ctx, b.GardenClient, secret, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, b.GardenClient, secret, func() error {
 		secret.Labels = map[string]string{
 			v1beta1constants.ProjectName:         b.Garden.Project.Name,
 			v1beta1constants.LabelShootName:      b.Shoot.GetInfo().Name,
@@ -64,11 +64,8 @@ func (b *Botanist) SyncPublicServiceAccountKeys(ctx context.Context) error {
 			"jwks":          jwksReqBytes,
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
+	return err
 }
 
 // DeletePublicServiceAccountKeys deletes the secret containing the public info
