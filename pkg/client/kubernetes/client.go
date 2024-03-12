@@ -97,12 +97,16 @@ func NewClientFromFile(masterURL, kubeconfigPath string, fns ...ConfigFunc) (Int
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
 func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error) {
-	config, err := RESTConfigFromClientConnectionConfiguration(nil, kubeconfig)
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
+	opts := append([]ConfigFunc{WithRESTConfig(restConfig)}, fns...)
 	return NewWithConfig(opts...)
 }
 
