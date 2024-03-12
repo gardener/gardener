@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -144,7 +144,7 @@ users:
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
+				KeepObjects:  ptr.To(false),
 			},
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
@@ -161,7 +161,7 @@ users:
 				"role__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml":        []byte(roleYAML),
 				"rolebinding__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml": []byte(roleBindingYAML),
 			},
-			Immutable: pointer.Bool(true),
+			Immutable: ptr.To(true),
 		}
 	})
 
