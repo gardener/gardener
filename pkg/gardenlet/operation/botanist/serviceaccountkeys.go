@@ -19,7 +19,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -32,21 +31,20 @@ import (
 // from the shoot kube-apiserver and writes them in a secret in the gardener-system-shoot-issuer namespace in the Garden cluster.
 func (b *Botanist) SyncPublicServiceAccountKeys(ctx context.Context) error {
 	var (
-		client        = b.ShootClientSet.RESTClient()
-		retrieveBytes = func(ctx context.Context, client rest.Interface, relativePath string) ([]byte, error) {
-			request := client.Get()
+		retrieveBytes = func(ctx context.Context, relativePath string) ([]byte, error) {
+			request := b.ShootClientSet.RESTClient().Get()
 			request.RequestURI(relativePath)
 			return request.DoRaw(ctx)
 		}
 	)
 
 	// paths copied from https://github.com/kubernetes/kubernetes/blob/7ea3d0245a63fbbba698f1cb939831fe8143db3e/pkg/serviceaccount/openidmetadata.go#L34-L45
-	oidReqBytes, err := retrieveBytes(ctx, client, "/.well-known/openid-configuration")
+	oidReqBytes, err := retrieveBytes(ctx, "/.well-known/openid-configuration")
 	if err != nil {
 		return err
 	}
 
-	jwksReqBytes, err := retrieveBytes(ctx, client, "/openid/v1/jwks")
+	jwksReqBytes, err := retrieveBytes(ctx, "/openid/v1/jwks")
 	if err != nil {
 		return err
 	}
