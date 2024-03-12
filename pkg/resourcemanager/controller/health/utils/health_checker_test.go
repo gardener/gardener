@@ -15,6 +15,7 @@
 package utils_test
 
 import (
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -525,6 +526,58 @@ var _ = Describe("CheckHealth", func() {
 					},
 				},
 				Status: vpaautoscalingv1.VerticalPodAutoscalerStatus{Conditions: []vpaautoscalingv1.VerticalPodAutoscalerCondition{{Type: vpaautoscalingv1.ConfigUnsupported, Status: corev1.ConditionTrue}}},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Certificate", func() {
+		BeforeEach(func() {
+			healthyReadyCondition := metav1.Condition{Type: "Ready", Status: "True"}
+			unhealthyReadyCondition := metav1.Condition{Type: "Ready", Status: "False"}
+
+			healthy = &certv1alpha1.Certificate{
+				Status: certv1alpha1.CertificateStatus{
+					State:      "Ready",
+					Conditions: []metav1.Condition{healthyReadyCondition},
+				},
+			}
+
+			unhealthy = &certv1alpha1.Certificate{
+				Status: certv1alpha1.CertificateStatus{
+					Conditions: []metav1.Condition{unhealthyReadyCondition},
+				},
+			}
+
+			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Certificate{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: certv1alpha1.CertificateStatus{Conditions: []metav1.Condition{unhealthyReadyCondition}},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Certificate Issuer", func() {
+		BeforeEach(func() {
+			healthy = &certv1alpha1.Issuer{
+				Status: certv1alpha1.IssuerStatus{
+					State: "Ready",
+				},
+			}
+
+			unhealthy = &certv1alpha1.Issuer{}
+			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Issuer{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 			}
 		})
 

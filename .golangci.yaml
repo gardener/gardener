@@ -126,6 +126,8 @@ linters-settings:
         alias: machinev1alpha1
       - pkg: github.com/gardener/etcd-druid/api/v1alpha1
         alias: druidv1alpha1
+      - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
+        alias: certv1alpha1
       # Gardener extension package
       - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock$
         alias: extensionsmock${1}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -105,8 +106,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
-		// only resources in the apps/v1 and monitoring.coreos.com/v1 API groups are considered for Progressing condition
-		if !sets.New(appsv1.GroupName, monitoring.GroupName).Has(ref.GroupVersionKind().Group) {
+		// Skip API groups that are irrelevant for progressing checks.
+		if !sets.New(appsv1.GroupName, monitoring.GroupName, certv1alpha1.GroupName).Has(ref.GroupVersionKind().Group) {
 			continue
 		}
 
@@ -122,6 +123,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			obj = &monitoringv1.Prometheus{}
 		case "Alertmanager":
 			obj = &monitoringv1.Alertmanager{}
+		case "Certificate":
+			obj = &certv1alpha1.Certificate{}
+		case "Issuer":
+			obj = &certv1alpha1.Issuer{}
 		default:
 			continue
 		}
@@ -221,6 +226,12 @@ func (r *Reconciler) checkProgressing(ctx context.Context, obj client.Object) (b
 
 	case *monitoringv1.Alertmanager:
 		progressing, reason = health.IsAlertmanagerProgressing(o)
+
+	case *certv1alpha1.Certificate:
+		progressing, reason = health.IsCertificateProgressing(o)
+
+	case *certv1alpha1.Issuer:
+		progressing, reason = health.IsCertificateIssuerProgressing(o)
 	}
 
 	return progressing, reason, nil

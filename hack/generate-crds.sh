@@ -82,6 +82,9 @@ get_group_package () {
   "machine.sapcloud.io")
     echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
     ;;
+  "cert.gardener.cloud")
+    echo "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
+    ;;
   *)
     >&2 echo "unknown group $1"
     return 1
