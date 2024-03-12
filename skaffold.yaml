@@ -305,6 +305,8 @@ build:
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
             - pkg/utils/timewindow
+            - pkg/utils/validation/admissionplugins
+            - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
