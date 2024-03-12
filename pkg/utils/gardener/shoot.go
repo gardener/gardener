@@ -281,7 +281,7 @@ func IsShootProjectInternalSecret(secretName string) (string, bool) {
 }
 
 // ComputeManagedShootIssuerSecretName returns the name that should be used for
-// storing the service account public signing keys of a shoot's kube-apiserver
+// storing the service account public keys of a shoot's kube-apiserver
 // in the gardener-system-shoot-issuer namespace in the Garden cluster.
 func ComputeManagedShootIssuerSecretName(projectName string, shootUID types.UID) string {
 	return fmt.Sprintf("%s--%s", projectName, shootUID)
