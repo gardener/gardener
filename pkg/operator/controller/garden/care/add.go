@@ -91,11 +91,15 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		return err
 	}
 
-	return c.Watch(
-		source.Kind(mgr.GetCache(), &resourcesv1alpha1.ManagedResource{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToGarden), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.ManagedResourceConditionsChanged(),
-	)
+	r.registerManagedResourceWatchFunc = func() error {
+		return c.Watch(
+			source.Kind(mgr.GetCache(), &resourcesv1alpha1.ManagedResource{}),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToGarden), mapper.UpdateWithNew, c.GetLogger()),
+			predicateutils.ManagedResourceConditionsChanged(),
+		)
+	}
+
+	return nil
 }
 
 // GardenPredicate is a predicate which returns 'true' for create events, and for update events in case the garden was

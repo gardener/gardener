@@ -46,6 +46,9 @@ type Reconciler struct {
 	Clock           clock.Clock
 	GardenClientMap clientmap.ClientMap
 	GardenNamespace string
+
+	registerManagedResourceWatchFunc func() error
+	managedResourceWatchRegistered   bool
 }
 
 // Reconcile reconciles Garden resources and executes health check operations.
@@ -64,6 +67,14 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	}
+
+	if !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
+		if err := r.registerManagedResourceWatchFunc(); err != nil {
+			log.Error(err, "Failed registering watch for resources.gardener.cloud/v1alpha1.ManagedResource now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
+		} else {
+			r.managedResourceWatchRegistered = true
+		}
 	}
 
 	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.GardenCare.SyncPeriod.Duration)
