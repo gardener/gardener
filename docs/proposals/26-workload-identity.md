@@ -131,14 +131,14 @@ or longer validity compared to the default one. This duration will be ensured to
 be between certain limits of minimal and maximal validity, in order to avoid
 frequent token renewals as well as tokens with too long validity.
 
-Similarly to `providerConfig` in other APIs, `WorkloadIdentity` resource will
-feature a `config` field that will be of byte array type allowing service
-provider specific configurations. Usually, the clients for services supporting
-identity federation need additional information about the service account and
-the federated identity in order to successfully use the JWT. This information is
-known to the service account owners and they will provide it via this `config`
-field, for example when AWS is the service the AWS IAM Role ARN needs to be
-provided.
+Similarly to `providerConfig` in other Gardener APIs, `WorkloadIdentity`
+resource will feature a `providerConfig` field that will be of byte array type
+allowing service provider specific configurations. Usually, the clients for
+services supporting identity federation need additional information about the
+cloud account and the federated identity in order to successfully use the JWT.
+This information is known to the cloud account owners and they will provide it
+via this `providerConfig` field, for example when AWS is the service the AWS IAM
+Role ARN needs to be provided.
 
 The `sub` claim will be computed by Gardener, it will have the following format
 `gardener.cloud:workloadidentity:<workloadidentity-namespace-name>:<workloadidentity-name>:<workloadidentity-uuid>`.
@@ -163,7 +163,7 @@ spec:
   duration: 48h # Optional field, gardener will have default value of token duration if the field is unset.
   targetSystem: # Required field.
     type: aws # Required field.
-    config: # Optional field of type []byte, extensions can make it mandatory via admission webhooks.
+    providerConfig: # Optional field of type []byte, extensions can make it mandatory via admission webhooks.
       apiVersion: aws.authentication.gardener.cloud/v1alpha1
       kind: Config
       iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
@@ -378,7 +378,8 @@ and other components relying on workload identities should request no more than
 read access. This `WorkloadIdentityBinding` CRD will be reconciled by a
 dedicated controller named `workloadidentity-refresher` from Gardenlet
 responsible to request OIDC tokens and write them into the target store. The
-workload identity `spec.config` will be also written into the target store.
+workload identity `spec.providerConfig` will be also written into the target
+store.
 
 At the time this GEP is written, it is envisioned only secrets to be used as
 store targets. The token will be available on the data key
@@ -417,7 +418,7 @@ metadata:
   namespace: shoot--local--foo
 spec:
   type: aws
-  config:
+  providerConfig:
     apiVersion: aws.authentication.gardener.cloud/v1alpha1
     kind: Config
     iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
