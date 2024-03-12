@@ -106,7 +106,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
-		// only resources in the apps/v1, monitoring.coreos.com/v1 and cert.gardener.cloud/v1alpha1 API groups are considered for Progressing condition
+		// Skip API groups that are irrelevant for progressing checks.
 		if !sets.New(appsv1.GroupName, monitoring.GroupName, certv1alpha1.GroupName).Has(ref.GroupVersionKind().Group) {
 			continue
 		}

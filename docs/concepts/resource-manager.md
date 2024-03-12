@@ -249,7 +249,7 @@ In addition to the origin annotation, all objects managed by the resource manage
 
 ### [`health` Controller](../../pkg/resourcemanager/controller/health)
 
-This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#ManagedResource-Controller) at least once.
+This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#managedResource-controller) at least once.
 Its main job is to perform checks for maintaining the well [known conditions](#conditions) `ResourcesHealthy` and `ResourcesProgressing`.
 
 #### Progressing Checks
