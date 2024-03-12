@@ -50,7 +50,10 @@ If you already have a shoot cluster with non-HA control plane, then the followin
 
 **Disallowed Transitions**
 
-If you have already set-up an HA shoot control plane with `node` failure tolerance, then an upgrade to a `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in originally.
+If you already have a shoot cluster with HA control plane, then the following transitions are not possible:
+* Upgrade of HA shoot control plane from `node` failure tolerance to `zone` failure tolerance is currently not supported, mainly because already existing volumes are bound to the zone they were created in originally.
+* Downgrade of HA shoot control plane with `zone` failure tolerance to `node` failure tolerance is currently not supported, mainly because of the same reason as above, that already existing volumes are bound to the respective zones they were created in originally.
+* Downgrade of HA shoot control plane with either `node` or `zone` failure tolerance, to a non-HA shoot control plane is currently not supported, mainly because [etcd-druid](https://github.com/gardener/etcd-druid) does not currently support scaling down of a multi-node etcd cluster to a single-node etcd cluster.
 
 ## Zone Outage Situation
 
