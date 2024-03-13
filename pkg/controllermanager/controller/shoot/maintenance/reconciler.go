@@ -156,14 +156,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	if reasons := maintainFeatureGatesForShoot(maintainedShoot); len(reasons) > 0 {
-		operations = append(operations, reasons...)
-	}
-
-	if reasons := maintainAdmissionPluginsForShoot(maintainedShoot); len(reasons) > 0 {
-		operations = append(operations, reasons...)
-	}
-
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
 		if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
@@ -200,12 +192,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		if err != nil {
 			// continue execution to allow other maintenance activities to continue
 			workerLog.Error(err, "Could not maintain Kubernetes version for worker pool")
-		} else {
-			if maintainedShoot.Spec.Provider.Workers[i].Kubernetes != nil && maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
-				if reasons := maintainFeatureGates(&maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, *maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubelet.featureGates", i)); len(reasons) > 0 {
-					operations = append(operations, reasons...)
-				}
-			}
 		}
 
 		if workerKubernetesUpdate != nil {
@@ -216,6 +202,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			result.description = workerKubernetesUpdate.description
 			workerToKubernetesUpdate[pool.Name] = result
 		}
+	}
+
+	if reasons := maintainFeatureGatesForShoot(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
+	}
+
+	if reasons := maintainAdmissionPluginsForShoot(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
 	}
 
 	operation := maintainOperation(maintainedShoot)
@@ -858,6 +852,16 @@ func maintainFeatureGatesForShoot(shoot *gardencorev1beta1.Shoot) []string {
 	if shoot.Spec.Kubernetes.Kubelet != nil && shoot.Spec.Kubernetes.Kubelet.FeatureGates != nil {
 		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.Kubelet.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubelet.featureGates"); len(reason) > 0 {
 			reasons = append(reasons, reason...)
+		}
+	}
+
+	for i := range shoot.Spec.Provider.Workers {
+		if shoot.Spec.Provider.Workers[i].Kubernetes != nil && shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
+			kubeletVersion := ptr.Deref(shoot.Spec.Provider.Workers[i].Kubernetes.Version, shoot.Spec.Kubernetes.Version)
+
+			if reason := maintainFeatureGates(&shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, kubeletVersion, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubelet.featureGates", i)); len(reason) > 0 {
+				reasons = append(reasons, reason...)
+			}
 		}
 	}
 

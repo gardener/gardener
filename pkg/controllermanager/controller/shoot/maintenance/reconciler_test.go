@@ -1340,6 +1340,36 @@ var _ = Describe("Shoot Maintenance", func() {
 							},
 						},
 					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "cpu-worker-1",
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Kubelet: &gardencorev1beta1.KubeletConfig{
+										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+											FeatureGates: map[string]bool{
+												supportedfeatureGate1:   true,
+												unsupportedfeatureGate2: true,
+											},
+										},
+									},
+								},
+							},
+							{
+								Name: "cpu-worker-2",
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Kubelet: &gardencorev1beta1.KubeletConfig{
+										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+											FeatureGates: map[string]bool{
+												supportedfeatureGate2:   true,
+												unsupportedfeatureGate1: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			}
 		})
@@ -1352,6 +1382,8 @@ var _ = Describe("Shoot Maintenance", func() {
 				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeScheduler.featureGates", "1.13.5", unsupportedfeatureGate1),
 				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeProxy.featureGates", "1.13.5", unsupportedfeatureGate2),
 				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.provider.workers[0].kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.provider.workers[1].kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate1),
 			))
 			Expect(shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
 				supportedfeatureGate1: true,
@@ -1369,6 +1401,12 @@ var _ = Describe("Shoot Maintenance", func() {
 			}))
 			Expect(shoot.Spec.Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 				supportedfeatureGate1: true,
+			}))
+			Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+			}))
+			Expect(shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate2: true,
 			}))
 		})
 	})
