@@ -160,7 +160,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, reasons...)
 	}
 
-	if reasons := maintainAdmissionPlugins(maintainedShoot); len(reasons) > 0 {
+	if reasons := maintainAdmissionPluginsForShoot(maintainedShoot); len(reasons) > 0 {
 		operations = append(operations, reasons...)
 	}
 
@@ -893,7 +893,7 @@ func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, versio
 // IsAdmissionPluginSupported is an alias for admissionpluginsvalidation.IsAdmissionPluginSupported. Exposed for testing purposes.
 var IsAdmissionPluginSupported = admissionpluginsvalidation.IsAdmissionPluginSupported
 
-func maintainAdmissionPlugins(shoot *gardencorev1beta1.Shoot) []string {
+func maintainAdmissionPluginsForShoot(shoot *gardencorev1beta1.Shoot) []string {
 	var (
 		reasons                 []string
 		removedAdmissionPlugins []string

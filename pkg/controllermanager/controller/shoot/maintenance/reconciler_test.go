@@ -1416,7 +1416,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should maintain admission plugins", func() {
-			result := maintainAdmissionPlugins(shoot)
+			result := maintainAdmissionPluginsForShoot(shoot)
 			Expect(result).To(ConsistOf(
 				ContainSubstring("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5", fmt.Sprintf("%s, %s", unsupportedAdmissionPlugin1, unsupportedAdmissionPlugin2)),
 			))
