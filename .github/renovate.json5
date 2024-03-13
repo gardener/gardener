@@ -112,20 +112,6 @@
           "third_party/**"
       ],
       "enabled": false
-    },
-    {
-      // Ignore dependency updates from europe-docker.pkg.dev/gardener-project/releases/gardener/ because these PRs are created by pipeline jobs.
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/.+"],
-      "matchFileNames": ["imagevector\/images\\.yaml"],
-      "enabled": false
-    },
-    {
-      // Ignore dependency updates from gardener/* because these PRs are created by pipeline jobs.
-      "matchDatasources": ["github-releases"],
-      "matchPackagePatterns": ["gardener\/.+"],
-      "matchFileNames": ["imagevector\/images\\.yaml"],
-      "enabled": false
     }
   ]
 }
