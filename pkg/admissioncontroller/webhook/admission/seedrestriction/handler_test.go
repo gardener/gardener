@@ -1100,7 +1100,7 @@ var _ = Describe("handler", func() {
 								&corev1.Secret{},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: "label shoot.gardener.cloud/name is missing",
+									Message: `label "shoot.gardener.cloud/name" is missing`,
 								},
 							),
 							Entry(
@@ -1114,7 +1114,7 @@ var _ = Describe("handler", func() {
 								},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: "label shoot.gardener.cloud/namespace is missing",
+									Message: `label "shoot.gardener.cloud/namespace" is missing`,
 								},
 							),
 							Entry(
@@ -1129,7 +1129,7 @@ var _ = Describe("handler", func() {
 								},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: "label authentication.gardener.cloud/public-keys is missing",
+									Message: `label "authentication.gardener.cloud/public-keys" is missing`,
 								},
 							),
 							Entry(
@@ -1145,7 +1145,7 @@ var _ = Describe("handler", func() {
 								},
 								&metav1.Status{
 									Code:    int32(http.StatusUnprocessableEntity),
-									Message: "label authentication.gardener.cloud/public-keys value must be set to serviceaccount",
+									Message: `label "authentication.gardener.cloud/public-keys" value must be set to "serviceaccount"`,
 								},
 							),
 						)

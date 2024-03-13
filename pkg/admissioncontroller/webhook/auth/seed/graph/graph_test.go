@@ -191,7 +191,7 @@ var _ = Describe("graph", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot1",
 				Namespace: namespace1.Name,
-				UID:       "uid1",
+				UID:       "f486b21b-7cbe-4bde-9b83-bf8a55c7f075",
 				Annotations: map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
 				},

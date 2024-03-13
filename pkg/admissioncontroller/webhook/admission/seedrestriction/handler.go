@@ -357,15 +357,15 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			ok             bool
 		)
 		if shootName, ok = secret.Labels[v1beta1constants.LabelShootName]; !ok {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelShootName))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootName))
 		}
 		if shootNamespace, ok = secret.Labels[v1beta1constants.LabelShootNamespace]; !ok {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelShootNamespace))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootNamespace))
 		}
 		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s is missing", v1beta1constants.LabelPublicKeys))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelPublicKeys))
 		} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %s value must be set to %s", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
 		}
 
 		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}

@@ -186,8 +186,8 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		if err := g.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err == nil {
 			if projectName, ok := namespace.Labels[v1beta1constants.ProjectName]; ok {
 				saPublicKeysSecretName := gardenerutils.ComputeManagedShootIssuerSecretName(projectName, shoot.UID)
-				saPublicKeysSecret := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootIssuerNamespace, saPublicKeysSecretName)
-				g.addEdge(saPublicKeysSecret, shootVertex)
+				saPublicKeysSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootIssuerNamespace, saPublicKeysSecretName)
+				g.addEdge(saPublicKeysSecretVertex, shootVertex)
 			}
 		}
 	}

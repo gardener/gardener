@@ -172,7 +172,7 @@ var _ = Describe("ServiceAccountKeys", func() {
 				Expect(statusError.Status().Details.Causes[0].Message).To(Equal("bad"))
 			})
 
-			It("should return bad request", func() {
+			It("should return internal server error", func() {
 				fakeShootRESTClient = &fakerest.RESTClient{
 					NegotiatedSerializer: scheme.Codecs,
 					Client: fakerest.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
