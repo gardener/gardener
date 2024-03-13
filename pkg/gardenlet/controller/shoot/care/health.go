@@ -441,13 +441,15 @@ func (h *Health) checkControlPlane(
 	return &c, nil
 }
 
-// CheckIfDependencyWatchdogProberScaledDownControllers checks if controllers have been scaled down by
-// dependency-watchdog-prober.
+// CheckIfDependencyWatchdogProberScaledDownControllers checks if controllers have been scaled down by dependency-watchdog-prober.
 func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, seedClient client.Client, shootNamespace string) ([]string, error) {
 	var scaledDownDeploymentNames []string
 
 	// Error is ignored since this function never returns an error
-	proberConfig, _ := kubeapiserver.NewDependencyWatchdogProberConfiguration()
+	proberConfig, err := kubeapiserver.NewDependencyWatchdogProberConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("failed getting dependency-watchdog-prober config: %w", err)
+	}
 
 	for _, dependentResourceInfo := range proberConfig {
 		if dependentResourceInfo.Ref == nil || dependentResourceInfo.Ref.Kind != "Deployment" {
@@ -793,6 +795,10 @@ func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.L
 // an error will be returned. The motivation is that dependency-watchdog is starting to scale down controllers when 60%
 // of the Leases are expired.
 func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+	if len(leaseList.Items) == 0 {
+		return nil
+	}
+
 	nodeNames := sets.Set[string]{}
 	for _, node := range nodeList.Items {
 		nodeNames.Insert(node.Name)
@@ -807,7 +813,7 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 		}
 	}
 
-	if expiredLeasesPercentage := int32(float64(expiredLeases) / float64(len(leaseList.Items)) * 100); expiredLeasesPercentage >= 20 {
+	if expiredLeasesPercentage := 100 * expiredLeases / len(leaseList.Items); expiredLeasesPercentage >= 20 {
 		return fmt.Errorf("%d%% of all Leases in %s namespace are expired - dependency-watchdog-prober will start scaling down controllers if 60%% are reached", expiredLeasesPercentage, corev1.NamespaceNodeLease)
 	}
 
