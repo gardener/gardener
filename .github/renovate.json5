@@ -89,6 +89,17 @@
       "enabled": false
     },
     {
+      // Update only patchlevels container images of istio.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["docker", "github-releases"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "gcr\\.io\/istio-release\/.+",
+        "istio\/istio"
+      ],
+      "enabled": false
+    },
+    {
       // Ignore dependency updates from github.com/gardener because these PRs are created by pipeline jobs.
       "matchDatasources": ["go"],
       "matchPackagePatterns": ["github\\.com\/gardener\/.+"],
