@@ -114,13 +114,6 @@
       "enabled": false
     },
     {
-      // Only patch level updates for container images in the imagevector. Minor and major versions are updated manually.
-      "matchDatasources": ["docker", "github-releases"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchFileNames": ["imagevector\/images\\.yaml"],
-      "enabled": false
-    },
-    {
       // Ignore dependency updates from europe-docker.pkg.dev/gardener-project/releases/gardener/ because these PRs are created by pipeline jobs.
       "matchDatasources": ["docker"],
       "matchPackagePatterns": ["europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/.+"],
