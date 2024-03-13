@@ -100,12 +100,6 @@
       "enabled": false
     },
     {
-      // Ignore dependency updates from github.com/gardener because these PRs are created by pipeline jobs.
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": ["github\\.com\/gardener\/.+"],
-      "enabled": false
-    },
-    {
       // Ignore dependency updates from k8s.io/kube-openapi because it depends on k8s.io/apiserver.
       "matchDatasources": ["go"],
       "matchPackagePatterns": ["k8s\\.io\/kube-openapi"],
