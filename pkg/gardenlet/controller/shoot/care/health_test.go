@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -458,6 +459,49 @@ var _ = Describe("health check", func() {
 				},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("the last successfully applied operating system config on node %q is outdated", nodeName)))),
 		)
+	})
+
+	Describe("#CheckIfDependencyWatchdogProberScaledDownControllers", func() {
+		var (
+			deploymentCA  *appsv1.Deployment
+			deploymentKCM *appsv1.Deployment
+			deploymentMCM *appsv1.Deployment
+		)
+
+		BeforeEach(func() {
+			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+		})
+
+		It("should report nothing because no relevant deployment exists", func() {
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scaledDownDeploymentNames).To(BeEmpty())
+		})
+
+		It("should report nothing because all relevant deployment have replicas > 0", func() {
+			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
+
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scaledDownDeploymentNames).To(BeEmpty())
+		})
+
+		It("should report names because some relevant deployment have replicas == 0", func() {
+			deploymentKCM.Spec.Replicas = nil
+			deploymentMCM.Spec.Replicas = ptr.To(int32(0))
+
+			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
+
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scaledDownDeploymentNames).To(HaveExactElements(deploymentKCM.Name, deploymentMCM.Name))
+		})
 	})
 
 	Describe("#CheckingNodeAgentLease", func() {

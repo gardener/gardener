@@ -22,6 +22,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -43,6 +45,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -415,6 +418,14 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
+	if !h.shoot.IsWorkerless {
+		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.SeedNamespace); err != nil {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
+		} else if len(scaledDownDeploymentNames) > 0 {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas (perhaps by dependency-watchdog-prober): %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
+		}
+	}
+
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil &&
 			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
@@ -428,6 +439,37 @@ func (h *Health) checkControlPlane(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
 	return &c, nil
+}
+
+// CheckIfDependencyWatchdogProberScaledDownControllers checks if controllers have been scaled down by
+// dependency-watchdog-prober.
+func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, seedClient client.Client, shootNamespace string) ([]string, error) {
+	var scaledDownDeploymentNames []string
+
+	// Error is ignored since this function never returns an error
+	proberConfig, _ := kubeapiserver.NewDependencyWatchdogProberConfiguration()
+
+	for _, dependentResourceInfo := range proberConfig {
+		if dependentResourceInfo.Ref == nil || dependentResourceInfo.Ref.Kind != "Deployment" {
+			continue
+		}
+
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: dependentResourceInfo.Ref.Name, Namespace: shootNamespace}}
+		if err := seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				// If the deployment does not exist then we don't care about it (e.g., some clusters don't have a
+				// cluster-autoscaler deployment when all their worker pools have min=max configuration).
+				continue
+			}
+			return nil, fmt.Errorf("failed reading Deployment %s for scale-down check: %w", deployment.Name, err)
+		}
+
+		if ptr.Deref(deployment.Spec.Replicas, 0) == 0 {
+			scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
+		}
+	}
+
+	return scaledDownDeploymentNames, nil
 }
 
 var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})

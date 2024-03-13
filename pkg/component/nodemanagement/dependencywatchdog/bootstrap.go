@@ -62,11 +62,6 @@ const (
 	configFileName                 = "dep-config.yaml"
 	dwdWeederDefaultLockObjectName = "dwd-weeder-leader-election"
 	dwdProberDefaultLockObjectName = "dwd-prober-leader-election"
-
-	// ManagedResourceDependencyWatchdogWeeder is the name of the dependency-watchdog-weeder managed resource.
-	ManagedResourceDependencyWatchdogWeeder = prefixDependencyWatchdog + "-weeder"
-	// ManagedResourceDependencyWatchdogProber is the name of the dependency-watchdog-prober managed resource.
-	ManagedResourceDependencyWatchdogProber = prefixDependencyWatchdog + "-prober"
 )
 
 // BootstrapperValues contains dependency-watchdog values.
