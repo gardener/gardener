@@ -232,6 +232,9 @@ func (r *Reconciler) reconcileBackupEntry(
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupentry status
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+		if !metav1.HasAnnotation(extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation) {
+			mustReconcileExtensionBackupEntry = true
+		}
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
 		lastOperationState := extensionBackupEntry.Status.LastOperation.State
@@ -281,6 +284,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			}
 		}
 	}
+
 	return reconcile.Result{}, nil
 }
 
