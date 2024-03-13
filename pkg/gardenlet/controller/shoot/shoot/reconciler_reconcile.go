@@ -655,6 +655,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
+		deployExtensionResourcesAfterWorker = g.Add(flow.Task{
+			Name:         "Deploying extension resources after workers",
+			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate, deployManagedResourceForCloudConfigExecutor, deployManagedResourceForGardenerNodeAgent),
+		})
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
@@ -666,6 +672,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return botanist.Shoot.Components.Extensions.Worker.Wait(ctx)
 			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness),
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForCloudConfigExecutor),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled after workers are ready",
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitAfterWorker,
+			SkipIf:       o.Shoot.IsWorkerless || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterWorker),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scaling down machine-controller-manager",
