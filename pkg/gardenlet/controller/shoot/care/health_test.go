@@ -504,6 +504,77 @@ var _ = Describe("health check", func() {
 		})
 	})
 
+	Describe("#CheckForExpiredNodeLeases", func() {
+		var (
+			nodeName = "node1"
+			nodeList corev1.NodeList
+
+			validLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(40)),
+				},
+			}
+
+			expiredLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(-40)),
+				},
+			}
+
+			unrelatedLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node2",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(40)),
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			nodeList = corev1.NodeList{
+				Items: []corev1.Node{{
+					ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+				}},
+			}
+		})
+
+		DescribeTable("#CheckForExpiredNodeLeases",
+			func(lease *coordinationv1.Lease, additionalNodeNames []string, expected types.GomegaMatcher) {
+				leaseList := coordinationv1.LeaseList{}
+				if lease != nil {
+					leaseList.Items = append(leaseList.Items, *lease)
+				}
+
+				for _, nodeName := range additionalNodeNames {
+					nodeList.Items = append(nodeList.Items, corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
+
+					lease := validLease.DeepCopy()
+					lease.Name = nodeName
+					leaseList.Items = append(leaseList.Items, *lease)
+				}
+
+				Expect(CheckForExpiredNodeLeases(&nodeList, &leaseList, fakeClock)).To(expected)
+			},
+
+			Entry("should return nil if there is an unexpired lease for node", validLease, nil, BeNil()),
+			Entry("should return nil if no leases are present", nil, nil, BeNil()),
+			Entry("should return nil if no node could be found for the lease", unrelatedLease, nil, BeNil()),
+			Entry("should return nil if less than 20% of leases are expired", expiredLease, []string{"node2", "node3", "node4", "node5", "node6"}, BeNil()),
+			Entry("should return an error if exactly 20% of leases are expired", expiredLease, []string{"node2", "node3", "node4", "node5"}, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+			Entry("should return an error if at least 20% of leases are expired", expiredLease, nil, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+		)
+	})
+
 	Describe("#CheckingNodeAgentLease", func() {
 		var (
 			validLease = coordinationv1.Lease{
@@ -516,7 +587,7 @@ var _ = Describe("health check", func() {
 				},
 			}
 
-			invalidLease = coordinationv1.Lease{
+			expiredLease = coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gardener-node-agent-node1",
 				},
@@ -526,7 +597,7 @@ var _ = Describe("health check", func() {
 				},
 			}
 
-			nonrelatedLease = coordinationv1.Lease{
+			unrelatedLease = coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gardener-node-agent-node2",
 				},
@@ -559,8 +630,8 @@ var _ = Describe("health check", func() {
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
 			// TODO(rfranzke): Remove this test-entry as soon as the UseGardenerNodeAgent feature gate gets removed.
 			Entry("should return nil if no leases are present", nil, BeNil()),
-			Entry("should return Error that node agent is not running if no matching lease could be found for node", nonrelatedLease, MatchError(ContainSubstring("not running"))),
-			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", invalidLease, MatchError(ContainSubstring("stopped running"))),
+			Entry("should return Error that node agent is not running if no matching lease could be found for node", unrelatedLease, MatchError(ContainSubstring("not running"))),
+			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", expiredLease, MatchError(ContainSubstring("stopped running"))),
 		)
 	})
 

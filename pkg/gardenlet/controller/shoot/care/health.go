@@ -747,6 +747,17 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
+	if !h.shoot.IsWorkerless {
+		leaseList := &coordinationv1.LeaseList{}
+		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
+			return nil, err
+		}
+
+		if err := CheckForExpiredNodeLeases(nodeList, leaseList, h.clock); err != nil {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TooManyExpiredNodeLeases", err.Error())), nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -773,6 +784,31 @@ func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.L
 		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
 		}
+	}
+
+	return nil
+}
+
+// CheckForExpiredNodeLeases checks if the number of expired node Leases surpasses 20% of all existing Leases. If yes,
+// an error will be returned. The motivation is that dependency-watchdog is starting to scale down controllers when 60%
+// of the Leases are expired.
+func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+	nodeNames := sets.Set[string]{}
+	for _, node := range nodeList.Items {
+		nodeNames.Insert(node.Name)
+	}
+
+	var expiredLeases int
+	for _, lease := range leaseList.Items {
+		if lease.Spec.RenewTime.Add(time.Second*time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) &&
+			// we only care about Leases related to existing nodes
+			nodeNames.Has(lease.Name) {
+			expiredLeases++
+		}
+	}
+
+	if expiredLeasesPercentage := int32(float64(expiredLeases) / float64(len(leaseList.Items)) * 100); expiredLeasesPercentage >= 20 {
+		return fmt.Errorf("%d%% of all Leases in %s namespace are expired - dependency-watchdog-prober will start scaling down controllers if 60%% are reached", expiredLeasesPercentage, corev1.NamespaceNodeLease)
 	}
 
 	return nil
