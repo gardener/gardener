@@ -54,9 +54,9 @@ parse_flags() {
       MULTI_ZONAL=true
       ;;
     --with-lpp-resize-support)
-        shift
-        WITH_LPP_RESIZE_SUPPORT="${1}"
-        ;;
+      shift
+      WITH_LPP_RESIZE_SUPPORT="${1}"
+      ;;
     esac
 
     shift
@@ -189,11 +189,9 @@ check_registry_cache_availability() {
 # [3]: https://kubernetes.io/docs/concepts/storage/volumes/#local
 # [4]: https://github.com/kubernetes-sigs/kind/blob/main/pkg/cluster/internal/create/actions/installstorage/storage.go
 # [5]: https://kubernetes.io/docs/reference/instrumentation/metrics/
-_setup_kind_sc_default_volume_type() {
-    echo "Configuring default StorageClass for kind cluster ..."
-    kubectl get storageclasses standard -o yaml | \
-        yq '.metadata.annotations.defaultVolumeType = "local"' | \
-        kubectl apply -f -
+setup_kind_sc_default_volume_type() {
+  echo "Configuring default StorageClass for kind cluster ..."
+  kubectl annotate storageclass standard defaultVolumeType=local
 }
 
 # The rancher.io/local-path provisioner at the moment does not support volume
@@ -208,50 +206,50 @@ _setup_kind_sc_default_volume_type() {
 #
 # [1]: https://github.com/rancher/local-path-provisioner
 # [2]: https://github.com/rancher/local-path-provisioner/pull/350
-_setup_kind_with_lpp_resize_support() {
-    if [ "${WITH_LPP_RESIZE_SUPPORT}" != "true" ]; then
-        return
-    fi
+#
+# TODO(dnaeon): remove this once we have [2] merged into upstream
+setup_kind_with_lpp_resize_support() {
+  if [ "${WITH_LPP_RESIZE_SUPPORT}" != "true" ]; then
+    return
+  fi
 
-    echo "Configuring kind local-path provisioner with volume resize support ..."
+  echo "Configuring kind local-path provisioner with volume resize support ..."
 
-    # First configure allowVolumeExpansion on the default StorageClass
-    kubectl get storageclasses standard -o yaml | \
-        yq '.allowVolumeExpansion = true' | \
-        kubectl apply -f -
+  # First configure allowVolumeExpansion on the default StorageClass
+  kubectl patch storageclass standard --patch '{"allowVolumeExpansion": true}'
 
-    local _workdir=$( mktemp -d )
-    local _oldpwd="${PWD}"
+  local _workdir=$( mktemp -d )
+  local _oldpwd="${PWD}"
 
-    # The fork of LPP with resize support
-    local _lpp_repo="https://github.com/marjus45/local-path-provisioner.git"
-    local _lpp_branch="feature-external-resizer"
+  # The fork of LPP with resize support
+  local _lpp_repo="https://github.com/marjus45/local-path-provisioner.git"
+  local _lpp_branch="feature-external-resizer"
 
-    # Build the latest image
-    cd "${_workdir}" && \
-        git clone "${_lpp_repo}" && \
-        cd local-path-provisioner && \
-        git checkout -b "${_lpp_branch}" "origin/${_lpp_branch}" && \
-        make
+  # Build the latest image
+  cd "${_workdir}" && \
+    git clone "${_lpp_repo}" && \
+    cd local-path-provisioner && \
+    git checkout -b "${_lpp_branch}" "origin/${_lpp_branch}" && \
+    make
 
-    # Push to the local registry
-    local _latest_image=$( cat ./bin/latest_image )
-    local _local_latest_image="localhost:5001/${_latest_image}"
-    docker image tag "${_latest_image}" "${_local_latest_image}"
-    docker push "${_local_latest_image}"
+  # Push to the local registry
+  local _latest_image=$( cat ./bin/latest_image )
+  local _local_latest_image="localhost:5001/${_latest_image}"
+  docker image tag "${_latest_image}" "${_local_latest_image}"
+  docker push "${_local_latest_image}"
 
-    # Apply the latest manifests and use our own image
-    cd deploy && \
-        kustomize edit set image rancher/local-path-provisioner:master-head="${_local_latest_image}" && \
-        kustomize build . | \
-        kubectl apply -f -
+  # Apply the latest manifests and use our own image
+  cd deploy && \
+    kustomize edit set image rancher/local-path-provisioner:master-head="${_local_latest_image}" && \
+    kustomize build . | \
+      kubectl apply -f -
 
-    # The default manifests from rancher/local-path come with another
-    # StorageClass, which we don't need, so make sure to remove it.
-    kubectl delete --ignore-not-found=true storageclass local-path
+  # The default manifests from rancher/local-path come with another
+  # StorageClass, which we don't need, so make sure to remove it.
+  kubectl delete --ignore-not-found=true storageclass local-path
 
-    cd "${_oldpwd}"
-    rm -rf "${_workdir}"
+  cd "${_oldpwd}"
+  rm -rf "${_workdir}"
 }
 
 parse_flags "$@"
@@ -284,7 +282,7 @@ kind create cluster \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # Configure the default StorageClass in the kind cluster
-_setup_kind_sc_default_volume_type
+setup_kind_sc_default_volume_type
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
 # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
@@ -399,7 +397,7 @@ kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
 setup_containerd_registry_mirrors
-_setup_kind_with_lpp_resize_support
+setup_kind_with_lpp_resize_support
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\

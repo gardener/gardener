@@ -48,7 +48,6 @@ GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
 PRINT_HELP ?=
 
-
 ifneq ($(SEED_NAME),provider-extensions)
 	SEED_KUBECONFIG := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig-$(SEED_NAME)
 endif
