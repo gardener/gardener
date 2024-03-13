@@ -137,9 +137,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	kubernetesControlPlaneUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+	kubernetesControlPlaneUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 		maintainedShoot.Spec.Kubernetes.Version = v
-		return nil
+		return v, nil
 	})
 	if err != nil {
 		// continue execution to allow the machine image version update and Kubernetes updates to worker pools
@@ -176,10 +176,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 
 		workerLog := log.WithValues("worker", pool.Name)
-		workerKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		workerKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
-				return err
+				return "", err
 			}
 			// If during autoupdate a worker pool kubernetes gets forcefully updated to the next minor which might be higher than the same minor of the shoot, take this
 			if workerPoolSemver.GreaterThan(shootKubernetesVersion) {
@@ -187,7 +187,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			}
 			v = workerPoolSemver.String()
 			maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
-			return nil
+			return v, nil
 		})
 		if err != nil {
 			// continue execution to allow other maintenance activities to continue
@@ -488,7 +488,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 }
 
 // maintainKubernetesVersion updates the Kubernetes version if necessary and returns the reason why an update was done
-func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (*updateResult, error) {
+func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) (string, error)) (*updateResult, error) {
 	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(kubernetesVersion, autoUpdate, profile)
 	if err != nil {
 		return nil, err
@@ -510,7 +510,8 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 		return nil, nil
 	}
 
-	err = updateFunc(updatedKubernetesVersion)
+	// In case the updatedKubernetesVersion for workerpool is higher than the controlplane version, actualUpdatedKubernetesVersion is set to controlplane version
+	actualUpdatedKubernetesVersion, err := updateFunc(updatedKubernetesVersion)
 	if err != nil {
 		return &updateResult{
 			description:  err.Error(),
@@ -519,9 +520,9 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 		}, err
 	}
 
-	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", updatedKubernetesVersion, "reason", reason)
+	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", actualUpdatedKubernetesVersion, "reason", reason)
 	return &updateResult{
-		description:  fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, updatedKubernetesVersion),
+		description:  fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, actualUpdatedKubernetesVersion),
 		reason:       reason,
 		isSuccessful: true,
 	}, nil
