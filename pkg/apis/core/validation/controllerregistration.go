@@ -41,6 +41,12 @@ var availableExtensionStrategies = sets.New(
 	string(core.AfterKubeAPIServer),
 )
 
+var availableExtensionStrategiesForReconcile = sets.New(
+	string(core.BeforeKubeAPIServer),
+	string(core.AfterKubeAPIServer),
+	string(core.AfterWorker),
+)
+
 // ValidateControllerRegistration validates a ControllerRegistration object.
 func ValidateControllerRegistration(controllerRegistration *core.ControllerRegistration) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -109,8 +115,8 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 
 		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
 			lifecyclePath := idxPath.Child("lifecycle")
-			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Reconcile)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategies)))
+			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(string(*resource.Lifecycle.Reconcile)) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategiesForReconcile)))
 			}
 			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Delete)) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, sets.List(availableExtensionStrategies)))

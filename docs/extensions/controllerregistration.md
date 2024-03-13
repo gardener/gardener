@@ -212,7 +212,7 @@ The `globallyEnabled=true` option specifies that the `Extension/foo` object shal
 The `reconcileTimeout` tells Gardener how long it should wait during its shoot reconciliation flow for the `Extension/foo`'s reconciliation to finish.
 
 #### `Extension` Lifecycle
-The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer` and `BeforeKubeAPIServer`. Let's take the following configuration and explain it.
+The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer`, `BeforeKubeAPIServer`, and `AfterWorker`. Let's take the following configuration and explain it.
 
 ```yaml
     ...

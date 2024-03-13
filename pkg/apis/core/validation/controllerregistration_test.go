@@ -244,6 +244,36 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should allow setting the AfterWorker lifecycle strategy on reconcile", func() {
+			afterStrat := core.AfterWorker
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &afterStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow setting AfterWorker lifecycle strategy on migrate or delete", func() {
+			afterStrat := core.AfterWorker
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Migrate: &afterStrat,
+				Delete:  &afterStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.migrate"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.delete"),
+			}))))
+		})
+
 		It("should not allow setting invalid lifecycle strategies", func() {
 			one := core.ControllerResourceLifecycleStrategy("one")
 			two := core.ControllerResourceLifecycleStrategy("two")
