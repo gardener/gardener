@@ -218,38 +218,19 @@ setup_kind_with_lpp_resize_support() {
   # First configure allowVolumeExpansion on the default StorageClass
   kubectl patch storageclass standard --patch '{"allowVolumeExpansion": true}'
 
-  local _workdir=$( mktemp -d )
-  local _oldpwd="${PWD}"
-
-  # The fork of LPP with resize support
-  local _lpp_repo="https://github.com/marjus45/local-path-provisioner.git"
-  local _lpp_branch="feature-external-resizer"
-
-  # Build the latest image
-  cd "${_workdir}" && \
-    git clone "${_lpp_repo}" && \
-    cd local-path-provisioner && \
-    git checkout -b "${_lpp_branch}" "origin/${_lpp_branch}" && \
-    make
-
-  # Push to the local registry
-  local _latest_image=$( cat ./bin/latest_image )
-  local _local_latest_image="localhost:5001/${_latest_image}"
-  docker image tag "${_latest_image}" "${_local_latest_image}"
-  docker push "${_local_latest_image}"
-
   # Apply the latest manifests and use our own image
-  cd deploy && \
-    kustomize edit set image rancher/local-path-provisioner:master-head="${_local_latest_image}" && \
-    kustomize build . | \
-      kubectl apply -f -
+  local _image="ghcr.io/ialidzhikov/local-path-provisioner:feature-external-resizer-c0c1c13"
+  local _lpp_repo="https://github.com/marjus45/local-path-provisioner"
+  local _lpp_branch="feature-external-resizer"
+  local _timeout="90"
+
+  kustomize build "${_lpp_repo}/deploy/?ref=${_lpp_branch}&timeout=${_timeout}" | \
+    sed -e "s|image: rancher/local-path-provisioner:master-head|image: ${_image}|g" | \
+    kubectl apply -f -
 
   # The default manifests from rancher/local-path come with another
   # StorageClass, which we don't need, so make sure to remove it.
   kubectl delete --ignore-not-found=true storageclass local-path
-
-  cd "${_oldpwd}"
-  rm -rf "${_workdir}"
 }
 
 parse_flags "$@"
