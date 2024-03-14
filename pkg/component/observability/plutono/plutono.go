@@ -317,15 +317,14 @@ providers:
 }
 
 func (p *plutono) getDataSource() string {
-	url := "http://prometheus-web:80"
-	maxLine := "1000"
+	prometheusSuffix, maxLine := "web", "1000"
 	if p.values.IsGardenCluster {
-		url = "http://" + p.namespace + "-prometheus:80"
-		maxLine = "5000"
+		prometheusSuffix, maxLine = "garden", "5000"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
-		url = "http://prometheus-aggregate:80"
-		maxLine = "5000"
+		prometheusSuffix, maxLine = "aggregate", "5000"
 	}
+
+	url := "http://prometheus-" + prometheusSuffix + ":80"
 
 	datasource := `apiVersion: 1
 
@@ -822,7 +821,7 @@ func (p *plutono) getPodLabels() map[string]string {
 
 	if p.values.IsGardenCluster {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel("garden-prometheus", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel("garden-avail-prom", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
