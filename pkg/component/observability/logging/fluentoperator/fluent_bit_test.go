@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +41,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Fluent Bit", func() {
@@ -56,8 +56,9 @@ var _ = Describe("Fluent Bit", func() {
 			PriorityClass:      priorityClassName,
 		}
 
-		c         client.Client
-		component component.DeployWaiter
+		c             client.Client
+		component     component.DeployWaiter
+		containObject func(object client.Object) types.GomegaMatcher
 
 		customResourcesManagedResourceName   = "fluent-bit"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
@@ -227,6 +228,7 @@ var _ = Describe("Fluent Bit", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = NewFluentBit(c, namespace, values)
+		containObject = NewManagedResourceObjectMatcher(c)
 	})
 
 	JustBeforeEach(func() {
@@ -288,9 +290,9 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
-			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(testruntime.Serialize(serviceMonitor)))
-			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit-output-plugin.yaml"])).To(Equal(testruntime.Serialize(serviceMonitorPlugin)))
-			Expect(string(customResourcesManagedResourceSecret.Data["prometheusrule__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(testruntime.Serialize(prometheusRule)))
+			Expect(customResourcesManagedResource).To(containObject(serviceMonitor))
+			Expect(customResourcesManagedResource).To(containObject(serviceMonitorPlugin))
+			Expect(customResourcesManagedResource).To(containObject(prometheusRule))
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
 		})
 	})

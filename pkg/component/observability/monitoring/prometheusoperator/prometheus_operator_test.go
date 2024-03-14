@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +43,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("PrometheusOperator", func() {
@@ -60,7 +60,8 @@ var _ = Describe("PrometheusOperator", func() {
 		deployer   component.DeployWaiter
 		values     Values
 
-		fakeOps *retryfake.Ops
+		fakeOps       *retryfake.Ops
+		containObject func(object client.Object) gomegatypes.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -90,6 +91,8 @@ var _ = Describe("PrometheusOperator", func() {
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
+
+		containObject = NewManagedResourceObjectMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -410,13 +413,13 @@ var _ = Describe("PrometheusOperator", func() {
 
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(7))
-				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
-				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(service)))
-				Expect(string(managedResourceSecret.Data["deployment__some-namespace__prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(deployment)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["clusterrole____prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-operator.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
-				Expect(string(managedResourceSecret.Data["clusterrole____prometheus.yaml"])).To(Equal(testruntime.Serialize(clusterRolePrometheus)))
+				Expect(managedResource).To(containObject(serviceAccount))
+				Expect(managedResource).To(containObject(service))
+				Expect(managedResource).To(containObject(deployment))
+				Expect(managedResource).To(containObject(vpa))
+				Expect(managedResource).To(containObject(clusterRole))
+				Expect(managedResource).To(containObject(clusterRoleBinding))
+				Expect(managedResource).To(containObject(clusterRolePrometheus))
 			})
 		})
 	})

@@ -20,6 +20,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -48,7 +49,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("KubeStateMetrics", func() {
@@ -60,9 +60,10 @@ var _ = Describe("KubeStateMetrics", func() {
 		priorityClassName = "some-priorityclass"
 		values            = Values{}
 
-		c   client.Client
-		sm  secretsmanager.Interface
-		ksm component.DeployWaiter
+		c             client.Client
+		sm            secretsmanager.Interface
+		ksm           component.DeployWaiter
+		containObject func(object client.Object) gomegatypes.GomegaMatcher
 
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -521,6 +522,7 @@ var _ = Describe("KubeStateMetrics", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
+		containObject = NewManagedResourceObjectMatcher(c)
 
 		ksm = New(c, namespace, sm, values)
 		managedResourceName = ""
@@ -670,19 +672,19 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(testruntime.Serialize(clusterRoleFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(serviceFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(deploymentFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__cache-kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(scrapeConfigCache)))
-				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__seed-kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(scrapeConfigSeed)))
+				Expect(managedResource).To(containObject(serviceAccount))
+				Expect(managedResource).To(containObject(clusterRoleFor(component.ClusterTypeSeed)))
+				Expect(managedResource).To(containObject(clusterRoleBindingFor(component.ClusterTypeSeed)))
+				Expect(managedResource).To(containObject(serviceFor(component.ClusterTypeSeed)))
+				Expect(managedResource).To(containObject(deploymentFor(component.ClusterTypeSeed)))
+				Expect(managedResource).To(containObject(vpa))
+				Expect(managedResource).To(containObject(scrapeConfigCache))
+				Expect(managedResource).To(containObject(scrapeConfigSeed))
 			})
 
 			Context("Kubernetes versions >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(testruntime.Serialize(pdbFor(true))))
+					Expect(managedResource).To(containObject(pdbFor(true)))
 				})
 			})
 
@@ -698,7 +700,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(testruntime.Serialize(pdbFor(false))))
+					Expect(managedResource).To(containObject(pdbFor(false)))
 				})
 			})
 		})
@@ -745,8 +747,8 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(2))
 
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(clusterRoleFor(component.ClusterTypeShoot))))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingFor(component.ClusterTypeShoot))))
+				Expect(managedResource).To(containObject(clusterRoleFor(component.ClusterTypeShoot)))
+				Expect(managedResource).To(containObject(clusterRoleBindingFor(component.ClusterTypeShoot)))
 
 				actualSecretShootAccess := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())

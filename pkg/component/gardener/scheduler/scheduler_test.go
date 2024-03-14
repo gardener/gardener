@@ -21,6 +21,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
@@ -53,7 +54,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("GardenerScheduler", func() {
@@ -69,7 +69,8 @@ var _ = Describe("GardenerScheduler", func() {
 		deployer          component.DeployWaiter
 		values            Values
 
-		fakeOps *retryfake.Ops
+		fakeOps       *retryfake.Ops
+		containObject func(object client.Object) types.GomegaMatcher
 
 		managedResourceRuntime       *resourcesv1alpha1.ManagedResource
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
@@ -99,6 +100,8 @@ var _ = Describe("GardenerScheduler", func() {
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
+
+		containObject = NewManagedResourceObjectMatcher(fakeClient)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -377,17 +380,17 @@ var _ = Describe("GardenerScheduler", func() {
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
-				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-3cf6616e.yaml"])).To(Equal(configMap(namespace, values)))
-				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(testruntime.Serialize(serviceRuntime)))
-				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
-				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
+				Expect(managedResourceRuntime).To(containObject(configMap(namespace, values)))
+				Expect(managedResourceRuntime).To(containObject(serviceRuntime))
+				Expect(managedResourceRuntime).To(containObject(vpa))
+				Expect(managedResourceRuntime).To(containObject(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_scheduler.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_scheduler.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+				Expect(managedResourceVirtual).To(containObject(clusterRole))
+				Expect(managedResourceVirtual).To(containObject(clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
@@ -398,13 +401,13 @@ var _ = Describe("GardenerScheduler", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(false))))
+					Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(false)))
 				})
 			})
 
 			Context("Kubernetes versions >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
+					Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(true)))
 				})
 			})
 		})
@@ -720,7 +723,7 @@ var (
 	}
 )
 
-func configMap(namespace string, testValues Values) string {
+func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 	schedulerConfig := &schedulerv1alpha1.SchedulerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
@@ -775,10 +778,10 @@ func configMap(namespace string, testValues Values) string {
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-	return testruntime.Serialize(configMap)
+	return configMap
 }
 
-func deployment(namespace, configSecretName string, testValues Values) string {
+func deployment(namespace, configSecretName string, testValues Values) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-scheduler",
@@ -916,5 +919,5 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return testruntime.Serialize(deployment)
+	return deployment
 }

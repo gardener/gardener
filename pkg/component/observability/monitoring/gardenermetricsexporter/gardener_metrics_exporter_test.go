@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -44,7 +45,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("GardenerMetricsExporter", func() {
@@ -60,7 +60,8 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		deployer          component.DeployWaiter
 		values            Values
 
-		fakeOps *retryfake.Ops
+		fakeOps       *retryfake.Ops
+		containObject func(object client.Object) gomegatypes.GomegaMatcher
 
 		managedResourceRuntime       *resourcesv1alpha1.ManagedResource
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
@@ -85,6 +86,8 @@ var _ = Describe("GardenerMetricsExporter", func() {
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
+
+		containObject = NewManagedResourceObjectMatcher(fakeClient)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -270,15 +273,15 @@ var _ = Describe("GardenerMetricsExporter", func() {
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
-				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-metrics-exporter.yaml"])).To(Equal(testruntime.Serialize(serviceRuntime)))
-				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-metrics-exporter.yaml"])).To(Equal(deployment(namespace, values)))
+				Expect(managedResourceRuntime).To(containObject(serviceRuntime))
+				Expect(managedResourceRuntime).To(containObject(deployment(namespace, values)))
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_metrics-exporter.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_metrics-exporter.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+				Expect(managedResourceVirtual).To(containObject(clusterRole))
+				Expect(managedResourceVirtual).To(containObject(clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
@@ -595,7 +598,7 @@ var (
 	}
 )
 
-func deployment(namespace string, testValues Values) string {
+func deployment(namespace string, testValues Values) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-metrics-exporter",
@@ -725,5 +728,5 @@ func deployment(namespace string, testValues Values) string {
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return testruntime.Serialize(deployment)
+	return deployment
 }

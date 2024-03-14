@@ -20,6 +20,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -45,7 +46,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("HVPA", func() {
@@ -61,8 +61,9 @@ var _ = Describe("HVPA", func() {
 			KubernetesVersion: semver.MustParse("1.25.5"),
 		}
 
-		c         client.Client
-		component component.DeployWaiter
+		c             client.Client
+		component     component.DeployWaiter
+		containObject func(object client.Object) types.GomegaMatcher
 
 		managedResourceName   = "hvpa"
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -83,6 +84,7 @@ var _ = Describe("HVPA", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = New(c, namespace, values)
+		containObject = NewManagedResourceObjectMatcher(c)
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -402,20 +404,21 @@ var _ = Describe("HVPA", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			Expect(managedResourceSecret.Data).To(HaveLen(10))
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(service)))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(deployment)))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(role)))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(roleBinding)))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
-			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(serviceMonitor)))
+
+			Expect(managedResource).To(containObject(serviceAccount))
+			Expect(managedResource).To(containObject(clusterRole))
+			Expect(managedResource).To(containObject(clusterRoleBinding))
+			Expect(managedResource).To(containObject(service))
+			Expect(managedResource).To(containObject(deployment))
+			Expect(managedResource).To(containObject(role))
+			Expect(managedResource).To(containObject(roleBinding))
+			Expect(managedResource).To(containObject(vpa))
+			Expect(managedResource).To(containObject(serviceMonitor))
 		})
 
 		Context("Kubernetes versions < 1.26", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(false))))
+				Expect(managedResource).To(containObject(podDisruptionBudgetFor(false)))
 			})
 		})
 
@@ -426,7 +429,7 @@ var _ = Describe("HVPA", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
+				Expect(managedResource).To(containObject(podDisruptionBudgetFor(true)))
 			})
 		})
 	})

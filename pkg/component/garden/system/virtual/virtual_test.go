@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +38,6 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Virtual", func() {
@@ -47,9 +47,10 @@ var _ = Describe("Virtual", func() {
 		managedResourceName = "garden-system-virtual"
 		namespace           = "some-namespace"
 
-		c         client.Client
-		component component.DeployWaiter
-		values    Values
+		c             client.Client
+		component     component.DeployWaiter
+		values        Values
+		containObject func(object client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -83,6 +84,7 @@ var _ = Describe("Virtual", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		values = Values{}
 		component = New(c, namespace, values)
+		containObject = NewManagedResourceObjectMatcher(c)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -632,29 +634,29 @@ var _ = Describe("Virtual", func() {
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
 			Expect(managedResourceSecret.Data).To(HaveLen(23))
-			Expect(string(managedResourceSecret.Data["namespace____garden.yaml"])).To(Equal(testruntime.Serialize(namespaceGarden)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(testruntime.Serialize(clusterRoleSeedBootstrapper)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingSeedBootstrapper)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seeds.yaml"])).To(Equal(testruntime.Serialize(clusterRoleSeeds)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seeds.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingSeeds)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_admin.yaml"])).To(Equal(testruntime.Serialize(clusterRoleGardenerAdmin)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_admin.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingGardenerAdmin)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_administrators.yaml"])).To(Equal(testruntime.Serialize(clusterRoleGardenerAdminAggregated)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_viewer.yaml"])).To(Equal(testruntime.Serialize(clusterRoleGardenerViewer)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_viewers.yaml"])).To(Equal(testruntime.Serialize(clusterRoleGardenerViewerAggregated)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-global-resources.yaml"])).To(Equal(testruntime.Serialize(clusterRoleReadGlobalResources)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-global-resources.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingReadGlobalResources)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_user-auth.yaml"])).To(Equal(testruntime.Serialize(clusterRoleUserAuth)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_user-auth.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingUserAuth)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-creation.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectCreation)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-member.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectMemberAggregated)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-member-aggregation.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectMember)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-serviceaccountmanager.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectServiceAccountManagerAggregated)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-serviceaccountmanager-aggregation.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectServiceAccountManager)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectViewerAggregated)))
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer-aggregation.yaml"])).To(Equal(testruntime.Serialize(clusterRoleProjectViewer)))
-			Expect(string(managedResourceSecret.Data["role__kube-system__gardener.cloud_system_read-cluster-identity-configmap.yaml"])).To(Equal(testruntime.Serialize(roleReadClusterIdentityConfigMap)))
-			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_system_read-cluster-identity-configmap.yaml"])).To(Equal(testruntime.Serialize(roleBindingReadClusterIdentityConfigMap)))
+			Expect(managedResource).To(containObject(namespaceGarden))
+			Expect(managedResource).To(containObject(clusterRoleSeedBootstrapper))
+			Expect(managedResource).To(containObject(clusterRoleBindingSeedBootstrapper))
+			Expect(managedResource).To(containObject(clusterRoleSeeds))
+			Expect(managedResource).To(containObject(clusterRoleBindingSeeds))
+			Expect(managedResource).To(containObject(clusterRoleGardenerAdmin))
+			Expect(managedResource).To(containObject(clusterRoleBindingGardenerAdmin))
+			Expect(managedResource).To(containObject(clusterRoleGardenerAdminAggregated))
+			Expect(managedResource).To(containObject(clusterRoleGardenerViewer))
+			Expect(managedResource).To(containObject(clusterRoleGardenerViewerAggregated))
+			Expect(managedResource).To(containObject(clusterRoleReadGlobalResources))
+			Expect(managedResource).To(containObject(clusterRoleBindingReadGlobalResources))
+			Expect(managedResource).To(containObject(clusterRoleUserAuth))
+			Expect(managedResource).To(containObject(clusterRoleBindingUserAuth))
+			Expect(managedResource).To(containObject(clusterRoleProjectCreation))
+			Expect(managedResource).To(containObject(clusterRoleProjectMemberAggregated))
+			Expect(managedResource).To(containObject(clusterRoleProjectMember))
+			Expect(managedResource).To(containObject(clusterRoleProjectServiceAccountManagerAggregated))
+			Expect(managedResource).To(containObject(clusterRoleProjectServiceAccountManager))
+			Expect(managedResource).To(containObject(clusterRoleProjectViewerAggregated))
+			Expect(managedResource).To(containObject(clusterRoleProjectViewer))
+			Expect(managedResource).To(containObject(roleReadClusterIdentityConfigMap))
+			Expect(managedResource).To(containObject(roleBindingReadClusterIdentityConfigMap))
 		})
 
 		Context("when seed authorizer is enabled", func() {
