@@ -74,6 +74,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	cleanupAdmissionPlugins(newShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -311,4 +313,25 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+func cleanupAdmissionPlugins(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return
+	}
+
+	var (
+		admissionPlugins      []core.AdmissionPlugin
+		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins
+	)
+
+	for _, plugin := range shootAdmissionPlugins {
+		if plugin.Name == "PodSecurityPolicy" {
+			continue
+		}
+
+		admissionPlugins = append(admissionPlugins, plugin)
+	}
+
+	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
 }
