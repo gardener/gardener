@@ -43,6 +43,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -339,10 +340,13 @@ var _ = Describe("health check", func() {
 						},
 					},
 				})
+				seedObj := &seedpkg.Seed{}
+				seedObj.SetInfo(&gardencorev1beta1.Seed{})
 
 				health := NewHealth(
 					logr.Discard(),
 					shootObj,
+					seedObj,
 					kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
 					nil,
 					nil,
@@ -474,9 +478,9 @@ var _ = Describe("health check", func() {
 			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
 		})
 
-		It("should report nothing because no relevant deployment exists", func() {
+		It("should report an error because a required relevant deployment does not exist", func() {
 			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).To(BeNotFoundError())
 			Expect(scaledDownDeploymentNames).To(BeEmpty())
 		})
 

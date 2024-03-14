@@ -51,6 +51,7 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -79,6 +80,7 @@ var (
 // Health contains information needed to execute shoot health checks.
 type Health struct {
 	shoot        *shoot.Shoot
+	seed         *seed.Seed
 	gardenClient client.Client
 	seedClient   kubernetes.Interface
 
@@ -100,6 +102,7 @@ type ShootClientInit func() (kubernetes.Interface, bool, error)
 func NewHealth(
 	log logr.Logger,
 	shoot *shoot.Shoot,
+	seed *seed.Seed,
 	seedClientSet kubernetes.Interface,
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
@@ -109,6 +112,7 @@ func NewHealth(
 ) *Health {
 	return &Health{
 		shoot:                  shoot,
+		seed:                   seed,
 		gardenClient:           gardenClient,
 		seedClient:             seedClientSet,
 		initializeShootClients: shootClientInit,
@@ -418,7 +422,7 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
-	if !h.shoot.IsWorkerless {
+	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.SeedNamespace); err != nil {
 			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
 		} else if len(scaledDownDeploymentNames) > 0 {
@@ -457,7 +461,7 @@ func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, s
 
 		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: dependentResourceInfo.Ref.Name, Namespace: shootNamespace}}
 		if err := seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
-			if apierrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) && dependentResourceInfo.Optional {
 				// If the deployment does not exist then we don't care about it (e.g., some clusters don't have a
 				// cluster-autoscaler deployment when all their worker pools have min=max configuration).
 				continue
@@ -748,7 +752,7 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
-	if !h.shoot.IsWorkerless {
+	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
 		leaseList := &coordinationv1.LeaseList{}
 		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
 			return nil, err
@@ -805,9 +809,9 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 
 	var expiredLeases int
 	for _, lease := range leaseList.Items {
-		if lease.Spec.RenewTime.Add(time.Second*time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) &&
-			// we only care about Leases related to existing nodes
-			nodeNames.Has(lease.Name) {
+		// we only care about Leases related to existing nodes
+		if nodeNames.Has(lease.Name) &&
+			lease.Spec.RenewTime.Add(time.Second*time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			expiredLeases++
 		}
 	}

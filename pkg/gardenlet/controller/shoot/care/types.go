@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
@@ -41,6 +42,7 @@ type HealthCheck interface {
 type NewHealthCheckFunc func(
 	logger logr.Logger,
 	shoot *shoot.Shoot,
+	seed *seed.Seed,
 	seedClient kubernetes.Interface,
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
@@ -53,6 +55,7 @@ type NewHealthCheckFunc func(
 var defaultNewHealthCheck NewHealthCheckFunc = func(
 	log logr.Logger,
 	shoot *shoot.Shoot,
+	seed *seed.Seed,
 	seedClientSet kubernetes.Interface,
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
@@ -63,6 +66,7 @@ var defaultNewHealthCheck NewHealthCheckFunc = func(
 	return NewHealth(
 		log,
 		shoot,
+		seed,
 		seedClientSet,
 		gardenClient,
 		shootClientInit,
