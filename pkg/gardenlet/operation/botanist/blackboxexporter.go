@@ -28,6 +28,7 @@ import (
 func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error) {
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
+		b.SecretsManager,
 		b.Shoot.SeedNamespace,
 		blackboxexporter.Values{
 			ClusterType:       component.ClusterTypeShoot,

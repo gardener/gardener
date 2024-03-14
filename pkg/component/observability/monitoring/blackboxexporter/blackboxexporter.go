@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,10 +38,13 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
@@ -49,6 +53,10 @@ const (
 
 	volumeMountPathConfig = "/etc/blackbox_exporter"
 	dataKeyConfig         = "blackbox.yaml"
+
+	volumeNameClusterAccess = "cluster-access"
+	// VolumeMountPathClusterAccess is the volume mount path to the cluster access credentials.
+	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/cluster-access"
 )
 
 // Interface contains functions for a blackbox-exporter deployer.
@@ -69,6 +77,8 @@ type Values struct {
 	KubernetesVersion *semver.Version
 	// Config is blackbox exporter configuration.
 	Config blackboxexporterconfig.Config
+	// ScrapeConfigs is a list of scrape configs for the blackbox exporter.
+	ScrapeConfigs []*monitoringv1alpha1.ScrapeConfig
 	// PodLabels are additional labels for the pod.
 	PodLabels map[string]string
 	// PriorityClassName is the name of the priority class.
@@ -78,20 +88,23 @@ type Values struct {
 // New creates a new instance of DeployWaiter for blackbox-exporter.
 func New(
 	client client.Client,
+	secretsManager secretsmanager.Interface,
 	namespace string,
 	values Values,
 ) Interface {
 	return &blackboxExporter{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		secretsManager: secretsManager,
+		namespace:      namespace,
+		values:         values,
 	}
 }
 
 type blackboxExporter struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	secretsManager secretsmanager.Interface
+	namespace      string
+	values         Values
 }
 
 func (b *blackboxExporter) Deploy(ctx context.Context) error {
@@ -333,6 +346,54 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
+	}
+
+	for _, scrapeConfig := range b.values.ScrapeConfigs {
+		if err := registry.Add(scrapeConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		caSecret, found := b.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+		}
+
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameClusterAccess,
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To(int32(420)),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
+								Items: []corev1.KeyToPath{{
+									Key:  secrets.DataKeyCertificateBundle,
+									Path: secrets.DataKeyCertificateBundle,
+								}},
+								Optional: ptr.To(false),
+							},
+						},
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{Name: gardenprometheus.AccessSecretName},
+								Items: []corev1.KeyToPath{{
+									Key:  resourcesv1alpha1.DataKeyToken,
+									Path: resourcesv1alpha1.DataKeyToken,
+								}},
+								Optional: ptr.To(false),
+							},
+						},
+					},
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameClusterAccess,
+			MountPath: VolumeMountPathClusterAccess,
+		})
 	}
 
 	return registry.AddAllAndSerialize(

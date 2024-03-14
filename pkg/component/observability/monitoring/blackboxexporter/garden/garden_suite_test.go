@@ -12,23 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shared
+package garden_test
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"testing"
 
-	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// NewBlackboxExporter creates a new blackbox-exporter deployer.
-func NewBlackboxExporter(c client.Client, secretsManager secretsmanager.Interface, namespace string, values blackboxexporter.Values) (blackboxexporter.Interface, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
-	if err != nil {
-		return nil, err
-	}
-	values.Image = image.String()
-
-	return blackboxexporter.New(c, secretsManager, namespace, values), nil
+func TestGarden(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Component Observability Monitoring BlackboxExporter Garden Suite")
 }

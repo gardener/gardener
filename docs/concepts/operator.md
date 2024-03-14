@@ -129,9 +129,12 @@ Instead, the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernete
 Third-party components that need to communicate with the virtual cluster can leverage the [`gardener-resource-manager`'s `TokenRequestor` controller](resource-manager.md#tokenrequestor-controller) and the generic kubeconfig, just like it works for `Shoot`s.
 Please note, that this functionality is restricted to the `garden` namespace. The current `Secret` name of the generic kubeconfig can be found in the annotations (key: `generic-token-kubeconfig.secret.gardener.cloud/name`) of the `Garden` resource.
 
-For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domains`.
-**The respective DNS record is not managed by `gardener-operator` and should be created manually. It should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.**
-The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
+For the virtual cluster, it is essential to provide at least one DNS domain via `.spec.virtualCluster.dns.domains`.
+**The respective DNS records are not managed by `gardener-operator` and should be created manually.
+They should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.
+The DNS records must be prefixed with both `gardener.` and `api.` for all domains in `.spec.virtualCluster.dns.domains`.**
+
+The first DNS domain in this list is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
 
 Apart from the control plane components of the virtual cluster, the reconcile also deploys the control plane components of Gardener.
 `gardener-apiserver` reuses the same ETCDs like the `virtual-garden-kube-apiserver`, so all data related to the "the garden cluster" is stored together and "isolated" from ETCD data related to the runtime cluster.

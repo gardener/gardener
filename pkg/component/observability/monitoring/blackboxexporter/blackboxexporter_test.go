@@ -36,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -52,9 +54,10 @@ var _ = Describe("BlackboxExporter", func() {
 		podLabels           = map[string]string{"bar": "foo"}
 		priorityClassName   = "priority-class"
 
-		c        client.Client
-		values   Values
-		deployer component.DeployWaiter
+		c                  client.Client
+		fakeSecretsManager secretsmanager.Interface
+		values             Values
+		deployer           component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -62,13 +65,15 @@ var _ = Describe("BlackboxExporter", func() {
 		configMapName      = "blackbox-exporter-config-eb6ac772"
 		serviceAccountYAML string
 		configMapYAML      string
-		deploymentYAML     string
+		deploymentYAMLFor  func(clusterType component.ClusterType) string
 		pdbYAMLFor         func(k8sGreaterEquals126 bool) string
 		serviceYAML        string
 		vpaYAML            string
 	)
 
 	BeforeEach(func() {
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
 		managedResourceName = "shoot-core-blackbox-exporter"
 		namespace = "some-namespace"
 		resourcesNamespace = "kube-system"
@@ -83,8 +88,8 @@ var _ = Describe("BlackboxExporter", func() {
 	})
 
 	JustBeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		deployer = New(c, namespace, values)
+		fakeSecretsManager = fakesecretsmanager.New(c, namespace)
+		deployer = New(c, fakeSecretsManager, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -158,7 +163,8 @@ spec:
 			return out
 		}
 
-		deploymentYAML = `apiVersion: apps/v1
+		deploymentYAMLFor = func(clusterType component.ClusterType) string {
+			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
@@ -208,7 +214,15 @@ spec:
             memory: 25Mi
         volumeMounts:
         - mountPath: /etc/blackbox_exporter
-          name: blackbox-exporter-config
+          name: blackbox-exporter-config`
+
+			if clusterType == component.ClusterTypeSeed {
+				out += `
+        - mountPath: /var/run/secrets/blackbox_exporter/cluster-access
+          name: cluster-access`
+			}
+
+			out += `
       dnsConfig:
         options:
         - name: ndots
@@ -225,9 +239,34 @@ spec:
       volumes:
       - configMap:
           name: ` + configMapName + `
-        name: blackbox-exporter-config
+        name: blackbox-exporter-config`
+
+			if clusterType == component.ClusterTypeSeed {
+				out += `
+      - name: cluster-access
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: bundle.crt
+                path: bundle.crt
+              name: ca
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-prometheus-garden
+              optional: false`
+			}
+
+			out += `
 status: {}
 `
+
+			return out
+		}
 
 		serviceYAML = `apiVersion: v1
 kind: Service
@@ -276,7 +315,6 @@ status: {}
 			JustBeforeEach(func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-				deployer = New(c, namespace, values)
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -306,7 +344,7 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
 				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
 			})
 
@@ -364,13 +402,15 @@ status: {}
 			values.ClusterType = component.ClusterTypeSeed
 			managedResourceName = "blackbox-exporter"
 			resourcesNamespace = namespace
+
+			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		})
 
 		Describe("#Deploy", func() {
 			JustBeforeEach(func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-				deployer = New(c, namespace, values)
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -403,7 +443,7 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
 			})
 
