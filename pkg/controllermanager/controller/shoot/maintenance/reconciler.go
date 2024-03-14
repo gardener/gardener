@@ -41,6 +41,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -135,9 +137,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	kubernetesControlPlaneUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+	kubernetesControlPlaneUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 		maintainedShoot.Spec.Kubernetes.Version = v
-		return nil
+		return v, nil
 	})
 	if err != nil {
 		// continue execution to allow the machine image version update and Kubernetes updates to worker pools
@@ -174,10 +176,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 
 		workerLog := log.WithValues("worker", pool.Name)
-		workerKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		workerKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
-				return err
+				return "", err
 			}
 			// If during autoupdate a worker pool kubernetes gets forcefully updated to the next minor which might be higher than the same minor of the shoot, take this
 			if workerPoolSemver.GreaterThan(shootKubernetesVersion) {
@@ -185,7 +187,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			}
 			v = workerPoolSemver.String()
 			maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
-			return nil
+			return v, nil
 		})
 		if err != nil {
 			// continue execution to allow other maintenance activities to continue
@@ -200,6 +202,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			result.description = workerKubernetesUpdate.description
 			workerToKubernetesUpdate[pool.Name] = result
 		}
+	}
+
+	if reasons := maintainFeatureGatesForShoot(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
+	}
+
+	if reasons := maintainAdmissionPluginsForShoot(maintainedShoot); len(reasons) > 0 {
+		operations = append(operations, reasons...)
 	}
 
 	operation := maintainOperation(maintainedShoot)
@@ -478,7 +488,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 }
 
 // maintainKubernetesVersion updates the Kubernetes version if necessary and returns the reason why an update was done
-func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (*updateResult, error) {
+func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) (string, error)) (*updateResult, error) {
 	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(kubernetesVersion, autoUpdate, profile)
 	if err != nil {
 		return nil, err
@@ -500,7 +510,8 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 		return nil, nil
 	}
 
-	err = updateFunc(updatedKubernetesVersion)
+	// In case the updatedKubernetesVersion for workerpool is higher than the controlplane version, actualUpdatedKubernetesVersion is set to controlplane version
+	actualUpdatedKubernetesVersion, err := updateFunc(updatedKubernetesVersion)
 	if err != nil {
 		return &updateResult{
 			description:  err.Error(),
@@ -509,9 +520,9 @@ func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUp
 		}, err
 	}
 
-	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", updatedKubernetesVersion, "reason", reason)
+	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", actualUpdatedKubernetesVersion, "reason", reason)
 	return &updateResult{
-		description:  fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, updatedKubernetesVersion),
+		description:  fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, actualUpdatedKubernetesVersion),
 		reason:       reason,
 		isSuccessful: true,
 	}, nil
@@ -810,4 +821,104 @@ func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) [
 	}
 
 	return reasonsForUpdate
+}
+
+func maintainFeatureGatesForShoot(shoot *gardencorev1beta1.Shoot) []string {
+	var reasons []string
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeAPIServer.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeAPIServer.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeControllerManager.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeControllerManager.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeScheduler != nil && shoot.Spec.Kubernetes.KubeScheduler.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeScheduler.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeScheduler.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.KubeProxy != nil && shoot.Spec.Kubernetes.KubeProxy.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.KubeProxy.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubeProxy.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	if shoot.Spec.Kubernetes.Kubelet != nil && shoot.Spec.Kubernetes.Kubelet.FeatureGates != nil {
+		if reason := maintainFeatureGates(&shoot.Spec.Kubernetes.Kubelet.KubernetesConfig, shoot.Spec.Kubernetes.Version, "spec.kubernetes.kubelet.featureGates"); len(reason) > 0 {
+			reasons = append(reasons, reason...)
+		}
+	}
+
+	for i := range shoot.Spec.Provider.Workers {
+		if shoot.Spec.Provider.Workers[i].Kubernetes != nil && shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil {
+			kubeletVersion := ptr.Deref(shoot.Spec.Provider.Workers[i].Kubernetes.Version, shoot.Spec.Kubernetes.Version)
+
+			if reason := maintainFeatureGates(&shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubernetesConfig, kubeletVersion, fmt.Sprintf("spec.provider.workers[%d].kubernetes.kubelet.featureGates", i)); len(reason) > 0 {
+				reasons = append(reasons, reason...)
+			}
+		}
+	}
+
+	return reasons
+}
+
+// IsFeatureGateSupported is an alias for featuresvalidation.IsFeatureGateSupported. Exposed for testing purposes.
+var IsFeatureGateSupported = featuresvalidation.IsFeatureGateSupported
+
+func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, version, fieldPath string) []string {
+	var (
+		reasons             []string
+		validFeatureGates   = make(map[string]bool, len(kubernetes.FeatureGates))
+		removedFeatureGates []string
+	)
+
+	for fg, enabled := range kubernetes.FeatureGates {
+		if supported, err := IsFeatureGateSupported(fg, version); err == nil && supported {
+			validFeatureGates[fg] = enabled
+		} else {
+			removedFeatureGates = append(removedFeatureGates, fg)
+		}
+	}
+
+	kubernetes.FeatureGates = validFeatureGates
+
+	slices.Sort(removedFeatureGates)
+	reasons = append(reasons, fmt.Sprintf("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", fieldPath, version, strings.Join(removedFeatureGates, ", ")))
+
+	return reasons
+}
+
+// IsAdmissionPluginSupported is an alias for admissionpluginsvalidation.IsAdmissionPluginSupported. Exposed for testing purposes.
+var IsAdmissionPluginSupported = admissionpluginsvalidation.IsAdmissionPluginSupported
+
+func maintainAdmissionPluginsForShoot(shoot *gardencorev1beta1.Shoot) []string {
+	var (
+		reasons                 []string
+		removedAdmissionPlugins []string
+	)
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins != nil {
+		validAdmissionPlugins := []gardencorev1beta1.AdmissionPlugin{}
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if supported, err := IsAdmissionPluginSupported(plugin.Name, shoot.Spec.Kubernetes.Version); err == nil && supported {
+				validAdmissionPlugins = append(validAdmissionPlugins, plugin)
+			} else {
+				removedAdmissionPlugins = append(removedAdmissionPlugins, plugin.Name)
+			}
+		}
+
+		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = validAdmissionPlugins
+
+		slices.Sort(removedAdmissionPlugins)
+		reasons = append(reasons, fmt.Sprintf("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version, strings.Join(removedAdmissionPlugins, ", ")))
+	}
+
+	return reasons
 }

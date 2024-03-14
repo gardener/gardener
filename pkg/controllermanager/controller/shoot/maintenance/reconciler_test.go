@@ -15,6 +15,7 @@
 package maintenance
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -24,6 +25,10 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/test"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("Shoot Maintenance", func() {
@@ -1055,9 +1060,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1073,9 +1078,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			// mark latest version 1.02 as preview
 			cloudProfile.Spec.Kubernetes.Versions[3].Classification = &previewClassification
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).To(Not(HaveOccurred()))
@@ -1087,9 +1092,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1101,9 +1106,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1122,9 +1127,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[1].ExpirationDate = &expirationDateInThePast
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1140,9 +1145,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).To(HaveOccurred())
@@ -1152,9 +1157,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1166,9 +1171,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInTheFuture
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1180,9 +1185,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1194,9 +1199,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1208,9 +1213,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.1.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) (string, error) {
 				shoot.Spec.Kubernetes.Version = v
-				return nil
+				return v, nil
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -1269,9 +1274,230 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(2)))
 		})
 	})
+
+	Describe("#MaintainFeatureGatesForShoot", func() {
+		var (
+			shoot                   *gardencorev1beta1.Shoot
+			supportedfeatureGate1   = "featureGate1"
+			supportedfeatureGate2   = "featureGate2"
+			unsupportedfeatureGate1 = "featureGate3"
+			unsupportedfeatureGate2 = "featureGate4"
+		)
+
+		BeforeEach(func() {
+			defer test.WithVar(
+				&IsFeatureGateSupported, isFeatureGateSupported,
+			)
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.13.5",
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									supportedfeatureGate1:   true,
+									unsupportedfeatureGate1: true,
+									supportedfeatureGate2:   false,
+								},
+							},
+						},
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									supportedfeatureGate1:   true,
+									unsupportedfeatureGate1: true,
+									unsupportedfeatureGate2: false,
+								},
+							},
+						},
+						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									supportedfeatureGate2:   true,
+									unsupportedfeatureGate1: true,
+								},
+							},
+						},
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									supportedfeatureGate1:   true,
+									supportedfeatureGate2:   false,
+									unsupportedfeatureGate2: true,
+								},
+							},
+						},
+						Kubelet: &gardencorev1beta1.KubeletConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									supportedfeatureGate1:   true,
+									unsupportedfeatureGate2: true,
+								},
+							},
+						},
+					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "cpu-worker-1",
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Kubelet: &gardencorev1beta1.KubeletConfig{
+										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+											FeatureGates: map[string]bool{
+												supportedfeatureGate1:   true,
+												unsupportedfeatureGate2: true,
+											},
+										},
+									},
+								},
+							},
+							{
+								Name: "cpu-worker-2",
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Kubelet: &gardencorev1beta1.KubeletConfig{
+										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+											FeatureGates: map[string]bool{
+												supportedfeatureGate2:   true,
+												unsupportedfeatureGate1: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should maintain feature gates", func() {
+			result := maintainFeatureGatesForShoot(shoot)
+			Expect(result).To(ConsistOf(
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.featureGates", "1.13.5", unsupportedfeatureGate1),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeControllerManager.featureGates", "1.13.5", fmt.Sprintf("%s, %s", unsupportedfeatureGate1, unsupportedfeatureGate2)),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeScheduler.featureGates", "1.13.5", unsupportedfeatureGate1),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeProxy.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.provider.workers[0].kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate2),
+				ContainSubstring("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", "spec.provider.workers[1].kubernetes.kubelet.featureGates", "1.13.5", unsupportedfeatureGate1),
+			))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+				supportedfeatureGate2: false,
+			}))
+			Expect(shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+			}))
+			Expect(shoot.Spec.Kubernetes.KubeScheduler.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate2: true,
+			}))
+			Expect(shoot.Spec.Kubernetes.KubeProxy.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+				supportedfeatureGate2: false,
+			}))
+			Expect(shoot.Spec.Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+			}))
+			Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
+			}))
+			Expect(shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate2: true,
+			}))
+		})
+	})
+
+	Describe("#MaintainAdmissionPlugins", func() {
+		var (
+			shoot                       *gardencorev1beta1.Shoot
+			supportedAdmissionPlugin1   = "admissionPlugin1"
+			supportedAdmissionPlugin2   = "admissionPlugin2"
+			unsupportedAdmissionPlugin1 = "admissionPlugin3"
+			unsupportedAdmissionPlugin2 = "admissionPlugin4"
+		)
+
+		BeforeEach(func() {
+			defer test.WithVar(
+				&IsAdmissionPluginSupported, isAdmissionPluginSupported,
+			)
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.13.5",
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+								{
+									Name: supportedAdmissionPlugin1,
+								},
+								{
+									Name: supportedAdmissionPlugin2,
+								},
+								{
+									Name: unsupportedAdmissionPlugin1,
+								},
+								{
+									Name: unsupportedAdmissionPlugin2,
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should maintain admission plugins", func() {
+			result := maintainAdmissionPluginsForShoot(shoot)
+			Expect(result).To(ConsistOf(
+				ContainSubstring("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5", fmt.Sprintf("%s, %s", unsupportedAdmissionPlugin1, unsupportedAdmissionPlugin2)),
+			))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
+				HaveField("Name", Equal(supportedAdmissionPlugin1)),
+				HaveField("Name", Equal(supportedAdmissionPlugin2)),
+			))
+		})
+	})
 })
 
 func assertWorkerMachineImageVersion(worker *gardencorev1beta1.Worker, imageName string, imageVersion string) {
 	ExpectWithOffset(1, worker.Machine.Image.Name).To(Equal(imageName))
 	ExpectWithOffset(1, *worker.Machine.Image.Version).To(Equal(imageVersion))
+}
+
+func isFeatureGateSupported(featureGate, v string) (bool, error) {
+	featureGateVersionRanges := map[string]*featuresvalidation.FeatureGateVersionRange{
+		"featureGate1": {VersionRange: version.VersionRange{}},
+		"featureGate2": {VersionRange: version.VersionRange{AddedInVersion: "1.12", RemovedInVersion: "1.14"}},
+		"featureGate3": {VersionRange: version.VersionRange{RemovedInVersion: "1.13"}},
+		"featureGate4": {VersionRange: version.VersionRange{AddedInVersion: "1.9", RemovedInVersion: "1.13"}},
+	}
+
+	vr := featureGateVersionRanges[featureGate]
+	if vr == nil {
+		return false, fmt.Errorf("unknown feature gate %s", featureGate)
+	}
+
+	return vr.Contains(v)
+}
+
+func isAdmissionPluginSupported(plugin, v string) (bool, error) {
+	admissionPluginsVersionRanges := map[string]*admissionpluginsvalidation.AdmissionPluginVersionRange{
+		"admissionPlugin1": {VersionRange: version.VersionRange{AddedInVersion: "1.12", RemovedInVersion: "1.14"}},
+		"admissionPlugin2": {VersionRange: version.VersionRange{}},
+		"admissionPlugin3": {VersionRange: version.VersionRange{RemovedInVersion: "1.13"}},
+		"admissionPlugin4": {VersionRange: version.VersionRange{AddedInVersion: "1.8", RemovedInVersion: "1.13"}},
+	}
+
+	vr := admissionPluginsVersionRanges[plugin]
+	if vr == nil {
+		return false, fmt.Errorf("unknown admission plugin %q", plugin)
+	}
+	return vr.Contains(v)
 }

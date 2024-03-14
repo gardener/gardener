@@ -371,7 +371,6 @@ var _ = Describe("ETCD", func() {
 			))
 		})
 	})
-
 })
 
 type fakeDiscoveryWithServerPreferredResources struct {
