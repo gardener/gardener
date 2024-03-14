@@ -224,6 +224,7 @@ honor_labels: true`
 								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
 								"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
+								v1beta1constants.LabelObservabilityApplication:                   name,
 							},
 						},
 						PriorityClassName: priorityClassName,
