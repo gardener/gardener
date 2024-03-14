@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/utils/ptr"
 
@@ -445,6 +446,57 @@ var _ = Describe("Strategy", func() {
 					"seed.gardener.cloud/status-seed": "true",
 				}))
 			})
+		})
+	})
+
+	Context("cleanupAdmissionPlugins", func() {
+		var (
+			newShoot, oldShoot *core.Shoot
+			ctx                context.Context
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+
+			newShoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						Version: "1.28.0",
+						KubeAPIServer: &core.KubeAPIServerConfig{
+							AdmissionPlugins: []core.AdmissionPlugin{
+								{
+									Name:   "NodeRestriction",
+									Config: &runtime.RawExtension{Raw: []byte("bar")},
+								},
+								{
+									Name:     "PodSecurityPolicy",
+									Disabled: ptr.To(true),
+								},
+								{
+									Name:   "PodSecurity",
+									Config: &runtime.RawExtension{Raw: []byte("foo")},
+								},
+							},
+						},
+					},
+				},
+			}
+			oldShoot = newShoot.DeepCopy()
+		})
+
+		It("should cleanup PodSecurityPolicy from the admission plugins list", func() {
+			strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+			Expect(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
+				core.AdmissionPlugin{
+					Name:   "NodeRestriction",
+					Config: &runtime.RawExtension{Raw: []byte("bar")},
+				},
+				core.AdmissionPlugin{
+					Name:   "PodSecurity",
+					Config: &runtime.RawExtension{Raw: []byte("foo")},
+				},
+			))
 		})
 	})
 })
