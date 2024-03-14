@@ -817,7 +817,7 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 	}
 
 	if expiredLeasesPercentage := 100 * expiredLeases / len(leaseList.Items); expiredLeasesPercentage >= 20 {
-		return fmt.Errorf("%d%% of all Leases in %s namespace are expired - dependency-watchdog-prober will start scaling down controllers when 60%% is reached", expiredLeasesPercentage, corev1.NamespaceNodeLease)
+		return fmt.Errorf("%d%% of all Leases in %s namespace are expired - dependency-watchdog-prober might start scaling down controllers", expiredLeasesPercentage, corev1.NamespaceNodeLease)
 	}
 
 	return nil
