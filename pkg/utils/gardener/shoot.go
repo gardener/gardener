@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -277,6 +278,13 @@ func IsShootProjectInternalSecret(secretName string) (string, bool) {
 	}
 
 	return "", false
+}
+
+// ComputeManagedShootIssuerSecretName returns the name that should be used for
+// storing the service account public keys of a shoot's kube-apiserver
+// in the gardener-system-shoot-issuer namespace in the Garden cluster.
+func ComputeManagedShootIssuerSecretName(projectName string, shootUID types.UID) string {
+	return projectName + "--" + string(shootUID)
 }
 
 // IsShootProjectConfigMap checks if the given name matches the name of a shoot-related project config map. If no, it returns

@@ -18,23 +18,27 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) error {
+func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			shoot, ok := obj.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
 			}
-			g.handleShootCreateOrUpdate(shoot)
+			g.handleShootCreateOrUpdate(ctx, shoot)
 		},
 
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -54,8 +58,9 @@ func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) erro
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
 				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
-				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) {
-				g.handleShootCreateOrUpdate(newShoot)
+				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
+				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) {
+				g.handleShootCreateOrUpdate(ctx, newShoot)
 			}
 		},
 
@@ -73,7 +78,7 @@ func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) erro
 	return err
 }
 
-func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
+func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("Shoot", "CreateOrUpdate").Observe(time.Since(start).Seconds())
@@ -175,6 +180,17 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	// deleted as part of the gardenlet reconciliation and are bound to the lifetime of the shoot as well.
 	shootStateVertex := g.getOrCreateVertex(VertexTypeShootState, shoot.Namespace, shoot.Name)
 	g.addEdge(shootStateVertex, shootVertex)
+
+	if v1beta1helper.HasManagedIssuer(shoot) {
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: shoot.Namespace}}
+		if err := g.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err == nil {
+			if projectName, ok := namespace.Labels[v1beta1constants.ProjectName]; ok {
+				saPublicKeysSecretName := gardenerutils.ComputeManagedShootIssuerSecretName(projectName, shoot.UID)
+				saPublicKeysSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootIssuerNamespace, saPublicKeysSecretName)
+				g.addEdge(saPublicKeysSecretVertex, shootVertex)
+			}
+		}
+	}
 }
 
 func (g *graph) handleShootDelete(shoot *gardencorev1beta1.Shoot) {

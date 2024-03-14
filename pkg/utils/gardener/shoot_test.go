@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -398,6 +399,14 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("ca-client suffix", "baz.ca-client", "baz", true),
+	)
+
+	DescribeTable("#ComputeManagedShootIssuerSecretName",
+		func(projectName string, shootUID types.UID, expectedName string) {
+			Expect(ComputeManagedShootIssuerSecretName(projectName, shootUID)).To(Equal(expectedName))
+		},
+		Entry("test one", "foo", types.UID("123"), "foo--123"),
+		Entry("test two", "bar", types.UID("4-5"), "bar--4-5"),
 	)
 
 	DescribeTable("#IsShootProjectConfigMap",
