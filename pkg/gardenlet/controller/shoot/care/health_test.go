@@ -507,11 +507,13 @@ var _ = Describe("health check", func() {
 	Describe("#CheckForExpiredNodeLeases", func() {
 		var (
 			nodeName = "node1"
-			nodeList corev1.NodeList
+
+			node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
 
 			validLease = &coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
+					Name:      nodeName,
+					Namespace: "kube-node-lease",
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
@@ -521,7 +523,8 @@ var _ = Describe("health check", func() {
 
 			expiredLease = &coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
+					Name:      nodeName,
+					Namespace: "kube-node-lease",
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
@@ -531,7 +534,8 @@ var _ = Describe("health check", func() {
 
 			unrelatedLease = &coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "node2",
+					Name:      "node2",
+					Namespace: "kube-node-lease",
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
@@ -540,19 +544,16 @@ var _ = Describe("health check", func() {
 			}
 		)
 
-		BeforeEach(func() {
-			nodeList = corev1.NodeList{
-				Items: []corev1.Node{{
-					ObjectMeta: metav1.ObjectMeta{Name: nodeName},
-				}},
-			}
-		})
-
 		DescribeTable("#CheckForExpiredNodeLeases",
-			func(lease *coordinationv1.Lease, additionalNodeNames []string, expected types.GomegaMatcher) {
+			func(lease *coordinationv1.Lease, node *corev1.Node, additionalNodeNames []string, expected types.GomegaMatcher) {
 				leaseList := coordinationv1.LeaseList{}
 				if lease != nil {
 					leaseList.Items = append(leaseList.Items, *lease)
+				}
+
+				nodeList := corev1.NodeList{}
+				if node != nil {
+					nodeList.Items = append(nodeList.Items, *node)
 				}
 
 				for _, nodeName := range additionalNodeNames {
@@ -566,12 +567,13 @@ var _ = Describe("health check", func() {
 				Expect(CheckForExpiredNodeLeases(&nodeList, &leaseList, fakeClock)).To(expected)
 			},
 
-			Entry("should return nil if there is an unexpired lease for node", validLease, nil, BeNil()),
-			Entry("should return nil if no leases are present", nil, nil, BeNil()),
-			Entry("should return nil if no node could be found for the lease", unrelatedLease, nil, BeNil()),
-			Entry("should return nil if less than 20% of leases are expired", expiredLease, []string{"node2", "node3", "node4", "node5", "node6"}, BeNil()),
-			Entry("should return an error if exactly 20% of leases are expired", expiredLease, []string{"node2", "node3", "node4", "node5"}, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
-			Entry("should return an error if at least 20% of leases are expired", expiredLease, nil, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+			Entry("should return nil if there is an unexpired lease for node", validLease, node, nil, BeNil()),
+			Entry("should return nil if no leases are present", nil, node, nil, BeNil()),
+			Entry("should return nil if no nodes are present", validLease, nil, nil, BeNil()),
+			Entry("should return nil if no node could be found for the lease", unrelatedLease, node, nil, BeNil()),
+			Entry("should return nil if less than 20% of leases are expired", expiredLease, node, []string{"node2", "node3", "node4", "node5", "node6"}, BeNil()),
+			Entry("should return an error if exactly 20% of leases are expired", expiredLease, node, []string{"node2", "node3", "node4", "node5"}, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+			Entry("should return an error if at least 20% of leases are expired", expiredLease, node, nil, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
 		)
 	})
 
