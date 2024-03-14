@@ -94,6 +94,8 @@
       "matchDatasources": ["docker", "github-releases"],
       "matchUpdateTypes": ["major", "minor"],
       "matchPackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/autoscaler\/cluster-autoscaler",
+        "gardener\/autoscaler",
         "gcr\\.io\/istio-release\/.+",
         "istio\/istio"
       ],
