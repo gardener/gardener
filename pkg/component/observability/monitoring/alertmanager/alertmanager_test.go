@@ -181,6 +181,7 @@ var _ = Describe("Alertmanager", func() {
 						"networking.gardener.cloud/to-dns": "allowed",
 						"networking.gardener.cloud/to-public-networks":  "allowed",
 						"networking.gardener.cloud/to-private-networks": "allowed",
+						v1beta1constants.LabelObservabilityApplication:  name,
 					},
 				},
 				PriorityClassName: priorityClassName,

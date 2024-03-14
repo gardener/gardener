@@ -39,6 +39,7 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 					v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelObservabilityApplication:       a.values.Name,
 				}),
 			},
 			PriorityClassName: a.values.PriorityClassName,
