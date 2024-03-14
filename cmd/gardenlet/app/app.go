@@ -396,6 +396,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
+	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -692,6 +697,46 @@ func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDele
 		return namespacesInDeletion.Has(s.Namespace) || !slices.Contains(s.Finalizers, grmFinalizer) || s.DeletionTimestamp == nil
 	})
 	return secretsToRecreate, nil
+}
+
+// TODO(rfranzke): Remove this code after gardener v1.92 has been released.
+func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	persistentVolumeList := &corev1.PersistentVolumeList{}
+	if err := seedClient.List(ctx, persistentVolumeList); err != nil {
+		return fmt.Errorf("failed listing persistent volumes for migrating deprecated topology labels: %w", err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, pv := range persistentVolumeList.Items {
+		persistentVolume := pv
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			log.Info("Migrating deprecated topology labels", "persistentVolumeName", persistentVolume.Name)
+			patch := client.MergeFrom(persistentVolume.DeepCopy())
+
+			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaRegion)
+			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaZone)
+
+			if persistentVolume.Spec.NodeAffinity != nil && persistentVolume.Spec.NodeAffinity.Required != nil {
+				for i, term := range persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms {
+					for j, expression := range term.MatchExpressions {
+						if expression.Key == corev1.LabelFailureDomainBetaRegion {
+							persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[i].MatchExpressions[j].Key = corev1.LabelTopologyRegion
+						}
+
+						if expression.Key == corev1.LabelFailureDomainBetaZone {
+							persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[i].MatchExpressions[j].Key = corev1.LabelTopologyZone
+						}
+					}
+				}
+			}
+
+			return seedClient.Patch(ctx, &persistentVolume, patch)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {
