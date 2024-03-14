@@ -868,7 +868,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count_over_time((sum by (node) (kube_node_spec_taint{effect=\"NoSchedule\", key!=\"ToBeDeletedByClusterAutoscaler\", key!=\"node.gardener.cloud/critical-components-not-ready\"}))[30m:]) > 5",
+          "expr": "count_over_time((sum by (node) (kube_node_spec_taint{effect=\"NoSchedule\", key!=\"deployment.machine.sapcloud.io/prefer-no-schedule\", key!=\"ToBeDeletedByClusterAutoscaler\", key!=\"node.gardener.cloud/critical-components-not-ready\"}))[30m:]) > 5",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
