@@ -525,6 +525,9 @@ const (
 	// cluster which can be used to describe that this ClusterRole contains custom permissions for extensions.
 	LabelAuthorizationCustomExtensionsPermissions = "authorization.gardener.cloud/custom-extensions-permissions"
 
+	// LabelObservabilityApplication is a constant for a label key set to all observability applications in gardener exposing a public endpoint.
+	LabelObservabilityApplication = "observability.gardener.cloud/app"
+
 	// LabelApp is a constant for a label key.
 	LabelApp = "app"
 	// LabelRole is a constant for a label key.
