@@ -38,6 +38,20 @@
       "fileMatch": ["^hack\/.+\\.sh$"],
       "matchStrings": ["--image[=| ][\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
       "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection of container images in images.yaml via container registry.
+      "customType": "regex",
+      "fileMatch": ["^imagevector\/images.yaml$"],
+      "matchStrings": ["\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection of container images in images.yaml via github releases.
+      "customType": "regex",
+      "fileMatch": ["^imagevector\/images.yaml$"],
+      "matchStrings": ["\\s+sourceRepository:\\s+github.com\/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
+      "datasourceTemplate": "github-releases"
     }
   ],
   "separateMinorPatch": true,
@@ -75,9 +89,16 @@
       "enabled": false
     },
     {
-      // Ignore dependency updates from github.com/gardener because these PRs are created by pipeline jobs.
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": ["github\\.com\/gardener\/.+"],
+      // Update only patchlevels container images of istio.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["docker", "github-releases"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/autoscaler\/cluster-autoscaler",
+        "gardener\/autoscaler",
+        "gcr\\.io\/istio-release\/.+",
+        "istio\/istio"
+      ],
       "enabled": false
     },
     {
