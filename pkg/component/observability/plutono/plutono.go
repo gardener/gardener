@@ -814,6 +814,7 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 
 func (p *plutono) getPodLabels() map[string]string {
 	labels := map[string]string{
+		v1beta1constants.LabelObservabilityApplication:                                      name,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}

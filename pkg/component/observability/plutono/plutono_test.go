@@ -826,6 +826,7 @@ func getLabels() map[string]string {
 
 func getPodLabels(values Values) map[string]string {
 	labels := map[string]string{
+		v1beta1constants.LabelObservabilityApplication:    "plutono",
 		v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel("logging", 3100): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
