@@ -42,7 +42,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/gardener/apiserver"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -54,6 +53,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("GardenerAPIServer", func() {
@@ -1423,22 +1423,22 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
-					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(deployment)))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretVirtual.Data).To(HaveLen(10))
-					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1beta1.core.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("core.gardener.cloud", "v1beta1"))))
-					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.seedmanagement.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"))))
-					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.operations.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("operations.gardener.cloud", "v1alpha1"))))
-					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.settings.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("settings.gardener.cloud", "v1alpha1"))))
-					Expect(string(managedResourceSecretVirtual.Data["service__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceVirtual)))
-					Expect(string(managedResourceSecretVirtual.Data["endpoints__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(endpoints)))
-					Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_apiserver_auth-delegator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAuthDelegation)))
-					Expect(string(managedResourceSecretVirtual.Data["rolebinding__kube-system__gardener.cloud_apiserver_auth-reader.yaml"])).To(Equal(componenttest.Serialize(roleBindingAuthReader)))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1beta1.core.gardener.cloud.yaml"])).To(Equal(testruntime.Serialize(apiServiceFor("core.gardener.cloud", "v1beta1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.seedmanagement.gardener.cloud.yaml"])).To(Equal(testruntime.Serialize(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.operations.gardener.cloud.yaml"])).To(Equal(testruntime.Serialize(apiServiceFor("operations.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.settings.gardener.cloud.yaml"])).To(Equal(testruntime.Serialize(apiServiceFor("settings.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["service__kube-system__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(serviceVirtual)))
+					Expect(string(managedResourceSecretVirtual.Data["endpoints__kube-system__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(endpoints)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_apiserver.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_apiserver.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_apiserver_auth-delegator.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingAuthDelegation)))
+					Expect(string(managedResourceSecretVirtual.Data["rolebinding__kube-system__gardener.cloud_apiserver_auth-reader.yaml"])).To(Equal(testruntime.Serialize(roleBindingAuthReader)))
 					Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
@@ -1450,8 +1450,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
+						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
 					})
 				})
 
@@ -1462,9 +1462,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(componenttest.Serialize(hvpa)))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
-						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntimeFor(true))))
+						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(testruntime.Serialize(hvpa)))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
+						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(serviceRuntimeFor(true))))
 					})
 				})
 
@@ -1475,9 +1475,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
-						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntimeFor(false))))
+						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(false))))
+						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(serviceRuntimeFor(false))))
 					})
 				})
 
@@ -1488,9 +1488,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
-						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntimeFor(false))))
+						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
+						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(testruntime.Serialize(serviceRuntimeFor(false))))
 					})
 				})
 			})

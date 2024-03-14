@@ -47,7 +47,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -59,6 +58,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 const (
@@ -550,7 +550,7 @@ func configMap(namespace string, testValues Values) string {
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-	return componenttest.Serialize(configMap)
+	return testruntime.Serialize(configMap)
 }
 
 func deployment(namespace, configSecretName, serverCertSecretName string, testValues Values) string {
@@ -705,7 +705,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return componenttest.Serialize(deployment)
+	return testruntime.Serialize(deployment)
 }
 
 func service(namespace string, testValues Values) string {
@@ -753,7 +753,7 @@ func service(namespace string, testValues Values) string {
 		}
 	}
 
-	return componenttest.Serialize(svc)
+	return testruntime.Serialize(svc)
 }
 
 func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) string {
@@ -776,13 +776,13 @@ func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) string {
 		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
 
-	return componenttest.Serialize(pdb)
+	return testruntime.Serialize(pdb)
 }
 
 func vpa(namespace string) string {
 	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
 
-	return componenttest.Serialize(&vpaautoscalingv1.VerticalPodAutoscaler{
+	return testruntime.Serialize(&vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-admission-controller",
 			Namespace: namespace,
@@ -815,7 +815,7 @@ func vpa(namespace string) string {
 }
 
 func clusterRole() string {
-	return componenttest.Serialize(&rbacv1.ClusterRole{
+	return testruntime.Serialize(&rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener.cloud:system:admission-controller",
 			Labels: map[string]string{
@@ -886,7 +886,7 @@ func clusterRole() string {
 }
 
 func clusterRoleBinding() string {
-	return componenttest.Serialize(&rbacv1.ClusterRoleBinding{
+	return testruntime.Serialize(&rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener.cloud:admission-controller",
 			Labels: map[string]string{
@@ -1174,5 +1174,5 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 		})
 	}
 
-	return componenttest.Serialize(webhookConfig)
+	return testruntime.Serialize(webhookConfig)
 }

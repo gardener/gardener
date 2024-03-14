@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -49,6 +48,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("KubeStateMetrics", func() {
@@ -670,19 +670,19 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(componenttest.Serialize(clusterRoleFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(serviceFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(deploymentFor(component.ClusterTypeSeed))))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__cache-kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(scrapeConfigCache)))
-				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__seed-kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(scrapeConfigSeed)))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(testruntime.Serialize(clusterRoleFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(serviceFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(deploymentFor(component.ClusterTypeSeed))))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__kube-state-metrics-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__cache-kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(scrapeConfigCache)))
+				Expect(string(managedResourceSecret.Data["scrapeconfig__"+namespace+"__seed-kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(scrapeConfigSeed)))
 			})
 
 			Context("Kubernetes versions >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdbFor(true))))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(testruntime.Serialize(pdbFor(true))))
 				})
 			})
 
@@ -698,7 +698,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(componenttest.Serialize(pdbFor(false))))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__kube-state-metrics-pdb.yaml"])).To(Equal(testruntime.Serialize(pdbFor(false))))
 				})
 			})
 		})
@@ -745,8 +745,8 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(2))
 
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(clusterRoleFor(component.ClusterTypeShoot))))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingFor(component.ClusterTypeShoot))))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(clusterRoleFor(component.ClusterTypeShoot))))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBindingFor(component.ClusterTypeShoot))))
 
 				actualSecretShootAccess := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())

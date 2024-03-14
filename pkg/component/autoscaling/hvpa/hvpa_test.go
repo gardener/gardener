@@ -40,12 +40,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("HVPA", func() {
@@ -402,20 +402,20 @@ var _ = Describe("HVPA", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			Expect(managedResourceSecret.Data).To(HaveLen(10))
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(service)))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(role)))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
+			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(service)))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(deployment)))
+			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(role)))
+			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(roleBinding)))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(testruntime.Serialize(vpa)))
+			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(serviceMonitor)))
 		})
 
 		Context("Kubernetes versions < 1.26", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(false))))
 			})
 		})
 
@@ -426,7 +426,7 @@ var _ = Describe("HVPA", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudgetFor(true))))
 			})
 		})
 	})

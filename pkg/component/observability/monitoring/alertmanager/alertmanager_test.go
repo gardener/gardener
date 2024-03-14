@@ -42,13 +42,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Alertmanager", func() {
@@ -448,12 +448,11 @@ var _ = Describe("Alertmanager", func() {
 		When("cluster type is 'seed'", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(5))
-
-				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(testruntime.Serialize(smtpSecret)))
 				Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
 			})
 
@@ -470,13 +469,12 @@ var _ = Describe("Alertmanager", func() {
 					alertManager.Spec.ExternalURL = "https://" + ingressHost
 
 					Expect(managedResourceSecret.Data).To(HaveLen(6))
-
-					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
-					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(testruntime.Serialize(smtpSecret)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(ingress)))
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
 				})
 			})
@@ -491,9 +489,9 @@ var _ = Describe("Alertmanager", func() {
 
 					Expect(managedResourceSecret.Data).To(HaveLen(3))
 
-					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("alertmanagerconfig__some-namespace__alertmanager-" + name + ".yaml"))
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("secret__some-namespace__alertmanager-" + name + "-smtp.yaml"))
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
@@ -533,11 +531,11 @@ var _ = Describe("Alertmanager", func() {
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(5))
 
-					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(testruntime.Serialize(smtpSecret)))
 				})
 			})
 
@@ -554,12 +552,12 @@ var _ = Describe("Alertmanager", func() {
 
 					Expect(managedResourceSecret.Data).To(HaveLen(6))
 
-					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+					Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+					Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
+					Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(config)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(testruntime.Serialize(smtpSecret)))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(podDisruptionBudget)))
 				})
 			})
 		})
@@ -577,11 +575,11 @@ var _ = Describe("Alertmanager", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(5))
 
-				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(alertManager)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(componenttest.Serialize(config)))
-				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(componenttest.Serialize(smtpSecret)))
+				Expect(string(managedResourceSecret.Data["service__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["alertmanager__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(alertManager)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["alertmanagerconfig__some-namespace__alertmanager-"+name+".yaml"])).To(Equal(testruntime.Serialize(config)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__alertmanager-"+name+"-smtp.yaml"])).To(Equal(testruntime.Serialize(smtpSecret)))
 			})
 		})
 	})

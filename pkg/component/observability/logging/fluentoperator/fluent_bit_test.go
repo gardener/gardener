@@ -40,6 +40,7 @@ import (
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Fluent Bit", func() {
@@ -287,9 +288,9 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
-			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
-			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit-output-plugin.yaml"])).To(Equal(componenttest.Serialize(serviceMonitorPlugin)))
-			Expect(string(customResourcesManagedResourceSecret.Data["prometheusrule__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
+			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(testruntime.Serialize(serviceMonitor)))
+			Expect(string(customResourcesManagedResourceSecret.Data["servicemonitor__"+namespace+"__aggregate-fluent-bit-output-plugin.yaml"])).To(Equal(testruntime.Serialize(serviceMonitorPlugin)))
+			Expect(string(customResourcesManagedResourceSecret.Data["prometheusrule__"+namespace+"__aggregate-fluent-bit.yaml"])).To(Equal(testruntime.Serialize(prometheusRule)))
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
 		})
 	})

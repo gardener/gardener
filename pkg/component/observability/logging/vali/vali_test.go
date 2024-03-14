@@ -50,6 +50,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -191,12 +192,12 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
-			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(true))))
-			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getIngress())))
-			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(true, "shoot"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(true))))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(testruntime.Serialize(getTelegrafConfigMap())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(testruntime.Serialize(getValiConfigMap())))
+			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getHVPA(true))))
+			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getIngress())))
+			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(testruntime.Serialize(getService(true, "shoot"))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getStatefulSet(true))))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
@@ -224,9 +225,9 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
-			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRole())))
-			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRoleBinding())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(testruntime.Serialize(getKubeRBACProxyClusterRoleBinding())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(testruntime.Serialize(getValitailClusterRole())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(testruntime.Serialize(getValitailClusterRoleBinding())))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -291,12 +292,12 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
-			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(false))))
-			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
-			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getServiceMonitor())))
-			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getPrometheusRule())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(testruntime.Serialize(getValiConfigMap())))
+			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getHVPA(false))))
+			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(testruntime.Serialize(getService(false, "seed"))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getStatefulSet(false))))
+			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(testruntime.Serialize(getServiceMonitor())))
+			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(testruntime.Serialize(getPrometheusRule())))
 			test.PrometheusRule(getPrometheusRule(), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
 
@@ -347,11 +348,11 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
-			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
-			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getServiceMonitor())))
-			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(test.Serialize(getPrometheusRule())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(testruntime.Serialize(getValiConfigMap())))
+			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(testruntime.Serialize(getService(false, "seed"))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(testruntime.Serialize(getStatefulSet(false))))
+			Expect(string(managedResourceSecret.Data["servicemonitor__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(testruntime.Serialize(getServiceMonitor())))
+			Expect(string(managedResourceSecret.Data["prometheusrule__shoot--foo--bar__aggregate-vali.yaml"])).To(Equal(testruntime.Serialize(getPrometheusRule())))
 		})
 	})
 

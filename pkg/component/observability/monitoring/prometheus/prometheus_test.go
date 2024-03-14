@@ -41,12 +41,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Prometheus", func() {
@@ -504,27 +504,27 @@ honor_labels: true`
 
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(11))
-				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(""))))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
+				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(testruntime.Serialize(service)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(prometheusFor(""))))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-"+name+".yaml"])).To(Equal(testruntime.Serialize(vpa)))
 
 				prometheusRule.Namespace = namespace
 				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
+				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(testruntime.Serialize(prometheusRule)))
 
 				metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["scrapeconfig__default__"+name+"-scrape.yaml"])).To(Equal(componenttest.Serialize(scrapeConfig)))
+				Expect(string(managedResourceSecret.Data["scrapeconfig__default__"+name+"-scrape.yaml"])).To(Equal(testruntime.Serialize(scrapeConfig)))
 
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
+				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(testruntime.Serialize(serviceMonitor)))
 
 				metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["podmonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(podMonitor)))
+				Expect(string(managedResourceSecret.Data["podmonitor__default__"+name+"-monitor.yaml"])).To(Equal(testruntime.Serialize(podMonitor)))
 
-				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(testruntime.Serialize(secretAdditionalScrapeConfigs)))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(testruntime.Serialize(additionalConfigMap)))
 			})
 
 			When("ingress is configured", func() {
@@ -540,7 +540,7 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(string(managedResourceSecret.Data["ingress__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__prometheus-"+name+".yaml"])).To(Equal(testruntime.Serialize(ingress)))
 				})
 			})
 
@@ -553,8 +553,8 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(alertmanagerName))))
-					Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-alert-relabel-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalAlertRelabelConfigs)))
+					Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(testruntime.Serialize(prometheusFor(alertmanagerName))))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-alert-relabel-configs.yaml"])).To(Equal(testruntime.Serialize(secretAdditionalAlertRelabelConfigs)))
 				})
 			})
 		})

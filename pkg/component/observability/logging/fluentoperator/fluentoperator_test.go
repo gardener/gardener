@@ -37,12 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Fluent Operator", func() {
@@ -357,13 +357,13 @@ var _ = Describe("Fluent Operator", func() {
 			Expect(operatorManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(operatorManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-			Expect(string(operatorManagedResourceSecret.Data["clusterrole____gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-			Expect(string(operatorManagedResourceSecret.Data["clusterrolebinding____fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-			Expect(string(operatorManagedResourceSecret.Data["role__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(role)))
-			Expect(string(operatorManagedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
-			Expect(string(operatorManagedResourceSecret.Data["deployment__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-			Expect(string(operatorManagedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(testruntime.Serialize(serviceAccount)))
+			Expect(string(operatorManagedResourceSecret.Data["clusterrole____gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(testruntime.Serialize(clusterRole)))
+			Expect(string(operatorManagedResourceSecret.Data["clusterrolebinding____fluent-operator.yaml"])).To(Equal(testruntime.Serialize(clusterRoleBinding)))
+			Expect(string(operatorManagedResourceSecret.Data["role__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(testruntime.Serialize(role)))
+			Expect(string(operatorManagedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(testruntime.Serialize(roleBinding)))
+			Expect(string(operatorManagedResourceSecret.Data["deployment__"+namespace+"__fluent-operator.yaml"])).To(Equal(testruntime.Serialize(deployment)))
+			Expect(string(operatorManagedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__fluent-operator.yaml"])).To(Equal(testruntime.Serialize(vpa)))
 		})
 	})
 
