@@ -206,6 +206,7 @@ var _ = Describe("Alertmanager", func() {
 				},
 				AlertmanagerConfigSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"alertmanager": name}},
 				AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
+				AlertmanagerConfigMatcherStrategy:   monitoringv1.AlertmanagerConfigMatcherStrategy{Type: "None"},
 				LogLevel:                            "info",
 				ForceEnableClusterMode:              true,
 				AlertmanagerConfiguration:           &monitoringv1.AlertmanagerConfiguration{Name: "alertmanager-" + name},

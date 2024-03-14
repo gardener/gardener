@@ -64,6 +64,7 @@ func (a *alertManager) alertManager(takeOverOldPV bool) *monitoringv1.Alertmanag
 			},
 			AlertmanagerConfigSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"alertmanager": a.values.Name}},
 			AlertmanagerConfigNamespaceSelector: &metav1.LabelSelector{},
+			AlertmanagerConfigMatcherStrategy:   monitoringv1.AlertmanagerConfigMatcherStrategy{Type: "None"},
 			LogLevel:                            "info",
 			ForceEnableClusterMode:              true,
 		},
