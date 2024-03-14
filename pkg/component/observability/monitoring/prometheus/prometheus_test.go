@@ -291,6 +291,7 @@ honor_labels: true`
 					"app":  "prometheus",
 					"role": "monitoring",
 					"name": name,
+					v1beta1constants.LabelObservabilityApplication: name,
 				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{

@@ -15,6 +15,8 @@
 package prometheus
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +33,8 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    p.getLabels(),
+			Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: p.values.Name}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{

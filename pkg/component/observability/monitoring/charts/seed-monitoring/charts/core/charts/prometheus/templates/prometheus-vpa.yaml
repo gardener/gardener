@@ -6,6 +6,7 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
+    observability.gardener.cloud/app: "prometheus"
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -28,4 +29,3 @@ spec:
       controlledValues: RequestsOnly
     - containerName: prometheus-config-reloader
       mode: "Off"
-

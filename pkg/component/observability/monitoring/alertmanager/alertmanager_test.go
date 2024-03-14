@@ -221,6 +221,7 @@ var _ = Describe("Alertmanager", func() {
 					"component":    "alertmanager",
 					"role":         "monitoring",
 					"alertmanager": name,
+					v1beta1constants.LabelObservabilityApplication: name,
 				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{

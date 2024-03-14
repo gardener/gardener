@@ -15,6 +15,8 @@
 package alertmanager
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +32,8 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.name(),
 			Namespace: a.namespace,
-			Labels:    a.getLabels(),
+			Labels: utils.MergeStringMaps(a.getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: a.values.Name}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
