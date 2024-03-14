@@ -125,12 +125,6 @@ func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDR(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDR", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDR), arg0)
 }
 
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 seedserver.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
 // SetSecrets indicates an expected call of SetSecrets.
 func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

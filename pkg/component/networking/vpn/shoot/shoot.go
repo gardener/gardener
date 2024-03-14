@@ -126,7 +126,6 @@ type vpnShoot struct {
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
-	secrets        Secrets
 }
 
 type vpnSecret struct {
@@ -242,7 +241,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			Type: corev1.SecretTypeOpaque,
 			Data: secretVPNSeedServerTLSAuth.Data,
 		}
-		secretDH           *corev1.Secret
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
@@ -390,7 +388,6 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	objects = append(objects,
 		secretCA,
 		secretTLSAuth,
-		secretDH,
 		serviceAccount,
 		networkPolicy,
 		networkPolicyFromSeed,
@@ -536,16 +533,6 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 			Template: *template,
 		},
 	}
-}
-
-// Secrets is collection of secrets for the vpn-shoot.
-type Secrets struct {
-	// DH is a secret containing the Diffie-Hellman credentials.
-	DH *component.Secret
-}
-
-func (v *vpnShoot) SetSecrets(secrets Secrets) {
-	v.secrets = secrets
 }
 
 func getLabels() map[string]string {
