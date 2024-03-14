@@ -20,6 +20,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 func init() {
@@ -123,5 +126,18 @@ func BeInvalidError() types.GomegaMatcher {
 func ShareSameReferenceAs(expected interface{}) types.GomegaMatcher {
 	return &referenceMatcher{
 		expected: expected,
+	}
+}
+
+// NewManagedResourceObjectMatcher returns a function for a matcher that checks
+// if the given object is handled by the given managed resource.
+// It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
+func NewManagedResourceObjectMatcher(cl client.Client) func(client.Object) types.GomegaMatcher {
+	return func(obj client.Object) types.GomegaMatcher {
+		return &managedResourceDataMatcher{
+			cl:                       cl,
+			expectedObj:              obj,
+			expectedObjectSerialized: testruntime.Serialize(obj),
+		}
 	}
 }
