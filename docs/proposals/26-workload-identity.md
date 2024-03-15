@@ -140,12 +140,13 @@ allowing service provider specific configurations. Usually, the clients for
 services supporting identity federation need additional information about the
 cloud account and the federated identity in order to successfully use the JWT.
 This information is known to the cloud account owners and they will provide it
-via this `providerConfig` field, for example when AWS is the service the AWS IAM
-Role ARN needs to be provided.
+via this `providerConfig` field, for example when AWS is the external service
+the AWS IAM Role ARN will be set in the `providerConfig` field.
 
-The `sub` claim will be computed by Gardener, it will have the following format
+The value of the `sub` claim of the OIDC token will be computed by Gardener, it
+will have the following format
 `gardener.cloud:workloadidentity:<workloadidentity-namespace-name>:<workloadidentity-name>:<workloadidentity-uuid>`.
-A validation must ensure that the WorkloadIdentity name and namespace names do
+A validation must ensure that the `WorkloadIdentity` name and namespace name do
 not exceed certain limit. This restrictions is required as per the OIDC
 [Specification](https://openid.net/specs/openid-connect-core-1_0.html#IDToken)
 the `sub` claim cannot exceed 255 ASCII chars length. Gardener API server will
@@ -178,12 +179,13 @@ JWTs will be available when the clients send `create` requests on the
 `WorkloadIdentity/token` subresource. As the clients will be providing various
 custom information that will be used for the generation of the JWT, yet another
 resource `TokenRequest` in the API group `authentication.gardener.cloud` will be
-used. It is envisioned this resource to contain just metadata for the context
-where the JWT is being used, e.g. shoot or backup entry identifier. Gardener API
-server must verify the provided metadata and it can enhance the JWT with
-additional information derived from the context, for example with information
-for the project and the seed of the shoot cluster. Gardener API can also add
-global information like a garden cluster identity. As `WorkloadIdentity` already
+used, similar to `TokenRequest` from `authentication.k8s.io/v1` API. It is
+envisioned this resource to contain just metadata for the context where the JWT
+is being used, e.g. shoot or backup entry identifier. Gardener API server must
+verify the provided metadata and it can enhance the JWT with additional
+information derived from the context, for example with information for the
+project and the seed of the shoot cluster. Gardener API can also add global
+information like a garden cluster identity. As `WorkloadIdentity` already
 specifies duration of the token, `TokenRequest` will not feature such field.
 `TokenRequest` resources will never be persisted in the storage layer, the
 generated token will be written in the `.status.token` field and returned to the
