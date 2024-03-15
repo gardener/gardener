@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/clock"
@@ -79,6 +81,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
@@ -397,7 +400,7 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
-	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient()); err != nil {
+	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
 	}
 
@@ -699,8 +702,28 @@ func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDele
 	return secretsToRecreate, nil
 }
 
-// TODO(rfranzke): Remove this code after gardener v1.92 has been released.
-func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+// TODO: Remove this function when Kubernetes 1.27 support gets dropped.
+func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedClient client.Client, restConfig *rest.Config) error {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed creating discovery client: %w", err)
+	}
+
+	version, err := discoveryClient.ServerVersion()
+	if err != nil {
+		return fmt.Errorf("failed reading the server version of seed cluster: %w", err)
+	}
+
+	seedVersion, err := semver.NewVersion(version.GitVersion)
+	if err != nil {
+		return fmt.Errorf("failed parsing server version to semver: %w", err)
+	}
+
+	//  PV node affinities were immutable until Kubernetes 1.27, see https://github.com/kubernetes/kubernetes/pull/115391
+	if !versionutils.ConstraintK8sGreaterEqual127.Check(seedVersion) {
+		return nil
+	}
+
 	persistentVolumeList := &corev1.PersistentVolumeList{}
 	if err := seedClient.List(ctx, persistentVolumeList); err != nil {
 		return fmt.Errorf("failed listing persistent volumes for migrating deprecated topology labels: %w", err)
@@ -712,7 +735,6 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 		persistentVolume := pv
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			log.Info("Migrating deprecated topology labels", "persistentVolumeName", persistentVolume.Name)
 			patch := client.MergeFrom(persistentVolume.DeepCopy())
 
 			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaRegion)
@@ -732,6 +754,14 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 				}
 			}
 
+			// prevent sending empty patches
+			if data, err := patch.Data(&persistentVolume); err != nil {
+				return fmt.Errorf("failed getting patch data for PV %s: %w", persistentVolume.Name, err)
+			} else if string(data) == `{}` {
+				return nil
+			}
+
+			log.Info("Migrating deprecated topology labels", "persistentVolumeName", persistentVolume.Name)
 			return seedClient.Patch(ctx, &persistentVolume, patch)
 		})
 	}
