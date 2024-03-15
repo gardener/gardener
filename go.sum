@@ -151,8 +151,8 @@ github.com/gardener/dependency-watchdog v1.2.1 h1:Q0zqinZNImBuNYfNQGAXkUh5qrfJyr
 github.com/gardener/dependency-watchdog v1.2.1/go.mod h1:RgU0VmsdBHxRU8IO9VsLxEinz58xEJdEz5hxvMqLKHQ=
 github.com/gardener/etcd-druid v0.22.0 h1:DVe+Zjrb93r9vI1uUiCTMHBffIUoMAKhNzFZNC6hsQ8=
 github.com/gardener/etcd-druid v0.22.0/go.mod h1:FROhfVKyWBo4krlPe3R6FIhJRmOmijEWBdEeUP0CJjE=
-github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
-github.com/gardener/hvpa-controller/api v0.5.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
+github.com/gardener/hvpa-controller/api v0.5.1 h1:bXF1q2inBJqIydN1B/J/BGvkBsBPW2ILCoe4mUbNFVQ=
+github.com/gardener/hvpa-controller/api v0.5.1/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
 github.com/gardener/machine-controller-manager v0.52.0 h1:irhpamQ/QXixCXJpNKRL71aM3FAdNO1HxZwA54jvncI=
 github.com/gardener/machine-controller-manager v0.52.0/go.mod h1:6g5i/uRGugkRyIABZmDjvaiT8GLL7XRE9ziw4C/9nCo=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
