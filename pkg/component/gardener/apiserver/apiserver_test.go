@@ -215,7 +215,8 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:      "gardener-apiserver",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
+						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
 					},
 					Labels: map[string]string{
 						"app":  "gardener",

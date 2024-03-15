@@ -232,9 +232,8 @@ honor_labels: true`
 							Labels: map[string]string{
 								"foo":                              "bar",
 								"networking.gardener.cloud/to-dns": "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver":                 "allowed",
-								"networking.resources.gardener.cloud/to-all-seed-scrape-targets": "allowed",
-								v1beta1constants.LabelObservabilityApplication:                   "prometheus-" + name,
+								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+								v1beta1constants.LabelObservabilityApplication:   "prometheus-" + name,
 							},
 						},
 						PriorityClassName: priorityClassName,

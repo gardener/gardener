@@ -184,6 +184,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 
 	switch k.values.ClusterType {
 	case component.ClusterTypeSeed:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricsPort))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsPort))
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, metricsPort))

@@ -302,10 +302,16 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), service, func() error {
 		service.Labels = getLabels()
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		networkPolicyPort := networkingv1.NetworkPolicyPort{
 			Port:     utils.IntStrPtrFromInt32(port),
 			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
+		}
+
+		if k.values.NamePrefix != "" {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkPolicyPort))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkPolicyPort))
+		}
 
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP

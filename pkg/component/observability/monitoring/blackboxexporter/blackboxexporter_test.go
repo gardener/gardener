@@ -67,7 +67,7 @@ var _ = Describe("BlackboxExporter", func() {
 		configMapYAML      string
 		deploymentYAMLFor  func(clusterType component.ClusterType) string
 		pdbYAMLFor         func(k8sGreaterEquals126 bool) string
-		serviceYAML        string
+		serviceYAMLFor     func(clusterType component.ClusterType) string
 		vpaYAML            string
 	)
 
@@ -268,9 +268,18 @@ status: {}
 			return out
 		}
 
-		serviceYAML = `apiVersion: v1
+		serviceYAMLFor = func(clusterType component.ClusterType) string {
+			out := `apiVersion: v1
 kind: Service
-metadata:
+metadata:`
+
+			if clusterType == component.ClusterTypeSeed {
+				out += `
+  annotations:
+    networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":9115}]'`
+			}
+
+			out += `
   creationTimestamp: null
   labels:
     component: blackbox-exporter
@@ -288,6 +297,8 @@ spec:
 status:
   loadBalancer: {}
 `
+			return out
+		}
 
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -345,7 +356,7 @@ status: {}
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
 				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
 			})
 
 			Context("w/o vpa enabled", func() {
@@ -444,7 +455,7 @@ status: {}
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
 			})
 
 			Context("w/o vpa enabled", func() {

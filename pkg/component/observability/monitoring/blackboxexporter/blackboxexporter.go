@@ -26,9 +26,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
@@ -41,6 +43,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -57,6 +60,8 @@ const (
 	volumeNameClusterAccess = "cluster-access"
 	// VolumeMountPathClusterAccess is the volume mount path to the cluster access credentials.
 	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/cluster-access"
+
+	port int32 = 9115
 )
 
 // Interface contains functions for a blackbox-exporter deployer.
@@ -240,7 +245,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "probe",
-										ContainerPort: int32(9115),
+										ContainerPort: port,
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
@@ -290,7 +295,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Ports: []corev1.ServicePort{
 					{
 						Name:     "probe",
-						Port:     int32(9115),
+						Port:     port,
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
@@ -320,6 +325,13 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
+
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     ptr.To(intstr.FromInt32(port)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}))
+	}
 
 	if b.values.VPAEnabled {
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{

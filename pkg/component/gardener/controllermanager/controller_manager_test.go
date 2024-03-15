@@ -162,8 +162,9 @@ var _ = Describe("GardenerControllerManager", func() {
 		}
 		serviceRuntime = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-controller-manager",
-				Namespace: namespace,
+				Name:        "gardener-controller-manager",
+				Namespace:   namespace,
+				Annotations: map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2719}]`},
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "controller-manager",

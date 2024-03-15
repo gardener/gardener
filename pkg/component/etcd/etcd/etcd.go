@@ -263,13 +263,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	clientService := &corev1.Service{}
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
-	))
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
-	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
+
+	ports := []networkingv1.NetworkPolicyPort{
+		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
+	}
+	if e.values.NamePrefix != "" {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(clientService, ports...))
+	} else {
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService, ports...))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+		metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)

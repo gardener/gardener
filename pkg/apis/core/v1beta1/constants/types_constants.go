@@ -491,6 +491,10 @@ const (
 	// which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
 	LabelNetworkPolicyScrapeTargets = "all-scrape-targets"
+	// LabelNetworkPolicyGardenScrapeTargets is a constant for pod selector label which can be used on Services for
+	// garden system components or extensions which should be scraped by Prometheus.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
+	LabelNetworkPolicyGardenScrapeTargets = "all-garden-scrape-targets"
 	// LabelNetworkPolicySeedScrapeTargets is a constant for pod selector label which can be used on Services for
 	// seed system components or extensions which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.

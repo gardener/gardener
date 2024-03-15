@@ -32,6 +32,12 @@ func InjectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, por
 	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicyScrapeTargets, ports...)
 }
 
+// InjectNetworkPolicyAnnotationsForGardenScrapeTargets injects the provided ports into the
+// `networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports` annotation of the given service.
+func InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {
+	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicyGardenScrapeTargets, ports...)
+}
+
 // InjectNetworkPolicyAnnotationsForSeedScrapeTargets injects the provided ports into the
 // `networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports` annotation of the given service.
 func InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {

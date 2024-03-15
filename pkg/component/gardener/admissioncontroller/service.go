@@ -60,6 +60,11 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(svc, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(metricsPort)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
+
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(svc, a.values.TopologyAwareRoutingEnabled, a.values.RuntimeVersion)
 
 	return svc

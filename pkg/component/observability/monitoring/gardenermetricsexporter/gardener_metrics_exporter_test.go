@@ -117,8 +117,9 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		}
 		serviceRuntime = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-metrics-exporter",
-				Namespace: namespace,
+				Name:        "gardener-metrics-exporter",
+				Namespace:   namespace,
+				Annotations: map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2718}]`},
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "metrics-exporter",

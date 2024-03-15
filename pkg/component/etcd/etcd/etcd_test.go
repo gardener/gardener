@@ -1618,6 +1618,10 @@ var _ = Describe("Etcd", func() {
 				)
 				etcdObj.Name = etcdName
 				etcdObj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-virtual-garden-etcd")
+				etcdObj.Spec.Etcd.ClientService.Annotations["networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`
+				delete(etcdObj.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports")
+				delete(etcdObj.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/namespace-selectors")
+				delete(etcdObj.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/pod-label-selector-namespace-alias")
 
 				hvpaObj := hvpaFor(class, 1, updateMode)
 				hvpaObj.Name = hvpaName

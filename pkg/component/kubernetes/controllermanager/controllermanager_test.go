@@ -902,10 +902,21 @@ namespace: kube-system
 				)
 			})
 
+			It("should deploy the expected Service", func() {
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				service.Name = "virtual-garden-kube-controller-manager"
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`}
+
+				actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: service.Name, Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
+				Expect(actualService).To(DeepEqual(service))
+			})
+
 			It("should deploy the expected ServiceMonitor", func() {
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-virtual-garden-kube-controller-manager", Namespace: namespace}}
+				actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: serviceMonitor.Name, Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			})

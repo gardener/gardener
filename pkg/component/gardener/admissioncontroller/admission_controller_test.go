@@ -723,7 +723,8 @@ func service(namespace string, testValues Values) *corev1.Service {
 				"role": "admission-controller",
 			},
 			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":2719}]`,
+				"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":2719}]`,
+				"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2723}]`,
 			},
 		},
 		Spec: corev1.ServiceSpec{

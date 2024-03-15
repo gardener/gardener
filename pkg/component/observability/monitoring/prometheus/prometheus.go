@@ -50,10 +50,9 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 					Labels: utils.MergeStringMaps(map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelObservabilityApplication:                                                   p.name(),
+						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelObservabilityApplication:        p.name(),
 					}, p.values.AdditionalPodLabels),
 				},
 				PriorityClassName: p.values.PriorityClassName,
