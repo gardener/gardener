@@ -72,7 +72,7 @@ spec:
         # TODO(rfranzke): Remove this label after v1.91 has been released.
         networking.resources.gardener.cloud/to-garden-prometheus-web-tcp-9090: allowed
         networking.resources.gardener.cloud/to-garden-alertmanager-client-tcp-9093: allowed
-        observability.gardener.cloud/app: "prometheus"
+        observability.gardener.cloud/app: "prometheus-shoot"
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
