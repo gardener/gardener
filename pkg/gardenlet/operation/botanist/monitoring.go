@@ -74,7 +74,20 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
 	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
-	return b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
+	if err := b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove this after v1.93 has been released.
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-client", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-config", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-db-alertmanager-0", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // MigrateAlertManager migrate the shoot alert manager to prometheus-operator.
@@ -88,19 +101,7 @@ func (b *Botanist) MigrateAlertManager(ctx context.Context) error {
 		return fmt.Errorf("failed reading old Alertmanager StatefulSet %s: %w", client.ObjectKeyFromObject(oldStatefulSet), err)
 	}
 
-	if err := b.DeployAlertManager(ctx); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-client", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-config", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-db-alertmanager-0", Namespace: b.Shoot.SeedNamespace}},
-	)
+	return b.DeployAlertManager(ctx)
 }
 
 // DefaultMonitoring creates a new monitoring component.
