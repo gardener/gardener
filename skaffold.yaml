@@ -90,6 +90,8 @@ build:
             - pkg/apiserver/registry/core/exposureclass/storage
             - pkg/apiserver/registry/core/internalsecret
             - pkg/apiserver/registry/core/internalsecret/storage
+            - pkg/apiserver/registry/core/namespacedcloudprofile
+            - pkg/apiserver/registry/core/namespacedcloudprofile/storage
             - pkg/apiserver/registry/core/project
             - pkg/apiserver/registry/core/project/storage
             - pkg/apiserver/registry/core/quota
@@ -179,6 +181,7 @@ build:
             - plugin/pkg/global/resourcereferencemanager
             - plugin/pkg/managedseed/shoot
             - plugin/pkg/managedseed/validator
+            - plugin/pkg/namespacedcloudprofile/validator
             - plugin/pkg/project/validator
             - plugin/pkg/seed/validator
             - plugin/pkg/shoot/dns

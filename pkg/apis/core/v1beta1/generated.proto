@@ -305,6 +305,13 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
+// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile
+message CloudProfileReference {
+  optional string kind = 1;
+
+  optional string name = 2;
+}
+
 // CloudProfileSpec is the specification of a CloudProfile.
 // It must contain exactly one of its defined keys.
 message CloudProfileSpec {
@@ -1730,6 +1737,82 @@ message NamedResourceReference {
   optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
 }
 
+// NamespacedCloudProfile represents certain properties about a provider environment.
+message NamespacedCloudProfile {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec defines the provider environment properties.
+  optional NamespacedCloudProfileSpec spec = 2;
+
+  // Most recently observed status of the NamespacedCloudProfile
+  optional NamespacedCloudProfileStatus status = 3;
+}
+
+// NamespacedCloudProfileList is a collection of CloudProfiles.
+message NamespacedCloudProfileList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of CloudProfiles.
+  repeated NamespacedCloudProfile items = 2;
+}
+
+// NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
+// It must contain exactly one of its defined keys.
+message NamespacedCloudProfileSpec {
+  // CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.
+  // +optional
+  optional string caBundle = 1;
+
+  // Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+  // +optional
+  optional KubernetesSettings kubernetes = 2;
+
+  // MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated MachineImage machineImages = 3;
+
+  // MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated MachineType machineTypes = 4;
+
+  // Regions contains constraints regarding allowed values for regions and zones.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated Region regions = 6;
+
+  // SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
+  // An empty list means that all seeds of the same provider type are supported.
+  // This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
+  // Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+  // type of the seed must match the shoot's provider.
+  // +optional
+  optional SeedSelector seedSelector = 7;
+
+  // VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated VolumeType volumeTypes = 9;
+
+  // A pointer to the NamespacedCloudProfiles parent CloudProfile
+  // +optional
+  optional CloudProfileReference parent = 10;
+}
+
+// NamespacedCloudProfileStatus holds the most recently observed status of the project
+message NamespacedCloudProfileStatus {
+  // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile
+  optional CloudProfileSpec cloudProfileSpec = 1;
+}
+
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
   // Type identifies the type of the networking plugin. This field is immutable.
@@ -2692,86 +2775,89 @@ message ShootSpec {
   // CloudProfileName is a name of a CloudProfile object. This field is immutable.
   optional string cloudProfileName = 2;
 
+  // CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile
+  optional CloudProfileReference cloudProfile = 3;
+
   // DNS contains information about the DNS settings of the Shoot.
   // +optional
-  optional DNS dns = 3;
+  optional DNS dns = 4;
 
   // Extensions contain type and provider information for Shoot extensions.
   // +optional
-  repeated Extension extensions = 4;
+  repeated Extension extensions = 5;
 
   // Hibernation contains information whether the Shoot is suspended or not.
   // +optional
-  optional Hibernation hibernation = 5;
+  optional Hibernation hibernation = 6;
 
   // Kubernetes contains the version and configuration settings of the control plane components.
-  optional Kubernetes kubernetes = 6;
+  optional Kubernetes kubernetes = 7;
 
   // Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
   // +optional
-  optional Networking networking = 7;
+  optional Networking networking = 8;
 
   // Maintenance contains information about the time window for maintenance operations and which
   // operations should be performed.
   // +optional
-  optional Maintenance maintenance = 8;
+  optional Maintenance maintenance = 9;
 
   // Monitoring contains information about custom monitoring configurations for the shoot.
   // +optional
-  optional Monitoring monitoring = 9;
+  optional Monitoring monitoring = 10;
 
   // Provider contains all provider-specific and provider-relevant information.
-  optional Provider provider = 10;
+  optional Provider provider = 11;
 
   // Purpose is the purpose class for this cluster.
   // +optional
-  optional string purpose = 11;
+  optional string purpose = 12;
 
   // Region is a name of a region. This field is immutable.
-  optional string region = 12;
+  optional string region = 13;
 
   // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
   // This field is immutable.
   // +optional
-  optional string secretBindingName = 13;
+  optional string secretBindingName = 14;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
   // +optional
-  optional string seedName = 14;
+  optional string seedName = 15;
 
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
-  optional SeedSelector seedSelector = 15;
+  optional SeedSelector seedSelector = 16;
 
   // Resources holds a list of named resource references that can be referred to in extension configs by their names.
   // +optional
-  repeated NamedResourceReference resources = 16;
+  repeated NamedResourceReference resources = 17;
 
   // Tolerations contains the tolerations for taints on seed clusters.
   // +patchMergeKey=key
   // +patchStrategy=merge
   // +optional
-  repeated Toleration tolerations = 17;
+  repeated Toleration tolerations = 18;
 
   // ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
   // This field is immutable.
   // +optional
-  optional string exposureClassName = 18;
+  optional string exposureClassName = 19;
 
   // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
   // +optional
-  optional SystemComponents systemComponents = 19;
+  optional SystemComponents systemComponents = 20;
 
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
-  optional ControlPlane controlPlane = 20;
+  optional ControlPlane controlPlane = 21;
 
   // SchedulerName is the name of the responsible scheduler which schedules the shoot.
   // If not specified, the default scheduler takes over.
   // This field is immutable.
   // +optional
-  optional string schedulerName = 21;
+  optional string schedulerName = 22;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

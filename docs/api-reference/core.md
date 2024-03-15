@@ -26,6 +26,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.InternalSecret">InternalSecret</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
@@ -926,6 +928,197 @@ More info: <a href="https://kubernetes.io/docs/concepts/configuration/secret/#se
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile
+</h3>
+<p>
+<p>NamespacedCloudProfile represents certain properties about a provider environment.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>NamespacedCloudProfile</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">
+NamespacedCloudProfileSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the provider environment properties.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>caBundle</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
+KubernetesSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubernetes contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
+[]MachineImage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineType">
+[]MachineType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineTypes contains constraints regarding allowed values for machine types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>regions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Region">
+[]Region
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Regions contains constraints regarding allowed values for regions and zones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
+An empty list means that all seeds of the same provider type are supported.
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volumeTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
+[]VolumeType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parent</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>A pointer to the NamespacedCloudProfiles parent CloudProfile</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">
+NamespacedCloudProfileStatus
+</a>
+</em>
+</td>
+<td>
+<p>Most recently observed status of the NamespacedCloudProfile</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Project">Project
 </h3>
 <p>
@@ -1577,6 +1770,19 @@ string
 </td>
 <td>
 <p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
 </td>
 </tr>
 <tr>
@@ -2830,11 +3036,52 @@ CRIName
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">NamespacedCloudProfileStatus</a>)
 </p>
 <p>
 <p>CloudProfileSpec is the specification of a CloudProfile.
@@ -6559,7 +6806,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>KubernetesSettings contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
@@ -6977,7 +7225,8 @@ int32
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineImage defines the name and multiple versions of the machine image in any environment.</p>
@@ -7122,7 +7371,8 @@ Examples:
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineType contains certain properties of a machine type.</p>
@@ -7550,6 +7800,172 @@ Kubernetes autoscaling/v1.CrossVersionObjectReference
 </td>
 <td>
 <p>ResourceRef is a reference to a resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
+</p>
+<p>
+<p>NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
+It must contain exactly one of its defined keys.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>caBundle</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
+KubernetesSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubernetes contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
+[]MachineImage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineType">
+[]MachineType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineTypes contains constraints regarding allowed values for machine types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>regions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Region">
+[]Region
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Regions contains constraints regarding allowed values for regions and zones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
+An empty list means that all seeds of the same provider type are supported.
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volumeTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
+[]VolumeType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parent</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>A pointer to the NamespacedCloudProfiles parent CloudProfile</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">NamespacedCloudProfileStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
+</p>
+<p>
+<p>NamespacedCloudProfileStatus holds the most recently observed status of the project</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cloudProfileSpec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">
+CloudProfileSpec
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile</p>
 </td>
 </tr>
 </tbody>
@@ -8518,7 +8934,8 @@ Kubernetes core/v1.ObjectReference
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>Region contains certain properties of a region.</p>
@@ -9062,6 +9479,7 @@ string
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -10802,6 +11220,19 @@ string
 </tr>
 <tr>
 <td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>dns</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.DNS">
@@ -11457,6 +11888,19 @@ string
 </tr>
 <tr>
 <td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>dns</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.DNS">
@@ -12036,7 +12480,8 @@ bool
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>VolumeType contains certain properties of a volume type.</p>

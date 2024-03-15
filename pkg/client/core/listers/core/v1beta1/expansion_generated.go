@@ -46,6 +46,14 @@ type InternalSecretListerExpansion interface{}
 // InternalSecretNamespaceLister.
 type InternalSecretNamespaceListerExpansion interface{}
 
+// NamespacedCloudProfileListerExpansion allows custom methods to be added to
+// NamespacedCloudProfileLister.
+type NamespacedCloudProfileListerExpansion interface{}
+
+// NamespacedCloudProfileNamespaceListerExpansion allows custom methods to be added to
+// NamespacedCloudProfileNamespaceLister.
+type NamespacedCloudProfileNamespaceListerExpansion interface{}
+
 // ProjectListerExpansion allows custom methods to be added to
 // ProjectLister.
 type ProjectListerExpansion interface{}

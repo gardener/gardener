@@ -61,6 +61,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ExposureClassList{},
 		&InternalSecret{},
 		&InternalSecretList{},
+		&NamespacedCloudProfile{},
+		&NamespacedCloudProfileList{},
 		&Project{},
 		&ProjectList{},
 		&Quota{},
