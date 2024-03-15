@@ -246,7 +246,7 @@ var _ = Describe("Prometheus", func() {
 					GroupInterval:  "5m",
 					RepeatInterval: "72h",
 					Receiver:       "dev-null",
-					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|operator)$"},"receiver":"email-kubernetes-ops"}`)}},
+					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"matchers": [{"name": "visibility", "matchType": "=~", "value": "all|operator"}], "receiver": "email-kubernetes-ops"}`)}},
 				},
 				InhibitRules: []monitoringv1alpha1.InhibitRule{
 					{

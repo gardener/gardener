@@ -49,7 +49,11 @@ func (a *alertManager) config() *monitoringv1alpha1.AlertmanagerConfig {
 				// Send alerts by default to nowhere
 				Receiver: "dev-null",
 				// email only for critical and blocker
-				Routes: []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|operator)$"},"receiver":"` + emailReceiverName + `"}`)}},
+				Routes: []apiextensionsv1.JSON{{Raw: []byte(`
+				  {"matchers": [{"name": "visibility",
+				                 "matchType": "=~",
+				                 "value": "all|operator"}],
+				   "receiver": "` + emailReceiverName + `"}`)}},
 			},
 			InhibitRules: []monitoringv1alpha1.InhibitRule{
 				// Apply inhibition if the alert name is the same.
