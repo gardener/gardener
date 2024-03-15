@@ -20,6 +20,7 @@ reviewers:
 - [Proposal](#proposal)
   - [API Changes](#api-changes)
     - [Shoot API Related Changes](#shoot-api-related-changes)
+    - [Seed API Related Changes](#seed-api-related-changes)
   - [Gardener as OIDC Token Issuer](#gardener-as-oidc-token-issuer)
   - [Distribution of Workload Identity Tokens](#distribution-of-workload-identity-tokens)
   - [Use cases](#use-cases)
@@ -296,6 +297,32 @@ spec:
     - type: some-dns-provider
       workloadIdentity:
         name: bar
+```
+
+#### Seed API Related Changes
+
+Wherever the Seed API is referring to secrets, it will be extended to refer to
+workload identities, as of now these are the fields `spec.backup.` and
+`spec.dns.provider` and they will have new field `workloadidentityRef` holding
+the name and the namespace of a workload identity resource. The respective
+`secretRef` fields will be made optional and validation will ensure only one of
+`secretRef` and `workloadIdentityRef` is used at a time.
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Seed
+metadata:
+  name: seed
+spec:
+  backup:
+    workloadidentityRef:
+      name: backup-workloadidentity
+      namespace: garden
+  dns:
+    provider:
+      workloadidentityRef:
+        name: ingress-workloadidentity
+        namespace: garden
 ```
 
 ### Gardener as OIDC Token Issuer
