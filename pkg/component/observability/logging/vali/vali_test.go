@@ -39,11 +39,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -1044,7 +1046,9 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: namespace,
-			Labels:    getLabels(),
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: valiName,
+			}),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
 			Replicas: ptr.To(int32(1)),
@@ -1262,7 +1266,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: getLabels(),
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+						v1beta1constants.LabelObservabilityApplication: valiName,
+					}),
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            priorityClassName,

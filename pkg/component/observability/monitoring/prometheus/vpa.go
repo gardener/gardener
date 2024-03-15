@@ -22,6 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -31,7 +34,9 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
 			Namespace: p.namespace,
-			Labels:    p.getLabels(),
+			Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: p.name(),
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{

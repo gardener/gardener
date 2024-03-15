@@ -21,6 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -30,7 +33,9 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      a.name(),
 			Namespace: a.namespace,
-			Labels:    a.getLabels(),
+			Labels: utils.MergeStringMaps(a.getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: a.name(),
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
