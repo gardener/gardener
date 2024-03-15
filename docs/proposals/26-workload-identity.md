@@ -421,9 +421,10 @@ A sample payload of a token will look like:
 Gardenlet will request tokens as per the global configurations and renew them
 regularly. It will be responsible to provide information for the specific usage
 of the token, e.g. shoot name, namespace and UID, via the `TokenRequest` API.
-Only the `gardenlet` will be authorized to create and refresh workload identity
-tokens. Seed Authorizer will be extended to allow gardenlets to request workload
-identity tokens only for `WorkloadIdentity` that they are responsible for.
+`gardenlet` will be the only Gardener component authorized to create and refresh
+workload identity tokens. Seed Authorizer will be extended to allow gardenlets
+to request workload identity tokens only for `WorkloadIdentity` that they are
+responsible for.
 
 As the tokens will usually have lifetime shorter than the period between two
 reconciliations, it is essential that the token creation and management are
@@ -437,90 +438,48 @@ different seeds, i.e. multiple controllers would be responsible to react on the
 annotation which is usually fine, but all of them would have to negotiate when
 the operation is completed and the annotation to be removed.
 
-To achieve the restriction that only `gardenlet` creates or refreshes tokens in
-the seed cluster, but not any other controller running there, a new CRD
-`WorkloadIdentityBinding` in the seed will be implemented. This CRD will refer
-to the `WorkloadIdentity` in the Garden cluster that is source of the token, as
-well as specify target store where the tokens to be written. Gardenlet will be
-the only component having write access to this CRD, while extension controllers
-and other components relying on workload identities should request no more than
-read access. This `WorkloadIdentityBinding` CRD will be reconciled by a
-dedicated controller named `workloadidentity-refresher` from Gardenlet
-responsible to request OIDC tokens and write them into the target store. The
-workload identity `spec.providerConfig` will be also written into the target
-store.
-
-At the time this GEP is written, it is envisioned only secrets to be used as
-store targets. The token will be available on the data key
-`workloadIdentityToken` in the secret, while the service provider config will be
-at `workloadIdentityConfig`. These secrets will be labeled with
-`workloadidentity.authentication.gardener.cloud/provider=(aws|gcp|...)` so that
-the extensions can easily select them and make adjustments via admission
+Kubernetes Secrets will be the resource holding the JWT, the provider config,
+and metadata about the used workload identity. The JWT will be stored under the
+`token` data key, while the provider config will use the `config` data key. The
+name and namespace of the used `WorkloadIdentity` will be stored in the
+annotations `workloadidentity.authentication.gardener.cloud/name` and
+`workloadidentity.authentication.gardener.cloud/namespace` respectively. The
+annotation `workloadidentity.authentication.gardener.cloud/context-object`, if
+present, will hold reference to the object using the workload identity, the
+value will be JSON document and have the format
+`{"apiVersion":"...","kind":"...","name":"...","namespace":"...","uid":"..."}`.
+It will be the source for the `spec.contextObject` field of the `TokenRequest`.
+To let the controller(s) easily select or distinguish these secrets, they will
+be labeled with
+`authentication.gardener.cloud/purpose: workload-identity-token-requestor`. The
+secrets will be also labeled with
+`workloadidentity.authentication.gardener.cloud/provider=<WorkloadIdentity.spec.targetSystem.type>`
+so that the extensions can easily select them and make adjustments via admission
 webhooks, e.g. transform the service provider config and the token into
 canonical form usable by the respective service provider SDK.
 
-The secret `cloudprovider` will be reused as target store when the shoot is
-using workload identity tokens as infrastructure credentials, the flow should be
-as follow:
+The secret `cloudprovider` that now holds the static credentials will be reused
+to store the token and the provider config when the shoot is using workload
+identity as infrastructure credentials. For each extension using workload
+identity, the secret will be named
+`workloadidentity-extension-<extension-type>`, and for dns providers
+`workloadidentity-dns-<dns-provider-type>`.
 
-1. Shoot reconciler creates/updates a `WorkloadIdentityBinding` resource in the
-   seed based on the configuration of the `WorkloadIdentity` and the shoot spec.
-   The name of the `WorkloadIdentityBinding` resource will be `cloudidentity`
-   while the name of the target store secret `cloudprovider`.
-1. `workloadidentity-refresher` receives event for `WorkloadIdentityBinding`
-   resource. It parses the token from the target store and if the token is still
-   valid, it just applies the provider config to the target store, otherwise a
-   new token is requested from the Gardener API and written to the store
-   together with the provider config.
-1. The status of the `WorkloadIdentityBinding` is updated with the "issued at"
-   and "expires at" timestamps of the token.
-1. The `WorkloadIdentityBinding` is requeued for reconciliation again when the
-   token will be suitable for renewal.
+The reconciliation flow for a component using workload identity tokens will look
+like:
 
-A sample `WorkloadIdentityBinding.extensions.gardener.cloud` resource will look like:
-
-```yaml
-apiVersion: extensions.gardener.cloud/v1alpha1
-kind: WorkloadIdentityBinding
-metadata:
-  name: cloudidentity
-  namespace: shoot--local--foo
-spec:
-  type: aws
-  providerConfig:
-    apiVersion: aws.authentication.gardener.cloud/v1alpha1
-    kind: Config
-    iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
-  contextObject: # Optional field, various metadata about context of use of the token
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: Shoot
-    name: foo
-    namespace: garden-local
-    uid: 54d09554-6a68-4f46-a23a-e3592385d820
-  workloadIdentity:
-    name: banana-testing
-    namespace: garden-local
-  store:
-    secretRef:
-      name: cloudprovider
-status:
-  issuedAt: 2024-02-09T08:35:02Z
-  expiresAt: 2024-02-09T16:35:02Z
-```
-
-Gardenlet will take care also for the extensions using workload identities via
-`shoot.spec.extensions.workloadIdentity`. For each such extension, it will
-create a `WorkloadIdentityBinding.extensions.gardener.cloud` resource in the
-control plane namespace named with the type of the extension. The name of the
-store might follow some established convention, but gardenlet has the freedom to
-generate a name. The only requirement is that the name remains stable across
-reconciliations. Extension controllers can request read access for the
-`WorkloadIdentityBinding` and read the name of the store themselves.
-
-Similar approach will be considered also when workload identity is used for DNS
-purposes, however no detailed proposal will be made as of now as usage of the
-DNS secrets needs to be understood better, considering also internal and default
-domains.
+1. A gardenlet controller creates/updates a `secret` resource in the seed with
+   the above mentioned annotations and labels based on the configuration of the
+   `WorkloadIdentity` and resource using it. The workload identity provider
+   config is also written into the secret at this step.
+1. The dedicated controller watches these secrets and receives event to
+   reconcile it.
+1. The controller reads the current token from the secret and if it does not
+   exist or is due for rotation, a new token is requested via `TokenRequest` on
+   the respective `WorkloadIdentity/token` subresource. The controller writes
+   the returned token into the secret.
+1. The `secret` is requeued for reconciliation again when the token will be
+   suitable for renewal.
 
 ### Use cases
 
