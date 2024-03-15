@@ -255,7 +255,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/plutono
-  tag: "v7.5.28"
+  tag: "v7.5.29"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
