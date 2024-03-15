@@ -17,6 +17,8 @@ package vali_test
 import (
 	"context"
 	"fmt"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -1044,7 +1046,9 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
 			Namespace: namespace,
-			Labels:    getLabels(),
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: valiName,
+			}),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
 			Replicas: ptr.To(int32(1)),
@@ -1262,7 +1266,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: getLabels(),
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+						v1beta1constants.LabelObservabilityApplication: valiName,
+					}),
 				},
 				Spec: corev1.PodSpec{
 					PriorityClassName:            priorityClassName,

@@ -306,7 +306,9 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      valiName,
 				Namespace: v.namespace,
-				Labels:    getLabels(),
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.LabelObservabilityApplication: valiName,
+				}),
 			},
 			Spec: hvpav1alpha1.HvpaSpec{
 				Replicas: ptr.To(v.values.Replicas),
@@ -627,7 +629,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels(),
+						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+							v1beta1constants.LabelObservabilityApplication: valiName,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						AutomountServiceAccountToken: ptr.To(false),
