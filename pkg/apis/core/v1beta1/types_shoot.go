@@ -137,6 +137,8 @@ type ShootSpec struct {
 	// This field is immutable.
 	// +optional
 	SchedulerName *string `json:"schedulerName,omitempty" protobuf:"bytes,21,opt,name=schedulerName"`
+	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
+	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,req,name=cloudProfile"`
 }
 
 // GetProviderType gets the type of the provider.

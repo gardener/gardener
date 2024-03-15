@@ -22,6 +22,8 @@ type ExposureClassExpansion interface{}
 
 type InternalSecretExpansion interface{}
 
+type NamespacedCloudProfileExpansion interface{}
+
 type ProjectExpansion interface{}
 
 type QuotaExpansion interface{}

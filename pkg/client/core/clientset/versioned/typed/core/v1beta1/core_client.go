@@ -24,6 +24,7 @@ type CoreV1beta1Interface interface {
 	ControllerRegistrationsGetter
 	ExposureClassesGetter
 	InternalSecretsGetter
+	NamespacedCloudProfilesGetter
 	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -67,6 +68,10 @@ func (c *CoreV1beta1Client) ExposureClasses() ExposureClassInterface {
 
 func (c *CoreV1beta1Client) InternalSecrets(namespace string) InternalSecretInterface {
 	return newInternalSecrets(c, namespace)
+}
+
+func (c *CoreV1beta1Client) NamespacedCloudProfiles(namespace string) NamespacedCloudProfileInterface {
+	return newNamespacedCloudProfiles(c, namespace)
 }
 
 func (c *CoreV1beta1Client) Projects() ProjectInterface {

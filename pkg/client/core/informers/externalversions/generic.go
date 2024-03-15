@@ -57,6 +57,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().ExposureClasses().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("internalsecrets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().InternalSecrets().Informer()}, nil
+	case v1beta1.SchemeGroupVersion.WithResource("namespacedcloudprofiles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().NamespacedCloudProfiles().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("projects"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().Projects().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("quotas"):
