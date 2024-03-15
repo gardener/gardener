@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +43,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -338,10 +340,13 @@ var _ = Describe("health check", func() {
 						},
 					},
 				})
+				seedObj := &seedpkg.Seed{}
+				seedObj.SetInfo(&gardencorev1beta1.Seed{})
 
 				health := NewHealth(
 					logr.Discard(),
 					shootObj,
+					seedObj,
 					kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
 					nil,
 					nil,
@@ -460,6 +465,122 @@ var _ = Describe("health check", func() {
 		)
 	})
 
+	Describe("#CheckIfDependencyWatchdogProberScaledDownControllers", func() {
+		var (
+			deploymentCA  *appsv1.Deployment
+			deploymentKCM *appsv1.Deployment
+			deploymentMCM *appsv1.Deployment
+		)
+
+		BeforeEach(func() {
+			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+		})
+
+		It("should report an error because a required relevant deployment does not exist", func() {
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).To(BeNotFoundError())
+			Expect(scaledDownDeploymentNames).To(BeEmpty())
+		})
+
+		It("should report nothing because all relevant deployment have replicas > 0", func() {
+			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
+
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scaledDownDeploymentNames).To(BeEmpty())
+		})
+
+		It("should report names because some relevant deployment have replicas == 0", func() {
+			deploymentKCM.Spec.Replicas = nil
+			deploymentMCM.Spec.Replicas = ptr.To(int32(0))
+
+			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
+			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
+
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(scaledDownDeploymentNames).To(HaveExactElements(deploymentKCM.Name, deploymentMCM.Name))
+		})
+	})
+
+	Describe("#CheckForExpiredNodeLeases", func() {
+		var (
+			nodeName = "node1"
+
+			node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+
+			validLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: "kube-node-lease",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(40)),
+				},
+			}
+
+			expiredLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: "kube-node-lease",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(-40)),
+				},
+			}
+
+			unrelatedLease = &coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "node2",
+					Namespace: "kube-node-lease",
+				},
+				Spec: coordinationv1.LeaseSpec{
+					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
+					LeaseDurationSeconds: ptr.To(int32(40)),
+				},
+			}
+		)
+
+		DescribeTable("#CheckForExpiredNodeLeases",
+			func(lease *coordinationv1.Lease, node *corev1.Node, additionalNodeNames []string, expected types.GomegaMatcher) {
+				leaseList := coordinationv1.LeaseList{}
+				if lease != nil {
+					leaseList.Items = append(leaseList.Items, *lease)
+				}
+
+				nodeList := corev1.NodeList{}
+				if node != nil {
+					nodeList.Items = append(nodeList.Items, *node)
+				}
+
+				for _, nodeName := range additionalNodeNames {
+					nodeList.Items = append(nodeList.Items, corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}})
+
+					lease := validLease.DeepCopy()
+					lease.Name = nodeName
+					leaseList.Items = append(leaseList.Items, *lease)
+				}
+
+				Expect(CheckForExpiredNodeLeases(&nodeList, &leaseList, fakeClock)).To(expected)
+			},
+
+			Entry("should return nil if there is an unexpired lease for node", validLease, node, nil, BeNil()),
+			Entry("should return nil if no leases are present", nil, node, nil, BeNil()),
+			Entry("should return nil if no nodes are present", validLease, nil, nil, BeNil()),
+			Entry("should return nil if no node could be found for the lease", unrelatedLease, node, nil, BeNil()),
+			Entry("should return nil if less than 20% of leases are expired", expiredLease, node, []string{"node2", "node3", "node4", "node5", "node6"}, BeNil()),
+			Entry("should return an error if exactly 20% of leases are expired", expiredLease, node, []string{"node2", "node3", "node4", "node5"}, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+			Entry("should return an error if at least 20% of leases are expired", expiredLease, node, nil, MatchError(ContainSubstring("Leases in kube-node-lease namespace are expired"))),
+		)
+	})
+
 	Describe("#CheckingNodeAgentLease", func() {
 		var (
 			validLease = coordinationv1.Lease{
@@ -472,7 +593,7 @@ var _ = Describe("health check", func() {
 				},
 			}
 
-			invalidLease = coordinationv1.Lease{
+			expiredLease = coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gardener-node-agent-node1",
 				},
@@ -482,7 +603,7 @@ var _ = Describe("health check", func() {
 				},
 			}
 
-			nonrelatedLease = coordinationv1.Lease{
+			unrelatedLease = coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gardener-node-agent-node2",
 				},
@@ -515,8 +636,8 @@ var _ = Describe("health check", func() {
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
 			// TODO(rfranzke): Remove this test-entry as soon as the UseGardenerNodeAgent feature gate gets removed.
 			Entry("should return nil if no leases are present", nil, BeNil()),
-			Entry("should return Error that node agent is not running if no matching lease could be found for node", nonrelatedLease, MatchError(ContainSubstring("not running"))),
-			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", invalidLease, MatchError(ContainSubstring("stopped running"))),
+			Entry("should return Error that node agent is not running if no matching lease could be found for node", unrelatedLease, MatchError(ContainSubstring("not running"))),
+			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", expiredLease, MatchError(ContainSubstring("stopped running"))),
 		)
 	})
 

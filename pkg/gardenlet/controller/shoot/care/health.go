@@ -22,6 +22,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -43,11 +45,13 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -76,6 +80,7 @@ var (
 // Health contains information needed to execute shoot health checks.
 type Health struct {
 	shoot        *shoot.Shoot
+	seed         *seed.Seed
 	gardenClient client.Client
 	seedClient   kubernetes.Interface
 
@@ -97,6 +102,7 @@ type ShootClientInit func() (kubernetes.Interface, bool, error)
 func NewHealth(
 	log logr.Logger,
 	shoot *shoot.Shoot,
+	seed *seed.Seed,
 	seedClientSet kubernetes.Interface,
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
@@ -106,6 +112,7 @@ func NewHealth(
 ) *Health {
 	return &Health{
 		shoot:                  shoot,
+		seed:                   seed,
 		gardenClient:           gardenClient,
 		seedClient:             seedClientSet,
 		initializeShootClients: shootClientInit,
@@ -415,6 +422,14 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
+	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
+		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.SeedNamespace); err != nil {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
+		} else if len(scaledDownDeploymentNames) > 0 {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas (perhaps by dependency-watchdog-prober): %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
+		}
+	}
+
 	if exitCondition := h.healthChecker.CheckManagedResources(condition, managedResources, func(managedResource resourcesv1alpha1.ManagedResource) bool {
 		return managedResource.Spec.Class != nil &&
 			sets.New("", string(gardencorev1beta1.ShootControlPlaneHealthy)).Has(managedResource.Labels[v1beta1constants.LabelCareConditionType])
@@ -428,6 +443,38 @@ func (h *Health) checkControlPlane(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
 	return &c, nil
+}
+
+// CheckIfDependencyWatchdogProberScaledDownControllers checks if controllers have been scaled down by dependency-watchdog-prober.
+func CheckIfDependencyWatchdogProberScaledDownControllers(ctx context.Context, seedClient client.Client, shootNamespace string) ([]string, error) {
+	var scaledDownDeploymentNames []string
+
+	proberConfig, err := kubeapiserver.NewDependencyWatchdogProberConfiguration()
+	if err != nil {
+		return nil, fmt.Errorf("failed getting dependency-watchdog-prober config: %w", err)
+	}
+
+	for _, dependentResourceInfo := range proberConfig {
+		if dependentResourceInfo.Ref == nil || dependentResourceInfo.Ref.Kind != "Deployment" {
+			continue
+		}
+
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: dependentResourceInfo.Ref.Name, Namespace: shootNamespace}}
+		if err := seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+			if apierrors.IsNotFound(err) && dependentResourceInfo.Optional {
+				// If the deployment does not exist then we don't care about it (e.g., some clusters don't have a
+				// cluster-autoscaler deployment when all their worker pools have min=max configuration).
+				continue
+			}
+			return nil, fmt.Errorf("failed reading Deployment %s for scale-down check: %w", deployment.Name, err)
+		}
+
+		if ptr.Deref(deployment.Spec.Replicas, 0) == 0 {
+			scaledDownDeploymentNames = append(scaledDownDeploymentNames, deployment.Name)
+		}
+	}
+
+	return scaledDownDeploymentNames, nil
 }
 
 var monitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
@@ -705,6 +752,17 @@ func (h *Health) CheckClusterNodes(
 		return &c, nil
 	}
 
+	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
+		leaseList := &coordinationv1.LeaseList{}
+		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(corev1.NamespaceNodeLease)); err != nil {
+			return nil, err
+		}
+
+		if err := CheckForExpiredNodeLeases(nodeList, leaseList, h.clock); err != nil {
+			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TooManyExpiredNodeLeases", err.Error())), nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -731,6 +789,35 @@ func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.L
 		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
 			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
 		}
+	}
+
+	return nil
+}
+
+// CheckForExpiredNodeLeases checks if the number of expired node Leases surpasses 20% of all existing Leases. If yes,
+// an error will be returned. The motivation is that dependency-watchdog is starting to scale down controllers when 60%
+// of the Leases are expired.
+func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.LeaseList, clock clock.Clock) error {
+	if len(leaseList.Items) == 0 || len(nodeList.Items) == 0 {
+		return nil
+	}
+
+	nodeNames := sets.Set[string]{}
+	for _, node := range nodeList.Items {
+		nodeNames.Insert(node.Name)
+	}
+
+	var expiredLeases int
+	for _, lease := range leaseList.Items {
+		// we only care about Leases related to existing nodes
+		if nodeNames.Has(lease.Name) &&
+			lease.Spec.RenewTime.Add(time.Second*time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
+			expiredLeases++
+		}
+	}
+
+	if expiredLeasesPercentage := 100 * expiredLeases / len(leaseList.Items); expiredLeasesPercentage >= 20 {
+		return fmt.Errorf("%d%% of all Leases in %s namespace are expired - dependency-watchdog-prober might start scaling down controllers", expiredLeasesPercentage, corev1.NamespaceNodeLease)
 	}
 
 	return nil

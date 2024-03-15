@@ -146,6 +146,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			updatedConditions = NewHealthCheck(
 				log,
 				o.Shoot,
+				o.Seed,
 				r.SeedClientSet,
 				r.GardenClient,
 				initializeShootClients,

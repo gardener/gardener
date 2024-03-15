@@ -43,6 +43,7 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -522,6 +523,7 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 	return func(
 		_ logr.Logger,
 		_ *shootpkg.Shoot,
+		_ *seedpkg.Seed,
 		_ kubernetes.Interface,
 		_ client.Client,
 		_ ShootClientInit,
