@@ -265,7 +265,7 @@ var _ = Describe("Alertmanager", func() {
 					GroupInterval:  "5m",
 					RepeatInterval: "72h",
 					Receiver:       "dev-null",
-					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"match_re":{"visibility":"^(all|operator)$"},"receiver":"email-kubernetes-ops"}`)}},
+					Routes:         []apiextensionsv1.JSON{{Raw: []byte(`{"matchers": [{"name": "visibility", "matchType": "=~", "value": "all|operator"}], "receiver": "email-kubernetes-ops"}`)}},
 				},
 				InhibitRules: []monitoringv1alpha1.InhibitRule{
 					{
@@ -569,7 +569,7 @@ var _ = Describe("Alertmanager", func() {
 				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9093}]`}
 				alertManager.Labels["gardener.cloud/role"] = "monitoring"
 				alertManager.Spec.PodMetadata.Labels["gardener.cloud/role"] = "monitoring"
-				config.Spec.Route.Routes[0].Raw = []byte(`{"match_re":{"visibility":"^(all|owner)$"},"receiver":"email-kubernetes-ops"}`)
+				config.Spec.Route.Routes[0].Raw = []byte(`{"matchers": [{"name": "visibility", "matchType": "=~", "value": "all|owner"}], "receiver":"email-kubernetes-ops"}`)
 			})
 
 			It("should successfully deploy all resources", func() {
