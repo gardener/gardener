@@ -95,7 +95,7 @@
       "enabled": false
     },
     {
-      // Update only patchlevels container images of istio and cluster-autoscaler.
+      // Update only patch levels container images of istio and cluster-autoscaler.
       // Minor and major upgrades most likely require manual adaptations of the code.
       "matchDatasources": ["docker", "github-releases"],
       "matchUpdateTypes": ["major", "minor"],
