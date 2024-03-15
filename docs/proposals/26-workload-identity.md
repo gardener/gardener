@@ -19,7 +19,7 @@ reviewers:
   - [Non-Goals](#non-goals)
 - [Proposal](#proposal)
   - [API Changes](#api-changes)
-    - [Shoot API](#shoot-api)
+    - [Shoot API Related Changes](#shoot-api-related-changes)
   - [Gardener as OIDC Token Issuer](#gardener-as-oidc-token-issuer)
   - [Distribution of Workload Identity Tokens](#distribution-of-workload-identity-tokens)
   - [Use cases](#use-cases)
@@ -207,34 +207,70 @@ status:
   expirationTimestamp: 2024-02-09T16:35:02Z
 ```
 
-#### Shoot API
+#### Shoot API Related Changes
 
-Shoot API will not undergo major changes, it will keep referring to
-SecretBindings in the same namespace by their name, however the `SecretBinding`
-API will be extended in the following way to enable usage of `WorkloadIdentity`
-as infrastructure service credentials:
+Currently, shoot clusters set the infrastructure credentials via an intermediate
+resource named `SecretBinding` which is referring to the actual Kubernetes
+secret that contains the static credentials. If `SecretBinding` is extended to
+refer `WorkloadIdentity` as infrastructure credentials, from user experience
+point of view `SecretBinding` is not the best name for such resource, because it
+is no longer limited to referring only secrets as its name implies. Therefore, a
+new resource named `CredentialsBinding` in the API group
+`authentication.gardener.cloud` will be implemented. It will have all features
+of `SecretBinding`, but on top of that will be extended to refer to
+`WorkloadIdentity` resources via `.workloadIdentityRef` field.
+`CredentialsBinding` will be allowed to set exactly one of the `.secretRef` or
+`.workloadIdentityRef` fields, but not both or none of them.
 
-- `SecretBinding.secretRef` field will be made optional and mutable.
-- new optional field `SecretBinding.workloadIdentityRef` will be introduced, it
-  will refer to a `WorkloadIdentity` resource by its name and namespace. The
-  value of the field will not be immutable and will allow existing shoots to
-  change the `WorkloadIdentity` they are using to allow rotation by the Gardener
-  users.
-- validation will ensure that either `secretRef` or `workloadIdentityRef` is
-  set, but not both.
-- on update of the `workloadIdentityRef`, extension admission controller should
+In a nutshell, the changes introduced compared to `SecretBinding` are:
+
+- `CredentialsBinding.secretRef` field will be optional and mutable.
+- `CredentialsBinding.workloadIdentityRef` field will be optional and mutable.
+  It will refer to a `WorkloadIdentity` resource by its name and namespace. If
+  the namespace is unset, the namespace of the `CredentialsBinding` is
+  will be used.
+- `quotas` and `provider` fields have the semantic as their respective
+  counterparts in the `SecretBinding` API. `providers` will be made mandatory
+  field also via the API specification.
+- Static validation will ensure that exactly one of `secretRef` or
+  `workloadIdentityRef` fields is set, but not both or none of them.
+- On update of the `workloadIdentityRef`, extension admission controller should
   ensure that both the old and the new `WorkloadIdentity` are for the same cloud
-  provider account.
+  provider account, if such validation is possible for the given extension.
 
-From user experience point of view, now `SecretBinding` might not be the best
-name for this resource, as it is no longer limited to referring only secrets, as
-its name implies. In a future version of Gardener APIs, it could and would be
-nice to be renamed to `CredentialsConfig`, `CredentialsBinding`,
-`CredentialsSource` or something similar. This way it also leave open space for
-other credentials implementations in the future.
+```yaml
+apiVersion: authentication.gardener.cloud/v1alpha1
+kind: CredentialsBinding
+metadata:
+  name: my-credentials
+  namespace: garden-local
+provider:
+  type: aws # {aws,azure,gcp,...}
+secretRef: # unlike SecretBindings, this field will be optional and mutable
+  name: static
+  # namespace: "...", allow reference across namespaces
+workloadIdentityRef:
+  name: banana-testing
+  # namespace: "...", allow reference across namespaces
+quotas: []
+# - name: quota-1
+# # namespace: garden-quoatas
+```
 
-Features associated with the SecretBinding like the quotas will be extended to
-also cover clusters using WorkloadIdentity for authentication.
+Shoot API will be extended with new field `.spec.credentialsBindingName` which
+value will be the name of a `CredentialsBinding` resource from the namespace of
+the shoot resource. The shoot field `.spec.secretBindingName` and the
+`SecretBinding` API will be deprecated in favour of `CredentialsBinding`, and
+eventually removed in a future version of Gardener. A static validation will
+ensure exactly one of the fields `.spec.secretBindingName` and
+`.spec.credentialsBindingName` is set. `secretBindingName` will be made mutable
+to allow already existing shoot clusters to migrate to credentials binding.
+Shoots will be able to use workload identity as infrastructure credentials only
+via the `CredentialsBinding` resource.
+
+Features associated with the SecretBinding like the
+[shoot quotas](../concepts/apiserver.md#shoot-quotas) will be extended to also
+cover clusters using WorkloadIdentity for authentication.
 
 While the infrastructure credentials for the shoot cluster are the main driver
 behind this GEP, various extensions can benefit of this feature as well. For
