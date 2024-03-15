@@ -79,6 +79,14 @@ const (
 	// beta: v1.89.0
 	// GA: v1.90.0
 	UseGardenerNodeAgent featuregate.Feature = "UseGardenerNodeAgent"
+
+	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
+	// nodes.
+	// owner: @timuthy @benedictweis
+	// alpha: v1.91.0
+	// beta: tbd
+	// GA: tbd
+	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -115,6 +123,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	APIServerFastRollout:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseGardenerNodeAgent:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
