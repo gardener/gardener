@@ -97,7 +97,7 @@ the credentials of Gardener users.
 - Register Gardener as trusted identity in the shoot clusters.
 - The tokens to be usable for authentication with the Gardener API.
 - Compatibility with gardenctl integration with cloud provider CLIs. JSON Web
-  Tokens will not be drop-in replacement of the static credentils, therefore
+  Tokens will not be drop-in replacement of the static credentials, therefore
   gardenctl and other tools will have to adapt to the JWTs as infrastructure
   credentials.
 - OIDC compliance - just as Kubernetes, Gardener goal is not to have full OIDC
