@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"strings"
 
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
@@ -390,9 +391,22 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		for _, ns := range namespaceList.Items {
 			if targetNamespace, ok := ns.Annotations["alpha.istio-ingress.gardener.cloud/migrate-to"]; ok && targetNamespace != "" {
 				if gatewayValues, ok := namespaceToGatewayValues[ns.Name]; ok {
+					// Labels need to be adjusted to contain the correct zone => copy the source labels
+					gatewayLabels := utils.MergeStringMaps(gatewayValues.Labels, map[string]string{})
 					var zone *string
 					if len(gatewayValues.Zones) == 1 {
 						zone = ptr.To(gatewayValues.Zones[0])
+						// The expected migration is from <region>-<zone> to <zone>
+						if lastSeparator := strings.LastIndex(*zone, "-"); lastSeparator >= 0 {
+							newZone := (*zone)[lastSeparator+1:]
+							// Unfortunately, ordinary istio ingress gateways (first case) use different labels than exposure classes (second case)
+							if value, ok := gatewayLabels[istio.DefaultZoneKey]; ok {
+								gatewayLabels[istio.DefaultZoneKey] = strings.ReplaceAll(value, "--zone--"+*zone, "--zone--"+newZone)
+							} else if value, ok := gatewayLabels[v1beta1constants.GardenRole]; ok {
+								gatewayLabels[v1beta1constants.GardenRole] = strings.ReplaceAll(value, "--zone--"+*zone, "--zone--"+newZone)
+							}
+							zone = &newZone
+						}
 					}
 					if err := sharedcomponent.AddIstioIngressGateway(
 						ctx,
@@ -400,7 +414,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 						istioDeployer,
 						targetNamespace,
 						gatewayValues.Annotations,
-						gatewayValues.Labels,
+						gatewayLabels,
 						gatewayValues.ExternalTrafficPolicy,
 						nil,
 						zone,
