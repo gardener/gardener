@@ -5,7 +5,7 @@ go 1.22.1
 // This is a separate go module to decouple the gardener codebase and production binaries from dependencies that are
 // only needed to build the logcheck tool
 require (
-	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
+	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f
 	// this has to be kept in sync with the used golangci-lint version
 	// use go version -m hack/tools/bin/golangci-lint to detect the dependency versions
 	golang.org/x/tools v0.18.0
