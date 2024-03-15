@@ -58,9 +58,15 @@
   "packageRules": [
     {
       // Group golang updates in one PR.
-      "groupName": "Update golang",
+      "groupName": "golang",
       "matchDatasources": ["docker", "go-version"],
       "matchPackagePatterns": ["golang"],
+    },
+    {
+      // Group istio image updates in one PR.
+      "groupName": "istio images",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
     },
     {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
@@ -89,15 +95,39 @@
       "enabled": false
     },
     {
-      // Update only patchlevels container images of istio.
+      // Update only patchlevels container images of istio and cluster-autoscaler.
       // Minor and major upgrades most likely require manual adaptations of the code.
       "matchDatasources": ["docker", "github-releases"],
       "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["imagevector/**"],
       "matchPackagePatterns": [
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/gardener\/autoscaler\/cluster-autoscaler",
         "gardener\/autoscaler",
         "gcr\\.io\/istio-release\/.+",
-        "istio\/istio"
+      ],
+      "enabled": false
+    },
+    {
+      // Do not use docker for images from gardener registry except those which do not work with github-releases.
+      "matchDatasources": ["docker"],
+      "matchFileNames": ["imagevector/**"],
+      "matchPackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/.+"
+      ],
+      "excludePackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+",
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubesphere\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Do not use github-releases for external dependencies except those we copy.
+      "matchDatasources": ["github-releases"],
+      "matchFileNames": ["imagevector/**"],
+      "excludePackagePatterns": [
+        "gardener\/.+",
+        "credativ\/.+",
+        "envoyproxy\/.+"
       ],
       "enabled": false
     },
