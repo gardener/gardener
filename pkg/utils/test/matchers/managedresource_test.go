@@ -112,7 +112,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 						Namespace: namespace,
 					},
 					Data: map[string][]byte{
-						fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(testruntime.Serialize(configMap)),
+						fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(testruntime.Serialize(configMap, fakeClient.Scheme())),
 					},
 				}
 				managedResourceSecret2 = &corev1.Secret{
@@ -121,7 +121,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 						Namespace: namespace,
 					},
 					Data: map[string][]byte{
-						fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(testruntime.Serialize(deployment)),
+						fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(testruntime.Serialize(deployment, fakeClient.Scheme())),
 					},
 				}
 				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{

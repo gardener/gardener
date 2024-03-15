@@ -137,7 +137,7 @@ func NewManagedResourceObjectMatcher(cl client.Client) func(client.Object) types
 		return &managedResourceDataMatcher{
 			cl:                       cl,
 			expectedObj:              obj,
-			expectedObjectSerialized: testruntime.Serialize(obj),
+			expectedObjectSerialized: testruntime.Serialize(obj, cl.Scheme()),
 		}
 	}
 }
