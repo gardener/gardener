@@ -6,7 +6,7 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
-    observability.gardener.cloud/app: "prometheus"
+    observability.gardener.cloud/app: "prometheus-shoot"
 spec:
   targetRef:
     apiVersion: apps/v1
