@@ -35,7 +35,8 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			Name:      p.name(),
 			Namespace: p.namespace,
 			Labels: utils.MergeStringMaps(p.getLabels(), map[string]string{
-				v1beta1constants.LabelObservabilityApplication: p.values.Name}),
+				v1beta1constants.LabelObservabilityApplication: p.name(),
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{

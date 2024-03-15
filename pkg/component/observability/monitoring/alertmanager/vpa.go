@@ -34,7 +34,8 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			Name:      a.name(),
 			Namespace: a.namespace,
 			Labels: utils.MergeStringMaps(a.getLabels(), map[string]string{
-				v1beta1constants.LabelObservabilityApplication: a.values.Name}),
+				v1beta1constants.LabelObservabilityApplication: a.name(),
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
