@@ -45,6 +45,7 @@ DEV_SETUP_WITH_WEBHOOKS                    := false
 IPFAMILY                                   := ipv4
 PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
+DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
 PRINT_HELP ?=
 
 ifneq ($(SEED_NAME),provider-extensions)
@@ -285,10 +286,18 @@ kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-ha-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
-kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) --path-cluster-values $(CLUSTER_VALUES) $(ADDITIONAL_PARAMETERS)
+kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+	./hack/kind-up.sh \
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG) \
+		--path-cluster-values $(CLUSTER_VALUES) \
+		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
+		$(ADDITIONAL_PARAMETERS)
 kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-multi-zone-down: $(KIND)
-	./hack/kind-down.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) $(ADDITIONAL_PARAMETERS)
+	./hack/kind-down.sh \
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG) \
+		$(ADDITIONAL_PARAMETERS)
 
 kind-extensions-up: $(KIND) $(KUBECTL)
 	REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
@@ -297,11 +306,17 @@ kind-extensions-down: $(KIND)
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
+kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+	./hack/kind-up.sh \
+		--cluster-name gardener-operator-local \
+		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig \
+		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
+		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
+	./hack/kind-down.sh \
+		--cluster-name gardener-operator-local \
+		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator
 
