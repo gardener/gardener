@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -102,15 +101,6 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		Describe("Kubelet defaulting", func() {
-			var (
-				defaultKubeReservedMemory = resource.MustParse("1Gi")
-				defaultKubeReservedCPU    = resource.MustParse("80m")
-				defaultKubeReservedPID    = resource.MustParse("20k")
-				kubeReservedMemory        = resource.MustParse("2Gi")
-				kubeReservedCPU           = resource.MustParse("20m")
-				kubeReservedPID           = resource.MustParse("10k")
-			)
-
 			BeforeEach(func() {
 				obj.Spec.Kubernetes.Kubelet = nil
 			})
@@ -218,33 +208,6 @@ var _ = Describe("Shoot defaulting", func() {
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
-			})
-
-			It("should default the kubeReserved field", func() {
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-					CPU:    &defaultKubeReservedCPU,
-					Memory: &defaultKubeReservedMemory,
-					PID:    &defaultKubeReservedPID,
-				})))
-			})
-
-			It("should not overwrite already set values for kubeReserved field", func() {
-				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-					KubeReserved: &KubeletConfigReserved{
-						CPU:    &kubeReservedCPU,
-						Memory: &kubeReservedMemory,
-						PID:    &kubeReservedPID,
-					},
-				}
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-					CPU:    &kubeReservedCPU,
-					Memory: &kubeReservedMemory,
-					PID:    &kubeReservedPID,
-				})))
 			})
 		})
 	})
