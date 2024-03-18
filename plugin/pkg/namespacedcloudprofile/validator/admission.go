@@ -81,7 +81,7 @@ func (v *ValidateNamespacedCloudProfile) ValidateInitialization() error {
 
 var _ admission.ValidationInterface = &ValidateNamespacedCloudProfile{}
 
-// Validate validates the NamespacedCloudProfile
+// Validate validates the NamespacedCloudProfile.
 func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {

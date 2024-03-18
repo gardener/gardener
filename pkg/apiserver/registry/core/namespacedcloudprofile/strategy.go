@@ -116,5 +116,5 @@ type namespacedCloudProfileStatusStrategy struct {
 	namespacedCloudProfileStrategy
 }
 
-// StatusStrategy defines the storage strategy for the status subresource of BackupBuckets.
+// StatusStrategy defines the storage strategy for the status subresource of NamespacedCloudProfiles.
 var StatusStrategy = namespacedCloudProfileStatusStrategy{Strategy}
