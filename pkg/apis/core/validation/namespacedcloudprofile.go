@@ -44,7 +44,7 @@ func ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile *core.Namespace
 	return allErrs
 }
 
-// ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a CloudProfile
+// ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a CloudProfile.
 func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
