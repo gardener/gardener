@@ -201,6 +201,7 @@ func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata
 var (
 	etcSystemdSystem                   = path.Join("/", "etc", "systemd", "system")
 	defaultFilePermissions os.FileMode = 0600
+	defaultDirPermissions  os.FileMode = 0755
 )
 
 func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
@@ -218,7 +219,7 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 
 		switch {
 		case file.Content.Inline != nil:
-			if err := r.FS.MkdirAll(filepath.Dir(file.Path), fs.ModeDir); err != nil {
+			if err := r.FS.MkdirAll(filepath.Dir(file.Path), defaultDirPermissions); err != nil {
 				return fmt.Errorf("unable to create directory %q: %w", file.Path, err)
 			}
 
@@ -293,7 +294,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 				return fmt.Errorf("unable to delete systemd drop-in folder for unit %q: %w", unit.Name, err)
 			}
 		} else {
-			if err := r.FS.MkdirAll(dropInDirectory, fs.ModeDir); err != nil {
+			if err := r.FS.MkdirAll(dropInDirectory, defaultDirPermissions); err != nil {
 				return fmt.Errorf("unable to create drop-in directory %q for unit %q: %w", dropInDirectory, unit.Name, err)
 			}
 
