@@ -25,6 +25,13 @@ Gardener does not evaluate or understand this config, but extension controllers 
 
 Please see [this](../../example/30-cloudprofile.yaml) example manifest and consult the documentation of your provider extension controller to get information about its `providerConfig`.
 
+### `NamespacedCloudProfile`s
+
+In addition to `CloudProfile`s, `NamespacedCloudProfile`s exist to enable project level `CloudProfile`s. 
+Please view [GEP-25](../proposals/25-namespaced-cloud-profiles.md) for additional information.
+This feature is currently under development and not ready for productive use.
+At the moment, only the necessary APIs and validations exist to allow for extension to adapt to the new `NamespacedCloudProfile` resource.
+
 ## `InternalSecret`s
 
 End-users can read and/or write `Secret`s in their project namespaces in the garden cluster. This prevents Gardener components from storing such "Gardener-internal" secrets in the respective project namespace.
