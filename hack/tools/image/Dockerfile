@@ -1,6 +1,7 @@
 # base
 ARG image
 FROM ${image} AS base
+ENV GOTOOLCHAIN=auto
 RUN echo "Installing Packages ..." \
 		&& apt-get update \
 		&& apt-get install -y --no-install-recommends \
@@ -13,7 +14,6 @@ RUN echo "Installing Packages ..." \
 FROM base as builder
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=$GOPROXY
-ENV GOTOOLCHAIN=auto
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 RUN make create-tools-bin
