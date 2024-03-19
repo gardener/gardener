@@ -80,8 +80,7 @@ type NamespacedCloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,opt,name=volumeTypes"`
-	// A pointer to the NamespacedCloudProfiles parent CloudProfile.
-	// +optional
+	// A pointer to the NamespacedCloudProfile's parent CloudProfile.
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,10,req,name=parent"`
 }
 

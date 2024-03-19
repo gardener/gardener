@@ -1498,10 +1498,10 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 func validateCloudProfile(cloudProfileReference *core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !features.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) || cloudProfileReference == nil {
+	if cloudProfileReference == nil {
 		return allErrs
 	}
-	if cloudProfileReference.Kind != "CloudProfile" && cloudProfileReference.Kind != "NamespacedCloudProfile" {
+	if !sets.New("CloudProfile", "NamespacedCloudProfile").Has(cloudProfileReference.Kind) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), cloudProfileReference.Kind, "cloudProfile kind must be CloudProfile or NamespacedCloudProfile"))
 	}
 	if len(cloudProfileReference.Name) == 0 {

@@ -53,7 +53,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 	return allErrs
 }
 
-// ValidateNamespacedCloudProfileSpec validates the specification of a CloudProfile object.
+// ValidateNamespacedCloudProfileSpec validates the specification of a NamespacedCloudProfile object.
 func ValidateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -91,7 +91,7 @@ func validateParent(parent core.CloudProfileReference, fldPath *field.Path) fiel
 	allErrs := field.ErrorList{}
 
 	if parent.Kind != "CloudProfile" {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), parent.Kind, "kind must be CloudProfile"))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), parent.Kind, []string{"NamespacedCloudProfile"}))
 	}
 	if len(parent.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a parent name"))
