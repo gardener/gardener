@@ -26,9 +26,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
 | IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
-| MachineControllerManagerDeployment | `false` | `Alpha` | `1.73` |        |
-| MachineControllerManagerDeployment | `true`  | `Beta`  | `1.81` | `1.81` |
-| MachineControllerManagerDeployment | `true`  | `GA`    | `1.82` |        |
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | APIServerFastRollout               | `true`  | `Beta`  | `1.82` | `1.89` |
@@ -147,6 +144,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerlessShoots                             | `true`  | `Beta`       | `1.79` | `1.85` |
 | WorkerlessShoots                             | `true`  | `GA`         | `1.86` |        |
 | WorkerlessShoots                             | `true`  | `Removed`    | `1.88` |        |
+| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73` |        |
+| MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81` | `1.81` |
+| MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82` | `1.91` |
+| MachineControllerManagerDeployment           | `true`  | `Removed`    | `1.92` |        |
 
 ## Using a Feature
 
@@ -192,7 +193,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | CoreDNSQueryRewriting              | `gardenlet`                       | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md).                                                                                        |
 | IPv6SingleStack                    | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
 | MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
-| MachineControllerManagerDeployment | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | APIServerFastRollout               | `gardenlet`                       | Enables fast rollouts for Shoot kube-apiservers on the given Seed. When enabled, `maxSurge` for Shoot kube-apiserver deployments is set to 100%.                                                                                                                                                                                                                                   |
 | UseGardenerNodeAgent               | `gardenlet`                       | Enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker nodes.                                                                                                                                                                                                                                                                                 |

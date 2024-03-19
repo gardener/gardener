@@ -65,17 +65,6 @@ const (
 	// beta: v1.91.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
-	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the
-	// machine-controller-manager. If enabled, all registered provider extensions must support injecting the
-	// provider-specific MCM provider sidecar container into the deployment via the `controlplane` webhook.
-	// owner: @rfranzke @JensAc @mreiger
-	// alpha: v1.73.0
-	// beta: v1.81.0
-	// GA: v1.82.0
-	// TODO(scheererj): Do not remove this feature gate before v1.90 to give extensions enough time to adopt v1.83.
-	// Otherwise, extensions might end up believing they need to manage MCM again when the feature gate is removed.
-	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
-
 	// APIServerFastRollout enables fast rollouts for Shoot kube-apiservers on the given Seed.
 	// When enabled, maxSurge for Shoot kube-apiserver deployments is set to 100%.
 	// owner: @oliver-goetz
@@ -117,16 +106,15 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:                 {Default: true, PreRelease: featuregate.Beta},
-	MachineControllerManagerDeployment: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	APIServerFastRollout:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	UseGardenerNodeAgent:               {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	HVPA:                            {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
+	APIServerFastRollout:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	UseGardenerNodeAgent:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
