@@ -116,10 +116,10 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 			ServiceName: v1beta1constants.DeploymentNameKubeAPIServer,
 			Host:        b.ComputeKubeAPIServerHost(),
 			IstioIngressGatewayLabelsFunc: func() map[string]string {
-				return b.IstioLabels()
+				return b.DefaultIstioLabels()
 			},
 			IstioIngressGatewayNamespaceFunc: func() string {
-				return b.IstioNamespace()
+				return b.DefaultIstioNamespace()
 			},
 		})
 }

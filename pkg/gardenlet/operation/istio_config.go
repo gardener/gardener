@@ -33,7 +33,12 @@ func (o *Operation) IstioServiceName() string {
 
 // IstioNamespace is the currently used namespace of the istio ingress gateway, which is responsible for the shoot cluster.
 func (o *Operation) IstioNamespace() string {
-	return o.addZonePinningIfRequired(*o.sniConfig().Ingress.Namespace)
+	return o.addZonePinningIfRequired(o.DefaultIstioNamespace())
+}
+
+// DefaultIstioNamespace is the default namespace of the istio ingress gateway disregarding zonal affinities of the shoot cluster.
+func (o *Operation) DefaultIstioNamespace() string {
+	return *o.sniConfig().Ingress.Namespace
 }
 
 // IstioLoadBalancerAnnotations contain the annotation to be used for the istio ingress service load balancer.
@@ -53,7 +58,15 @@ func (o *Operation) IstioLoadBalancerAnnotations() map[string]string {
 
 // IstioLabels contain the labels to be used for the istio ingress gateway entities.
 func (o *Operation) IstioLabels() map[string]string {
-	zone := o.singleZoneIfPinned()
+	return o.istioLabels(o.singleZoneIfPinned())
+}
+
+// DefaultIstioLabels contain the labels to be used for the default istio ingress gateway entities disregarding zonal affinities.
+func (o *Operation) DefaultIstioLabels() map[string]string {
+	return o.istioLabels(nil)
+}
+
+func (o *Operation) istioLabels(zone *string) map[string]string {
 	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
 		return sharedcomponent.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
 	}
