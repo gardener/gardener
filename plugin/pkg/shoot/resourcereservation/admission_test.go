@@ -43,13 +43,17 @@ var _ = Describe("resourcereservation", func() {
 	})
 
 	Describe("#Handles", func() {
-		It("should only handle CREATE and UPDATE operation", func() {
-			plugin := New(true)
-			Expect(plugin.Handles(admission.Create)).To(BeTrue())
-			Expect(plugin.Handles(admission.Update)).To(BeTrue())
-			Expect(plugin.Handles(admission.Connect)).NotTo(BeTrue())
-			Expect(plugin.Handles(admission.Delete)).NotTo(BeTrue())
-		})
+		DescribeTable("should only handle CREATE and UPDATE operation",
+			func(typeDependentReservations bool) {
+				plugin := New(typeDependentReservations)
+				Expect(plugin.Handles(admission.Create)).To(BeTrue())
+				Expect(plugin.Handles(admission.Update)).To(BeTrue())
+				Expect(plugin.Handles(admission.Connect)).NotTo(BeTrue())
+				Expect(plugin.Handles(admission.Delete)).NotTo(BeTrue())
+			},
+			Entry("for disabled type dependent reservations", false),
+			Entry("for enabled type dependent reservations", true),
+		)
 	})
 
 	Describe("#Admit", func() {
@@ -61,11 +65,9 @@ var _ = Describe("resourcereservation", func() {
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
 			cloudProfile        gardencorev1beta1.CloudProfile
 
-			shoot *core.Shoot
-			// oldShoot            core.Shoot
+			shoot           *core.Shoot
 			namespace       string = "test"
 			machineTypeName string = "n1-standard-2"
-			volumeTypeName  string = "pd-standard"
 
 			cloudProfileBase = gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
@@ -78,12 +80,6 @@ var _ = Describe("resourcereservation", func() {
 							CPU:    resource.MustParse("2"),
 							GPU:    resource.MustParse("0"),
 							Memory: resource.MustParse("5Gi"),
-						},
-					},
-					VolumeTypes: []gardencorev1beta1.VolumeType{
-						{
-							Name:  volumeTypeName,
-							Class: "standard",
 						},
 					},
 				},
@@ -119,28 +115,100 @@ var _ = Describe("resourcereservation", func() {
 			userInfo = &user.DefaultInfo{Name: "foo"}
 			shoot = shootBase.DeepCopy()
 			cloudProfile = *cloudProfileBase.DeepCopy()
+		})
 
-			plugin = New(true).(*ResourceReservation)
+		setupProfile := func(typeDependentReservations bool) {
+			plugin = New(typeDependentReservations).(*ResourceReservation)
 			plugin.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			plugin.SetCoreInformerFactory(coreInformerFactory)
 			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-		})
+		}
 
-		Context("inject resource reservation", func() {
-			It("should inject resource reservations", func() {
-				expectedShoot := shoot.DeepCopy()
-				worker := &expectedShoot.Spec.Provider.Workers[0]
-				cpu := resource.NewMilliQuantity(70, resource.BinarySI)
-				memory := resource.NewQuantity(1288490188, resource.BinarySI)
-				pid := resource.MustParse("20k")
-				worker.Kubernetes = &core.WorkerKubernetes{
+		Context("with type dependent resource reservations", func() {
+			BeforeEach(func() {
+				setupProfile(true)
+			})
+
+			Context("inject resource reservation", func() {
+				It("should inject resource reservations", func() {
+					expectedShoot := shoot.DeepCopy()
+					worker := &expectedShoot.Spec.Provider.Workers[0]
+					cpu := resource.NewMilliQuantity(70, resource.BinarySI)
+					memory := resource.NewQuantity(1288490188, resource.BinarySI)
+					pid := resource.MustParse("20k")
+					worker.Kubernetes = &core.WorkerKubernetes{
+						Kubelet: &core.KubeletConfig{
+							KubeReserved: &core.KubeletConfigReserved{
+								CPU:    cpu,
+								Memory: memory,
+								PID:    &pid,
+							},
+						},
+					}
+
+					attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+					Expect(shoot).To(Equal(expectedShoot))
+				})
+			})
+
+			It("should not overwrite worker pool resource reservations", func() {
+				cpu := resource.MustParse("42m")
+				memory := resource.MustParse("512Mi")
+				pid := resource.MustParse("31k")
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{
 					Kubelet: &core.KubeletConfig{
 						KubeReserved: &core.KubeletConfigReserved{
-							CPU:    cpu,
-							Memory: memory,
+							CPU:    &cpu,
+							Memory: &memory,
 							PID:    &pid,
 						},
+					},
+				}
+
+				expectedShoot := shoot.DeepCopy()
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot).To(Equal(expectedShoot))
+			})
+
+			It("should skip shoots with shoot global resource reservations", func() {
+				cpu := resource.MustParse("42m")
+				memory := resource.MustParse("512Mi")
+				pid := resource.MustParse("31k")
+				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
+					KubeReserved: &core.KubeletConfigReserved{
+						CPU:    &cpu,
+						Memory: &memory,
+						PID:    &pid,
+					},
+				}
+
+				expectedShoot := shoot.DeepCopy()
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+				Expect(shoot).To(Equal(expectedShoot))
+			})
+		})
+
+		Context("with static resource reservations", func() {
+			BeforeEach(func() {
+				setupProfile(false)
+			})
+
+			It("should inject default shoot global resource reservations", func() {
+				expectedShoot := shoot.DeepCopy()
+				cpu := resource.MustParse("80m")
+				memory := resource.MustParse("1Gi")
+				pid := resource.MustParse("20k")
+				expectedShoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
+					KubeReserved: &core.KubeletConfigReserved{
+						CPU:    &cpu,
+						Memory: &memory,
+						PID:    &pid,
 					},
 				}
 
