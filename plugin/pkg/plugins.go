@@ -124,6 +124,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameShootExposureClass,              // ShootExposureClass
 		PluginNameShootDNS,                        // ShootDNS
 		PluginNameShootManagedSeed,                // ShootManagedSeed
+		PluginNameShootResourceReservation,        // ShootResourceReservation
 		PluginNameShootQuotaValidator,             // ShootQuotaValidator
 		PluginNameShootValidator,                  // ShootValidator
 		PluginNameSeedValidator,                   // SeedValidator

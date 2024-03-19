@@ -44,7 +44,7 @@ var _ = Describe("resourcereservation", func() {
 
 	Describe("#Handles", func() {
 		It("should only handle CREATE and UPDATE operation", func() {
-			plugin := New()
+			plugin := New(true)
 			Expect(plugin.Handles(admission.Create)).To(BeTrue())
 			Expect(plugin.Handles(admission.Update)).To(BeTrue())
 			Expect(plugin.Handles(admission.Connect)).NotTo(BeTrue())
@@ -120,7 +120,7 @@ var _ = Describe("resourcereservation", func() {
 			shoot = shootBase.DeepCopy()
 			cloudProfile = *cloudProfileBase.DeepCopy()
 
-			plugin = New().(*ResourceReservation)
+			plugin = New(true).(*ResourceReservation)
 			plugin.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			plugin.SetCoreInformerFactory(coreInformerFactory)

@@ -42,8 +42,13 @@ const (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameShootResourceReservation, func(_ io.Reader) (admission.Interface, error) {
-		return New(), nil
+	plugins.Register(plugin.PluginNameShootResourceReservation, func(config io.Reader) (admission.Interface, error) {
+		cfg, err := LoadConfiguration(config)
+		if err != nil {
+			return nil, err
+		}
+
+		return New(cfg.TypeDependentReservations), nil
 	})
 }
 
@@ -52,6 +57,8 @@ type ResourceReservation struct {
 	*admission.Handler
 	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
 	readyFunc          admission.ReadyFunc
+
+	typeDependentReservations bool
 }
 
 var (
@@ -61,9 +68,10 @@ var (
 )
 
 // New creates a new ResourceReservation admission plugin.
-func New() admission.MutationInterface {
+func New(typeDependentReservations bool) admission.MutationInterface {
 	return &ResourceReservation{
-		Handler: admission.NewHandler(admission.Create, admission.Update),
+		Handler:                   admission.NewHandler(admission.Create, admission.Update),
+		typeDependentReservations: typeDependentReservations,
 	}
 }
 
@@ -119,6 +127,11 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 
 	// Pass if the shoot is intended to get deleted
 	if shoot.DeletionTimestamp != nil {
+		return nil
+	}
+
+	if !c.typeDependentReservations {
+		setStaticResourceReservationDefaults(shoot)
 		return nil
 	}
 
