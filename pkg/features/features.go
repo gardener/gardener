@@ -69,8 +69,6 @@ const (
 	// nodes.
 	// owner: @timuthy @benedictweis
 	// alpha: v1.91.0
-	// beta: tbd
-	// GA: tbd
 	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 )
 

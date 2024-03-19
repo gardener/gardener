@@ -113,7 +113,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		return apierrors.NewInternalError(errors.New("could not convert object to NamespacedCloudProfile"))
 	}
 
-	// Exit early if shoot spec hasn't changed
+	// Exit early if the spec hasn't changed
 	if a.GetOperation() == admission.Update {
 		old, ok := a.GetOldObject().(*gardencorev1beta1.NamespacedCloudProfile)
 		if !ok {

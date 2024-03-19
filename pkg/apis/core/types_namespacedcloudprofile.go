@@ -80,7 +80,6 @@ type NamespacedCloudProfileSpec struct {
 	// +optional
 	VolumeTypes []VolumeType
 	// A pointer to the NamespacedCloudProfiles parent CloudProfile.
-	// +optional
 	Parent CloudProfileReference
 }
 
