@@ -48,11 +48,11 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 
 	Context("without managed resource", func() {
 		It("should not find an object", func() {
-			Expect(nil).ToNot(containsObject(&corev1.Secret{}))
+			Expect(nil).NotTo(containsObject(&corev1.Secret{}))
 		})
 	})
 
-	Context("with managed resource, without secret references", func() {
+	Context("with managed resource", func() {
 		var (
 			namespace       string
 			managedResource *resourcesv1alpha1.ManagedResource
@@ -67,7 +67,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 			}
 		})
 
-		Context("With secrets references", func() {
+		Context("with secrets references", func() {
 			var (
 				ctx context.Context
 
@@ -158,7 +158,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 
 		Context("without secret references", func() {
 			It("should not find an object", func() {
-				Expect(managedResource).ToNot(containsObject(&corev1.Secret{}))
+				Expect(managedResource).NotTo(containsObject(&corev1.Secret{}))
 			})
 		})
 	})

@@ -15,6 +15,8 @@
 package matchers
 
 import (
+	"context"
+
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -135,6 +137,7 @@ func ShareSameReferenceAs(expected interface{}) types.GomegaMatcher {
 func NewManagedResourceObjectMatcher(cl client.Client) func(client.Object) types.GomegaMatcher {
 	return func(obj client.Object) types.GomegaMatcher {
 		return &managedResourceDataMatcher{
+			ctx:                      context.Background(),
 			cl:                       cl,
 			expectedObj:              obj,
 			expectedObjectSerialized: testruntime.Serialize(obj, cl.Scheme()),

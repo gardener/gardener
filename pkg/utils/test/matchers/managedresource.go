@@ -29,6 +29,7 @@ import (
 )
 
 type managedResourceDataMatcher struct {
+	ctx         context.Context
 	cl          client.Client
 	expectedObj client.Object
 
@@ -37,14 +38,14 @@ type managedResourceDataMatcher struct {
 	secretNames              []string
 }
 
-func (m *managedResourceDataMatcher) FailureMessage(_ interface{}) (message string) {
+func (m *managedResourceDataMatcher) FailureMessage(_ interface{}) string {
 	if m.actualObjectSerialized != "" {
 		return format.Message(m.actualObjectSerialized, "to equal", m.expectedObjectSerialized)
 	}
 	return format.Message(m.expectedObjectSerialized, fmt.Sprintf("to be found in managed resource secrets %v", m.secretNames))
 }
 
-func (m *managedResourceDataMatcher) NegatedFailureMessage(_ interface{}) (message string) {
+func (m *managedResourceDataMatcher) NegatedFailureMessage(_ interface{}) string {
 	return format.Message(m.expectedObjectSerialized, fmt.Sprintf("not to be found in managed resource secrets %v", m.secretNames))
 }
 
@@ -60,14 +61,14 @@ func (m *managedResourceDataMatcher) Match(actual interface{}) (bool, error) {
 
 	gvk, err := apiutil.GVKForObject(m.expectedObj, m.cl.Scheme())
 	if err != nil {
-		return false, fmt.Errorf("error when extracting object kind: %s", err)
+		return false, fmt.Errorf("error when extracting object kind: %w", err)
 	}
 
 	dataKey := fmt.Sprintf(
 		"%s__%s__%s.yaml",
 		strings.ToLower(gvk.Kind),
 		m.expectedObj.GetNamespace(),
-		strings.Replace(m.expectedObj.GetName(), ":", "_", -1),
+		strings.ReplaceAll(m.expectedObj.GetName(), ":", "_"),
 	)
 
 	for _, secretRef := range managedResource.Spec.SecretRefs {
@@ -78,8 +79,8 @@ func (m *managedResourceDataMatcher) Match(actual interface{}) (bool, error) {
 			},
 		}
 
-		if err := m.cl.Get(context.Background(), client.ObjectKeyFromObject(secret), secret); err != nil {
-			return false, fmt.Errorf("error when retrieving managed resource secret: %s", err)
+		if err := m.cl.Get(m.ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return false, fmt.Errorf("error when retrieving managed resource secret: %w", err)
 		}
 
 		m.secretNames = append(m.secretNames, secretRef.Name)
