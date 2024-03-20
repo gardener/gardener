@@ -66,9 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	var restartGardenerNodeAgent bool
 	for _, serviceName := range strings.Split(services, ",") {
+		if !strings.HasSuffix(serviceName, ".service") {
+			serviceName = serviceName + ".service"
+		}
 		// If the gardener-node-agent itself should be restarted, we have to first remove the annotation from the node.
 		// Otherwise, the annotation is never removed and it restarts itself indefinitely.
-		if strings.HasPrefix(serviceName, "gardener-node-agent") {
+		if serviceName == nodeagentv1alpha1.UnitName {
 			restartGardenerNodeAgent = true
 			continue
 		}

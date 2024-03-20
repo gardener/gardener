@@ -91,7 +91,7 @@ var _ = Describe("Node controller tests", func() {
 
 	It("should restart the systemd services specified in the restart annotation", func() {
 		By("Adding restart annotation to node")
-		svc1, svc2, svc3 := "gardener-node-agent", "foo", "bar"
+		svc1, svc2, svc3 := "gardener-node-agent", "foo.service", "bar"
 		metav1.SetMetaDataAnnotation(&node.ObjectMeta, "worker.gardener.cloud/restart-systemd-services", svc1+","+svc2+","+svc3)
 		Expect(testClient.Update(ctx, node)).To(Succeed())
 
@@ -106,7 +106,7 @@ var _ = Describe("Node controller tests", func() {
 			return fakeDBus.Actions
 		}).Should(ConsistOf(
 			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc2}},
-			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc3}},
+			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc3 + ".service"}},
 			fake.SystemdAction{Action: fake.ActionRestart, UnitNames: []string{svc1 + ".service"}},
 		))
 	})
