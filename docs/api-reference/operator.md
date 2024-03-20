@@ -1156,19 +1156,6 @@ string
 <tbody>
 <tr>
 <td>
-<code>domain</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
-TODO(scheererj): Drop this after v1.90 has been released.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>domains</code></br>
 <em>
 []string

@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
-	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -99,16 +98,6 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		fldPath           = field.NewPath("spec", "runtimeCluster")
 	)
 
-	// Check if old Domain field was properly transferred to Domains field.
-	if oldRuntimeCluster.Ingress.Domain != nil && len(newRuntimeCluster.Ingress.Domains) > 0 && *oldRuntimeCluster.Ingress.Domain != newRuntimeCluster.Ingress.Domains[0] {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domains").Index(0), newRuntimeCluster.Ingress.Domains[0], "first entry must be the same as previously used in .spec.runtimeCluster.ingress.domain"))
-	}
-
-	// Disallow changing from 'domains' to 'domain'.
-	if len(oldRuntimeCluster.Ingress.Domains) > 0 && oldRuntimeCluster.Ingress.Domain == nil && newRuntimeCluster.Ingress.Domain != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ingress", "domain"), "switching from .spec.runtimeCluster.ingress.domains to .spec.runtimeCluster.ingress.domain is not allowed"))
-	}
-
 	// First domain is immutable.
 	// Note: We can consider supporting this scenario in the future.
 	if len(oldRuntimeCluster.Ingress.Domains) > 0 && len(newRuntimeCluster.Ingress.Domains) > 0 {
@@ -158,23 +147,11 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
-	// TODO(scheererj): Turn this into a native CRD validation as soon as the `ingress.domain` field was dropped (planned after v1.90)
-	if len(runtimeCluster.Ingress.Domains) == 0 && runtimeCluster.Ingress.Domain == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("ingress").Child("domains"), "at least one domain is required"))
-	}
-
-	if runtimeCluster.Ingress.Domain != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*runtimeCluster.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
-	}
-
 	domains := sets.New[string]()
 	for i, domain := range runtimeCluster.Ingress.Domains {
 		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain, fldPath.Child("ingress", "domains").Index(i))...)
 		if domains.Has(domain) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
-		}
-		if domain == ptr.Deref(runtimeCluster.Ingress.Domain, "") {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domain"), domain))
 		}
 		domains.Insert(domain)
 	}

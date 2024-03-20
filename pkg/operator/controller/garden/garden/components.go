@@ -145,13 +145,6 @@ func (r *Reconciler) instantiateComponents(
 		wildcardCertSecretName = ptr.To(wildcardCertSecret.GetName())
 	}
 
-	var ingressDomain string
-	if domains := garden.Spec.RuntimeCluster.Ingress.Domains; len(domains) > 0 {
-		ingressDomain = domains[0]
-	} else {
-		ingressDomain = *garden.Spec.RuntimeCluster.Ingress.Domain
-	}
-
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
@@ -265,7 +258,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(secretsManager, ingressDomain, wildcardCertSecretName)
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -273,7 +266,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, ingressDomain, wildcardCertSecretName)
+	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -809,12 +802,8 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 	}
 
 	var wildcardDomains []string
-	if domains := garden.Spec.RuntimeCluster.Ingress.Domains; len(domains) > 0 {
-		for _, domain := range garden.Spec.RuntimeCluster.Ingress.Domains {
-			wildcardDomains = append(wildcardDomains, "*."+domain)
-		}
-	} else {
-		wildcardDomains = []string{"*." + *garden.Spec.RuntimeCluster.Ingress.Domain}
+	for _, domain := range garden.Spec.RuntimeCluster.Ingress.Domains {
+		wildcardDomains = append(wildcardDomains, "*."+domain)
 	}
 
 	return sharedcomponent.NewNginxIngress(

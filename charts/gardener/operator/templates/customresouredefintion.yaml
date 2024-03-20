@@ -103,17 +103,13 @@ spec:
                         required:
                         - kind
                         type: object
-                      domain:
-                        description: |-
-                          Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
-                          TODO(scheererj): Drop this after v1.90 has been released.
-                        type: string
                       domains:
                         description: |-
                           Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
                           to construct ingress URLs for system applications running in runtime cluster.
                         items:
                           type: string
+                        minItems: 1
                         type: array
                     required:
                     - controller
