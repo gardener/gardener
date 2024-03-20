@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apiserver/pkg/admission"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -98,7 +99,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	if a.GetKind().GroupKind() != gardencorev1beta1.Kind("NamespacedCloudProfile") {
+	if a.GetKind().GroupKind() != gardencore.Kind("NamespacedCloudProfile") {
 		return nil
 	}
 
@@ -106,16 +107,16 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		return nil
 	}
 
-	var oldNamespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{}
+	var oldNamespacedCloudProfile = &gardencore.NamespacedCloudProfile{}
 
-	namespacedCloudProfile, convertIsSuccessful := a.GetObject().(*gardencorev1beta1.NamespacedCloudProfile)
+	namespacedCloudProfile, convertIsSuccessful := a.GetObject().(*gardencore.NamespacedCloudProfile)
 	if !convertIsSuccessful {
 		return apierrors.NewInternalError(errors.New("could not convert object to NamespacedCloudProfile"))
 	}
 
 	// Exit early if the spec hasn't changed
 	if a.GetOperation() == admission.Update {
-		old, ok := a.GetOldObject().(*gardencorev1beta1.NamespacedCloudProfile)
+		old, ok := a.GetOldObject().(*gardencore.NamespacedCloudProfile)
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not convert old resource into NamespacedCloudProfile object"))
 		}
@@ -148,8 +149,8 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 
 type validationContext struct {
 	parentCloudProfile        *gardencorev1beta1.CloudProfile
-	namespacedCloudProfile    *gardencorev1beta1.NamespacedCloudProfile
-	oldNamespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+	namespacedCloudProfile    *gardencore.NamespacedCloudProfile
+	oldNamespacedCloudProfile *gardencore.NamespacedCloudProfile
 }
 
 func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
@@ -174,7 +175,7 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 	return nil
 }
 
-func isMachineTypePresentInNamespacedCloudProfile(machineType gardencorev1beta1.MachineType, cloudProfile *gardencorev1beta1.NamespacedCloudProfile) bool {
+func isMachineTypePresentInNamespacedCloudProfile(machineType gardencore.MachineType, cloudProfile *gardencore.NamespacedCloudProfile) bool {
 	for _, cloudProfileMachineType := range cloudProfile.Spec.MachineTypes {
 		if cloudProfileMachineType.Name == machineType.Name {
 			return true
