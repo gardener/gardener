@@ -2,17 +2,6 @@ run:
   concurrency: 4
   deadline: 10m
 
-  skip-dirs:
-  - pkg/client/core
-  - pkg/client/extensions
-  - pkg/client/seedmanagement
-  - pkg/client/settings
-
-  skip-files:
-  - ".*\\.pb\\.go$"
-  - "zz_generated\\..*\\.go$"
-  - "openapi_generated\\.go$"
-
 linters:
   enable:
   - revive
@@ -47,6 +36,17 @@ issues:
   - linters:
     - staticcheck
     text: "SA1019:" # Excludes messages where deprecated variables are used
+
+  exclude-dirs:
+  - pkg/client/core
+  - pkg/client/extensions
+  - pkg/client/seedmanagement
+  - pkg/client/settings
+
+  exclude-files:
+  - ".*\\.pb\\.go$"
+  - "zz_generated\\..*\\.go$"
+  - "openapi_generated\\.go$"
 
 linters-settings:
   loggercheck:
