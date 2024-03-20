@@ -19,13 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -37,130 +38,186 @@ import (
 
 var _ = Describe("ManagedResource Object Matcher", func() {
 	var (
-		fakeClient     client.Client
-		containsObject func(client.Object) types.GomegaMatcher
+		ctx        context.Context
+		scheme     *runtime.Scheme
+		fakeClient client.Client
+
+		resourceName, resourceNamespace string
+		configMap                       *corev1.ConfigMap
+		secret                          *corev1.Secret
+		deployment                      *appsv1.Deployment
+
+		managedResource                                *resourcesv1alpha1.ManagedResource
+		managedResourceSecret1, managedResourceSecret2 *corev1.Secret
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.Scheme).Build()
-		containsObject = NewManagedResourceObjectMatcher(fakeClient)
-	})
+		ctx = context.Background()
+		scheme = runtime.NewScheme()
+		schemeBuilder := runtime.NewSchemeBuilder(kubernetesscheme.AddToScheme, resourcesv1alpha1.AddToScheme)
+		Expect(schemeBuilder.AddToScheme(scheme)).To(Succeed())
 
-	Context("without managed resource", func() {
-		It("should not find an object", func() {
-			Expect(nil).NotTo(containsObject(&corev1.Secret{}))
-		})
-	})
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	Context("with managed resource", func() {
-		var (
-			namespace       string
-			managedResource *resourcesv1alpha1.ManagedResource
-		)
+		resourceName = "test"
+		resourceNamespace = "default"
 
-		BeforeEach(func() {
-			namespace = "test-namespace"
-			managedResource = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-				},
-			}
-		})
-
-		Context("with secrets references", func() {
-			var (
-				ctx context.Context
-
-				configMap                                      *corev1.ConfigMap
-				deployment                                     *appsv1.Deployment
-				managedResourceSecret1, managedResourceSecret2 *corev1.Secret
-			)
-
-			BeforeEach(func() {
-				ctx = context.Background()
-
-				configMap = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "controller-config",
-						Namespace: namespace,
-					},
-					Data: map[string]string{
-						"key": "value",
-					},
-				}
-				deployment = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "admission",
-						Namespace: "gardener",
-					},
-					Spec: appsv1.DeploymentSpec{
-						Replicas: ptr.To(int32(2)),
-						Paused:   true,
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{Name: "gardener"},
-								},
-							},
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: resourceNamespace,
+			},
+			Data: map[string]string{
+				"key": "value",
+			},
+		}
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: resourceNamespace,
+			},
+			Data: map[string][]byte{
+				"key": []byte("value"),
+			},
+		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: resourceNamespace,
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: ptr.To(int32(2)),
+				Paused:   true,
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{Name: "gardener"},
 						},
 					},
-				}
+				},
+			},
+		}
 
-				managedResourceSecret1 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "secret1",
-						Namespace: namespace,
-					},
-					Data: map[string][]byte{
-						fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(testruntime.Serialize(configMap, fakeClient.Scheme())),
-					},
-				}
-				managedResourceSecret2 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "secret2",
-						Namespace: namespace,
-					},
-					Data: map[string][]byte{
-						fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(testruntime.Serialize(deployment, fakeClient.Scheme())),
-					},
-				}
-				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
-					{Name: managedResourceSecret1.Name},
-					{Name: managedResourceSecret2.Name},
-				}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: resourceNamespace,
+			},
+		}
+		managedResourceSecret1 = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "secret1",
+				Namespace: resourceNamespace,
+			},
+		}
+		managedResourceSecret2 = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "secret2",
+				Namespace: resourceNamespace,
+			},
+		}
+	})
 
-				Expect(fakeClient.Create(ctx, managedResourceSecret1)).To(Succeed())
-				Expect(fakeClient.Create(ctx, managedResourceSecret2)).To(Succeed())
-			})
+	setupManagedResource := func() {
+		managedResourceSecret1.Data = map[string][]byte{
+			fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(testruntime.Serialize(configMap, fakeClient.Scheme())),
+		}
 
-			It("should only find contained resources", func() {
-				Expect(managedResource).To(containsObject(configMap))
-				Expect(managedResource).To(containsObject(deployment))
+		managedResourceSecret2.Data = map[string][]byte{
+			fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(testruntime.Serialize(deployment, fakeClient.Scheme())),
+			fmt.Sprintf("secret__%s__%s.yaml", secret.Namespace, secret.Name):             []byte(testruntime.Serialize(secret, fakeClient.Scheme())),
+		}
 
-				deploymentModified := deployment.DeepCopy()
-				deploymentModified.Spec.MinReadySeconds += 1
-				Expect(managedResource).NotTo(containsObject(deploymentModified))
-			})
+		managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
+			{Name: managedResourceSecret1.Name},
+			{Name: managedResourceSecret2.Name},
+		}
 
-			It("should not find resources if data key does not match", func() {
-				objectKey := fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name)
-				objectData := managedResourceSecret2.Data[objectKey]
-				Expect(objectData).NotTo(BeEmpty())
+		ExpectWithOffset(1, fakeClient.Create(ctx, managedResource)).To(Succeed())
+		ExpectWithOffset(1, fakeClient.Create(ctx, managedResourceSecret1)).To(Succeed())
+		ExpectWithOffset(1, fakeClient.Create(ctx, managedResourceSecret2)).To(Succeed())
+	}
 
-				patch := client.MergeFrom(managedResourceSecret2.DeepCopy())
-				delete(managedResourceSecret2.Data, objectKey)
-				managedResourceSecret2.Data[strings.Trim(objectKey, ".yaml")] = objectData
-				Expect(fakeClient.Patch(ctx, managedResourceSecret2, patch)).To(Succeed())
+	commonTests := func(matcherFn func(client.Client) func(...client.Object) types.GomegaMatcher) {
+		var matcher func(...client.Object) types.GomegaMatcher
 
-				Expect(managedResource).NotTo(containsObject(deployment))
+		BeforeEach(func() {
+			matcher = matcherFn(fakeClient)
+		})
+
+		Context("without managed resource", func() {
+			It("should not find an object", func() {
+				ExpectWithOffset(1, nil).NotTo(matcher(&corev1.Secret{}))
 			})
 		})
 
-		Context("without secret references", func() {
-			It("should not find an object", func() {
-				Expect(managedResource).NotTo(containsObject(&corev1.Secret{}))
+		Context("with managed resource", func() {
+			Context("with secrets references", func() {
+				BeforeEach(func() {
+					setupManagedResource()
+				})
+
+				It("should only find contained resources", func() {
+					ExpectWithOffset(1, managedResource).To(matcher(configMap, deployment, secret))
+
+					deploymentModified := deployment.DeepCopy()
+					deploymentModified.Spec.MinReadySeconds += 1
+					ExpectWithOffset(1, managedResource).NotTo(matcher(deploymentModified))
+				})
+
+				It("should not find resources if data key does not match", func() {
+					managedResourceSecret := &corev1.Secret{}
+					ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret2), managedResourceSecret)).To(Succeed())
+
+					objectKey := fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name)
+					ExpectWithOffset(1, managedResourceSecret.Data).To(HaveKey(objectKey))
+
+					patch := client.MergeFrom(managedResourceSecret.DeepCopy())
+					managedResourceSecret.Data[strings.Trim(objectKey, ".yaml")] = managedResourceSecret.Data[objectKey]
+					delete(managedResourceSecret.Data, objectKey)
+					ExpectWithOffset(1, fakeClient.Patch(ctx, managedResourceSecret, patch)).To(Succeed())
+
+					ExpectWithOffset(1, managedResource).NotTo(matcher(deployment))
+				})
 			})
+
+			Context("without secret references", func() {
+				It("should not find an object", func() {
+					ExpectWithOffset(1, managedResource).NotTo(matcher(&corev1.Secret{}))
+				})
+			})
+		})
+	}
+
+	Describe("ContainsObject functionality", func() {
+		var containObjects func(...client.Object) types.GomegaMatcher
+
+		BeforeEach(func() {
+			containObjects = NewManagedResourceContainsObjectsMatcher(fakeClient)
+		})
+
+		commonTests(NewManagedResourceContainsObjectsMatcher)
+
+		It("should succeed on finding partial objects", func() {
+			setupManagedResource()
+
+			Expect(managedResource).To(containObjects(secret, configMap))
 		})
 	})
 
+	Describe("ConsistOf functionality", func() {
+		var containObjects func(...client.Object) types.GomegaMatcher
+
+		BeforeEach(func() {
+			containObjects = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		})
+
+		commonTests(NewManagedResourceConsistOfObjectsMatcher)
+
+		It("should fail because extra elements are found", func() {
+			setupManagedResource()
+
+			Expect(managedResource).NotTo(containObjects(secret, configMap))
+		})
+	})
 })

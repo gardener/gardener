@@ -131,16 +131,42 @@ func ShareSameReferenceAs(expected interface{}) types.GomegaMatcher {
 	}
 }
 
-// NewManagedResourceObjectMatcher returns a function for a matcher that checks
-// if the given object is handled by the given managed resource.
+// NewManagedResourceContainsObjectsMatcher returns a function for a matcher that checks
+// if the given objects are handled by the given managed resource.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceObjectMatcher(cl client.Client) func(client.Object) types.GomegaMatcher {
-	return func(obj client.Object) types.GomegaMatcher {
-		return &managedResourceDataMatcher{
-			ctx:                      context.Background(),
-			cl:                       cl,
-			expectedObj:              obj,
-			expectedObjectSerialized: testruntime.Serialize(obj, cl.Scheme()),
+func NewManagedResourceContainsObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
+	return func(objs ...client.Object) types.GomegaMatcher {
+		expectedObjToSerialized := make(map[client.Object]string)
+		for _, o := range objs {
+			obj := o
+			expectedObjToSerialized[obj] = testruntime.Serialize(obj, cl.Scheme())
+		}
+
+		return &managedResourceObjectsMatcher{
+			ctx:                     context.Background(),
+			cl:                      cl,
+			expectedObjToSerialized: expectedObjToSerialized,
+		}
+	}
+}
+
+// NewManagedResourceConsistOfObjectsMatcher returns a function for a matcher that checks
+// if the exact list of given objects are handled by the given managed resource.
+// Any extra objects found through the ManagedResource let the matcher fail.
+// It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
+func NewManagedResourceConsistOfObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
+	return func(objs ...client.Object) types.GomegaMatcher {
+		expectedObjToSerialized := make(map[client.Object]string)
+		for _, o := range objs {
+			obj := o
+			expectedObjToSerialized[obj] = testruntime.Serialize(obj, cl.Scheme())
+		}
+
+		return &managedResourceObjectsMatcher{
+			ctx:                     context.Background(),
+			cl:                      cl,
+			expectedObjToSerialized: expectedObjToSerialized,
+			extraObjectsCheck:       true,
 		}
 	}
 }
