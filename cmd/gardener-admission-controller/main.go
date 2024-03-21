@@ -30,7 +30,7 @@ func main() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
-		logf.Log.Error(err, "Error starting app")
+		logf.Log.Error(err, "Error starting app", "app", app.Name)
 		os.Exit(1)
 	}
 }
