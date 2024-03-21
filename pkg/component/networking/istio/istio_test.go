@@ -450,7 +450,7 @@ var _ = Describe("istiod", func() {
 				)
 			})
 
-			It("should succesfully deploy pdb with the correct spec", func() {
+			It("should successfully deploy pdb with the correct spec", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 

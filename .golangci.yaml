@@ -12,6 +12,7 @@ linters:
   - ginkgolinter
   - nilerr
   - whitespace
+  - misspell
 
 issues:
   exclude-use-default: false
@@ -50,6 +51,8 @@ linters-settings:
   loggercheck:
     require-string-key: true
     no-printf-like: true
+  misspell:
+    mode: restricted # only check comments
   revive:
     rules:
     - name: duplicated-imports
