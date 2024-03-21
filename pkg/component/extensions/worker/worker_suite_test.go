@@ -17,11 +17,13 @@ package worker_test
 import (
 	"testing"
 
+	"github.com/gardener/gardener/pkg/gardenlet/features"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 func TestWorker(t *testing.T) {
 	RegisterFailHandler(Fail)
+	features.RegisterFeatureGates()
 	RunSpecs(t, "Component Extensions Worker Suite")
 }

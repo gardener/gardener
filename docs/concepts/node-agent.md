@@ -70,6 +70,7 @@ The controller also maintains two annotations on the `Node`:
 
 - `worker.gardener.cloud/kubernetes-version`, describing the version of the installed `kubelet`.
 - `checksum/cloud-config-data`, describing the checksum of the applied `OperatingSystemConfig` (used in future reconciliations to determine whether it needs to reconcile, and to report that this node is up-to-date).
+// FIXME
 
 ### [Token Controller](../../pkg/nodeagent/controller/token)
 
