@@ -83,9 +83,8 @@
       "enabled": false
     },
     {
-      // Only patch level updates for logcheck. Minor and major versions must be in sync with golangci-lint.
+      // Go versions must be in sync with golangci-lint.
       "matchDatasources": ["go"],
-      "matchUpdateTypes": ["major", "minor"],
       "matchFileNames": ["hack\/tools\/logcheck\/go\\.mod"],
       "enabled": false
     },
