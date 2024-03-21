@@ -422,22 +422,23 @@ var _ = Describe("Etcd", func() {
 					expectGetBackupSecret()
 				})
 
-				It("should properly restore multi-node main etcd from backup if etcd does not exist", func() {
-					gomock.InOrder(
-						etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "")),
-						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
-						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
-						etcdMain.EXPECT().Deploy(ctx),
-						etcdMain.EXPECT().Wait(ctx),
-						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
-					)
+				It("should properly restore multi-node etcd from backup if etcd main does not exist yet", func() {
+					// Expect the checks for whether multi-node etcd has to be restored
+					etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-					etcdEvents.EXPECT().Deploy(ctx)
+					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
+						gomock.InOrder(
+							etcd.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+							etcd.EXPECT().SetReplicas(ptr.To(int32(1))),
+							etcd.EXPECT().Deploy(ctx),
+							etcd.EXPECT().SetReplicas(ptr.To(int32(3))),
+						)
+					}
+
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
 
-				It("should properly restore multi-node main etcd from backup if it is deployed with 1 replica", func() {
+				It("should properly restore multi-node etcd from backup if it is deployed with 1 replica", func() {
 					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
 						return &druidv1alpha1.Etcd{
 							Spec: druidv1alpha1.EtcdSpec{
@@ -445,16 +446,15 @@ var _ = Describe("Etcd", func() {
 							},
 						}, nil
 					})
-					gomock.InOrder(
-						etcdMain.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
-						etcdMain.EXPECT().SetReplicas(ptr.To(int32(1))),
-						etcdMain.EXPECT().Deploy(ctx),
-						etcdMain.EXPECT().Wait(ctx),
-						etcdMain.EXPECT().Scale(ctx, int32(3)),
-						etcdMain.EXPECT().SetReplicas(ptr.To(int32(3))),
-					)
 
-					etcdEvents.EXPECT().Deploy(ctx)
+					for _, etcd := range []*mocketcd.MockInterface{etcdMain, etcdEvents} {
+						gomock.InOrder(
+							etcd.EXPECT().GetReplicas().Return(ptr.To(int32(3))),
+							etcd.EXPECT().SetReplicas(ptr.To(int32(1))),
+							etcd.EXPECT().Deploy(ctx),
+							etcd.EXPECT().SetReplicas(ptr.To(int32(3))),
+						)
+					}
 
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
