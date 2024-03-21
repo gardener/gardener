@@ -104,7 +104,7 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 		tasks = append(tasks, func(ctx context.Context) error {
 			dwdOldSecret := &corev1.Secret{}
 			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: dwd.InternalProbeSecretName}, dwdOldSecret); err != nil {
-				// If ns does not contain old DWD secret, do not procees.
+				// If ns does not contain old DWD secret, do not process.
 				if apierrors.IsNotFound(err) {
 					return nil
 				}
