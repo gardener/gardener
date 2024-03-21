@@ -264,7 +264,8 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	if err != nil {
 		return "", nil, fmt.Errorf("failed computing the effective Kubernetes version for pool %q: %w", worker.Name, err)
 	}
-	secretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
+	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet, worker.Kubernetes)
+	secretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI, kubeReserved)
 
 	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, secretName, worker.Name)
 	if err != nil {
