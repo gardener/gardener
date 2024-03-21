@@ -137,8 +137,10 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 			}
 
 			reserved := helper.CalcluateEffectiveResourceReservations(cluster.Shoot.Spec.Kubernetes.Kubelet, w.Kubernetes)
-			resourceString := fmt.Sprintf("%s-%s-%s-%s", reserved.CPU, reserved.Memory, reserved.PID, reserved.EphemeralStorage)
-			data = append(data, resourceString)
+			if reserved != nil {
+				resourceString := fmt.Sprintf("%s-%s-%s-%s", reserved.CPU, reserved.Memory, reserved.PID, reserved.EphemeralStorage)
+				data = append(data, resourceString)
+			}
 		}
 	}
 

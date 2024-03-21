@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -110,6 +111,11 @@ var _ = Describe("Machines", func() {
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "1.2.3",
+						},
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name: p.Name,
+							}},
 						},
 					},
 					Status: gardencorev1beta1.ShootStatus{
@@ -269,6 +275,26 @@ var _ = Describe("Machines", func() {
 
 			It("when enabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}
+			})
+
+			It("when changing resource reservations at the shoot", func() {
+				res := resource.MustParse("123m")
+				c.Shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
+					KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+						CPU: &res,
+					},
+				}
+			})
+
+			It("when changing resource reservations at the worker pool", func() {
+				res := resource.MustParse("125m")
+				c.Shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+					Kubelet: &gardencorev1beta1.KubeletConfig{
+						KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+							CPU: &res,
+						},
+					},
+				}
 			})
 		})
 	})

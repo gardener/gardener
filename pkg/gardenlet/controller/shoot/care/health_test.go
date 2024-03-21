@@ -261,7 +261,7 @@ var _ = Describe("health check", func() {
 			nodeName                   = "node1"
 			oscSecretMeta              = map[string]metav1.ObjectMeta{
 				workerPoolName1: {
-					Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil),
+					Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
 					Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 				},
@@ -270,6 +270,7 @@ var _ = Describe("health check", func() {
 					Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName2},
 					Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum2},
 				},
+				// FIXME
 			}
 		)
 
@@ -319,7 +320,7 @@ var _ = Describe("health check", func() {
 						meta := m.DeepCopy()
 						// regenerate OSC secret key because it might be different when UseGardenerNodeAgent feature gate is enabled
 						if strings.HasPrefix(meta.Name, "gardener-node-agent") || strings.HasPrefix(meta.Name, "cloud-config") {
-							meta.Name = operatingsystemconfig.Key(workerPoolName, kubernetesVersion, nil)
+							meta.Name = operatingsystemconfig.Key(workerPoolName, kubernetesVersion, nil, nil)
 						}
 
 						list.Items = append(list.Items, corev1.Secret{
@@ -363,7 +364,11 @@ var _ = Describe("health check", func() {
 			Entry("missing OSC secret checksum for a worker pool",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -378,7 +383,11 @@ var _ = Describe("health check", func() {
 			Entry("missing OSC secret checksum for a worker pool when shoot has not been reconciled yet",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -393,7 +402,11 @@ var _ = Describe("health check", func() {
 			Entry("no OSC node checksum for a worker pool",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -408,7 +421,11 @@ var _ = Describe("health check", func() {
 			Entry("no OSC node checksum for a worker pool when shoot has not been reconciled yet",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, nil, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, nil, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -423,7 +440,11 @@ var _ = Describe("health check", func() {
 			Entry("outdated OSC secret checksum for a worker pool",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -435,7 +456,7 @@ var _ = Describe("health check", func() {
 				true,
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
@@ -444,7 +465,11 @@ var _ = Describe("health check", func() {
 			Entry("outdated OSC secret checksum for a worker pool when shoot has not been reconciled yet",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(labels.Set{
+						"worker.gardener.cloud/pool":               workerPoolName1,
+						"worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(),
+						"worker.gardener.cloud/cloud-config-key":   operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
+					}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -456,7 +481,7 @@ var _ = Describe("health check", func() {
 				false,
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
