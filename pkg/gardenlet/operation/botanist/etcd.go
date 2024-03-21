@@ -140,10 +140,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 	}
 
-	return flow.Parallel(
-		b.deployOrRestoreMainEtcd,
-		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
-	)(ctx)
+	return b.deployOrRestoreEtcd(ctx)
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
@@ -192,17 +189,20 @@ func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 	return b.Shoot.Components.ControlPlane.EtcdEvents.Scale(ctx, replicas)
 }
 
-func (b *Botanist) deployOrRestoreMainEtcd(ctx context.Context) error {
+func (b *Botanist) deployOrRestoreEtcd(ctx context.Context) error {
 	isRestoreRequired, err := b.isRestorationOfMultiNodeMainEtcdRequired(ctx)
 	if err != nil {
 		return err
 	}
 
 	if isRestoreRequired {
-		return b.restoreMultiNodeMainEtcd(ctx)
+		return b.restoreMultiNodeEtcd(ctx)
 	}
 
-	return b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx)
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
+		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
+	)(ctx)
 }
 
 func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context) (bool, error) {
@@ -233,22 +233,21 @@ func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context)
 	return true, nil
 }
 
-func (b *Botanist) restoreMultiNodeMainEtcd(ctx context.Context) error {
-	originalReplicas := b.Shoot.Components.ControlPlane.EtcdMain.GetReplicas()
-	defer func() {
-		// Revert the original replica count for the etcd. This is done in case a step
-		// is added to the reconciliation flow that depends on the etcd's replica count.
-		b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(originalReplicas)
-	}()
+func (b *Botanist) restoreMultiNodeEtcd(ctx context.Context) error {
+	for _, component := range []etcd.Interface{b.Shoot.Components.ControlPlane.EtcdMain, b.Shoot.Components.ControlPlane.EtcdEvents} {
+		originalReplicas := component.GetReplicas()
+		defer func() {
+			// Revert the original replica count for the etcd. This is done in case a step
+			// is added to the reconciliation flow that depends on the etcd's replica count.
+			component.SetReplicas(originalReplicas)
+		}()
+		component.SetReplicas(ptr.To(int32(1)))
+	}
 
-	b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(ptr.To(int32(1)))
-	if err := b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx); err != nil {
-		return err
-	}
-	if err := b.Shoot.Components.ControlPlane.EtcdMain.Wait(ctx); err != nil {
-		return err
-	}
-	return b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, getEtcdReplicas(b.Shoot.GetInfo()))
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
+		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
+	)(ctx)
 }
 
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
