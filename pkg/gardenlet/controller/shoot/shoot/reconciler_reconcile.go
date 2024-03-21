@@ -313,13 +313,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		scaleEtcdAfterRestore = g.Add(flow.Task{
-			Name:         "Scaling main and events etcd after restoration from backup",
+			Name:         "Scaling main and events etcd after kube-apiserver is ready",
 			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, helper.GetEtcdDeployTimeout(o.Shoot, defaultTimeout)),
 			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Waiting until main and events etcd scaled up after restoration from backup",
+			Name:         "Waiting until main and events etcd scaled up after kube-apiserver is ready",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
 			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
