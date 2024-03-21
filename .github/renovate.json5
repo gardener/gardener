@@ -83,6 +83,12 @@
       "enabled": false
     },
     {
+      // Go versions must be in sync with golangci-lint.
+      "matchDatasources": ["go"],
+      "matchFileNames": ["hack\/tools\/logcheck\/go\\.mod"],
+      "enabled": false
+    },
+    {
       // Update only patchlevels of major dependencies like kubernetes, controller-runtime and istio.
       // Minor and major upgrades most likely require manual adaptations of the code.
       "matchDatasources": ["go"],
