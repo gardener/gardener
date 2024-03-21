@@ -16,7 +16,7 @@ package controllerutils
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,7 +38,7 @@ import (
 var _ = Describe("Patch", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		ctrl   *gomock.Controller
 		c      *mockclient.MockClient

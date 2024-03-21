@@ -184,7 +184,7 @@ func validateAdmissionPluginConfig(plugin core.AdmissionPlugin, fldPath *field.P
 			if runtime.IsNotRegisteredError(err) {
 				return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), "expected pod-security.admission.config.k8s.io/v1.PodSecurityConfiguration")
 			}
-			return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), fmt.Sprintf("cannot decode the given config: %s", err.Error()))
+			return field.Invalid(fldPath.Child("config"), string(plugin.Config.Raw), "cannot decode the given config: "+err.Error())
 		}
 	}
 

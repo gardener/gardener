@@ -16,6 +16,7 @@ package clientmap_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -146,7 +147,7 @@ var _ = Describe("ShootClientMap", func() {
 		It("should fail if ProjectForNamespaceFromReader fails", func() {
 			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
 
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
@@ -165,7 +166,7 @@ var _ = Describe("ShootClientMap", func() {
 			technicalID := shoot.Status.TechnicalID
 			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
 
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
@@ -194,7 +195,7 @@ var _ = Describe("ShootClientMap", func() {
 			technicalID := shoot.Status.TechnicalID
 			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
 
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
@@ -328,7 +329,7 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		It("should fail if Get gardener-internal Secret fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))

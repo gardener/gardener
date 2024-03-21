@@ -16,7 +16,6 @@ package podtopologyspreadconstraints_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -153,7 +152,7 @@ func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener-resource-manager-%s", testID),
+				Name: "gardener-resource-manager-" + testID,
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				resourcemanager.GetPodTopologySpreadConstraintsMutatingWebhook(

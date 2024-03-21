@@ -15,6 +15,7 @@
 package apiserver
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -119,22 +120,22 @@ type ExtraOptions struct {
 func (o *ExtraOptions) Validate() []error {
 	allErrors := []error{}
 	if len(o.ClusterIdentity) == 0 {
-		allErrors = append(allErrors, fmt.Errorf("--cluster-identity must be specified"))
+		allErrors = append(allErrors, errors.New("--cluster-identity must be specified"))
 	}
 
 	if o.AdminKubeconfigMaxExpiration < time.Hour ||
 		o.AdminKubeconfigMaxExpiration > time.Duration(1<<32)*time.Second {
-		allErrors = append(allErrors, fmt.Errorf("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
+		allErrors = append(allErrors, errors.New("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
 	}
 
 	if o.ViewerKubeconfigMaxExpiration < time.Hour ||
 		o.ViewerKubeconfigMaxExpiration > time.Duration(1<<32)*time.Second {
-		allErrors = append(allErrors, fmt.Errorf("--shoot-viewer-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
+		allErrors = append(allErrors, errors.New("--shoot-viewer-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
 	}
 
 	if o.CredentialsRotationInterval < 24*time.Hour ||
 		o.CredentialsRotationInterval > time.Duration(1<<32)*time.Second {
-		allErrors = append(allErrors, fmt.Errorf("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
+		allErrors = append(allErrors, errors.New("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
 	}
 
 	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {

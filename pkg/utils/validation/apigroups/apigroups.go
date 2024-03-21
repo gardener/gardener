@@ -244,9 +244,9 @@ type APIVersionRange struct {
 func (r *APIVersionRange) SupportedVersionRange() string {
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		return fmt.Sprintf("versions >= %s", r.AddedInVersion)
+		return "versions >= " + r.AddedInVersion
 	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		return fmt.Sprintf("versions < %s", r.RemovedInVersion)
+		return "versions < " + r.RemovedInVersion
 	case r.AddedInVersion != "" && r.RemovedInVersion != "":
 		return fmt.Sprintf("versions >= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
 	default:
@@ -282,7 +282,7 @@ func ValidateAPIGroupVersions(runtimeConfig map[string]bool, version string, wor
 				} else {
 					// Check if any of the resources in the API group version are required
 					for a, vr := range apiGVRVersionRanges {
-						if strings.HasPrefix(a, fmt.Sprintf("%s/", apiGroupVersion)) {
+						if strings.HasPrefix(a, apiGroupVersion+"/") {
 							if err := checkIfRequired(vr, a, workerless, fldPath.Key(api)); err != nil {
 								allErrs = append(allErrs, err)
 							}
@@ -322,7 +322,7 @@ func SplitAPI(api string) (string, string, error) {
 		apiGroupVersion = strings.Join(apis[:2], "/")
 		if apis[0] == "v1" {
 			apiGroupVersion = "v1"
-			apiGVR = fmt.Sprintf("v1/%s", apis[1])
+			apiGVR = "v1/" + apis[1]
 		}
 	case 3:
 		apiGroupVersion = strings.Join(apis[:2], "/")

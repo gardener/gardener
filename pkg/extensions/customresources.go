@@ -234,13 +234,13 @@ func WaitUntilExtensionObjectDeleted(
 			lastObservedError = v1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 
-		var message = fmt.Sprintf("%s is still present", extensionKey(kind, namespace, name))
+		var message = extensionKey(kind, namespace, name) + " is still present"
 		if lastObservedError != nil {
 			message += fmt.Sprintf(", last observed error: %s", lastObservedError.Error())
 		}
-		return retry.MinorError(fmt.Errorf(message))
+		return retry.MinorError(errors.New(message))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
+		message := "Failed to delete " + extensionKey(kind, namespace, name)
 		if lastObservedError != nil {
 			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}

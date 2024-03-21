@@ -586,7 +586,7 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			[]corev1.EnvVar{
 				{
 					Name:  "VPN_SERVER_INDEX",
-					Value: fmt.Sprintf("%d", *index),
+					Value: strconv.Itoa(*index),
 				},
 				{
 					Name: "POD_NAME",
@@ -742,11 +742,11 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 			{
 				Name:  "HA_VPN_SERVERS",
-				Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfSeedServers),
+				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfSeedServers),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfShootClients),
+				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
 	}

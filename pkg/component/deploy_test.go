@@ -16,7 +16,7 @@ package component_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,7 +31,7 @@ var _ = Describe("Helper functions", func() {
 		ctrl                         *gomock.Controller
 		deployer1, deployer2         *mockcomponent.MockDeployer
 		deployWaiter1, deployWaiter2 *mockcomponent.MockDeployWaiter
-		err                          = fmt.Errorf("some error")
+		err                          = errors.New("some error")
 		ctx                          = context.TODO()
 		deployer                     Deployer
 		waiter                       DeployWaiter

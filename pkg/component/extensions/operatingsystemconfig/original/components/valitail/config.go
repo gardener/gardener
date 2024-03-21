@@ -17,7 +17,7 @@ package valitail
 import (
 	"bytes"
 	_ "embed"
-	"fmt"
+	"errors"
 	"net/url"
 	"text/template"
 
@@ -46,7 +46,7 @@ func init() {
 
 func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
 	if ctx.ValiIngress == "" {
-		return extensionsv1alpha1.File{}, fmt.Errorf("vali ingress url is missing")
+		return extensionsv1alpha1.File{}, errors.New("vali ingress url is missing")
 	}
 
 	apiServerURL, err := url.Parse(ctx.APIServerURL)

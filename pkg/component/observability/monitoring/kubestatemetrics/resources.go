@@ -230,7 +230,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 			"--metric-labels-allowlist=nodes=[*]",
 			"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
-			fmt.Sprintf("--metric-allowlist=%s", strings.Join(cachePrometheusAllowedMetrics, ",")),
+			"--metric-allowlist="+strings.Join(cachePrometheusAllowedMetrics, ","),
 		)
 	}
 

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -74,7 +74,7 @@ var _ = Describe("KubeStateMetrics", func() {
 			kubeStateMetrics *mockkubestatemetrics.MockInterface
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {

@@ -191,7 +191,7 @@ func DigestedName(publicKey interface{}, subject *pkix.Name, usages []certificat
 		write([]byte(v))
 	}
 
-	return fmt.Sprintf("seed-csr-%s", encode(hash.Sum(nil))), nil
+	return "seed-csr-" + encode(hash.Sum(nil)), nil
 }
 
 func kubeconfigWithAuthInfo(config *rest.Config, authInfo *clientcmdapi.AuthInfo) ([]byte, error) {

@@ -16,6 +16,7 @@ package etcd_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -75,7 +76,7 @@ var _ = Describe("Etcd", func() {
 		log        logr.Logger
 
 		ctx                     = context.TODO()
-		fakeErr                 = fmt.Errorf("fake err")
+		fakeErr                 = errors.New("fake err")
 		class                   = ClassNormal
 		replicas                = ptr.To(int32(1))
 		storageCapacity         = "12Gi"

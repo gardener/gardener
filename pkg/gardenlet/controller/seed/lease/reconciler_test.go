@@ -16,7 +16,7 @@ package lease_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -249,14 +249,14 @@ type failingLeaseClient struct {
 
 func (c failingLeaseClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 	if _, ok := obj.(*coordinationv1.Lease); ok {
-		return fmt.Errorf("fake")
+		return errors.New("fake")
 	}
 	return c.Client.Create(ctx, obj, opts...)
 }
 
 func (c failingLeaseClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	if _, ok := obj.(*coordinationv1.Lease); ok {
-		return fmt.Errorf("fake")
+		return errors.New("fake")
 	}
 	return c.Client.Update(ctx, obj, opts...)
 }

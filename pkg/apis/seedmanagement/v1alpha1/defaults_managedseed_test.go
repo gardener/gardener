@@ -16,7 +16,6 @@ package v1alpha1_test
 
 import (
 	"encoding/json"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -111,7 +110,7 @@ var _ = Describe("Defaults", func() {
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{
 										SecretRef: corev1.SecretReference{
-											Name:      fmt.Sprintf("backup-%s", name),
+											Name:      "backup-" + name,
 											Namespace: namespace,
 										},
 									},

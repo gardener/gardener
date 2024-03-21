@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -209,7 +210,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 		return nil, nil
 	}
 	if !ok2 {
-		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
+		return nil, errors.New("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
 	}
 
 	var apiServerAutoscaler ManagedSeedAPIServerAutoscaler

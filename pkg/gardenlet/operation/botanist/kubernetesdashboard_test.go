@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -85,7 +85,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			kubernetesdashboard *mockkubernetesdashboard.MockInterface
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {

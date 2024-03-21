@@ -16,7 +16,7 @@ package fake
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -41,7 +41,7 @@ func (o *Ops) Until(ctx context.Context, _ time.Duration, f retry.Func) error {
 	for {
 		attempts++
 		if attempts > o.MaxAttempts {
-			return retry.NewError(fmt.Errorf("max attempts reached"), minorErr)
+			return retry.NewError(errors.New("max attempts reached"), minorErr)
 		}
 
 		done, err := f(ctx)

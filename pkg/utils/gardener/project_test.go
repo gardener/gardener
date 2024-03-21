@@ -16,7 +16,7 @@ package gardener_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,7 +39,7 @@ var _ = Describe("Project", func() {
 		c    *mockclient.MockClient
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		namespaceName = "foo"
 		namespace     = &corev1.Namespace{

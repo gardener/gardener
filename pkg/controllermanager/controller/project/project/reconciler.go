@@ -16,6 +16,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -232,7 +233,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 	}
 
 	if metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
-		return nil, fmt.Errorf("namespace is already in-use by another project")
+		return nil, errors.New("namespace is already in-use by another project")
 	}
 
 	before := namespace.DeepCopy()

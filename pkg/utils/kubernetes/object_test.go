@@ -16,7 +16,7 @@ package kubernetes_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,7 +43,7 @@ var _ = Describe("Object", func() {
 		c    *mockclient.MockClient
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		obj1 = &corev1.Secret{}
 		obj2 = &appsv1.Deployment{}

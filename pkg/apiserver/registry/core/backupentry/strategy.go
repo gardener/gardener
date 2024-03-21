@@ -16,6 +16,7 @@ package backupentry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -172,7 +173,7 @@ func ToSelectableFields(backupEntry *core.BackupEntry) fields.Set {
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	backupEntry, ok := obj.(*core.BackupEntry)
 	if !ok {
-		return nil, nil, fmt.Errorf("not a backupEntry")
+		return nil, nil, errors.New("not a backupEntry")
 	}
 	return backupEntry.ObjectMeta.Labels, ToSelectableFields(backupEntry), nil
 }

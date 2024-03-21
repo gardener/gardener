@@ -15,7 +15,7 @@
 package reconciler_test
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,8 +27,8 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		fakeErr           = fmt.Errorf("fake")
-		cause             = fmt.Errorf("cause")
+		fakeErr           = errors.New("fake")
+		cause             = errors.New("cause")
 		requeueAfter      = time.Hour
 		requeueAfterError = &RequeueAfterError{Cause: cause, RequeueAfter: requeueAfter}
 	)

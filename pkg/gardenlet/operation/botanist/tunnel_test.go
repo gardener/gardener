@@ -17,7 +17,6 @@ package botanist_test
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -127,7 +126,7 @@ var _ = Describe("Tunnel", func() {
 			Context("broken connection", func() {
 				It("should fail because pod is running but connection is not established", func() {
 					defer test.WithVar(&botanist.SetupPortForwarder, func(context.Context, *rest.Config, string, string, int, int) (kubernetes.PortForwarder, error) {
-						return nil, fmt.Errorf("foo")
+						return nil, errors.New("foo")
 					})()
 
 					done, err := botanist.CheckTunnelConnection(context.Background(), log, clientset, tunnelName)

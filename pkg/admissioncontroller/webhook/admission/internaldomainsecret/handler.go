@@ -16,6 +16,7 @@ package internaldomainsecret
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +62,7 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 		return nil, apierrors.NewInternalError(err)
 	}
 	if exists {
-		return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
+		return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, errors.New("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 	}
 
 	if _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
@@ -100,7 +101,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 			return nil, apierrors.NewInternalError(err)
 		}
 		if exists {
-			return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot update secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
+			return nil, apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, errors.New("cannot update secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 		}
 	}
 
@@ -119,7 +120,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 			return nil, apierrors.NewInternalError(err)
 		}
 		if atLeastOneShoot {
-			return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot change domain because there are still shoots left in the system"))
+			return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, errors.New("cannot change domain because there are still shoots left in the system"))
 		}
 	}
 
@@ -146,7 +147,7 @@ func (h *Handler) ValidateDelete(ctx context.Context, obj runtime.Object) (admis
 		return nil, apierrors.NewInternalError(err)
 	}
 	if atLeastOneShoot {
-		return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot delete internal domain secret because there are still shoots left in the system"))
+		return nil, apierrors.NewForbidden(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, errors.New("cannot delete internal domain secret because there are still shoots left in the system"))
 	}
 
 	return nil, nil

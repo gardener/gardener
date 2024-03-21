@@ -15,7 +15,7 @@
 package matchers
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/onsi/gomega/format"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -53,7 +53,7 @@ func newDeepEqualMatcher(expected interface{}) gomegatypes.GomegaMatcher {
 
 func (m *deepMatcher) Match(actual interface{}) (success bool, err error) {
 	if actual == nil && m.expected == nil {
-		return false, fmt.Errorf(deepMatcherNilError)
+		return false, errors.New(deepMatcherNilError)
 	}
 
 	return m.compareFn(m.expected, actual), nil

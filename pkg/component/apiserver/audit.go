@@ -154,6 +154,6 @@ func InjectAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *co
 	}
 
 	if v := auditConfig.Webhook.Version; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-version=%s", *v))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--audit-webhook-version="+*v)
 	}
 }

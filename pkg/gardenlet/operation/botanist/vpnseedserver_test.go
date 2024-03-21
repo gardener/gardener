@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 
 	"github.com/Masterminds/semver/v3"
@@ -129,7 +129,7 @@ var _ = Describe("VPNSeedServer", func() {
 			vpnSeedServer *mockvpnseedserver.MockInterface
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 
 			namespaceUID    = types.UID("1234")
 			nodeNetworkCIDR = "10.0.0.0/24"

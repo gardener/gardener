@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +31,7 @@ import (
 func NewBuilder() *Builder {
 	return &Builder{
 		seedObjectFunc: func(_ context.Context) (*gardencorev1beta1.Seed, error) {
-			return nil, fmt.Errorf("seed object is required but not set")
+			return nil, errors.New("seed object is required but not set")
 		},
 	}
 }

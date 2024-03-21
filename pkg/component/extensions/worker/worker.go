@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -439,5 +440,5 @@ func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) err
 		return nil
 	}
 
-	return fmt.Errorf("worker status machineDeployments has not been updated")
+	return errors.New("worker status machineDeployments has not been updated")
 }

@@ -16,7 +16,7 @@ package dnsrecord_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -72,7 +72,7 @@ var _ = Describe("DNSRecord", func() {
 		ctx     = context.TODO()
 		now     = time.Now()
 		log     = logr.Discard()
-		testErr = fmt.Errorf("test")
+		testErr = errors.New("test")
 
 		fakeOps *retryfake.Ops
 		mockNow *mocktime.MockNow

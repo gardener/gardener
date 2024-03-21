@@ -53,7 +53,7 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkT
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
 		}
 	} else if networkRequired {
-		allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("%ss is required", networkType)))
+		allErrs = append(allErrs, field.Required(fldPath, networkType+"s is required"))
 	}
 
 	return allErrs

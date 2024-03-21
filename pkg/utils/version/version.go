@@ -107,9 +107,9 @@ func (r *VersionRange) Contains(version string) (bool, error) {
 	var constraint string
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
+		constraint = ">= " + r.AddedInVersion
 	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
+		constraint = "< " + r.RemovedInVersion
 	case r.AddedInVersion != "" && r.RemovedInVersion != "":
 		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
 	default:
@@ -122,9 +122,9 @@ func (r *VersionRange) Contains(version string) (bool, error) {
 func (r *VersionRange) SupportedVersionRange() string {
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		return fmt.Sprintf("versions >= %s", r.AddedInVersion)
+		return "versions >= " + r.AddedInVersion
 	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		return fmt.Sprintf("versions < %s", r.RemovedInVersion)
+		return "versions < " + r.RemovedInVersion
 	case r.AddedInVersion != "" && r.RemovedInVersion != "":
 		return fmt.Sprintf("versions >= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
 	default:

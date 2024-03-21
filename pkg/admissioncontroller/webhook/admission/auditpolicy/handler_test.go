@@ -16,7 +16,7 @@ package auditpolicy_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -315,7 +315,7 @@ rules:
 
 			It("fails getting cm", func() {
 				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), &corev1.ConfigMap{}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
-					return fmt.Errorf("fake")
+					return errors.New("fake")
 				})
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve config map: fake", "")
 			})

@@ -16,7 +16,7 @@ package botanist
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +43,7 @@ var _ = Describe("controlplane", func() {
 		botanist             *Botanist
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 	)
 
 	BeforeEach(func() {

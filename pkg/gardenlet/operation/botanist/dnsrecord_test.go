@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -84,7 +84,7 @@ var _ = Describe("dnsrecord", func() {
 
 		ctx                 = context.TODO()
 		now                 = time.Now()
-		testErr             = fmt.Errorf("test")
+		testErr             = errors.New("test")
 		seedClusterIdentity = "seed1"
 
 		cleanup func()

@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -195,7 +196,7 @@ func FilterEntriesByFilterFn(entries []string, filterFn func(entry string) bool)
 // IPv6 and IPv4 is supported.
 func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
 	if subnet == nil {
-		return nil, fmt.Errorf("subnet is nil")
+		return nil, errors.New("subnet is nil")
 	}
 
 	isIPv6 := false

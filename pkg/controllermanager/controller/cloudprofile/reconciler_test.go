@@ -16,6 +16,7 @@ package cloudprofile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -53,7 +54,7 @@ var _ = Describe("Reconciler", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		cloudProfileName = "test-cloudprofile"
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 		reconciler = &Reconciler{Client: c, Recorder: &record.FakeRecorder{}}
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{

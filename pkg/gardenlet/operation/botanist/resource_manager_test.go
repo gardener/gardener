@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -112,7 +113,7 @@ var _ = Describe("ResourceManager", func() {
 			secrets         resourcemanager.Secrets
 
 			ctx           = context.TODO()
-			fakeErr       = fmt.Errorf("fake err")
+			fakeErr       = errors.New("fake err")
 			seedNamespace = "fake-seed-ns"
 
 			c             *mockclient.MockClient

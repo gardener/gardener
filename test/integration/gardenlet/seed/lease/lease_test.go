@@ -16,7 +16,7 @@ package lease_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -98,7 +98,7 @@ var _ = Describe("Seed lease controller tests", func() {
 		}).Should(Succeed())
 
 		By("Ensure seed connection fails")
-		fakeError = fmt.Errorf("fake")
+		fakeError = errors.New("fake")
 
 		By("Ensure health status was set to false")
 		Eventually(func() bool {

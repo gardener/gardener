@@ -16,6 +16,7 @@ package seedrestriction_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -58,7 +59,7 @@ import (
 var _ = Describe("handler", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake")
+		fakeErr = errors.New("fake")
 		err     error
 
 		ctrl      *gomock.Controller
@@ -596,7 +597,7 @@ var _ = Describe("handler", func() {
 									Allowed: false,
 									Result: &metav1.Status{
 										Code:    int32(http.StatusForbidden),
-										Message: fmt.Sprintf("specification of source BackupEntry must equal specification of original BackupEntry %s", shootBackupEntryName),
+										Message: "specification of source BackupEntry must equal specification of original BackupEntry " + shootBackupEntryName,
 									},
 								},
 							}))

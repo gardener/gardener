@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -575,7 +576,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 				{
 					Name:  "HA_VPN_CLIENTS",
-					Value: fmt.Sprintf("%d", v.values.HighAvailabilityNumberOfShootClients),
+					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 				},
 			}...)
 	}
@@ -861,12 +862,12 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
       socket_address:
         protocol: TCP
         address: "` + listenAddress + `"
-        port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
+        port_value: ` + strconv.Itoa(EnvoyPort) + `
     additional_addresses:
     - address:
         socket_address:
           address: "` + listenAddressV6 + `"
-          port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
+          port_value: ` + strconv.Itoa(EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
       typed_config:
@@ -943,7 +944,7 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
     address:
       socket_address:
         address: "` + listenAddress + `"
-        port_value: ` + fmt.Sprintf("%d", MetricsPort) + `
+        port_value: ` + strconv.Itoa(MetricsPort) + `
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager

@@ -200,7 +200,7 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, fldPath.Child("gardener"))...)
 
 	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, fmt.Sprintf("cannot parse service network cidr: %s", err.Error())))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "cannot parse service network cidr: "+err.Error()))
 	}
 	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, virtualCluster.Networking.Services) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "pod network of runtime cluster intersects with service network of virtual cluster"))

@@ -227,7 +227,7 @@ var _ = Describe("validator", func() {
 					SecretBindingName: ptr.To("my-secret"),
 					SeedName:          &seedName,
 					DNS: &core.DNS{
-						Domain: ptr.To(fmt.Sprintf("shoot.%s", baseDomain)),
+						Domain: ptr.To("shoot." + baseDomain),
 						Providers: []core.DNSProvider{
 							{
 								Type: &unmanagedDNSProvider,
@@ -1928,7 +1928,7 @@ var _ = Describe("validator", func() {
 					anotherShoot := versionedShoot.DeepCopy()
 					anotherShoot.Name = "another-shoot"
 
-					subdomain := fmt.Sprintf("subdomain.%s", *anotherShoot.Spec.DNS.Domain)
+					subdomain := "subdomain." + *anotherShoot.Spec.DNS.Domain
 					shoot.Spec.DNS.Domain = &subdomain
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())

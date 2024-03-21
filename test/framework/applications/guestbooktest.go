@@ -17,6 +17,7 @@ package applications
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -121,7 +122,7 @@ func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, gue
 			bodyString := string(responseBytes)
 			if strings.Contains(bodyString, "404") || strings.Contains(bodyString, "503") {
 				t.framework.Logger.Info("Guestbook app is not ready yet")
-				return retry.MinorError(fmt.Errorf("guestbook response body contained an error code"))
+				return retry.MinorError(errors.New("guestbook response body contained an error code"))
 			}
 		}
 		t.framework.Logger.Info("Rejoice, the guestbook app urls are available now")
@@ -195,8 +196,8 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 func (t *GuestBookTest) Test(ctx context.Context) {
 	shoot := t.framework.Shoot
 	// define guestbook app urls
-	guestBookAppURL := fmt.Sprintf("http://%s", t.guestBookAppHost)
-	pushString := fmt.Sprintf("foobar-%s", shoot.Name)
+	guestBookAppURL := "http://" + t.guestBookAppHost
+	pushString := "foobar-" + shoot.Name
 	pushURL := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
 	pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 

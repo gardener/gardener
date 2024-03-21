@@ -16,6 +16,7 @@ package bootstrappers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -73,7 +74,7 @@ func (g *GardenKubeconfig) Start(ctx context.Context) (err error) {
 			return nil
 		}
 
-		return fmt.Errorf("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
+		return errors.New("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
 			"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 	}
 
@@ -134,7 +135,7 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(
 
 	if len(bootstrapKubeconfig) == 0 {
 		log.Info("Unable to perform kubeconfig bootstrap. Bootstrap secret does not contain a kubeconfig")
-		return nil, "", "", fmt.Errorf("bootstrap secret does not contain a kubeconfig, cannot bootstrap")
+		return nil, "", "", errors.New("bootstrap secret does not contain a kubeconfig, cannot bootstrap")
 	}
 
 	bootstrapClientSet, err := NewClientFromBytes(bootstrapKubeconfig)

@@ -15,8 +15,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -145,7 +143,7 @@ func setDefaultsResources(obj *gardenletv1alpha1.ResourcesConfiguration) {
 func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string) {
 	if spec.Backup != nil && spec.Backup.SecretRef == (corev1.SecretReference{}) {
 		spec.Backup.SecretRef = corev1.SecretReference{
-			Name:      fmt.Sprintf("backup-%s", name),
+			Name:      "backup-" + name,
 			Namespace: namespace,
 		}
 	}

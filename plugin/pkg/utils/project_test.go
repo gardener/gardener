@@ -15,7 +15,7 @@
 package utils_test
 
 import (
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,7 +30,7 @@ import (
 
 var _ = Describe("Project", func() {
 	var (
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		namespaceName = "foo"
 

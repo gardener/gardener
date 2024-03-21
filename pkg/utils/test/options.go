@@ -15,7 +15,7 @@
 package test
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -26,7 +26,7 @@ type Flag interface {
 }
 
 func keyToFlag(key string) string {
-	return fmt.Sprintf("--%s", key)
+	return "--" + key
 }
 
 type intFlag struct {
@@ -35,7 +35,7 @@ type intFlag struct {
 }
 
 func (f *intFlag) Slice() []string {
-	return []string{keyToFlag(f.key), fmt.Sprintf("%d", f.value)}
+	return []string{keyToFlag(f.key), strconv.Itoa(f.value)}
 }
 
 type stringFlag struct {

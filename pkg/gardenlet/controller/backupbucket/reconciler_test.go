@@ -16,7 +16,6 @@ package backupbucket_test
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -256,5 +255,5 @@ var _ = Describe("Controller", func() {
 })
 
 func generateBackupBucketSecretName(backupBucketName string) string {
-	return fmt.Sprintf("bucket-%s", backupBucketName)
+	return "bucket-" + backupBucketName
 }

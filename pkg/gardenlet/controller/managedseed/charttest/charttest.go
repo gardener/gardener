@@ -16,6 +16,7 @@ package charttest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -957,7 +958,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 	error,
 ) {
 	if image.Repository == nil || image.Tag == nil {
-		return appsv1.DeploymentSpec{}, fmt.Errorf("the image repository and tag must be provided")
+		return appsv1.DeploymentSpec{}, errors.New("the image repository and tag must be provided")
 	}
 
 	deployment := appsv1.DeploymentSpec{

@@ -16,6 +16,7 @@ package clientmap_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -98,7 +99,7 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because of unpopulated token", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return nil
@@ -119,7 +120,7 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because NewClientFromSecretObject fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					(&corev1.Secret{
@@ -229,7 +230,7 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should fail if Get gardener-internal Secret fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return fakeErr

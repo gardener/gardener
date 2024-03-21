@@ -16,6 +16,7 @@ package controller_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -39,7 +40,7 @@ import (
 var _ = Describe("Status", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake")
+		fakeErr = errors.New("fake")
 
 		generation int64 = 1337
 		lastOpType       = gardencorev1beta1.LastOperationTypeCreate

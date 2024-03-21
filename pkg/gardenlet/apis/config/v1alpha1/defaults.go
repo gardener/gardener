@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,7 +103,7 @@ func SetDefaults_ExposureClassHandler(obj []ExposureClassHandler) {
 			obj[i].SNI.Ingress = &SNIIngress{}
 		}
 		if obj[i].SNI.Ingress.Namespace == nil {
-			namespaceName := fmt.Sprintf("istio-ingress-handler-%s", handler.Name)
+			namespaceName := "istio-ingress-handler-" + handler.Name
 			obj[i].SNI.Ingress.Namespace = &namespaceName
 		}
 		if obj[i].SNI.Ingress.ServiceName == nil {

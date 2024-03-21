@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -50,7 +50,7 @@ var _ = Describe("KubeControllerManager", func() {
 		c                *mockclient.MockClient
 
 		ctx       = context.TODO()
-		fakeErr   = fmt.Errorf("fake err")
+		fakeErr   = errors.New("fake err")
 		namespace = "foo"
 	)
 

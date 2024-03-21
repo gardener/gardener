@@ -16,6 +16,7 @@
 package v1alpha1
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/conversion"
@@ -64,7 +65,7 @@ func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.G
 	if out.Config.Raw == nil {
 		cfg, ok := out.Config.Object.(*gardenletv1alpha1.GardenletConfiguration)
 		if !ok {
-			return fmt.Errorf("unknown gardenlet config object type")
+			return errors.New("unknown gardenlet config object type")
 		}
 		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {

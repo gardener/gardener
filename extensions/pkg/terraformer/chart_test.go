@@ -15,8 +15,6 @@
 package terraformer
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -26,7 +24,7 @@ import (
 
 func mkManifest(name string, content string) releaseutil.Manifest {
 	return releaseutil.Manifest{
-		Name:    fmt.Sprintf("/templates/%s", name),
+		Name:    "/templates/" + name,
 		Content: content,
 	}
 }

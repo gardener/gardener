@@ -16,7 +16,7 @@ package cache_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -98,7 +98,7 @@ var _ = Describe("Aggregator", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: objectMeta,
 			}
-			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(fmt.Errorf("some error"))
+			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(errors.New("some error"))
 			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(MatchError("some error"))
 		})
 	})

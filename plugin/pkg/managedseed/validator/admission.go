@@ -370,36 +370,36 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	if spec.Ingress.Domain == "" {
 		spec.Ingress.Domain = ingressDomain
 	} else if spec.Ingress.Domain != ingressDomain {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, "seed ingress domain must be equal to shoot DNS domain "+ingressDomain))
 	}
 
 	// Initialize and validate networks
 	if spec.Networks.Nodes == nil {
 		spec.Networks.Nodes = shoot.Spec.Networking.Nodes
 	} else if shoot.Spec.Networking.Nodes != nil && *spec.Networks.Nodes != *shoot.Spec.Networking.Nodes {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "nodes"), spec.Networks.Nodes, fmt.Sprintf("seed nodes CIDR must be equal to shoot nodes CIDR %s", *shoot.Spec.Networking.Nodes)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "nodes"), spec.Networks.Nodes, "seed nodes CIDR must be equal to shoot nodes CIDR "+*shoot.Spec.Networking.Nodes))
 	}
 	if spec.Networks.Pods == "" && shoot.Spec.Networking.Pods != nil {
 		spec.Networks.Pods = *shoot.Spec.Networking.Pods
 	} else if shoot.Spec.Networking.Pods != nil && spec.Networks.Pods != *shoot.Spec.Networking.Pods {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "pods"), spec.Networks.Pods, fmt.Sprintf("seed pods CIDR must be equal to shoot pods CIDR %s", *shoot.Spec.Networking.Pods)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "pods"), spec.Networks.Pods, "seed pods CIDR must be equal to shoot pods CIDR "+*shoot.Spec.Networking.Pods))
 	}
 	if spec.Networks.Services == "" && shoot.Spec.Networking.Services != nil {
 		spec.Networks.Services = *shoot.Spec.Networking.Services
 	} else if shoot.Spec.Networking.Services != nil && spec.Networks.Services != *shoot.Spec.Networking.Services {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "services"), spec.Networks.Pods, fmt.Sprintf("seed services CIDR must be equal to shoot services CIDR %s", *shoot.Spec.Networking.Services)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networks", "services"), spec.Networks.Pods, "seed services CIDR must be equal to shoot services CIDR "+*shoot.Spec.Networking.Services))
 	}
 
 	// Initialize and validate provider
 	if spec.Provider.Type == "" {
 		spec.Provider.Type = shoot.Spec.Provider.Type
 	} else if spec.Provider.Type != shoot.Spec.Provider.Type {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "type"), spec.Provider.Type, fmt.Sprintf("seed provider type must be equal to shoot provider type %s", shoot.Spec.Provider.Type)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "type"), spec.Provider.Type, "seed provider type must be equal to shoot provider type "+shoot.Spec.Provider.Type))
 	}
 	if spec.Provider.Region == "" {
 		spec.Provider.Region = shoot.Spec.Region
 	} else if spec.Provider.Region != shoot.Spec.Region {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, "seed provider region must be equal to shoot region "+shoot.Spec.Region))
 	}
 	if shootZones := v1beta1helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
 		spec.Provider.Zones = sets.List(shootZones)

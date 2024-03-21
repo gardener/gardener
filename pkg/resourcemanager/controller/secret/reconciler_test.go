@@ -16,7 +16,7 @@ package secret_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -85,7 +85,7 @@ var _ = Describe("SecretReconciler", func() {
 		})
 
 		It("should do nothing if secret get fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Return(fakeErr)

@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -53,7 +54,7 @@ var _ = Describe("ClusterIdentity", func() {
 		clusterIdentity *mockclusteridentity.MockInterface
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake")
+		fakeErr = errors.New("fake")
 
 		gardenClient  client.Client
 		seedClient    client.Client

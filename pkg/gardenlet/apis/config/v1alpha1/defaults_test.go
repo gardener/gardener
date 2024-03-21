@@ -15,7 +15,6 @@
 package v1alpha1_test
 
 import (
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -742,7 +741,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ExposureClassHandlers[0].SNI).ToNot(BeNil())
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress).ToNot(BeNil())
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).ToNot(BeNil())
-			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).To(Equal(fmt.Sprintf("istio-ingress-handler-%s", obj.ExposureClassHandlers[0].Name)))
+			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).To(Equal("istio-ingress-handler-" + obj.ExposureClassHandlers[0].Name))
 			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.ServiceName).To(Equal("istio-ingressgateway"))
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Labels).To(Equal(map[string]string{
 				"app":                 "istio-ingressgateway",
@@ -751,7 +750,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.ExposureClassHandlers[1].SNI.Ingress).ToNot(BeNil())
 			Expect(obj.ExposureClassHandlers[1].SNI.Ingress.Namespace).ToNot(BeNil())
-			Expect(*obj.ExposureClassHandlers[1].SNI.Ingress.Namespace).To(Equal(fmt.Sprintf("istio-ingress-handler-%s", obj.ExposureClassHandlers[1].Name)))
+			Expect(*obj.ExposureClassHandlers[1].SNI.Ingress.Namespace).To(Equal("istio-ingress-handler-" + obj.ExposureClassHandlers[1].Name))
 			Expect(*obj.ExposureClassHandlers[1].SNI.Ingress.ServiceName).To(Equal("istio-ingressgateway"))
 			Expect(obj.ExposureClassHandlers[1].SNI.Ingress.Labels).To(Equal(map[string]string{
 				"app":                 "istio-ingressgateway",
@@ -776,7 +775,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ExposureClassHandlers[0].SNI).ToNot(BeNil())
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress).ToNot(BeNil())
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).ToNot(BeNil())
-			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).To(Equal(fmt.Sprintf("istio-ingress-handler-%s", obj.ExposureClassHandlers[0].Name)))
+			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).To(Equal("istio-ingress-handler-" + obj.ExposureClassHandlers[0].Name))
 			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.ServiceName).To(Equal("istio-ingressgateway"))
 			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Labels).To(Equal(map[string]string{
 				"app":                 "istio-ingressgateway",

@@ -16,6 +16,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -344,7 +345,7 @@ func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.
 
 		renewTimestamp, ok := shootAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 		if !ok {
-			return retryutils.MinorError(fmt.Errorf("token not yet generated"))
+			return retryutils.MinorError(errors.New("token not yet generated"))
 		}
 
 		renewTime, err2 := time.Parse(time.RFC3339, renewTimestamp)
@@ -353,7 +354,7 @@ func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.
 		}
 
 		if time.Now().UTC().After(renewTime.UTC()) {
-			return retryutils.MinorError(fmt.Errorf("token not yet renewed"))
+			return retryutils.MinorError(errors.New("token not yet renewed"))
 		}
 
 		return retryutils.Ok()

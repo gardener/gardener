@@ -16,6 +16,7 @@ package managedresources_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -90,7 +91,7 @@ func (e *errorClient) Patch(ctx context.Context, obj client.Object, patch client
 var _ = Describe("managedresources", func() {
 	var (
 		ctx     = context.Background()
-		fakeErr = fmt.Errorf("fake")
+		fakeErr = errors.New("fake")
 
 		namespace   = "test"
 		name        = "managed-resource"

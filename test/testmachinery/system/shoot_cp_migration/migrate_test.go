@@ -22,8 +22,8 @@ package cp_migration_test
 
 import (
 	"context"
+	"errors"
 	"flag"
-	"fmt"
 	"strings"
 	"time"
 
@@ -115,7 +115,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	}
 
 	if !v1beta1helper.NginxIngressEnabled(t.Shoot.Spec.Addons) {
-		return fmt.Errorf("the shoot must have the nginx-ingress addon enabled")
+		return errors.New("the shoot must have the nginx-ingress addon enabled")
 	}
 
 	ginkgo.By("Create test Secret and Service Account")

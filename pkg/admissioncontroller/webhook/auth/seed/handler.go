@@ -174,7 +174,7 @@ func (h *Handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccess
 		return nil, nil, err
 	}
 	if gvk == nil {
-		return nil, nil, fmt.Errorf("could not determine GVK for object in the request body")
+		return nil, nil, errors.New("could not determine GVK for object in the request body")
 	}
 
 	// The only difference in v1beta1 is that the JSON key name of the 'Groups' field is different. Hence, when we

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 	"sort"
 
@@ -141,7 +141,7 @@ var _ = Describe("KubeProxy", func() {
 			kubeProxy *mockkubeproxy.MockInterface
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {

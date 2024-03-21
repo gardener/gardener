@@ -16,7 +16,7 @@ package namespacedeletion_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -108,7 +108,7 @@ var _ = Describe("handler", func() {
 	})
 
 	It("should fail because get namespace fails", func() {
-		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(errors.New("fake"))
 
 		test(MatchError(ContainSubstring("fake")))
 	})
@@ -118,7 +118,7 @@ var _ = Describe("handler", func() {
 			namespace.DeepCopyInto(obj)
 			return nil
 		})
-		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
+		mockClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(errors.New("fake"))
 
 		test(MatchError(ContainSubstring("fake")))
 	})
@@ -172,7 +172,7 @@ var _ = Describe("handler", func() {
 
 			It("should fail because listing shoots fails", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, _ *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return fmt.Errorf("fake")
+					return errors.New("fake")
 				})
 
 				test(MatchError(ContainSubstring("fake")))

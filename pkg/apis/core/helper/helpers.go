@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -60,7 +61,7 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
 		return "secret", nil
 	}
-	return "", fmt.Errorf("unknown quota scope")
+	return "", errors.New("unknown quota scope")
 }
 
 // DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
@@ -100,7 +101,7 @@ func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, fil
 		}
 	}
 
-	return core.MachineImageVersion{}, fmt.Errorf("the latest machine version has been removed")
+	return core.MachineImageVersion{}, errors.New("the latest machine version has been removed")
 }
 
 // DetermineLatestExpirableVersion determines the latest expirable version and the latest non-deprecated version from a slice of ExpirableVersions.
@@ -138,7 +139,7 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 	}
 
 	if latestSemVerVersion == nil {
-		return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("unable to determine latest expirable version")
+		return core.ExpirableVersion{}, core.ExpirableVersion{}, errors.New("unable to determine latest expirable version")
 	}
 
 	return latestExpirableVersion, latestNonDeprecatedExpirableVersion, nil
@@ -432,7 +433,7 @@ func ConvertSeed(obj runtime.Object) (*core.Seed, error) {
 	}
 	result, ok := obj.(*core.Seed)
 	if !ok {
-		return nil, fmt.Errorf("could not convert Seed to internal version")
+		return nil, errors.New("could not convert Seed to internal version")
 	}
 	return result, nil
 }

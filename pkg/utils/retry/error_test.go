@@ -16,7 +16,6 @@ package retry_test
 
 import (
 	"errors"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,7 +26,7 @@ import (
 var _ = Describe("Retriable Errors", func() {
 	Describe("#RetriableError", func() {
 		It("should mark an error as retriable", func() {
-			err := fmt.Errorf("foo")
+			err := errors.New("foo")
 			r := RetriableError(err)
 			Expect(r).To(MatchError("foo"))
 
@@ -50,14 +49,14 @@ var _ = Describe("Retriable Errors", func() {
 
 	Describe("#IsRetriable", func() {
 		It("should return false for non-retriable error", func() {
-			Expect(IsRetriable(fmt.Errorf("foo"))).To(BeFalse())
+			Expect(IsRetriable(errors.New("foo"))).To(BeFalse())
 		})
 		It("should return true for retriable error", func() {
 			Expect(IsRetriable(dummyRetriableError{})).To(BeTrue())
 			Expect(IsRetriable(&dummyRetriableError{})).To(BeTrue())
 		})
 		It("should return true for error created by RetriableError", func() {
-			Expect(IsRetriable(RetriableError(fmt.Errorf("foo")))).To(BeTrue())
+			Expect(IsRetriable(RetriableError(errors.New("foo")))).To(BeTrue())
 			Expect(IsRetriable(RetriableError(&specialError{}))).To(BeTrue())
 		})
 	})

@@ -34,7 +34,7 @@ func VersionMajorMinor(version string) (string, error) {
 func VersionInfo(vs string) (*version.Info, error) {
 	v, err := semver.NewVersion(vs)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid version string '%s': %w", vs, err)
+		return nil, fmt.Errorf("invalid version string '%s': %w", vs, err)
 	}
 	return &version.Info{
 		Major:      fmt.Sprintf("%d", v.Major()),

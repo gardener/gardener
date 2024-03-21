@@ -782,15 +782,15 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
-				Value: fmt.Sprintf("%d", index),
+				Value: strconv.Itoa(index),
 			},
 			{
 				Name:  "HA_VPN_SERVERS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfSeedServers),
+				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfSeedServers),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfShootClients),
+				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfShootClients),
 			},
 			{
 				Name:  "OPENVPN_PORT",
@@ -858,7 +858,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
-				Value: fmt.Sprintf("%d", k.values.VPN.HighAvailabilityNumberOfShootClients),
+				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfShootClients),
 			},
 		},
 		Resources: corev1.ResourceRequirements{

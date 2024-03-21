@@ -16,7 +16,7 @@ package internaldomainsecret_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -47,7 +47,7 @@ var _ = Describe("handler", func() {
 		mockReader *mockclient.MockReader
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 		log     logr.Logger
 		handler *Handler
 

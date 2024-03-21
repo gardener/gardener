@@ -16,7 +16,7 @@ package healthz_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -55,7 +55,7 @@ var _ = Describe("Checker", func() {
 		})
 
 		It("should return an error because the request failed", func() {
-			fakeErr := fmt.Errorf("fake err")
+			fakeErr := errors.New("fake err")
 			fakeRESTClient.Err = fakeErr
 
 			Expect(checker(nil)).To(MatchError(fakeErr))

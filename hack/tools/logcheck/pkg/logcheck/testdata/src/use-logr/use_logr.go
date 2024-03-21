@@ -17,6 +17,7 @@
 package use_logr
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -40,7 +41,7 @@ func WithValues(keysAndValues ...interface{}) logr.Logger       { return logr.Lo
 
 func notCallingFuncWithSelectorExpr() {
 	Info("foo")
-	Error(fmt.Errorf("foo"), "bar")
+	Error(errors.New("foo"), "bar")
 	WithValues("foo", "bar")
 }
 
@@ -72,7 +73,7 @@ type fooStringer struct{}
 func (fooStringer) String() string { return "Foo" }
 
 func constantStringMessage() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const msg = "A constant string"
 	var varMsg = "Not a constant string"
 	var stringer fmt.Stringer = fooStringer{}
@@ -136,7 +137,7 @@ func constantStringMessage() {
 }
 
 func emptyMessage() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const msg = ""
 
 	var nl notLogr
@@ -159,7 +160,7 @@ func emptyMessage() {
 }
 
 func messageUsingFormatSpecifier() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const msg = "Message using %s"
 
 	var nl notLogr
@@ -182,7 +183,7 @@ func messageUsingFormatSpecifier() {
 }
 
 func messageNotCapitalized() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const msg = "message"
 
 	var nl notLogr
@@ -205,7 +206,7 @@ func messageNotCapitalized() {
 }
 
 func messageEndingWithPunctuationMark() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const msg = "Message."
 
 	var nl notLogr
@@ -228,7 +229,7 @@ func messageEndingWithPunctuationMark() {
 }
 
 func oddNumberOfArgs() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 
 	var nl notLogr
 	nl.WithValues("foo")
@@ -280,7 +281,7 @@ func oddNumberOfArgs() {
 }
 
 func constantStringKey() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const key = "constantKey"
 	var varKey = "notConstantKey"
 	var stringer fmt.Stringer = fooStringer{}
@@ -344,7 +345,7 @@ func constantStringKey() {
 }
 
 func emptyKey() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const emptyKey, key = "", "notEmpty"
 
 	var nl notLogr
@@ -382,7 +383,7 @@ func emptyKey() {
 }
 
 func keyUsingFormatSpecifier() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const key = "keyUsing%s"
 
 	var nl notLogr
@@ -405,7 +406,7 @@ func keyUsingFormatSpecifier() {
 }
 
 func capitalizedKey() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const capitalizedKey, key = "UpperCamelCase", "lowerCamelCase"
 
 	var nl notLogr
@@ -443,7 +444,7 @@ func capitalizedKey() {
 }
 
 func asciiKey() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const nonASCIIKey, key = "nonASCIIKeyÄÖÜ", "asciiKey"
 
 	var nl notLogr
@@ -481,7 +482,7 @@ func asciiKey() {
 }
 
 func keyContainingSpace() {
-	var err = fmt.Errorf("foo")
+	var err = errors.New("foo")
 	const keyWithSpaces, key = "key with spaces", "keyWithoutSpaces"
 
 	var nl notLogr

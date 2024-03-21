@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -78,7 +78,7 @@ var _ = Describe("VerticalPodAutoscaler", func() {
 			vpa *mockvpa.MockInterface
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {

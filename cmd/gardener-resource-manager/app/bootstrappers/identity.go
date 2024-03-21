@@ -16,6 +16,7 @@ package bootstrappers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -66,7 +67,7 @@ func (i *IdentityDeterminer) determineClusterIdentity(ctx context.Context, force
 		}
 
 		if force {
-			return "", fmt.Errorf("cannot determine cluster identity from configmap: no cluster-identity entry")
+			return "", errors.New("cannot determine cluster identity from configmap: no cluster-identity entry")
 		}
 	} else {
 		if force || !apierrors.IsNotFound(err) {
