@@ -297,6 +297,7 @@ func MapStringBoolToCommandLineParameter(m map[string]bool, param string) string
 	for k := range m {
 		keys = append(keys, k)
 	}
+
 	slices.Sort(keys)
 
 	out := param

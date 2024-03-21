@@ -38,6 +38,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.APIReader == nil {
 		r.APIReader = mgr.GetAPIReader()
 	}
+
 	if r.FS.Fs == nil {
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
 	}

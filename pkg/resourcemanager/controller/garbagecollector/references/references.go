@@ -167,6 +167,7 @@ func computeAnnotationsFromLocalObjRefs(refs []corev1.LocalObjectReference, kind
 	for _, ref := range refs {
 		out[AnnotationKey(kind, ref.Name)] = ref.Name
 	}
+
 	for _, v := range additional {
 		out[v] = ""
 	}

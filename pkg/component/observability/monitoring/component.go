@@ -495,6 +495,7 @@ func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]i
 					},
 				}
 			}
+
 			break
 		}
 
@@ -512,6 +513,7 @@ func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]i
 					},
 				}
 			}
+
 			break
 		}
 
@@ -548,6 +550,7 @@ func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]i
 					return nil, err
 				}
 			}
+
 			break
 		}
 	}

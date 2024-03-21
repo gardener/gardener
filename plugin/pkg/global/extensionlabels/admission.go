@@ -229,6 +229,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix+pool.Machine.Image.Name, "true")
 		}
 	}
+
 	if shoot.Spec.DNS != nil {
 		for _, provider := range shoot.Spec.DNS.Providers {
 			if provider.Type == nil || *provider.Type == core.DNSUnmanaged {
@@ -237,7 +238,9 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+*provider.Type, "true")
 		}
 	}
+
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")
+
 	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+*shoot.Spec.Networking.Type, "true")
 	}

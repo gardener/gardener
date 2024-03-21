@@ -67,6 +67,7 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 	if obj.Weeder == nil {
 		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
 	}
+
 	if obj.Prober == nil {
 		obj.Prober = &SeedSettingDependencyWatchdogProber{Enabled: true}
 	}

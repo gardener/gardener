@@ -572,6 +572,7 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
 	// This indicates how many Nodes we can host at max from a networking perspective.
 	var bitLen, maxNodeCount = &big.Int{}, &big.Int{}
+
 	bitLen.Sub(big.NewInt(nodeCIDRMaskSize), big.NewInt(int64(podCIDRMaskSize)))
 	maxNodeCount.Exp(big.NewInt(2), bitLen, nil)
 
@@ -1906,6 +1907,7 @@ func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList 
 			duplicatedError := field.Duplicate(idxPath, taint)
 			duplicatedError.Detail = "taints must be unique by key and effect pair"
 			allErrs = append(allErrs, duplicatedError)
+
 			continue
 		}
 
@@ -1925,6 +1927,7 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 	}
 
 	allErrors := field.ErrorList{}
+
 	switch *effect {
 	case corev1.TaintEffectNoSchedule, corev1.TaintEffectPreferNoSchedule, corev1.TaintEffectNoExecute:
 	default:
@@ -1993,6 +1996,7 @@ func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion str
 
 		if hasSufficientWorkers {
 			workerPoolsWithSufficientWorkers[workerPoolKey] = struct{}{}
+
 			delete(workerPoolsWithInsufficientWorkers, workerPoolKey)
 		} else {
 			if _, b := workerPoolsWithSufficientWorkers[workerPoolKey]; !b {
@@ -2050,8 +2054,8 @@ func ValidateHibernationSchedules(schedules []core.HibernationSchedule, fldPath 
 // ValidateHibernationCronSpec validates a cron specification of a hibernation schedule.
 func ValidateHibernationCronSpec(seenSpecs sets.Set[string], spec string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
 	_, err := cron.ParseStandard(spec)
+
 	switch {
 	case err != nil:
 		allErrs = append(allErrs, field.Invalid(fldPath, spec, fmt.Sprintf("not a valid cron spec: %v", err)))

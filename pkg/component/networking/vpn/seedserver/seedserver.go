@@ -218,6 +218,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		if err := v.deployStatefulSet(ctx, labels, podTemplate); err != nil {
 			return err
 		}
+
 		for i := 0; i < int(v.values.Replicas); i++ {
 			if err := v.deployService(ctx, &i); err != nil {
 				return err
@@ -243,6 +244,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		if err := v.deployDestinationRule(ctx, nil); err != nil {
 			return err
 		}
+
 		objects := []client.Object{v.emptyStatefulSet()}
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			objects = append(objects, v.emptyService(&i), v.emptyDestinationRule(&i))

@@ -55,6 +55,7 @@ func (e *ExtensionResourceStateList) Upsert(extensionResourceState *gardencorev1
 			return
 		}
 	}
+
 	*e = append(*e, *extensionResourceState)
 }
 
@@ -111,6 +112,7 @@ func (g *GardenerResourceDataList) Upsert(data *gardencorev1beta1.GardenerResour
 			return
 		}
 	}
+
 	*g = append(*g, *data)
 }
 
@@ -154,5 +156,6 @@ func (r *ResourceDataList) Upsert(data *gardencorev1beta1.ResourceData) {
 			return
 		}
 	}
+
 	*r = append(*r, *data)
 }

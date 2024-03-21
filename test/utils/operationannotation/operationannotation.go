@@ -67,6 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.V(1).Info("Removing operation annotation")
+
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	delete(obj.GetAnnotations(), v1beta1constants.GardenerOperation)
 	return reconcile.Result{}, r.Client.Patch(ctx, obj, patch)

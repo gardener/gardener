@@ -234,6 +234,7 @@ func (cm *GenericClientMap) Start(ctx context.Context) error {
 
 func (cm *GenericClientMap) startClientSet(key ClientSetKey, entry *clientMapEntry) error {
 	clientSetContext, clientSetCancel := context.WithCancel(context.Background())
+
 	go func() {
 		select {
 		case <-clientSetContext.Done():

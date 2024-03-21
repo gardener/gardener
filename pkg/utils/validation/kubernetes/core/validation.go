@@ -54,6 +54,7 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 	}
 
 	allErrors := field.ErrorList{}
+
 	switch *effect {
 	// TODO: Replace next line with subsequent commented-out line when implement TaintEffectNoScheduleNoAdmit.
 	case corev1.TaintEffectNoSchedule, corev1.TaintEffectPreferNoSchedule, corev1.TaintEffectNoExecute:
@@ -74,6 +75,7 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 // ValidateTolerations tests if given tolerations have valid data.
 func ValidateTolerations(tolerations []corev1.Toleration, fldPath *field.Path) field.ErrorList {
 	allErrors := field.ErrorList{}
+
 	for i, toleration := range tolerations {
 		idxPath := fldPath.Index(i)
 		// validate the toleration key
@@ -113,17 +115,21 @@ func ValidateTolerations(tolerations []corev1.Toleration, fldPath *field.Path) f
 			allErrors = append(allErrors, validateTaintEffect(&toleration.Effect, true, idxPath.Child("effect"))...)
 		}
 	}
+
 	return allErrors
 }
 
 // ValidateResourceQuantityValue enforces that specified quantity is valid for specified resource
 func ValidateResourceQuantityValue(resource string, value resource.Quantity, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	allErrs = append(allErrs, ValidateNonnegativeQuantity(value, fldPath)...)
+
 	if IsIntegerResourceName(resource) {
 		if value.MilliValue()%int64(1000) != int64(0) {
 			allErrs = append(allErrs, field.Invalid(fldPath, value, isNotIntegerErrorMsg))
 		}
 	}
+
 	return allErrs
 }

@@ -183,6 +183,7 @@ func (s *singleObject) getOrCreateCache(key client.ObjectKey) (cache.Cache, erro
 		log.V(1).Info("Cache not found, creating it")
 
 		var err error
+
 		cache, err = s.createAndStartCache(log, key)
 		if err != nil {
 			return nil, err

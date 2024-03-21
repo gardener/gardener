@@ -129,6 +129,7 @@ func BuildWebhookConfigs(
 			}
 			rules = append(rules, *rule)
 		}
+
 		switch webhook.Target {
 		case TargetSeed:
 			// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective

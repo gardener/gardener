@@ -35,8 +35,10 @@ type Ops struct {
 
 // Until implements retry.Ops without waiting between retries.
 func (o *Ops) Until(ctx context.Context, _ time.Duration, f retry.Func) error {
-	var minorErr error
-	attempts := 0
+	var (
+		minorErr error
+		attempts = 0
+	)
 
 	for {
 		attempts++

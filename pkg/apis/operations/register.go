@@ -48,5 +48,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&Bastion{},
 		&BastionList{},
 	)
+
 	return nil
 }

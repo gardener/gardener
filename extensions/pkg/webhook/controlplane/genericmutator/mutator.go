@@ -190,6 +190,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 				return errors.New("could not cast old object to vpaautoscalingv1.VerticalPodAutoscaler")
 			}
 		}
+
 		switch x.Name {
 		case machinecontrollermanager.VPAName:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)

@@ -155,6 +155,7 @@ func (b *defaultConditionBuilder) buildMessage() string {
 		// without specifying a message we want to retain this message instead of toggling to `b.old.Message == ""`.
 		return "No message given."
 	}
+
 	if b.old.Message == "" {
 		return "The condition has been initialized but its semantic check has not been performed yet."
 	}

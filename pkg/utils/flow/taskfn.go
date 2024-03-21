@@ -114,11 +114,13 @@ func ParallelN(n int, fns ...TaskFn) TaskFn {
 
 		for i := 0; i < workers; i++ {
 			wg.Add(1)
+
 			go func() {
 				for fn := range fnsCh {
 					fn := fn
 					errCh <- fn(ctx)
 				}
+
 				wg.Done()
 			}()
 		}
@@ -165,7 +167,9 @@ func ParallelExitOnError(fns ...TaskFn) TaskFn {
 
 		for _, fn := range fns {
 			t := fn
+
 			wg.Add(1)
+
 			go func() {
 				defer wg.Done()
 				errors <- t(subCtx)

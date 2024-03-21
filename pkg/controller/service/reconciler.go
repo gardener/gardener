@@ -55,10 +55,12 @@ type Reconciler struct {
 
 // Reconcile reconciles Service resources.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
+	var (
+		log     = logf.FromContext(ctx)
+		key     = req.NamespacedName
+		service = &corev1.Service{}
+	)
 
-	key := req.NamespacedName
-	service := &corev1.Service{}
 	if err := r.Client.Get(ctx, key, service); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
@@ -72,6 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	log.Info("Reconciling service")
+
 	var (
 		ip    string
 		patch = client.MergeFrom(service.DeepCopy())

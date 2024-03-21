@@ -66,6 +66,7 @@ func SetDefaults_Image(obj *Image) {
 		} else {
 			pullPolicy = corev1.PullIfNotPresent
 		}
+
 		obj.PullPolicy = &pullPolicy
 	}
 }

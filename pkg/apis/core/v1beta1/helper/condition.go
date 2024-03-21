@@ -107,6 +107,7 @@ func FailedCondition(
 func UpdatedConditionWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
 	builder, err := NewConditionBuilder(condition.Type)
 	utilruntime.Must(err)
+
 	newCondition, _ := builder.
 		WithOldCondition(condition).
 		WithClock(clock).
@@ -159,6 +160,7 @@ func MergeConditions(oldConditions []gardencorev1beta1.Condition, newConditions 
 			out[index] = condition
 			continue
 		}
+
 		out = append(out, condition)
 	}
 

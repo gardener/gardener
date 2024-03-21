@@ -65,6 +65,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	if err != nil {
 		return fmt.Errorf("error adding lease to containerd client: %w", err)
 	}
+
 	defer func() { utilruntime.HandleError(done(ctx)) }()
 
 	resolver := docker.NewResolver(docker.ResolverOptions{
@@ -82,6 +83,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	if err != nil {
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}
+
 	defer func() { utilruntime.HandleError(fs.Remove(imageMountDirectory)) }()
 
 	if err := mountImage(ctx, image, snapshotter, imageMountDirectory); err != nil {
@@ -163,6 +165,7 @@ func CopyFile(fs afero.Afero, sourceFile, destinationFile string, permissions os
 	if err != nil {
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}
+
 	defer func() { utilruntime.HandleError(fs.Remove(tempDir)) }()
 
 	tmpFilePath := filepath.Join(tempDir, filepath.Base(destinationFile))

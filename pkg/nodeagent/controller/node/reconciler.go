@@ -56,6 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
+
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
@@ -65,6 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var restartGardenerNodeAgent bool
+
 	for _, serviceName := range strings.Split(services, ",") {
 		if !strings.HasSuffix(serviceName, ".service") {
 			serviceName = serviceName + ".service"
@@ -75,6 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			restartGardenerNodeAgent = true
 			continue
 		}
+
 		r.restartService(ctx, log, node, serviceName)
 	}
 

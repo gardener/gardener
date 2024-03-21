@@ -125,6 +125,7 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 	if k.firstFailure == nil {
 		now := k.Clock.Now()
 		k.firstFailure = &now
+
 		log.Error(err, "Kubelet is unhealthy")
 		k.recorder.Eventf(node, corev1.EventTypeWarning, "kubelet", "Kubelet is unhealthy, health check error: %s", err.Error())
 	}
@@ -145,11 +146,12 @@ func (k *KubeletHealthChecker) Check(ctx context.Context, node *corev1.Node) err
 // ensureNodeInternalIP restores the internalIP of the node if this was initially set but lost in the process.
 // This happens if Kubelet runs into a timeout when contacting the cloud provider API during start-up, see https://github.com/gardener/gardener/commit/1311de43a1745cbc8cf65d57c72e9ed0a2c5e586#diff-738db1352694482843441061260a6f02.
 func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *corev1.Node) error {
-	log := logf.FromContext(ctx).WithName(k.Name())
 	var (
+		log        = logf.FromContext(ctx).WithName(k.Name())
 		externalIP string
 		internalIP string
 	)
+
 	for _, addr := range node.Status.Addresses {
 		switch addr.Type {
 		case corev1.NodeExternalIP:
@@ -199,6 +201,7 @@ func (k *KubeletHealthChecker) ensureNodeInternalIP(ctx context.Context, node *c
 				}
 				return err
 			}
+
 			log.Info("Updated internal IP address of node status", "ip", k.lastInternalIP.String())
 			k.recorder.Eventf(node, corev1.EventTypeNormal, "kubelet", "Updated the lost internal IP address of node status to the previous known: %s ", k.lastInternalIP.String())
 		}

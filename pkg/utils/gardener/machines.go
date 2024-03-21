@@ -88,6 +88,7 @@ func WaitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, read
 		countMachineClasses      = -1
 		countMachineClassSecrets = -1
 	)
+
 	log.Info("Waiting until all machine resources have been deleted")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
@@ -151,6 +152,7 @@ func WaitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, read
 			if err := reader.List(ctx, machineClassSecretsList, client.InNamespace(namespace), client.MatchingLabels(map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass})); err != nil {
 				return retryutils.SevereError(err)
 			}
+
 			for _, machineClassSecret := range machineClassSecretsList.Items {
 				if len(machineClassSecret.Finalizers) != 0 {
 					count++

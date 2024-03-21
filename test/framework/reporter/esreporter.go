@@ -153,6 +153,7 @@ func (reporter *GardenerESReporter) processReport(report ginkgo.Report) {
 	if reporter.suite.Failures != 0 || reporter.suite.Errors != 0 {
 		reporter.suite.Phase = SpecPhaseFailed
 	}
+
 	reporter.suite.Tests = report.PreRunStats.SpecsThatWillRun
 	reporter.suite.Duration = math.Trunc(report.RunTime.Seconds()*1000) / 1000
 }
@@ -164,6 +165,7 @@ func (reporter *GardenerESReporter) storeResults() {
 			fmt.Printf("Failed to create report file: %s\n", err.Error())
 			return
 		}
+
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			fmt.Printf("Failed to create report directory %s: %s\n", dir, err.Error())
 			return
@@ -174,6 +176,7 @@ func (reporter *GardenerESReporter) storeResults() {
 	if err != nil {
 		fmt.Printf("Failed to create report file: %s\n\t%s", reporter.filename, err.Error())
 	}
+
 	defer func() {
 		if err := file.Close(); err != nil {
 			fmt.Printf("unable to close report file: %s", err.Error())

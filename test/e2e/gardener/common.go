@@ -42,6 +42,7 @@ func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 // getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
 func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 	var failureToleranceType gardencorev1beta1.FailureToleranceType
+
 	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
 	case "zone":
 		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone

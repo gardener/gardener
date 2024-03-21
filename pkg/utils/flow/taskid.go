@@ -116,6 +116,7 @@ func (t TaskIDs) List() TaskIDSlice {
 	for k := range t {
 		out = append(out, k)
 	}
+
 	slices.Sort(out)
 	return out
 }

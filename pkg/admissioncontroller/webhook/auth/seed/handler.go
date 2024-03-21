@@ -69,6 +69,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		body        []byte
 		err         error
 	)
+
 	defer cancel()
 
 	// Verify that body is non-empty
@@ -117,6 +118,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var status authorizationv1.SubjectAccessReviewStatus
+
 	switch decision {
 	case auth.DecisionAllow:
 		status = Allowed()
@@ -167,6 +169,7 @@ func (h *Handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccess
 	// isn't set. By setting TypeMeta of an unregistered type to the v1 GVK, the decoder will coerce a v1beta1
 	// SubjectAccessReview to v1.
 	var obj unversionedAdmissionReview
+
 	obj.SetGroupVersionKind(authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
 
 	_, gvk, err := codecs.UniversalDeserializer().Decode(body, nil, &obj)

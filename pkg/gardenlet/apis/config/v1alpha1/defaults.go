@@ -95,6 +95,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_ExposureClassHandler sets defaults for the configuration for an exposure class handler.
 func SetDefaults_ExposureClassHandler(obj []ExposureClassHandler) {
 	var defaultSVCName = v1beta1constants.DefaultSNIIngressServiceName
+
 	for i, handler := range obj {
 		if obj[i].SNI == nil {
 			obj[i].SNI = &SNI{Ingress: &SNIIngress{}}

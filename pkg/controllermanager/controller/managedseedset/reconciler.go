@@ -96,8 +96,11 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, managedSeedSet
 		return reconcile.Result{}, nil
 	}
 
-	var status *seedmanagementv1alpha1.ManagedSeedSetStatus
-	var removeFinalizer bool
+	var (
+		status          *seedmanagementv1alpha1.ManagedSeedSetStatus
+		removeFinalizer bool
+	)
+
 	defer func() {
 		// Only update status if the finalizer is not removed to prevent errors if the object is already gone
 		if !removeFinalizer {

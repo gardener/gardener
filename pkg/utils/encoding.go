@@ -156,9 +156,11 @@ func ComputeSHA256Hex(in []byte) string {
 func HashForMap(m map[string]interface{}) string {
 	var hash string
 	keys := make([]string, 0, len(m))
+
 	for k := range m {
 		keys = append(keys, k)
 	}
+
 	slices.Sort(keys)
 
 	for _, k := range keys {

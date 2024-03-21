@@ -91,6 +91,7 @@ func normalize(version string) string {
 	if idx != -1 {
 		v = v[:idx]
 	}
+
 	return v
 }
 
@@ -105,6 +106,7 @@ type VersionRange struct {
 // and less than RemovedInVersion (always true if RemovedInVersion is empty).
 func (r *VersionRange) Contains(version string) (bool, error) {
 	var constraint string
+
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
 		constraint = ">= " + r.AddedInVersion
@@ -115,6 +117,7 @@ func (r *VersionRange) Contains(version string) (bool, error) {
 	default:
 		constraint = "*"
 	}
+
 	return CheckVersionMeetsConstraint(version, constraint)
 }
 

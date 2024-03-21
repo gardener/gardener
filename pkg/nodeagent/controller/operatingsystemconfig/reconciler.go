@@ -209,6 +209,7 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
+
 	defer func() { utilruntime.HandleError(r.FS.RemoveAll(tmpDir)) }()
 
 	for _, file := range files {

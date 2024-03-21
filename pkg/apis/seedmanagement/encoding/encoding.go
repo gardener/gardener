@@ -81,7 +81,9 @@ func EncodeGardenletConfigurationToBytes(cfg *gardenletv1alpha1.GardenletConfigu
 	if err != nil {
 		return nil, err
 	}
+
 	var b bytes.Buffer
+
 	if err := encoder.Encode(cfg, &b); err != nil {
 		return nil, err
 	}

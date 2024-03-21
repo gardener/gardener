@@ -80,6 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	conditionThreshold := utils.GetThresholdForCondition(r.Config.ConditionThresholds, gardencorev1beta1.SeedBackupBucketsReady)
+
 	switch {
 	case len(erroneousBackupBuckets) > 0:
 		errorMsg := "The following BackupBuckets have issues:"

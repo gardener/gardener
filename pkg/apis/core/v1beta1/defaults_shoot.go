@@ -395,6 +395,7 @@ func addTolerations(tolerations *[]Toleration, additionalTolerations ...Tolerati
 		if _, ok := existingTolerations[toleration]; ok {
 			continue
 		}
+
 		*tolerations = append(*tolerations, toleration)
 	}
 }

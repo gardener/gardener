@@ -46,6 +46,7 @@ func CheckAPIServerAvailability(
 
 	// Determine the status code of the response.
 	var statusCode int
+
 	response.StatusCode(&statusCode)
 
 	if statusCode != http.StatusOK {

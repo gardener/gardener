@@ -114,6 +114,7 @@ func createFile(fakeFS afero.Fs, name, content string, permissions os.FileMode) 
 	file, err := fakeFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, permissions)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
+
 	_, err = file.WriteString(content)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 }
@@ -122,9 +123,11 @@ func checkFile(fakeFS afero.Fs, name, content string, permissions fs.FileMode) {
 	fileInfo, err := fakeFS.Stat(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, fileInfo.Mode()).To(Equal(permissions))
+
 	file, err := fakeFS.Open(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer file.Close()
+
 	var fileContent []byte
 	_, err = file.Read(fileContent)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())

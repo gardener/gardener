@@ -870,6 +870,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			if ow.Name == worker.Name {
 				oldWorker = ow
 				isNewWorkerPool = false
+
 				break
 			}
 		}
@@ -1430,6 +1431,7 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 					return true, nil
 				}
 			}
+
 			break
 		}
 	}
@@ -1453,8 +1455,8 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
 					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
 				}
-
 				defaultImage = coreMachineImage
+
 				break
 			}
 		}

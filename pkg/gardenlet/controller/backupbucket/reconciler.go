@@ -71,6 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
@@ -438,6 +439,7 @@ func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Conte
 
 func (r *Reconciler) updateBackupBucketStatusOperationStart(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of BackupBucket state initialized."

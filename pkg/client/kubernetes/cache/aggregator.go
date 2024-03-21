@@ -92,6 +92,7 @@ func (c *aggregator) Start(ctx context.Context) error {
 			}
 		}(gvk, runtimecache)
 	}
+
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {
 			logf.Log.Error(err, "Fallback cache failed to start")

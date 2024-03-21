@@ -153,6 +153,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(_ context.Context, a admission.Attrib
 	if len(projects) == 0 {
 		return nil
 	}
+
 	var foundProject *gardencorev1beta1.Project
 	for _, project := range projects {
 		if project.Spec.Namespace != nil && *project.Spec.Namespace == shoot.Namespace && project.Status.Phase == gardencorev1beta1.ProjectReady {

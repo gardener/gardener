@@ -92,6 +92,7 @@ func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerg
 	defer s.infoMutex.Unlock()
 
 	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())
@@ -119,6 +120,7 @@ func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrateg
 	defer s.infoMutex.Unlock()
 
 	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())

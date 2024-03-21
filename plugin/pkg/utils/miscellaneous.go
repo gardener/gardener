@@ -49,6 +49,7 @@ func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool 
 // GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
 func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
 	var matchingShoots []*gardencorev1beta1.Shoot
+
 	shoots, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))

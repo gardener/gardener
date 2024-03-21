@@ -40,15 +40,19 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkT
 		if NetworksIntersect(seedServices, *shootNetwork) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
 		}
+
 		if NetworksIntersect(seedPods, *shootNetwork) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed pod network", networkType)))
 		}
+
 		if seedNodes != nil && NetworksIntersect(*seedNodes, *shootNetwork) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
 		}
+
 		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootNetwork) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRange)))
 		}
+
 		if NetworksIntersect(v1beta1constants.DefaultVPNRangeV6, *shootNetwork) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
 		}
@@ -72,9 +76,11 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 		if NetworksIntersect(*shootPods, *shootServices) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot pod network intersects with shoot service network"))
 		}
+
 		if shootNodes != nil && NetworksIntersect(*shootPods, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with shoot node network"))
 		}
+
 		if shootNodes != nil && NetworksIntersect(*shootServices, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with shoot node network"))
 		}
@@ -82,11 +88,13 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 		if shootNodes != nil && NetworksIntersect(*shootPods, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with shoot node network"))
 		}
+
 		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
 	} else if shootServices != nil {
 		if shootNodes != nil && NetworksIntersect(*shootServices, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with shoot node network"))
 		}
+
 		if !workerless {
 			allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
 		}
@@ -94,6 +102,7 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 		if !workerless {
 			allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
 		}
+
 		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
 	}
 

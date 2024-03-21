@@ -291,6 +291,7 @@ func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
 	for _, x := range v2 {
 		v2Versions.Insert(x.Version)
 	}
+
 	diff := map[string]int{}
 	for index, x := range v1 {
 		if !v2Versions.Has(x.Version) {
@@ -307,6 +308,7 @@ func FilterVersionsWithClassification(versions []core.ExpirableVersion, classifi
 		if version.Classification == nil || *version.Classification != classification {
 			continue
 		}
+
 		result = append(result, version)
 	}
 	return result
@@ -324,6 +326,7 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 		if semVer.Equal(&version) || semVer.Minor() != version.Minor() || semVer.Major() != version.Major() {
 			continue
 		}
+
 		result = append(result, v)
 	}
 	return result, nil

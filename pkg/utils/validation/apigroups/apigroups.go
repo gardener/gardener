@@ -217,12 +217,14 @@ func IsAPISupported(api, version string) (bool, string, error) {
 		if !ok {
 			return false, "", fmt.Errorf("unknown API group version resource %q", apiGVR)
 		}
+
 		versionRange = vr
 	} else {
 		vr, ok := apiGroupVersionRanges[apiGroupVersion]
 		if !ok {
 			return false, "", fmt.Errorf("unknown API group version %q", apiGroupVersion)
 		}
+
 		versionRange = vr
 	}
 

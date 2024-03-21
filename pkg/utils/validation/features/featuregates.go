@@ -270,6 +270,7 @@ type FeatureGateVersionRange struct {
 
 func isFeatureLockedToDefault(featureGate, version string) (bool, error) {
 	var constraint string
+
 	vr := featureGateVersionRanges[featureGate]
 	if vr.LockedToDefaultInVersion != "" {
 		constraint = ">= " + vr.LockedToDefaultInVersion

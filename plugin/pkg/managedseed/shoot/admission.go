@@ -136,6 +136,7 @@ func (v *Shoot) validateDeleteCollection(ctx context.Context, a admission.Attrib
 	if err != nil {
 		return err
 	}
+
 	for _, managedSeed := range managedSeeds {
 		if err := v.validateDelete(ctx, newAttributesWithName(a, managedSeed.Name)); err != nil {
 			return err

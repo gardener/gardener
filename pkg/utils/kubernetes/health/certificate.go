@@ -28,6 +28,7 @@ func CheckCertificate(cert *certv1alpha1.Certificate) error {
 			if err := checkConditionState(condition.Type, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 				return err
 			}
+
 			break
 		}
 	}

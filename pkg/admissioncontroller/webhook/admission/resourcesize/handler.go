@@ -49,6 +49,7 @@ type Handler struct {
 // Handle checks the resource sizes.
 func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Response {
 	var err error
+
 	switch req.Operation {
 	case admissionv1.Create:
 		err = h.handle(req)
@@ -123,6 +124,7 @@ func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.S
 func userMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {
 	for _, subject := range subjects {
 		var match bool
+
 		switch subject.Kind {
 		case rbacv1.UserKind:
 			match = admissioncontrollerhelper.UserMatches(subject, userInfo)

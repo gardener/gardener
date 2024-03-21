@@ -76,6 +76,7 @@ func NewClientFromFile(masterURL, kubeconfigPath string, fns ...ConfigFunc) (Int
 		if err != nil {
 			return nil, err
 		}
+
 		opts := append([]ConfigFunc{WithRESTConfig(kubeconfig)}, fns...)
 		return NewWithConfig(opts...)
 	}

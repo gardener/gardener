@@ -187,6 +187,7 @@ func DigestedName(publicKey interface{}, subject *pkix.Name, usages []certificat
 	for _, v := range subject.Organization {
 		write([]byte(v))
 	}
+
 	for _, v := range usages {
 		write([]byte(v))
 	}

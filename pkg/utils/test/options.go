@@ -132,6 +132,7 @@ func (c *Command) Slice() []string {
 	for _, flag := range c.Flags {
 		out = append(out, flag.Slice()...)
 	}
+
 	out = append(out, c.Args...)
 	return out
 }

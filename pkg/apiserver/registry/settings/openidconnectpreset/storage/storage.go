@@ -59,6 +59,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 
 		TableConvertor: newTableConvertor(),
 	}
+
 	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)

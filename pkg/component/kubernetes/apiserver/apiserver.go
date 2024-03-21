@@ -496,6 +496,7 @@ func (k *kubeAPIServer) WaitCleanup(ctx context.Context) error {
 	return retry.Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
 		deploy := k.emptyDeployment()
 		err = k.client.Client().Get(ctx, client.ObjectKeyFromObject(deploy), deploy)
+
 		switch {
 		case apierrors.IsNotFound(err):
 			return retry.Ok()

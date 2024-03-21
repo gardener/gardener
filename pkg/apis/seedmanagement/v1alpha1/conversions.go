@@ -53,6 +53,7 @@ func Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *
 		if err != nil {
 			return err
 		}
+
 		in.Config.Object = cfg
 	}
 	return autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in, out, s)
@@ -67,10 +68,12 @@ func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.G
 		if !ok {
 			return errors.New("unknown gardenlet config object type")
 		}
+
 		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}
+
 		out.Config.Raw = raw
 	}
 	return nil

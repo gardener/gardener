@@ -37,12 +37,14 @@ func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfigurat
 	if conf.TargetClientConnection != nil {
 		allErrs = append(allErrs, validateClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
 	}
+
 	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
 	}
+
 	if !sets.New(logger.AllLogFormats...).Has(conf.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
 	}
@@ -93,6 +95,7 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 	if conf.ClusterID == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("clusterID"), "cluster id must be non-nil"))
 	}
+
 	if len(ptr.Deref(conf.ResourceClass, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("resourceClass"), "must provide a resource class"))
 	}
@@ -100,6 +103,7 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 	if conf.KubeletCSRApprover.Enabled {
 		allErrs = append(allErrs, validateConcurrentSyncs(conf.KubeletCSRApprover.ConcurrentSyncs, fldPath.Child("kubeletCSRApprover"))...)
 	}
+
 	if conf.GarbageCollector.Enabled {
 		allErrs = append(allErrs, validateSyncPeriod(conf.GarbageCollector.SyncPeriod, fldPath.Child("garbageCollector"))...)
 	}

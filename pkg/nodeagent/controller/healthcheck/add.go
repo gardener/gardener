@@ -45,17 +45,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
 	}
+
 	if r.DBus == nil {
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
+
 	if len(r.HealthCheckers) == 0 {
 		if err := r.setDefaultHealthChecks(); err != nil {
 			return err
 		}
 	}
+
 	if r.HealthCheckIntervalSeconds == 0 {
 		r.HealthCheckIntervalSeconds = defaultIntervalSeconds
 	}
@@ -78,14 +82,17 @@ func (r *Reconciler) setDefaultHealthChecks() error {
 	if address == "" {
 		address = defaults.DefaultAddress
 	}
+
 	namespace := os.Getenv(namespaces.NamespaceEnvVar)
 	if namespace == "" {
 		namespace = namespaces.Default
 	}
+
 	client, err := containerd.New(address, containerd.WithDefaultNamespace(namespace))
 	if err != nil {
 		return fmt.Errorf("error creating containerd client: %w", err)
 	}
+
 	containerdHealthChecker := NewContainerdHealthChecker(r.Client, client, clock, r.DBus, r.Recorder)
 
 	kubeletHealthChecker := NewKubeletHealthChecker(r.Client, clock, r.DBus, r.Recorder, net.InterfaceAddrs)

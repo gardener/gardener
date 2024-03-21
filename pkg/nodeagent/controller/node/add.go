@@ -34,9 +34,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName)
 	}
+
 	if r.DBus == nil {
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}

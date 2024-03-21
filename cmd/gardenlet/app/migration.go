@@ -144,6 +144,7 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 				if vol.Name == "config" {
 					grmCMName = vol.ConfigMap.Name
 					grmCMVolumeIndex = n
+
 					break
 				}
 			}
@@ -369,6 +370,7 @@ func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedC
 					log.Info("Deleting orphaned persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume))
 					return client.IgnoreNotFound(seedClient.Delete(ctx, &persistentVolume))
 				})
+
 				continue
 			}
 		} else if persistentVolume.Spec.ClaimRef == nil {

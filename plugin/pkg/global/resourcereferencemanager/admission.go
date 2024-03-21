@@ -457,6 +457,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 					channel = make(chan error)
 					wg      sync.WaitGroup
 				)
+
 				wg.Add(len(shootList))
 
 				for _, s := range shootList {
@@ -777,6 +778,7 @@ func lookupResource(ctx context.Context, namespace, name string, get getFn, fall
 	// This helps when creating a secret and immediately creating a secretbinding referencing it.
 	time.Sleep(MissingSecretWait)
 	_, err = get(ctx, namespace, name)
+
 	switch {
 	case apierrors.IsNotFound(err):
 		// no-op

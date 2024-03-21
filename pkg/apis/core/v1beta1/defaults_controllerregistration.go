@@ -48,10 +48,12 @@ func SetDefaults_ControllerResourceLifecycle(obj *ControllerResourceLifecycle) {
 		afterKubeAPIServer := AfterKubeAPIServer
 		obj.Reconcile = &afterKubeAPIServer
 	}
+
 	if obj.Delete == nil {
 		beforeKubeAPIServer := BeforeKubeAPIServer
 		obj.Delete = &beforeKubeAPIServer
 	}
+
 	if obj.Migrate == nil {
 		beforeKubeAPIServer := BeforeKubeAPIServer
 		obj.Migrate = &beforeKubeAPIServer

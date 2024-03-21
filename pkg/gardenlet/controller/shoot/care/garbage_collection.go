@@ -162,6 +162,7 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
+
 			continue
 		}
 

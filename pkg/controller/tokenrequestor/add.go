@@ -43,6 +43,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetCoreV1Client == nil {
 		var err error
+
 		r.TargetCoreV1Client, err = corev1clientset.NewForConfig(targetCluster.GetConfig())
 		if err != nil {
 			return fmt.Errorf("could not create coreV1Client: %w", err)

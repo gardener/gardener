@@ -37,6 +37,7 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) ([]networkingv1.NetworkPol
 			if existingIPs.Has(address.IP) {
 				continue
 			}
+
 			bitLen, err := netutils.GetBitLen(address.IP)
 			if err != nil {
 				return nil, err

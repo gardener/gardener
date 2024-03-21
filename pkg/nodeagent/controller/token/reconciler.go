@@ -54,6 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			log.V(1).Info("Object not found")
 			return reconcile.Result{}, fmt.Errorf("secret %s not found: %w", request.NamespacedName, err)
 		}
+
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
@@ -74,9 +75,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !bytes.Equal(currentToken, token) {
 		log.Info("Access token differs from the one currently stored on the disk, updating it", "path", path)
+
 		if err := r.FS.WriteFile(path, token, 0600); err != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to write access token to %s: %w", path, err)
 		}
+
 		log.Info("Updated token written to disk")
 	}
 

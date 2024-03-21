@@ -302,6 +302,7 @@ func updateTokenInSecretData(log logr.Logger, data map[string][]byte, token stri
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
 		log.Info("Writing token to data")
 		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
+
 		return nil
 	}
 

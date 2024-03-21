@@ -222,6 +222,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 				FailedChecks:        len(result.failedChecks),
 				Codes:               result.codes,
 			})
+
 			continue
 		}
 
@@ -252,6 +253,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 				ProgressingChecks:    len(result.progressingChecks),
 				Codes:                result.codes,
 			})
+
 			continue
 		}
 

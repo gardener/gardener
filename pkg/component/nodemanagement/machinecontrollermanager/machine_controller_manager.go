@@ -339,6 +339,7 @@ func (m *machineControllerManager) WaitCleanup(ctx context.Context) error {
 	return retry.Until(timeoutCtx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
 		deploy := m.emptyDeployment()
 		err = m.client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)
+
 		switch {
 		case apierrors.IsNotFound(err):
 			return retry.Ok()

@@ -50,6 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	var taskFns []flow.TaskFn
 	for _, healthChecker := range r.HealthCheckers {
 		f := healthChecker
+
 		taskFns = append(taskFns, func(ctx context.Context) error { return f.Check(ctx, node.DeepCopy()) })
 	}
 

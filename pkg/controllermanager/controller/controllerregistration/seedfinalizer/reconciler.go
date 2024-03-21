@@ -53,6 +53,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
+
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 

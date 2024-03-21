@@ -41,6 +41,7 @@ func NewMaintenanceTime(hour, minute, second int) *MaintenanceTime {
 	if second >= 60 {
 		panic(fmt.Sprintf("invalid second %d", second))
 	}
+
 	return &MaintenanceTime{hour, minute, second}
 }
 
@@ -51,6 +52,7 @@ func ParseMaintenanceTime(value string) (*MaintenanceTime, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse the value into the maintenanceTime format: %s", err.Error())
 	}
+
 	return timeToMaintenanceTime(t), nil
 }
 
@@ -66,6 +68,7 @@ func RandomMaintenanceTimeWindow() *MaintenanceTimeWindow {
 		begin = NewMaintenanceTime(hour, 0, 0)
 		end   = NewMaintenanceTime(hour+1, 0, 0)
 	)
+
 	return NewMaintenanceTimeWindow(begin, end)
 }
 
@@ -144,6 +147,7 @@ func ParseMaintenanceTimeWindow(begin, end string) (*MaintenanceTimeWindow, erro
 	if err != nil {
 		return nil, fmt.Errorf("could not parse begin time: %s", err.Error())
 	}
+
 	maintenanceWindowEnd, err := ParseMaintenanceTime(end)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse end time: %s", err.Error())
