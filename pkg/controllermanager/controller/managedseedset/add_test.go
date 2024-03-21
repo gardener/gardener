@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedseedset
+package managedseedset_test
 
 import (
 	"context"
@@ -34,11 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-)
-
-const (
-	name      = "test"
-	namespace = "garden"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 )
 
 var _ = Describe("Add", func() {

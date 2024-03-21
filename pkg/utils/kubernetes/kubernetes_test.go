@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package kubernetes_test
 
 import (
 	"context"
@@ -48,6 +48,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	mockio "github.com/gardener/gardener/third_party/mock/go/io"

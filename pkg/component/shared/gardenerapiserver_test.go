@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shared
+package shared_test
 
 import (
 	"context"
@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	mockgardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver/mock"
+	. "github.com/gardener/gardener/pkg/component/shared"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"

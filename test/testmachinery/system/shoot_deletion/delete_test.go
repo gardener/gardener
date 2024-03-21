@@ -17,7 +17,7 @@
 		- Tests the deletion of a shoot
  **/
 
-package shoot_deletion
+package shoot_deletion_test
 
 import (
 	"context"

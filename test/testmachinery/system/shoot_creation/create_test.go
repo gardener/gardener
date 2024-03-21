@@ -24,7 +24,7 @@
 		- Successful reconciliation after Shoot creation
  **/
 
-package shoot_creation
+package shoot_creation_test
 
 import (
 	"context"

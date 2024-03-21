@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package kubernetes_test
 
 import (
 	"github.com/Masterminds/semver/v3"
@@ -20,6 +20,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	policyv1 "k8s.io/api/policy/v1"
+
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("#SetAlwaysAllowEviction", func() {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package charttest
+package charttest_test
 
 import (
 	"context"
@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/charttest"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )

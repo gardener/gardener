@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package certificatesigningrequest
+package certificatesigningrequest_test
 
 import (
 	"context"
@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )

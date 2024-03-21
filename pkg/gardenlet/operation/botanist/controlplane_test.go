@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist
+package botanist_test
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
