@@ -315,13 +315,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		scaleEtcdAfterRestore = g.Add(flow.Task{
 			Name:         "Scaling main and events etcd after restoration from backup",
 			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, helper.GetEtcdDeployTimeout(o.Shoot, defaultTimeout)),
-			SkipIf:       !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
+			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until main and events etcd scaled up after restoration from backup",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
-			SkipIf:       !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
+			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
