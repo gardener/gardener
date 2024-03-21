@@ -186,7 +186,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 				}
 
-				key := Key(worker.Name, k8sVersion, worker.CRI)
+				kubelet := values.KubeletConfig
+				if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
+					kubelet = worker.Kubernetes.Kubelet
+				}
+				var kubeReserved *gardencorev1beta1.KubeletConfigReserved
+				if kubelet != nil {
+					kubeReserved = kubelet.KubeReserved
+				}
+
+				key := Key(worker.Name, k8sVersion, worker.CRI, kubeReserved)
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
 				for imageName, image := range images {
@@ -455,7 +464,17 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := Key(worker.Name, k8sVersion, worker.CRI)
+
+					kubelet := values.KubeletConfig
+					if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
+						kubelet = worker.Kubernetes.Kubelet
+					}
+					var kubeReserved *gardencorev1beta1.KubeletConfigReserved
+					if kubelet != nil {
+						kubeReserved = kubelet.KubeReserved
+					}
+
+					key := Key(worker.Name, k8sVersion, worker.CRI, kubeReserved)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
@@ -950,17 +969,19 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should return an empty string", func() {
-			Expect(Key(workerName, nil, nil)).To(BeEmpty())
+			Expect(Key(workerName, nil, nil, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
+			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil, nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("is different for different worker.cri configurations", func() {
-			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, nil)
+			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")}, nil)
 			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
+
+		// FIXME test different reservations
 	})
 })

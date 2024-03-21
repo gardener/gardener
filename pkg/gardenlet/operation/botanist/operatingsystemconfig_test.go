@@ -258,8 +258,8 @@ var _ = Describe("operatingsystemconfig", func() {
 		)
 
 		JustBeforeEach(func() {
-			worker1Key = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
-			worker2Key = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+			worker1Key = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil, nil)
+			worker2Key = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil, nil)
 
 			botanist.Shoot.SeedNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)
