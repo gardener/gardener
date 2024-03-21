@@ -28,126 +28,141 @@ import (
 )
 
 var _ = Describe("PrepareForCreate", func() {
-	var namespacedCloudProfile *core.NamespacedCloudProfile
+	var (
+		validExpirationDate1   = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
+		validExpirationDate2   = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}
+		expiredExpirationDate1 = &metav1.Time{Time: time.Now().Add(-time.Hour)}
+		expiredExpirationDate2 = &metav1.Time{Time: time.Now().Add(-24 * time.Hour)}
 
-	It("should drop the expired Kubernetes and MachineImage versions from the NamespacedCloudProfile", func() {
-		var (
-			validExpirationDate1   = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
-			validExpirationDate2   = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}
-			expiredExpirationDate1 = &metav1.Time{Time: time.Now().Add(-time.Hour)}
-			expiredExpirationDate2 = &metav1.Time{Time: time.Now().Add(-24 * time.Hour)}
-		)
+		namespacedCloudProfile *core.NamespacedCloudProfile
 
-		namespacedCloudProfile = &core.NamespacedCloudProfile{
-			Spec: core.NamespacedCloudProfileSpec{
-				Kubernetes: &core.KubernetesSettings{
-					Versions: []core.ExpirableVersion{
-						{
-							Version: "1.27.3",
+		kubernetesSettings = &core.KubernetesSettings{
+			Versions: []core.ExpirableVersion{
+				{
+					Version: "1.27.3",
+				},
+				{
+					Version:        "1.26.4",
+					ExpirationDate: validExpirationDate1,
+				},
+				{
+					Version:        "1.25.6",
+					ExpirationDate: validExpirationDate2,
+				},
+				{
+					Version:        "1.24.8",
+					ExpirationDate: expiredExpirationDate1,
+				},
+				{
+					Version:        "1.24.6",
+					ExpirationDate: expiredExpirationDate2,
+				},
+			},
+		}
+
+		machineImages = []core.MachineImage{
+			{
+				Name: "machineImage1",
+				Versions: []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "2.1.0",
 						},
-						{
-							Version:        "1.26.4",
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "2.0.3",
 							ExpirationDate: validExpirationDate1,
 						},
-						{
-							Version:        "1.25.6",
-							ExpirationDate: validExpirationDate2,
-						},
-						{
-							Version:        "1.24.8",
-							ExpirationDate: expiredExpirationDate1,
-						},
-						{
-							Version:        "1.24.6",
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "1.9.7",
 							ExpirationDate: expiredExpirationDate2,
 						},
 					},
 				},
-				MachineImages: []core.MachineImage{
+			},
+			{
+				Name: "machineImage2",
+				Versions: []core.MachineImageVersion{
 					{
-						Name: "machineImage1",
-						Versions: []core.MachineImageVersion{
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version: "2.1.0",
-								},
-							},
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version:        "2.0.3",
-									ExpirationDate: validExpirationDate1,
-								},
-							},
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version:        "1.9.7",
-									ExpirationDate: expiredExpirationDate2,
-								},
-							},
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "4.3.0",
+							ExpirationDate: validExpirationDate2,
 						},
 					},
 					{
-						Name: "machineImage2",
-						Versions: []core.MachineImageVersion{
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version:        "4.3.0",
-									ExpirationDate: validExpirationDate2,
-								},
-							},
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version: "4.2.3",
-								},
-							},
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version:        "4.1.8",
-									ExpirationDate: expiredExpirationDate1,
-								},
-							},
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "4.2.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "4.1.8",
+							ExpirationDate: expiredExpirationDate1,
 						},
 					},
 				},
 			},
 		}
+	)
 
-		namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+	DescribeTable("should drop expired versions from the NamespacedCloudProfile",
+		func(useKubernetesSettings, useMachineImages bool) {
+			namespacedCloudProfile = &core.NamespacedCloudProfile{}
 
-		Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
-			MatchFields(IgnoreExtras, Fields{
-				"Version": Equal("1.27.3"),
-			}), MatchFields(IgnoreExtras, Fields{
-				"Version": Equal("1.26.4"),
-			}), MatchFields(IgnoreExtras, Fields{
-				"Version": Equal("1.25.6"),
-			}),
-		))
+			if useKubernetesSettings {
+				namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
+			}
+			if useMachineImages {
+				namespacedCloudProfile.Spec.MachineImages = machineImages
+			}
 
-		Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
-			MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("machineImage1"),
-				"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("2.1.0"),
-					})},
-				), MatchFields(IgnoreExtras, Fields{
-					"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("2.0.3"),
-					})},
-				)),
-			}), MatchFields(IgnoreExtras, Fields{
-				"Name": Equal("machineImage2"),
-				"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("4.3.0"),
-					})},
-				), MatchFields(IgnoreExtras, Fields{
-					"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("4.2.3"),
-					})},
-				)),
-			}),
-		))
-	})
+			namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+
+			if useKubernetesSettings {
+				Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Version": Equal("1.27.3"),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Version": Equal("1.26.4"),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Version": Equal("1.25.6"),
+					}),
+				))
+			}
+			if useMachineImages {
+				Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("machineImage1"),
+						"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+								"Version": Equal("2.1.0"),
+							})},
+						), MatchFields(IgnoreExtras, Fields{
+							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+								"Version": Equal("2.0.3"),
+							})},
+						)),
+					}), MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("machineImage2"),
+						"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+								"Version": Equal("4.3.0"),
+							})},
+						), MatchFields(IgnoreExtras, Fields{
+							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+								"Version": Equal("4.2.3"),
+							})},
+						)),
+					}),
+				))
+			}
+		},
+
+		Entry("only machineImage set", false, true),
+		Entry("only kubernetes set", true, false),
+		Entry("both kubernetes and machineImages set", true, true),
+	)
 })
