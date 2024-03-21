@@ -171,7 +171,7 @@ func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
 }
 
 // NodeLabelsForWorkerPool returns a combined map of all user-specified and gardener-managed node labels.
-func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEnabled bool) map[string]string {
+func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEnabled bool, oscKey string) map[string]string {
 	// copy worker pool labels map
 	labels := utils.MergeStringMaps(workerPool.Labels)
 	if labels == nil {
@@ -189,6 +189,7 @@ func NodeLabelsForWorkerPool(workerPool gardencorev1beta1.Worker, nodeLocalDNSEn
 	// worker pool name labels
 	labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
 	labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
+	labels[v1beta1constants.LabelWorkerPoolOperatingSystemConfig] = oscKey
 
 	// add CRI labels selected by the RuntimeClass
 	if workerPool.CRI != nil {

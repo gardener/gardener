@@ -78,6 +78,9 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// KubernetesVersion is the Kubernetes version of the cluster for which the worker nodes shall be created.
 	KubernetesVersion *semver.Version
+	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
+	// this configuration.
+	KubeletConfig *gardencorev1beta1.KubeletConfig
 	// MachineTypes is the list of machine types present in the CloudProfile referenced by the shoot
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is the public SSH key that shall be installed on the worker nodes.
@@ -223,6 +226,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		oscKey, err := operatingsystemconfig.KeyFromWorker(&workerPool, w.values.KubernetesVersion, w.values.KubeletConfig)
+		if err != nil {
+			return nil, err
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -230,7 +238,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, oscKey),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{

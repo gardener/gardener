@@ -642,7 +642,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:           d.clusterDomain,
 		CRIName:                 d.criName,
 		Images:                  d.images,
-		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
 		KubeletCABundle:         d.kubeletCABundle,
 		KubeletConfigParameters: d.kubeletConfigParameters,
 		KubeletCLIFlags:         d.kubeletCLIFlags,
