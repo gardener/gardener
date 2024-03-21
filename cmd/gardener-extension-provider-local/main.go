@@ -27,11 +27,10 @@ import (
 
 func main() {
 	utils.DeduplicateWarnings()
-
 	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	if err := app.NewControllerManagerCommand(signals.SetupSignalHandler()).Execute(); err != nil {
-		logf.Log.Error(err, "Error executing the main controller command")
+		logf.Log.Error(err, "Error starting app")
 		os.Exit(1)
 	}
 }

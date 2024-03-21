@@ -17,20 +17,23 @@ package main
 import (
 	"os"
 
-	_ "k8s.io/component-base/logs/json/register" // for JSON log format registration
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/apiserver/features"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
-
 	ctx := signals.SetupSignalHandler()
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
+
 	if err := app.NewCommand().ExecuteContext(ctx); err != nil {
+		logf.Log.Error(err, "Error starting app")
 		os.Exit(1)
 	}
 }

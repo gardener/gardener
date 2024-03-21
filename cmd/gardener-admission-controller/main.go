@@ -15,20 +15,22 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
 	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
-		fmt.Println(err)
+		logf.Log.Error(err, "Error starting app")
 		os.Exit(1)
 	}
 }
