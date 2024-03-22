@@ -42,7 +42,7 @@ const (
 	PluginNameManagedSeedShoot = "ManagedSeedShoot"
 	// PluginNameManagedSeed is the name of the ManagedSeed admission plugin.
 	PluginNameManagedSeed = "ManagedSeed"
-	// PluginNameNamespacedCloudProfileValidator is the name of the NamespacedCloudProfile admission plugin.
+	// PluginNameNamespacedCloudProfileValidator is the name of the NamespacedCloudProfileValidator admission plugin.
 	PluginNameNamespacedCloudProfileValidator = "NamespacedCloudProfileValidator"
 	// PluginNameProjectValidator is the name of the ProjectValidator admission plugin.
 	PluginNameProjectValidator = "ProjectValidator"

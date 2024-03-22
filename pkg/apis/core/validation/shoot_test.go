@@ -5865,6 +5865,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 		})
+
+		Describe("#ValidateCloudProfileReference", func() {
+			var fldPath *field.Path
+
+			BeforeEach(func() {
+				fldPath = field.NewPath("cloudProfile")
+			})
+
+			It("should not allow using an empty cloudProfile reference", func() {
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "",
+					Name: "",
+				}
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("cloudProfile.kind"),
+						"Detail": Equal("must be CloudProfile or NamespacedCloudProfile"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("cloudProfile.name"),
+						"Detail": Equal("must specify a CloudProfile name"),
+					}))))
+			})
+
+			It("should not allow using a CloudProfile", func() {
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "my-profile",
+				}
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should not allow using a NamespacedCloudProfile", func() {
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "my-profile",
+				}
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+
+				Expect(errList).To(BeEmpty())
+			})
+		})
 	})
 
 	Describe("#ValidateWorkers", func() {

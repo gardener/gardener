@@ -39,7 +39,7 @@ type NamespacedCloudProfileList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
-	// Items is the list of CloudProfiles.
+	// Items is the list of NamespacedCloudProfiles.
 	Items []NamespacedCloudProfile
 }
 
@@ -67,7 +67,7 @@ type NamespacedCloudProfileSpec struct {
 	Parent CloudProfileReference
 }
 
-// NamespacedCloudProfileStatus holds the most recently observed status of the project.
+// NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
 type NamespacedCloudProfileStatus struct {
 	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec
@@ -75,8 +75,8 @@ type NamespacedCloudProfileStatus struct {
 
 // CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
 type CloudProfileReference struct {
-	// Kind contains a CloudProfile kind, must be "CloudProfile" or "NamespacedCloudProfile"
+	// Kind contains a CloudProfile kind, must be "CloudProfile" or "NamespacedCloudProfile".
 	Kind string
-	// Name contains the name of the referenced CloudProfile
+	// Name contains the name of the referenced CloudProfile or NamespacedCloudProfile.
 	Name string
 }
