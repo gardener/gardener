@@ -182,6 +182,43 @@ spec:
                   chain with an issuer matching this Subject Common Name. If no match,
                   the default offered chain will be used.'
                 type: string
+              privateKey:
+                description: Private key options. These include the key algorithm
+                  and size.
+                properties:
+                  algorithm:
+                    description: |-
+                      Algorithm is the private key algorithm of the corresponding private key
+                      for this certificate.
+
+
+                      If provided, allowed values are either `RSA` or `ECDSA`.
+                      If `algorithm` is specified and `size` is not provided,
+                      key size of 2048 will be used for `RSA` key algorithm and
+                      key size of 256 will be used for `ECDSA` key algorithm.
+                    enum:
+                    - RSA
+                    - ECDSA
+                    type: string
+                  size:
+                    description: |-
+                      Size is the key bit size of the corresponding private key for this certificate.
+
+
+                      If `algorithm` is set to `RSA`, valid values are `2048`, `3072` or `4096`,
+                      and will default to `2048` if not specified.
+                      If `algorithm` is set to `ECDSA`, valid values are `256` or `384`,
+                      and will default to `256` if not specified.
+                      No other values are allowed.
+                    enum:
+                    - 256
+                    - 384
+                    - 2048
+                    - 3072
+                    - 4096
+                    format: int32
+                    type: integer
+                type: object
               renew:
                 description: Renew triggers a renewal if set to true
                 type: boolean
