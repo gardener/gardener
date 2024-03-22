@@ -146,7 +146,7 @@ images:
 - name: prometheus-operator
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: quay.io/prometheus-operator/prometheus-operator
-  tag: v0.71.2
+  tag: v0.72.0
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
