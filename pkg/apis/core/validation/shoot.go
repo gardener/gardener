@@ -1502,10 +1502,10 @@ func validateCloudProfile(cloudProfileReference *core.CloudProfileReference, fld
 		return allErrs
 	}
 	if !sets.New("CloudProfile", "NamespacedCloudProfile").Has(cloudProfileReference.Kind) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), cloudProfileReference.Kind, "cloudProfile kind must be CloudProfile or NamespacedCloudProfile"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), cloudProfileReference.Kind, "must be CloudProfile or NamespacedCloudProfile"))
 	}
 	if len(cloudProfileReference.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a cloudProfile name"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a CloudProfile name"))
 	}
 
 	return allErrs

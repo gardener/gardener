@@ -16,14 +16,13 @@ package validation
 
 import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// ValidateNamespacedCloudProfile validates a CloudProfile object.
+// ValidateNamespacedCloudProfile validates a NamespacedCloudProfile object.
 func ValidateNamespacedCloudProfile(cloudProfile *core.NamespacedCloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -73,9 +72,6 @@ func ValidateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, f
 	}
 	if spec.Regions != nil {
 		allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
-	}
-	if spec.SeedSelector != nil {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
 	if spec.CABundle != nil {
 		_, err := utils.DecodeCertificate([]byte(*(spec.CABundle)))

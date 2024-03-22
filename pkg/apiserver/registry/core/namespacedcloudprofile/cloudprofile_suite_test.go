@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCloudProfile(t *testing.T) {
+func TestNamespacedCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Registry Core NamespacedCloudProfile Suite")
 }

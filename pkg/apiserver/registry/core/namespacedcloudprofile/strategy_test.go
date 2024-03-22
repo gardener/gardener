@@ -30,7 +30,7 @@ import (
 var _ = Describe("PrepareForCreate", func() {
 	var namespacedCloudProfile *core.NamespacedCloudProfile
 
-	It("should drop the expired Kubernetes and MachineImage versions from the namespacedcloudprofile", func() {
+	It("should drop the expired Kubernetes and MachineImage versions from the NamespacedCloudProfile", func() {
 		var (
 			validExpirationDate1   = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
 			validExpirationDate2   = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}

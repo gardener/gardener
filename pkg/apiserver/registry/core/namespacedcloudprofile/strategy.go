@@ -83,20 +83,18 @@ func (namespacedCloudProfileStrategy) WarningsOnUpdate(_ context.Context, _, _ r
 }
 
 func dropExpiredVersions(namespacedCloudProfile *core.NamespacedCloudProfile) {
-	if namespacedCloudProfile.Spec.Kubernetes == nil {
-		return
-	}
+	if namespacedCloudProfile.Spec.Kubernetes != nil {
+		var validKubernetesVersions []core.ExpirableVersion
 
-	var validKubernetesVersions []core.ExpirableVersion
-
-	for _, version := range namespacedCloudProfile.Spec.Kubernetes.Versions {
-		if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
-			continue
+		for _, version := range namespacedCloudProfile.Spec.Kubernetes.Versions {
+			if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+				continue
+			}
+			validKubernetesVersions = append(validKubernetesVersions, version)
 		}
-		validKubernetesVersions = append(validKubernetesVersions, version)
-	}
 
-	namespacedCloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
+		namespacedCloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
+	}
 
 	for i, machineImage := range namespacedCloudProfile.Spec.MachineImages {
 		var validMachineImageVersions []core.MachineImageVersion

@@ -40,24 +40,23 @@ type NamespacedCloudProfileList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Items is the list of CloudProfiles.
+	// Items is the list of NamespacedCloudProfiles.
 	Items []NamespacedCloudProfile `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
-// It must contain exactly one of its defined keys.
 type NamespacedCloudProfileSpec struct {
 	// CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	// +optional
-	Kubernetes *KubernetesSettings `json:"kubernetes" protobuf:"bytes,2,opt,name=kubernetes"`
+	Kubernetes *KubernetesSettings `json:"kubernetes,omitempty" protobuf:"bytes,2,opt,name=kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	MachineImages []MachineImage `json:"machineImages" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,3,opt,name=machineImages"`
+	MachineImages []MachineImage `json:"machineImages,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,3,opt,name=machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -80,18 +79,20 @@ type NamespacedCloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,opt,name=volumeTypes"`
-	// A pointer to the NamespacedCloudProfile's parent CloudProfile.
+	// Parent contains a reference to a CloudProfile it inherits from.
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,10,req,name=parent"`
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the project.
 type NamespacedCloudProfileStatus struct {
-	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile
+	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec `json:"cloudProfileSpec,omitempty" protobuf:"bytes,1,opt,name=cloudProfileSpec"`
 }
 
 // CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
 type CloudProfileReference struct {
+	// Kind contains a CloudProfile kind, must be "CloudProfile" or "NamespacedCloudProfile"
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`
+	// Name contains the name of the referenced CloudProfile
 	Name string `json:"name" protobuf:"bytes,2,req,name=name"`
 }

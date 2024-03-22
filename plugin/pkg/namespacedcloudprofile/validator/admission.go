@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"io"
 	"reflect"
 
@@ -26,6 +25,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -163,12 +163,12 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 			if parentMachineType.Name != machineType.Name {
 				continue
 			}
-			// If a machineType is already present in the namespacedCloudProfile and just got added to the parentCloudProfile,
-			// it should still be allowed to remain in the namespacedCloudProfile.
+			// If a machineType is already present in the NamespacedCloudProfile and just got added to the parent CloudProfile,
+			// it should still be allowed to remain in the NamespacedCloudProfile.
 			if a.GetOperation() == admission.Update && isMachineTypePresentInNamespacedCloudProfile(machineType, c.oldNamespacedCloudProfile) {
 				continue
 			}
-			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to rewrite MachineType of parent CloudProfile with machineType: %+v", machineType))
+			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType: %+v", machineType))
 		}
 	}
 

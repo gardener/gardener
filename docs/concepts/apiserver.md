@@ -30,7 +30,7 @@ Please see [this](../../example/30-cloudprofile.yaml) example manifest and consu
 In addition to `CloudProfile`s, `NamespacedCloudProfile`s exist to enable project level `CloudProfile`s. 
 Please view [GEP-25](../proposals/25-namespaced-cloud-profiles.md) for additional information.
 This feature is currently under development and not ready for productive use.
-At the moment, only the necessary APIs and validations exist to allow for extension to adapt to the new `NamespacedCloudProfile` resource.
+At the moment, only the necessary APIs and validations exist to allow for extensions to adapt to the new `NamespacedCloudProfile` resource.
 
 ## `InternalSecret`s
 

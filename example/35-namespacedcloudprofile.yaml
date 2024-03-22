@@ -4,7 +4,9 @@ metadata:
   name: custom-cloudprofile-1
   namespace: garden-local
 spec:
-  parent: # specifies a parent CloudProfile from which the NamespacedCloudProfile inherits
+  # Specifies a parent CloudProfile from which the NamespacedCloudProfile inherits, the result will be written into the status of the NamespacedCloudProfile.
+  # Every other field is optional in a NamespacedCloudProfile.
+  parent:
     # every other field is optional in a NamespacedCloudProfile
     # fields will be merged with the parent CloudProfile and the result will be written into the status of the NamespacedCloudProfile
     kind: CloudProfile
