@@ -99,8 +99,16 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				},
 			}
 
-			errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-			Expect(errorList).To(BeEmpty())
+			newNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+			newNamespacedCloudProfile.Spec.Parent.Name = "other-profile-parent"
+			newNamespacedCloudProfile.ResourceVersion = "2"
+
+			errorList := ValidateNamespacedCloudProfileUpdate(newNamespacedCloudProfile, namespacedCloudProfile)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.parent"),
+				}))))
 		})
 
 		Context("tests for unknown cloud profiles", func() {
@@ -233,12 +241,14 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.parent.name"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.parent.name"),
+						"Detail": Equal("must provide a parent name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.parent.kind"),
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.parent.kind"),
+						"Detail": Equal("supported values: \"CloudProfile\""),
 					}))))
 			})
 
@@ -249,8 +259,9 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.parent.kind"),
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("spec.parent.kind"),
+						"Detail": Equal("supported values: \"CloudProfile\""),
 					}))))
 			})
 

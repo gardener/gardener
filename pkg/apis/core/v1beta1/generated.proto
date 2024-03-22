@@ -1757,7 +1757,7 @@ message NamespacedCloudProfile {
   optional NamespacedCloudProfileStatus status = 3;
 }
 
-// NamespacedCloudProfileList is a collection of CloudProfiles.
+// NamespacedCloudProfileList is a collection of NamespacedCloudProfiles.
 message NamespacedCloudProfileList {
   // Standard list object metadata.
   // +optional
@@ -1793,7 +1793,7 @@ message NamespacedCloudProfileSpec {
   // +patchMergeKey=name
   // +patchStrategy=merge
   // +optional
-  repeated Region regions = 6;
+  repeated Region regions = 5;
 
   // SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
   // An empty list means that all seeds of the same provider type are supported.
@@ -1801,19 +1801,19 @@ message NamespacedCloudProfileSpec {
   // Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
   // type of the seed must match the shoot's provider.
   // +optional
-  optional SeedSelector seedSelector = 7;
+  optional SeedSelector seedSelector = 6;
 
   // VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
   // +patchMergeKey=name
   // +patchStrategy=merge
   // +optional
-  repeated VolumeType volumeTypes = 9;
+  repeated VolumeType volumeTypes = 7;
 
   // Parent contains a reference to a CloudProfile it inherits from.
-  optional CloudProfileReference parent = 10;
+  optional CloudProfileReference parent = 8;
 }
 
-// NamespacedCloudProfileStatus holds the most recently observed status of the project.
+// NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
 message NamespacedCloudProfileStatus {
   // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
   optional CloudProfileSpec cloudProfileSpec = 1;

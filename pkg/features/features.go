@@ -68,7 +68,7 @@ const (
 	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
 	// nodes.
 	// owner: @timuthy @benedictweis
-	// alpha: v1.91.0
+	// alpha: v1.92.0
 	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 )
 

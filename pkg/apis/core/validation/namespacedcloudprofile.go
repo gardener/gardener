@@ -61,7 +61,7 @@ func ValidateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, f
 	if spec.Kubernetes != nil {
 		allErrs = append(allErrs, validateKubernetesSettings(*spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	}
-	if spec.MachineTypes != nil {
+	if spec.MachineImages != nil {
 		allErrs = append(allErrs, validateMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
 	}
 	if spec.MachineTypes != nil {
@@ -87,7 +87,7 @@ func validateParent(parent core.CloudProfileReference, fldPath *field.Path) fiel
 	allErrs := field.ErrorList{}
 
 	if parent.Kind != "CloudProfile" {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), parent.Kind, []string{"NamespacedCloudProfile"}))
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), parent.Kind, []string{"CloudProfile"}))
 	}
 	if len(parent.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a parent name"))

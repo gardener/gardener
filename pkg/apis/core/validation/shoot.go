@@ -267,7 +267,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		workerless = len(spec.Provider.Workers) == 0
 	)
 
-	allErrs = append(allErrs, validateCloudProfile(spec.CloudProfile, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, fldPath.Child("cloudProfile"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
@@ -1155,6 +1155,23 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 	return allErrs
 }
 
+// ValidateCloudProfileReference validates the given CloudProfileReference fields.
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cloudProfileReference == nil {
+		return allErrs
+	}
+	if !sets.New("CloudProfile", "NamespacedCloudProfile").Has(cloudProfileReference.Kind) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), cloudProfileReference.Kind, "must be CloudProfile or NamespacedCloudProfile"))
+	}
+	if len(cloudProfileReference.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a CloudProfile name"))
+	}
+
+	return allErrs
+}
+
 // ValidateVerticalPodAutoscaler validates the given VerticalPodAutoscaler fields.
 func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -1490,22 +1507,6 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 				return allErrs
 			}
 		}
-	}
-
-	return allErrs
-}
-
-func validateCloudProfile(cloudProfileReference *core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if cloudProfileReference == nil {
-		return allErrs
-	}
-	if !sets.New("CloudProfile", "NamespacedCloudProfile").Has(cloudProfileReference.Kind) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("kind"), cloudProfileReference.Kind, "must be CloudProfile or NamespacedCloudProfile"))
-	}
-	if len(cloudProfileReference.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a CloudProfile name"))
 	}
 
 	return allErrs

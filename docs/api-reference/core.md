@@ -7951,7 +7951,7 @@ CloudProfileReference
 <a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
 </p>
 <p>
-<p>NamespacedCloudProfileStatus holds the most recently observed status of the project.</p>
+<p>NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.</p>
 </p>
 <table>
 <thead>

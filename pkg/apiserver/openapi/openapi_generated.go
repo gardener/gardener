@@ -5204,7 +5204,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref common.Referenc
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "NamespacedCloudProfileList is a collection of CloudProfiles.",
+				Description: "NamespacedCloudProfileList is a collection of NamespacedCloudProfiles.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -5377,7 +5377,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "NamespacedCloudProfileStatus holds the most recently observed status of the project.",
+				Description: "NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cloudProfileSpec": {

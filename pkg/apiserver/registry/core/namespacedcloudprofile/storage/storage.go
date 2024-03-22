@@ -27,7 +27,7 @@ import (
 	namespacedcloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/namespacedcloudprofile"
 )
 
-// REST implements a RESTStorage for NamespacedCloudProfile
+// REST implements a RESTStorage for NamespacedCloudProfile.
 type REST struct {
 	*genericregistry.Store
 }
