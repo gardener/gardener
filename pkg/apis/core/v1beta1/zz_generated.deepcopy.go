@@ -4810,11 +4810,6 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		*out = new(Addons)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CloudProfile != nil {
-		in, out := &in.CloudProfile, &out.CloudProfile
-		*out = new(CloudProfileReference)
-		**out = **in
-	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
 		*out = new(DNS)
@@ -4899,6 +4894,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 	if in.SchedulerName != nil {
 		in, out := &in.SchedulerName, &out.SchedulerName
 		*out = new(string)
+		**out = **in
+	}
+	if in.CloudProfile != nil {
+		in, out := &in.CloudProfile, &out.CloudProfile
+		*out = new(CloudProfileReference)
 		**out = **in
 	}
 	return

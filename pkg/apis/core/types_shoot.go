@@ -66,8 +66,6 @@ type ShootSpec struct {
 	Addons *Addons
 	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
 	CloudProfileName string
-	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
-	CloudProfile *CloudProfileReference
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS *DNS
 	// Extensions contain type and provider information for Shoot extensions.
@@ -112,6 +110,8 @@ type ShootSpec struct {
 	// If not specified, the default scheduler takes over.
 	// This field is immutable.
 	SchedulerName *string
+	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
+	CloudProfile *CloudProfileReference
 }
 
 // GetProviderType gets the type of the provider.
