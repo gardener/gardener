@@ -60,8 +60,8 @@ var _ = Describe("PrometheusOperator", func() {
 		deployer   component.DeployWaiter
 		values     Values
 
-		fakeOps       *retryfake.Ops
-		containObject func(object client.Object) gomegatypes.GomegaMatcher
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) gomegatypes.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -92,7 +92,7 @@ var _ = Describe("PrometheusOperator", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -412,14 +412,15 @@ var _ = Describe("PrometheusOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
-				Expect(managedResource).To(containObject(serviceAccount))
-				Expect(managedResource).To(containObject(service))
-				Expect(managedResource).To(containObject(deployment))
-				Expect(managedResource).To(containObject(vpa))
-				Expect(managedResource).To(containObject(clusterRole))
-				Expect(managedResource).To(containObject(clusterRoleBinding))
-				Expect(managedResource).To(containObject(clusterRolePrometheus))
+				Expect(managedResource).To(consistOf(
+					serviceAccount,
+					service,
+					deployment,
+					vpa,
+					clusterRole,
+					clusterRoleBinding,
+					clusterRolePrometheus,
+				))
 			})
 		})
 	})

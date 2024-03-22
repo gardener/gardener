@@ -42,15 +42,15 @@ import (
 
 var _ = Describe("Virtual", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		managedResourceName = "garden-system-virtual"
 		namespace           = "some-namespace"
 
-		c             client.Client
-		component     component.DeployWaiter
-		values        Values
-		containObject func(object client.Object) types.GomegaMatcher
+		c         client.Client
+		component component.DeployWaiter
+		values    Values
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -84,7 +84,7 @@ var _ = Describe("Virtual", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		values = Values{}
 		component = New(c, namespace, values)
-		containObject = NewManagedResourceObjectMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -633,30 +633,31 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(23))
-			Expect(managedResource).To(containObject(namespaceGarden))
-			Expect(managedResource).To(containObject(clusterRoleSeedBootstrapper))
-			Expect(managedResource).To(containObject(clusterRoleBindingSeedBootstrapper))
-			Expect(managedResource).To(containObject(clusterRoleSeeds))
-			Expect(managedResource).To(containObject(clusterRoleBindingSeeds))
-			Expect(managedResource).To(containObject(clusterRoleGardenerAdmin))
-			Expect(managedResource).To(containObject(clusterRoleBindingGardenerAdmin))
-			Expect(managedResource).To(containObject(clusterRoleGardenerAdminAggregated))
-			Expect(managedResource).To(containObject(clusterRoleGardenerViewer))
-			Expect(managedResource).To(containObject(clusterRoleGardenerViewerAggregated))
-			Expect(managedResource).To(containObject(clusterRoleReadGlobalResources))
-			Expect(managedResource).To(containObject(clusterRoleBindingReadGlobalResources))
-			Expect(managedResource).To(containObject(clusterRoleUserAuth))
-			Expect(managedResource).To(containObject(clusterRoleBindingUserAuth))
-			Expect(managedResource).To(containObject(clusterRoleProjectCreation))
-			Expect(managedResource).To(containObject(clusterRoleProjectMemberAggregated))
-			Expect(managedResource).To(containObject(clusterRoleProjectMember))
-			Expect(managedResource).To(containObject(clusterRoleProjectServiceAccountManagerAggregated))
-			Expect(managedResource).To(containObject(clusterRoleProjectServiceAccountManager))
-			Expect(managedResource).To(containObject(clusterRoleProjectViewerAggregated))
-			Expect(managedResource).To(containObject(clusterRoleProjectViewer))
-			Expect(managedResource).To(containObject(roleReadClusterIdentityConfigMap))
-			Expect(managedResource).To(containObject(roleBindingReadClusterIdentityConfigMap))
+			Expect(managedResource).To(consistOf(
+				namespaceGarden,
+				clusterRoleSeedBootstrapper,
+				clusterRoleBindingSeedBootstrapper,
+				clusterRoleSeeds,
+				clusterRoleBindingSeeds,
+				clusterRoleGardenerAdmin,
+				clusterRoleBindingGardenerAdmin,
+				clusterRoleGardenerAdminAggregated,
+				clusterRoleGardenerViewer,
+				clusterRoleGardenerViewerAggregated,
+				clusterRoleReadGlobalResources,
+				clusterRoleBindingReadGlobalResources,
+				clusterRoleUserAuth,
+				clusterRoleBindingUserAuth,
+				clusterRoleProjectCreation,
+				clusterRoleProjectMemberAggregated,
+				clusterRoleProjectMember,
+				clusterRoleProjectServiceAccountManagerAggregated,
+				clusterRoleProjectServiceAccountManager,
+				clusterRoleProjectViewerAggregated,
+				clusterRoleProjectViewer,
+				roleReadClusterIdentityConfigMap,
+				roleBindingReadClusterIdentityConfigMap,
+			))
 		})
 
 		Context("when seed authorizer is enabled", func() {

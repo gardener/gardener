@@ -86,8 +86,8 @@ var _ = Describe("Alertmanager", func() {
 		deployer   component.DeployWaiter
 		values     Values
 
-		fakeOps       *retryfake.Ops
-		containObject func(object client.Object) types.GomegaMatcher
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -123,7 +123,7 @@ var _ = Describe("Alertmanager", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -450,13 +450,13 @@ var _ = Describe("Alertmanager", func() {
 
 		When("cluster type is 'seed'", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
-				Expect(managedResource).To(containObject(service))
-				Expect(managedResource).To(containObject(alertManager))
-				Expect(managedResource).To(containObject(vpa))
-				Expect(managedResource).To(containObject(config))
-				Expect(managedResource).To(containObject(smtpSecret))
-				Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
+				Expect(managedResource).To(consistOf(
+					service,
+					alertManager,
+					vpa,
+					config,
+					smtpSecret,
+				))
 			})
 
 			When("ingress is configured", func() {
@@ -471,14 +471,14 @@ var _ = Describe("Alertmanager", func() {
 				It("should successfully deploy all resources", func() {
 					alertManager.Spec.ExternalURL = "https://" + ingressHost
 
-					Expect(managedResourceSecret.Data).To(HaveLen(6))
-					Expect(managedResource).To(containObject(service))
-					Expect(managedResource).To(containObject(alertManager))
-					Expect(managedResource).To(containObject(vpa))
-					Expect(managedResource).To(containObject(config))
-					Expect(managedResource).To(containObject(smtpSecret))
-					Expect(managedResource).To(containObject(ingress))
-					Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
+					Expect(managedResource).To(consistOf(
+						service,
+						alertManager,
+						vpa,
+						config,
+						smtpSecret,
+						ingress,
+					))
 				})
 			})
 
@@ -492,12 +492,11 @@ var _ = Describe("Alertmanager", func() {
 
 					Expect(managedResourceSecret.Data).To(HaveLen(3))
 
-					Expect(managedResource).To(containObject(service))
-					Expect(managedResource).To(containObject(alertManager))
-					Expect(managedResource).To(containObject(vpa))
-					Expect(managedResourceSecret.Data).NotTo(HaveKey("alertmanagerconfig__some-namespace__alertmanager-" + name + ".yaml"))
-					Expect(managedResourceSecret.Data).NotTo(HaveKey("secret__some-namespace__alertmanager-" + name + "-smtp.yaml"))
-					Expect(managedResourceSecret.Data).NotTo(HaveKey("poddisruptionbudget__some-namespace__alertmanager-" + name + ".yaml"))
+					Expect(managedResource).To(consistOf(
+						service,
+						alertManager,
+						vpa,
+					))
 				})
 			})
 
@@ -532,13 +531,13 @@ var _ = Describe("Alertmanager", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(5))
-
-					Expect(managedResource).To(containObject(service))
-					Expect(managedResource).To(containObject(alertManager))
-					Expect(managedResource).To(containObject(vpa))
-					Expect(managedResource).To(containObject(config))
-					Expect(managedResource).To(containObject(smtpSecret))
+					Expect(managedResource).To(consistOf(
+						service,
+						alertManager,
+						vpa,
+						config,
+						smtpSecret,
+					))
 				})
 			})
 
@@ -553,14 +552,14 @@ var _ = Describe("Alertmanager", func() {
 					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-9094"] = "allowed"
 					alertManager.Spec.Replicas = ptr.To(int32(2))
 
-					Expect(managedResourceSecret.Data).To(HaveLen(6))
-
-					Expect(managedResource).To(containObject(service))
-					Expect(managedResource).To(containObject(alertManager))
-					Expect(managedResource).To(containObject(vpa))
-					Expect(managedResource).To(containObject(config))
-					Expect(managedResource).To(containObject(smtpSecret))
-					Expect(managedResource).To(containObject(podDisruptionBudget))
+					Expect(managedResource).To(consistOf(
+						service,
+						alertManager,
+						vpa,
+						config,
+						smtpSecret,
+						podDisruptionBudget,
+					))
 				})
 			})
 		})
@@ -576,13 +575,13 @@ var _ = Describe("Alertmanager", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
-
-				Expect(managedResource).To(containObject(service))
-				Expect(managedResource).To(containObject(alertManager))
-				Expect(managedResource).To(containObject(vpa))
-				Expect(managedResource).To(containObject(config))
-				Expect(managedResource).To(containObject(smtpSecret))
+				Expect(managedResource).To(consistOf(
+					service,
+					alertManager,
+					vpa,
+					config,
+					smtpSecret,
+				))
 			})
 		})
 	})

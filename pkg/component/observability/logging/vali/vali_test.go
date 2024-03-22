@@ -79,7 +79,7 @@ const (
 
 var _ = Describe("Vali", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 	)
 
 	Describe("#Deploy", func() {
@@ -89,7 +89,7 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret       *corev1.Secret
 			managedResourceTarget       *resourcesv1alpha1.ManagedResource
 			managedResourceSecretTarget *corev1.Secret
-			containObject               func(object client.Object) gomegatypes.GomegaMatcher
+			consistOf                   func(...client.Object) gomegatypes.GomegaMatcher
 
 			fakeSecretManager secretsmanager.Interface
 			storage           = resource.MustParse("60Gi")
@@ -99,7 +99,7 @@ var _ = Describe("Vali", func() {
 			var err error
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeSecretManager = fakesecretsmanager.New(c, namespace)
-			containObject = NewManagedResourceObjectMatcher(c)
+			consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 			Expect(err).ToNot(HaveOccurred())
 
@@ -186,20 +186,20 @@ var _ = Describe("Vali", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			Expect(managedResource).To(consistOf(
+				getTelegrafConfigMap(),
+				getValiConfigMap(),
+				getHVPA(true),
+				getIngress(),
+				getService(true, "shoot"),
+				getStatefulSet(true),
+			))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(6))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(managedResource).To(containObject(getTelegrafConfigMap()))
-			Expect(managedResource).To(containObject(getValiConfigMap()))
-			Expect(managedResource).To(containObject(getHVPA(true)))
-			Expect(managedResource).To(containObject(getIngress()))
-			Expect(managedResource).To(containObject(getService(true, "shoot")))
-			Expect(managedResource).To(containObject(getStatefulSet(true)))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 			expectedTargetMr := &resourcesv1alpha1.ManagedResource{
@@ -219,17 +219,17 @@ var _ = Describe("Vali", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
 			Expect(managedResourceTarget).To(DeepEqual(expectedTargetMr))
+			Expect(managedResourceTarget).To(consistOf(
+				getKubeRBACProxyClusterRoleBinding(),
+				getValitailClusterRole(),
+				getValitailClusterRoleBinding(),
+			))
 
 			managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
 			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(managedResourceTarget).To(containObject(getKubeRBACProxyClusterRoleBinding()))
-			Expect(managedResourceTarget).To(containObject(getValitailClusterRole()))
-			Expect(managedResourceTarget).To(containObject(getValitailClusterRoleBinding()))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -286,20 +286,21 @@ var _ = Describe("Vali", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			Expect(managedResource).To(consistOf(
+				getValiConfigMap(),
+				getHVPA(false),
+				getService(false, "seed"),
+				getStatefulSet(false),
+				getServiceMonitor(),
+				getPrometheusRule(),
+			))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(6))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(managedResource).To(containObject(getValiConfigMap()))
-			Expect(managedResource).To(containObject(getHVPA(false)))
-			Expect(managedResource).To(containObject(getService(false, "seed")))
-			Expect(managedResource).To(containObject(getStatefulSet(false)))
-			Expect(managedResource).To(containObject(getServiceMonitor()))
-			Expect(managedResource).To(containObject(getPrometheusRule()))
 			test.PrometheusRule(getPrometheusRule(), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
 
@@ -346,15 +347,16 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(5))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			Expect(managedResource).To(containObject(getValiConfigMap()))
-			Expect(managedResource).To(containObject(getService(false, "seed")))
-			Expect(managedResource).To(containObject(getStatefulSet(false)))
-			Expect(managedResource).To(containObject(getServiceMonitor()))
-			Expect(managedResource).To(containObject(getPrometheusRule()))
+			Expect(managedResource).To(consistOf(
+				getValiConfigMap(),
+				getService(false, "seed"),
+				getStatefulSet(false),
+				getServiceMonitor(),
+				getPrometheusRule(),
+			))
 		})
 	})
 

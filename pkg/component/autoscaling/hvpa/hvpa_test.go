@@ -50,7 +50,7 @@ import (
 
 var _ = Describe("HVPA", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
@@ -61,9 +61,9 @@ var _ = Describe("HVPA", func() {
 			KubernetesVersion: semver.MustParse("1.25.5"),
 		}
 
-		c             client.Client
-		component     component.DeployWaiter
-		containObject func(object client.Object) types.GomegaMatcher
+		c         client.Client
+		component component.DeployWaiter
+		consistOf func(object ...client.Object) types.GomegaMatcher
 
 		managedResourceName   = "hvpa"
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -84,7 +84,7 @@ var _ = Describe("HVPA", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = New(c, namespace, values)
-		containObject = NewManagedResourceObjectMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -374,6 +374,8 @@ var _ = Describe("HVPA", func() {
 	})
 
 	Describe("#Deploy", func() {
+		var expectedObjects []client.Object
+
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
@@ -397,28 +399,30 @@ var _ = Describe("HVPA", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			expectedObjects = []client.Object{
+				serviceAccount,
+				clusterRole,
+				clusterRoleBinding,
+				service,
+				deployment,
+				role,
+				roleBinding,
+				vpa,
+				serviceMonitor,
+			}
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(managedResourceSecret.Data).To(HaveLen(10))
 
-			Expect(managedResource).To(containObject(serviceAccount))
-			Expect(managedResource).To(containObject(clusterRole))
-			Expect(managedResource).To(containObject(clusterRoleBinding))
-			Expect(managedResource).To(containObject(service))
-			Expect(managedResource).To(containObject(deployment))
-			Expect(managedResource).To(containObject(role))
-			Expect(managedResource).To(containObject(roleBinding))
-			Expect(managedResource).To(containObject(vpa))
-			Expect(managedResource).To(containObject(serviceMonitor))
 		})
 
 		Context("Kubernetes versions < 1.26", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(managedResource).To(containObject(podDisruptionBudgetFor(false)))
+				expectedObjects = append(expectedObjects, podDisruptionBudgetFor(false))
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 		})
 
@@ -429,7 +433,8 @@ var _ = Describe("HVPA", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResource).To(containObject(podDisruptionBudgetFor(true)))
+				expectedObjects = append(expectedObjects, podDisruptionBudgetFor(true))
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 		})
 	})

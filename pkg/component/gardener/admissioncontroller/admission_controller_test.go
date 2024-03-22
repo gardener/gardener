@@ -75,7 +75,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 		fakeSecretManager secretsmanager.Interface
 		deployer          component.DeployWaiter
 		testValues        Values
-		containObject     func(object client.Object) types.GomegaMatcher
+		consistOf         func(...client.Object) types.GomegaMatcher
 
 		namespace = "some-namespace"
 	)
@@ -90,7 +90,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		testValues = Values{}
 	})
@@ -139,7 +139,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 		Context("with common values", func() {
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 
@@ -150,7 +150,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 
@@ -161,7 +161,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "4ef77c17", testValues, false)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, false)
 			})
 		})
 
@@ -173,7 +173,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 
@@ -184,7 +184,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "6d282905", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "6d282905", testValues, true)
 			})
 		})
 
@@ -195,7 +195,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, containObject, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
 			})
 		})
 	})
@@ -425,7 +425,7 @@ func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespac
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(BeNotFoundError())
 }
 
-func verifyExpectations(ctx context.Context, fakeClient client.Client, containObject func(object client.Object) types.GomegaMatcher, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values, k8sGreaterEqual126 bool) {
+func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf func(...client.Object) types.GomegaMatcher, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values, k8sGreaterEqual126 bool) {
 	By("Check Gardener Access Secret")
 	accessSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -461,6 +461,13 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, containOb
 		"gardener.cloud/role":                "seed-system-component",
 		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
 	}))
+	Expect(runtimeMr).To(consistOf(
+		configMap(namespace, testValues),
+		deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues),
+		service(namespace, testValues),
+		vpa(namespace),
+		podDisruptionBudget(namespace, k8sGreaterEqual126),
+	))
 
 	runtimeManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -469,12 +476,6 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, containOb
 		},
 	}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
-
-	Expect(runtimeMr).To(containObject(configMap(namespace, testValues)))
-	Expect(runtimeMr).To(containObject(deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues)))
-	Expect(runtimeMr).To(containObject(service(namespace, testValues)))
-	Expect(runtimeMr).To(containObject(vpa(namespace)))
-	Expect(runtimeMr).To(containObject(podDisruptionBudget(namespace, k8sGreaterEqual126)))
 	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 	Expect(runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -488,6 +489,12 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, containOb
 		"origin":                             "gardener",
 		"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
 	}))
+	caGardener, ok := fakeSecretManager.Get("ca-gardener")
+	Expect(virtualMr).To(consistOf(
+		clusterRole(),
+		clusterRoleBinding(),
+		validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues),
+	))
 
 	virtualManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -496,13 +503,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, containOb
 		},
 	}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualManagedResourceSecret), virtualManagedResourceSecret)).To(Succeed())
-
-	caGardener, ok := fakeSecretManager.Get("ca-gardener")
 	Expect(ok).To(BeTrue())
-
-	Expect(virtualMr).To(containObject(clusterRole()))
-	Expect(virtualMr).To(containObject(clusterRoleBinding()))
-	Expect(virtualMr).To(containObject(validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues)))
 	Expect(virtualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 	Expect(virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }

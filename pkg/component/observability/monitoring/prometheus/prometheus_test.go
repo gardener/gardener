@@ -80,8 +80,9 @@ honor_labels: true`
 		deployer   component.DeployWaiter
 		values     Values
 
-		fakeOps       *retryfake.Ops
-		containObject func(object client.Object) types.GomegaMatcher
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) types.GomegaMatcher
+		contain   func(...client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -124,7 +125,8 @@ honor_labels: true`
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		contain = NewManagedResourceContainsObjectsMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -506,28 +508,25 @@ honor_labels: true`
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(11))
-				Expect(managedResource).To(containObject(serviceAccount))
-				Expect(managedResource).To(containObject(service))
-				Expect(managedResource).To(containObject(clusterRoleBinding))
-				Expect(managedResource).To(containObject(prometheusFor("")))
-				Expect(managedResource).To(containObject(vpa))
-
 				prometheusRule.Namespace = namespace
 				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
-				Expect(managedResource).To(containObject(prometheusRule))
-
 				metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
-				Expect(managedResource).To(containObject(scrapeConfig))
-
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
-				Expect(managedResource).To(containObject(serviceMonitor))
-
 				metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
-				Expect(managedResource).To(containObject(podMonitor))
 
-				Expect(managedResource).To(containObject(secretAdditionalScrapeConfigs))
-				Expect(managedResource).To(containObject(additionalConfigMap))
+				Expect(managedResource).To(consistOf(
+					serviceAccount,
+					service,
+					clusterRoleBinding,
+					prometheusFor(""),
+					vpa,
+					prometheusRule,
+					scrapeConfig,
+					serviceMonitor,
+					podMonitor,
+					secretAdditionalScrapeConfigs,
+					additionalConfigMap,
+				))
 			})
 
 			When("ingress is configured", func() {
@@ -543,7 +542,7 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(managedResource).To(containObject(ingress))
+					Expect(managedResource).To(contain(ingress))
 				})
 			})
 
@@ -556,8 +555,10 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(managedResource).To(containObject(prometheusFor(alertmanagerName)))
-					Expect(managedResource).To(containObject(secretAdditionalAlertRelabelConfigs))
+					Expect(managedResource).To(contain(
+						prometheusFor(alertmanagerName),
+						secretAdditionalAlertRelabelConfigs,
+					))
 				})
 			})
 		})

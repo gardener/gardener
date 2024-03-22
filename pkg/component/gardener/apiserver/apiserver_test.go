@@ -58,7 +58,7 @@ import (
 
 var _ = Describe("GardenerAPIServer", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		managedResourceNameRuntime       = "gardener-apiserver-runtime"
 		managedResourceNameVirtual       = "gardener-apiserver-virtual"
@@ -78,7 +78,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		fakeSecretManager secretsmanager.Interface
 		values            Values
 		deployer          Interface
-		containObject     func(object client.Object) types.GomegaMatcher
+		consistOf         func(...client.Object) types.GomegaMatcher
 
 		fakeOps *retryfake.Ops
 
@@ -146,7 +146,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			TopologyAwareRoutingEnabled: true,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -1372,6 +1372,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			Context("resources generation", func() {
+				var expectedRuntimeObjects []client.Object
+
 				JustBeforeEach(func() {
 					Expect(deployer.Deploy(ctx)).To(Succeed())
 
@@ -1423,24 +1425,24 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
+					expectedRuntimeObjects = []client.Object{deployment}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
-					Expect(managedResourceRuntime).To(containObject(deployment))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
+					Expect(managedResourceVirtual).To(consistOf(
+						apiServiceFor("core.gardener.cloud", "v1beta1"),
+						apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"),
+						apiServiceFor("operations.gardener.cloud", "v1alpha1"),
+						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
+						serviceVirtual,
+						endpoints,
+						clusterRole,
+						clusterRoleBinding,
+						clusterRoleBindingAuthDelegation,
+						roleBindingAuthReader,
+					))
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretVirtual.Data).To(HaveLen(10))
-					Expect(managedResourceVirtual).To(containObject(apiServiceFor("core.gardener.cloud", "v1beta1")))
-					Expect(managedResourceVirtual).To(containObject(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1")))
-					Expect(managedResourceVirtual).To(containObject(apiServiceFor("operations.gardener.cloud", "v1alpha1")))
-					Expect(managedResourceVirtual).To(containObject(apiServiceFor("settings.gardener.cloud", "v1alpha1")))
-					Expect(managedResourceVirtual).To(containObject(serviceVirtual))
-					Expect(managedResourceVirtual).To(containObject(endpoints))
-					Expect(managedResourceVirtual).To(containObject(clusterRole))
-					Expect(managedResourceVirtual).To(containObject(clusterRoleBinding))
-					Expect(managedResourceVirtual).To(containObject(clusterRoleBindingAuthDelegation))
-					Expect(managedResourceVirtual).To(containObject(roleBindingAuthReader))
 					Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
@@ -1452,8 +1454,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(containObject(vpa))
-						Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(true)))
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							vpa,
+							podDisruptionBudgetFor(true),
+							serviceRuntimeFor(true),
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})
 				})
 
@@ -1464,9 +1472,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(containObject(hvpa))
-						Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(true)))
-						Expect(managedResourceRuntime).To(containObject(serviceRuntimeFor(true)))
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							hvpa,
+							podDisruptionBudgetFor(true),
+							serviceRuntimeFor(true),
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})
 				})
 
@@ -1477,9 +1490,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(containObject(vpa))
-						Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(false)))
-						Expect(managedResourceRuntime).To(containObject(serviceRuntimeFor(false)))
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							vpa,
+							podDisruptionBudgetFor(false),
+							serviceRuntimeFor(false),
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})
 				})
 
@@ -1490,9 +1508,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(containObject(vpa))
-						Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(true)))
-						Expect(managedResourceRuntime).To(containObject(serviceRuntimeFor(false)))
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							vpa,
+							podDisruptionBudgetFor(true),
+							serviceRuntimeFor(false),
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})
 				})
 			})

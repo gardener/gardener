@@ -53,7 +53,7 @@ var _ = Describe("EventLogger", func() {
 	)
 
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 		c   client.Client
 
 		managedResource            *resourcesv1alpha1.ManagedResource
@@ -66,7 +66,7 @@ var _ = Describe("EventLogger", func() {
 
 		eventLoggerDeployer component.Deployer
 		fakeSecretManager   secretsmanager.Interface
-		containObject       func(object client.Object) types.GomegaMatcher
+		consistOf           func(...client.Object) types.GomegaMatcher
 
 		clusterRoleForShoot = func() *rbacv1.ClusterRole {
 			return &rbacv1.ClusterRole{
@@ -221,7 +221,7 @@ var _ = Describe("EventLogger", func() {
 		var err error
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-		containObject = NewManagedResourceObjectMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		eventLoggerDeployer, err = New(
 			c,
@@ -318,16 +318,13 @@ var _ = Describe("EventLogger", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			Expect(managedResource).To(consistOf(clusterRoleForShoot(), clusterRoleBinding))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(managedResource).To(containObject(clusterRoleForShoot()))
-			Expect(managedResource).To(containObject(clusterRoleBinding))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
 			Expect(eventLoggerServiceAccount).To(DeepEqual(&corev1.ServiceAccount{

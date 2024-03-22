@@ -47,7 +47,7 @@ import (
 
 var _ = Describe("Fluent Operator", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		name              = "fluent-operator"
 		namespace         = "some-namespace"
@@ -58,9 +58,9 @@ var _ = Describe("Fluent Operator", func() {
 			PriorityClassName: priorityClassName,
 		}
 
-		c             client.Client
-		component     component.DeployWaiter
-		containObject func(object client.Object) types.GomegaMatcher
+		c         client.Client
+		component component.DeployWaiter
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		operatorManagedResourceName   = "fluent-operator"
 		operatorManagedResource       *resourcesv1alpha1.ManagedResource
@@ -78,7 +78,7 @@ var _ = Describe("Fluent Operator", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = NewFluentOperator(c, namespace, values)
-		containObject = NewManagedResourceObjectMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -351,21 +351,21 @@ var _ = Describe("Fluent Operator", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(operatorManagedResource).To(DeepEqual(expectedMr))
+			Expect(operatorManagedResource).To(consistOf(
+				serviceAccount,
+				clusterRole,
+				clusterRoleBinding,
+				role,
+				roleBinding,
+				deployment,
+				vpa,
+			))
 
 			operatorManagedResourceSecret.Name = operatorManagedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(operatorManagedResourceSecret.Data).To(HaveLen(7))
 			Expect(operatorManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(operatorManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(operatorManagedResource).To(containObject(serviceAccount))
-			Expect(operatorManagedResource).To(containObject(clusterRole))
-			Expect(operatorManagedResource).To(containObject(clusterRoleBinding))
-			Expect(operatorManagedResource).To(containObject(role))
-			Expect(operatorManagedResource).To(containObject(roleBinding))
-			Expect(operatorManagedResource).To(containObject(deployment))
-			Expect(operatorManagedResource).To(containObject(vpa))
 		})
 	})
 

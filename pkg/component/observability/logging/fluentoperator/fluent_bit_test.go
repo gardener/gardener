@@ -45,7 +45,7 @@ import (
 
 var _ = Describe("Fluent Bit", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
@@ -56,9 +56,9 @@ var _ = Describe("Fluent Bit", func() {
 			PriorityClass:      priorityClassName,
 		}
 
-		c             client.Client
-		component     component.DeployWaiter
-		containObject func(object client.Object) types.GomegaMatcher
+		c         client.Client
+		component component.DeployWaiter
+		contains  func(...client.Object) types.GomegaMatcher
 
 		customResourcesManagedResourceName   = "fluent-bit"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
@@ -228,7 +228,7 @@ var _ = Describe("Fluent Bit", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = NewFluentBit(c, namespace, values)
-		containObject = NewManagedResourceObjectMatcher(c)
+		contains = NewManagedResourceContainsObjectsMatcher(c)
 	})
 
 	JustBeforeEach(func() {
@@ -276,6 +276,12 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResource).To(DeepEqual(expectedMr))
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+			Expect(customResourcesManagedResource).To(contains(
+				serviceMonitor,
+				serviceMonitorPlugin,
+				prometheusRule,
+			))
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(12))
@@ -290,9 +296,6 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
-			Expect(customResourcesManagedResource).To(containObject(serviceMonitor))
-			Expect(customResourcesManagedResource).To(containObject(serviceMonitorPlugin))
-			Expect(customResourcesManagedResource).To(containObject(prometheusRule))
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
 		})
 	})

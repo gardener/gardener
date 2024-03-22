@@ -60,8 +60,8 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		deployer          component.DeployWaiter
 		values            Values
 
-		fakeOps       *retryfake.Ops
-		containObject func(object client.Object) gomegatypes.GomegaMatcher
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) gomegatypes.GomegaMatcher
 
 		managedResourceRuntime       *resourcesv1alpha1.ManagedResource
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
@@ -87,7 +87,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -242,6 +242,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
 				Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
+				Expect(managedResourceRuntime).To(consistOf(serviceRuntime, deployment(namespace, values)))
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
@@ -269,19 +270,14 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
+				Expect(managedResourceVirtual).To(consistOf(clusterRole, clusterRoleBinding))
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
-				Expect(managedResourceRuntime).To(containObject(serviceRuntime))
-				Expect(managedResourceRuntime).To(containObject(deployment(namespace, values)))
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
-				Expect(managedResourceVirtual).To(containObject(clusterRole))
-				Expect(managedResourceVirtual).To(containObject(clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})

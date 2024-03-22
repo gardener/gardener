@@ -69,8 +69,8 @@ var _ = Describe("GardenerScheduler", func() {
 		deployer          component.DeployWaiter
 		values            Values
 
-		fakeOps       *retryfake.Ops
-		containObject func(object client.Object) types.GomegaMatcher
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		managedResourceRuntime       *resourcesv1alpha1.ManagedResource
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
@@ -86,7 +86,7 @@ var _ = Describe("GardenerScheduler", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
@@ -101,7 +101,7 @@ var _ = Describe("GardenerScheduler", func() {
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
 
-		containObject = NewManagedResourceObjectMatcher(fakeClient)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -300,6 +300,8 @@ var _ = Describe("GardenerScheduler", func() {
 
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
+			var expectedRuntimeObject []client.Object
+
 			BeforeEach(func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(BeNotFoundError())
@@ -374,23 +376,21 @@ var _ = Describe("GardenerScheduler", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
+				expectedRuntimeObject = []client.Object{
+					configMap(namespace, values),
+					serviceRuntime,
+					vpa,
+					deployment(namespace, "gardener-scheduler-config-3cf6616e", values),
+				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
-
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
-				Expect(managedResourceRuntime).To(containObject(configMap(namespace, values)))
-				Expect(managedResourceRuntime).To(containObject(serviceRuntime))
-				Expect(managedResourceRuntime).To(containObject(vpa))
-				Expect(managedResourceRuntime).To(containObject(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
+				Expect(managedResourceVirtual).To(consistOf(clusterRole, clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
-				Expect(managedResourceVirtual).To(containObject(clusterRole))
-				Expect(managedResourceVirtual).To(containObject(clusterRoleBinding))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
@@ -401,13 +401,15 @@ var _ = Describe("GardenerScheduler", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(false)))
+					expectedRuntimeObject = append(expectedRuntimeObject, podDisruptionBudgetFor(false))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
 				})
 			})
 
 			Context("Kubernetes versions >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(containObject(podDisruptionBudgetFor(true)))
+					expectedRuntimeObject = append(expectedRuntimeObject, podDisruptionBudgetFor(true))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
 				})
 			})
 		})
