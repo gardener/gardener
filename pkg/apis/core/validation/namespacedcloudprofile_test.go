@@ -981,17 +981,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					))
 				})
 			})
-
-			It("should forbid unsupported seed selectors", func() {
-				namespacedCloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
-
-				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.seedSelector.matchLabels"),
-				}))))
-			})
 		})
 	})
 

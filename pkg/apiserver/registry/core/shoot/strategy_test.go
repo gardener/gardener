@@ -82,7 +82,7 @@ var _ = Describe("Strategy", func() {
 				}
 			})
 
-			It("should remove cloudProfile field if namespacedcloudprofile feature gate is disabled", func() {
+			It("should remove cloudProfile field if NamespacedCloudProfile feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 
 				shoot.Spec.CloudProfile = cloudProfileReference
@@ -91,7 +91,7 @@ var _ = Describe("Strategy", func() {
 				Expect(shoot.Spec.CloudProfile).To(BeNil())
 			})
 
-			It("should not remove cloudProfile field if namespacedcloudprofile feature gate is enabled", func() {
+			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is enabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
 				shoot.Spec.CloudProfile = cloudProfileReference
@@ -119,7 +119,7 @@ var _ = Describe("Strategy", func() {
 				}
 			})
 
-			It("should remove cloudProfile field if namespacedcloudprofile feature gate is disabled", func() {
+			It("should remove cloudProfile field if NamespacedCloudProfile feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 
 				newShoot.Spec.CloudProfile = cloudProfileReference
@@ -128,7 +128,7 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.CloudProfile).To(BeNil())
 			})
 
-			It("should not remove cloudProfile field if namespacedcloudprofile feature gate is enabled", func() {
+			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is enabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
 				newShoot.Spec.CloudProfile = cloudProfileReference
