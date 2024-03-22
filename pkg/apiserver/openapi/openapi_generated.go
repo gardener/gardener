@@ -1622,21 +1622,23 @@ func schema_pkg_apis_core_v1beta1_CloudProfileReference(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CloudProfileReference holds the information about the parent of the NamespacedCloudProfile",
+				Description: "CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Kind contains a CloudProfile kind, must be \"CloudProfile\" or \"NamespacedCloudProfile\"",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Default: "",
-							Type:    []string{"string"},
-							Format:  "",
+							Description: "Name contains the name of the referenced CloudProfile",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -5185,7 +5187,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfile(ref common.ReferenceCal
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Most recently observed status of the NamespacedCloudProfile",
+							Description: "Most recently observed status of the NamespacedCloudProfile.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamespacedCloudProfileStatus"),
 						},
@@ -5228,7 +5230,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileList(ref common.Referenc
 					},
 					"items": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Items is the list of CloudProfiles.",
+							Description: "Items is the list of NamespacedCloudProfiles.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5253,7 +5255,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile. It must contain exactly one of its defined keys.",
+				Description: "NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"caBundle": {
@@ -5357,12 +5359,13 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 					},
 					"parent": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A pointer to the NamespacedCloudProfiles parent CloudProfile",
+							Description: "Parent contains a reference to a CloudProfile it inherits from.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
 						},
 					},
 				},
+				Required: []string{"parent"},
 			},
 		},
 		Dependencies: []string{
@@ -5374,12 +5377,12 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "NamespacedCloudProfileStatus holds the most recently observed status of the project",
+				Description: "NamespacedCloudProfileStatus holds the most recently observed status of the project.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cloudProfileSpec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile",
+							Description: "CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"),
 						},
@@ -8077,12 +8080,6 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							Format:      "",
 						},
 					},
-					"cloudProfile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
-						},
-					},
 					"dns": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNS contains information about the DNS settings of the Shoot.",
@@ -8234,6 +8231,12 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							Description: "SchedulerName is the name of the responsible scheduler which schedules the shoot. If not specified, the default scheduler takes over. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"cloudProfile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
 						},
 					},
 				},

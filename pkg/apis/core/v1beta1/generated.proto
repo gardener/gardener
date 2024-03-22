@@ -305,10 +305,12 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile
+// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
 message CloudProfileReference {
+  // Kind contains a CloudProfile kind, must be "CloudProfile" or "NamespacedCloudProfile"
   optional string kind = 1;
 
+  // Name contains the name of the referenced CloudProfile
   optional string name = 2;
 }
 
@@ -1751,7 +1753,7 @@ message NamespacedCloudProfile {
   // Spec defines the provider environment properties.
   optional NamespacedCloudProfileSpec spec = 2;
 
-  // Most recently observed status of the NamespacedCloudProfile
+  // Most recently observed status of the NamespacedCloudProfile.
   optional NamespacedCloudProfileStatus status = 3;
 }
 
@@ -1761,12 +1763,11 @@ message NamespacedCloudProfileList {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  // Items is the list of CloudProfiles.
+  // Items is the list of NamespacedCloudProfiles.
   repeated NamespacedCloudProfile items = 2;
 }
 
 // NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
-// It must contain exactly one of its defined keys.
 message NamespacedCloudProfileSpec {
   // CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.
   // +optional
@@ -1808,14 +1809,13 @@ message NamespacedCloudProfileSpec {
   // +optional
   repeated VolumeType volumeTypes = 9;
 
-  // A pointer to the NamespacedCloudProfiles parent CloudProfile
-  // +optional
+  // Parent contains a reference to a CloudProfile it inherits from.
   optional CloudProfileReference parent = 10;
 }
 
-// NamespacedCloudProfileStatus holds the most recently observed status of the project
+// NamespacedCloudProfileStatus holds the most recently observed status of the project.
 message NamespacedCloudProfileStatus {
-  // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile
+  // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
   optional CloudProfileSpec cloudProfileSpec = 1;
 }
 
@@ -2781,89 +2781,90 @@ message ShootSpec {
   // CloudProfileName is a name of a CloudProfile object. This field is immutable.
   optional string cloudProfileName = 2;
 
-  // CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile
-  optional CloudProfileReference cloudProfile = 3;
-
   // DNS contains information about the DNS settings of the Shoot.
   // +optional
-  optional DNS dns = 4;
+  optional DNS dns = 3;
 
   // Extensions contain type and provider information for Shoot extensions.
   // +optional
-  repeated Extension extensions = 5;
+  repeated Extension extensions = 4;
 
   // Hibernation contains information whether the Shoot is suspended or not.
   // +optional
-  optional Hibernation hibernation = 6;
+  optional Hibernation hibernation = 5;
 
   // Kubernetes contains the version and configuration settings of the control plane components.
-  optional Kubernetes kubernetes = 7;
+  optional Kubernetes kubernetes = 6;
 
   // Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
   // +optional
-  optional Networking networking = 8;
+  optional Networking networking = 7;
 
   // Maintenance contains information about the time window for maintenance operations and which
   // operations should be performed.
   // +optional
-  optional Maintenance maintenance = 9;
+  optional Maintenance maintenance = 8;
 
   // Monitoring contains information about custom monitoring configurations for the shoot.
   // +optional
-  optional Monitoring monitoring = 10;
+  optional Monitoring monitoring = 9;
 
   // Provider contains all provider-specific and provider-relevant information.
-  optional Provider provider = 11;
+  optional Provider provider = 10;
 
   // Purpose is the purpose class for this cluster.
   // +optional
-  optional string purpose = 12;
+  optional string purpose = 11;
 
   // Region is a name of a region. This field is immutable.
-  optional string region = 13;
+  optional string region = 12;
 
   // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
   // This field is immutable.
   // +optional
-  optional string secretBindingName = 14;
+  optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
   // +optional
-  optional string seedName = 15;
+  optional string seedName = 14;
 
   // SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
   // +optional
-  optional SeedSelector seedSelector = 16;
+  optional SeedSelector seedSelector = 15;
 
   // Resources holds a list of named resource references that can be referred to in extension configs by their names.
   // +optional
-  repeated NamedResourceReference resources = 17;
+  repeated NamedResourceReference resources = 16;
 
   // Tolerations contains the tolerations for taints on seed clusters.
   // +patchMergeKey=key
   // +patchStrategy=merge
   // +optional
-  repeated Toleration tolerations = 18;
+  repeated Toleration tolerations = 17;
 
   // ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
   // This field is immutable.
   // +optional
-  optional string exposureClassName = 19;
+  optional string exposureClassName = 18;
 
   // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
   // +optional
-  optional SystemComponents systemComponents = 20;
+  optional SystemComponents systemComponents = 19;
 
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
-  optional ControlPlane controlPlane = 21;
+  optional ControlPlane controlPlane = 20;
 
   // SchedulerName is the name of the responsible scheduler which schedules the shoot.
   // If not specified, the default scheduler takes over.
   // This field is immutable.
   // +optional
-  optional string schedulerName = 22;
+  optional string schedulerName = 21;
+
+  // CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
+  // +optional
+  optional CloudProfileReference cloudProfile = 22;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

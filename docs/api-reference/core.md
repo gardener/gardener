@@ -1097,8 +1097,7 @@ CloudProfileReference
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>A pointer to the NamespacedCloudProfiles parent CloudProfile</p>
+<p>Parent contains a reference to a CloudProfile it inherits from.</p>
 </td>
 </tr>
 </table>
@@ -1114,7 +1113,7 @@ NamespacedCloudProfileStatus
 </em>
 </td>
 <td>
-<p>Most recently observed status of the NamespacedCloudProfile</p>
+<p>Most recently observed status of the NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>
@@ -1774,19 +1773,6 @@ string
 </tr>
 <tr>
 <td>
-<code>cloudProfile</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
-CloudProfileReference
-</a>
-</em>
-</td>
-<td>
-<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dns</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.DNS">
@@ -2042,6 +2028,20 @@ string
 <p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
 If not specified, the default scheduler takes over.
 This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 </table>
@@ -3044,7 +3044,7 @@ CRIName
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
-<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile</p>
+<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.</p>
 </p>
 <table>
 <thead>
@@ -3062,6 +3062,7 @@ string
 </em>
 </td>
 <td>
+<p>Kind contains a CloudProfile kind, must be &ldquo;CloudProfile&rdquo; or &ldquo;NamespacedCloudProfile&rdquo;</p>
 </td>
 </tr>
 <tr>
@@ -3072,6 +3073,7 @@ string
 </em>
 </td>
 <td>
+<p>Name contains the name of the referenced CloudProfile</p>
 </td>
 </tr>
 </tbody>
@@ -7817,8 +7819,7 @@ Kubernetes autoscaling/v1.CrossVersionObjectReference
 <a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
 </p>
 <p>
-<p>NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
-It must contain exactly one of its defined keys.</p>
+<p>NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.</p>
 </p>
 <table>
 <thead>
@@ -7938,8 +7939,7 @@ CloudProfileReference
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>A pointer to the NamespacedCloudProfiles parent CloudProfile</p>
+<p>Parent contains a reference to a CloudProfile it inherits from.</p>
 </td>
 </tr>
 </tbody>
@@ -7951,7 +7951,7 @@ CloudProfileReference
 <a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
 </p>
 <p>
-<p>NamespacedCloudProfileStatus holds the most recently observed status of the project</p>
+<p>NamespacedCloudProfileStatus holds the most recently observed status of the project.</p>
 </p>
 <table>
 <thead>
@@ -7971,7 +7971,7 @@ CloudProfileSpec
 </em>
 </td>
 <td>
-<p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile</p>
+<p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>
@@ -11226,19 +11226,6 @@ string
 </tr>
 <tr>
 <td>
-<code>cloudProfile</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
-CloudProfileReference
-</a>
-</em>
-</td>
-<td>
-<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dns</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.DNS">
@@ -11494,6 +11481,20 @@ string
 <p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
 If not specified, the default scheduler takes over.
 This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>
@@ -11894,19 +11895,6 @@ string
 </tr>
 <tr>
 <td>
-<code>cloudProfile</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
-CloudProfileReference
-</a>
-</em>
-</td>
-<td>
-<p>CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dns</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.DNS">
@@ -12162,6 +12150,20 @@ string
 <p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
 If not specified, the default scheduler takes over.
 This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 </table>
