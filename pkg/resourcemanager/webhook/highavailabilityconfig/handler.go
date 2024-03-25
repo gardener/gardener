@@ -512,7 +512,6 @@ func mutateAutoscalingReplicas(
 	}
 
 	// For compatibility reasons, only overwrite minReplicas if the current count is lower than the calculated count.
-	// TODO(timuthy): Reconsider if this should be removed in a future version.
 	if ptr.Deref(getMinReplicas(), 0) < *replicas {
 		log.Info("Mutating minReplicas", "minReplicas", replicas)
 		setMinReplicas(replicas)
