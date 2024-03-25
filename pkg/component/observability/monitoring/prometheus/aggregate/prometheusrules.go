@@ -65,7 +65,7 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 						},
 						{
 							Alert: "NodeNotHealthy",
-							Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!="deployment.machine.sapcloud.io/prefer-no-schedule", key!="ToBeDeletedByClusterAutoscaler", key!="` + v1beta1constants.LabelNodeCriticalComponent + `"}))[30m:]) > 9`),
+							Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!~"node.kubernetes.io/unschedulable|deployment.machine.sapcloud.io/prefer-no-schedule|ToBeDeletedByClusterAutoscaler|` + v1beta1constants.TaintNodeCriticalComponentsNotReady + `"}))[30m:]) > 9`),
 							For:   ptr.To(monitoringv1.Duration("0m")),
 							Labels: map[string]string{
 								"severity":   "warning",
