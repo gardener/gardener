@@ -37,8 +37,8 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Parent Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["parent.name"]},
-			{Name: "Parent Kind", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["parent.kind"]},
+			{Name: "Parent Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["Parent CloudProfile Name."]},
+			{Name: "Parent Kind", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["Parent CloudProfile Kind."]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}

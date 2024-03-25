@@ -16,6 +16,7 @@ package validation
 
 import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -27,12 +28,12 @@ func ValidateNamespacedCloudProfile(cloudProfile *core.NamespacedCloudProfile) f
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&cloudProfile.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateNamespacedCloudProfileSpec(&cloudProfile.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, validateNamespacedCloudProfileSpec(&cloudProfile.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
 
-// ValidateNamespacedCloudProfileUpdate validates a CloudProfile object before an update.
+// ValidateNamespacedCloudProfileUpdate validates a NamespacedCloudProfile object before an update.
 func ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile *core.NamespacedCloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -43,7 +44,7 @@ func ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile *core.Namespace
 	return allErrs
 }
 
-// ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a CloudProfile.
+// ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a NamespacedCloudProfile.
 func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -52,8 +53,8 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 	return allErrs
 }
 
-// ValidateNamespacedCloudProfileSpec validates the specification of a NamespacedCloudProfile object.
-func ValidateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
+// validateNamespacedCloudProfileSpec validates the specification of a NamespacedCloudProfile object.
+func validateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateParent(spec.Parent, fldPath.Child("parent"))...)
@@ -72,6 +73,9 @@ func ValidateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, f
 	}
 	if spec.Regions != nil {
 		allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
+	}
+	if spec.SeedSelector != nil {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
 	if spec.CABundle != nil {
 		_, err := utils.DecodeCertificate([]byte(*(spec.CABundle)))
