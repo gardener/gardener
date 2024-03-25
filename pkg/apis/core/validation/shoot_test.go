@@ -5894,7 +5894,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 			})
 
-			It("should not allow using a CloudProfile", func() {
+			It("should allow using a CloudProfile", func() {
 				cloudProfileReference := &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "my-profile",
@@ -5905,7 +5905,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(BeEmpty())
 			})
 
-			It("should not allow using a NamespacedCloudProfile", func() {
+			It("should allow using a NamespacedCloudProfile", func() {
 				cloudProfileReference := &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
 					Name: "my-profile",

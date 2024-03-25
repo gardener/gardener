@@ -91,8 +91,8 @@ type NamespacedCloudProfileStatus struct {
 
 // CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
 type CloudProfileReference struct {
-	// Kind contains a CloudProfile kind, must be "CloudProfile" or "NamespacedCloudProfile"
+	// Kind contains a CloudProfile kind.
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`
-	// Name contains the name of the referenced CloudProfile
+	// Name contains the name of the referenced CloudProfile.
 	Name string `json:"name" protobuf:"bytes,2,req,name=name"`
 }

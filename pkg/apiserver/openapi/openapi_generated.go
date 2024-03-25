@@ -1627,7 +1627,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileReference(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kind contains a CloudProfile kind, must be \"CloudProfile\" or \"NamespacedCloudProfile\"",
+							Description: "Kind contains a CloudProfile kind.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -1635,7 +1635,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileReference(ref common.ReferenceCall
 					},
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name contains the name of the referenced CloudProfile",
+							Description: "Name contains the name of the referenced CloudProfile.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
