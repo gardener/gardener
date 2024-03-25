@@ -69,7 +69,7 @@ type NamespacedCloudProfileSpec struct {
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
 type NamespacedCloudProfileStatus struct {
-	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
+	// CloudProfileSpec is the most recently generated CloudProfileSpec of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec
 }
 

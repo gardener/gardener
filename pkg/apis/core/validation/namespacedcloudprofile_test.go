@@ -72,17 +72,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 			errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 			Expect(errorList).To(BeEmpty())
-
-			newNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
-			newNamespacedCloudProfile.Spec.Parent.Name = "cloud-profile-parent-1"
-			newNamespacedCloudProfile.ResourceVersion = "2"
-
-			errorList = ValidateNamespacedCloudProfileUpdate(newNamespacedCloudProfile, namespacedCloudProfile)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.parent"),
-				}))))
 		})
 
 		It("should not allow a NamespacedCloudProfile to change its parent reference", func() {
@@ -1001,7 +990,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 		dateInThePast   = &metav1.Time{Time: time.Now().AddDate(-5, 0, 0)}
 	)
 
-	Describe("#ValidateNamespacedCloudProfileSpecUpdate", func() {
+	Describe("#ValidateNamespacedCloudProfileUpdate", func() {
 		BeforeEach(func() {
 			cloudProfileNew = &core.NamespacedCloudProfile{
 				ObjectMeta: metav1.ObjectMeta{

@@ -5883,14 +5883,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
+						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("cloudProfile.kind"),
-						"Detail": Equal("must be CloudProfile or NamespacedCloudProfile"),
+						"Detail": Equal("supported values: \"CloudProfile\", \"NamespacedCloudProfile\""),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
 						"Field":  Equal("cloudProfile.name"),
-						"Detail": Equal("must specify a CloudProfile name"),
+						"Detail": Equal("must specify a CloudProfile or NamespacedCloudProfile name"),
 					}))))
 			})
 
