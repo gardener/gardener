@@ -137,7 +137,7 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.CloudProfile).To(Equal(cloudProfileReference))
 			})
 
-			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is disabled but the cloudProfile field is preset in the old Shoot", func() {
+			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is disabled but the cloudProfile field is present in the old Shoot", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
 				oldShoot.Spec.CloudProfile = cloudProfileReference

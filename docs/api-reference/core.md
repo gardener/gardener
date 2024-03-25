@@ -3062,7 +3062,7 @@ string
 </em>
 </td>
 <td>
-<p>Kind contains a CloudProfile kind, must be &ldquo;CloudProfile&rdquo; or &ldquo;NamespacedCloudProfile&rdquo;</p>
+<p>Kind contains a CloudProfile kind.</p>
 </td>
 </tr>
 <tr>
@@ -3073,7 +3073,7 @@ string
 </em>
 </td>
 <td>
-<p>Name contains the name of the referenced CloudProfile</p>
+<p>Name contains the name of the referenced CloudProfile.</p>
 </td>
 </tr>
 </tbody>
