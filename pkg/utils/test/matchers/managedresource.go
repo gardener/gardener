@@ -52,7 +52,7 @@ func (m *managedResourceObjectsMatcher) NegatedFailureMessage(actual interface{}
 func (m *managedResourceObjectsMatcher) createMessage(actual interface{}, addition string) string {
 	managedResource, ok := actual.(*resourcesv1alpha1.ManagedResource)
 	if !ok {
-		return fmt.Errorf("expected *resourcesv1alpha1.ManagedResource.  got:\n%s", format.Object(actual, 1)).Error()
+		return fmt.Sprintf("expected *resourcesv1alpha1.ManagedResource.  got:\n%s", format.Object(actual, 1))
 	}
 
 	var message string
