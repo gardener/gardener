@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -47,7 +47,7 @@ import (
 
 var _ = Describe("Fluent Operator", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		name              = "fluent-operator"
 		namespace         = "some-namespace"
@@ -60,6 +60,7 @@ var _ = Describe("Fluent Operator", func() {
 
 		c         client.Client
 		component component.DeployWaiter
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		operatorManagedResourceName   = "fluent-operator"
 		operatorManagedResource       *resourcesv1alpha1.ManagedResource
@@ -77,6 +78,7 @@ var _ = Describe("Fluent Operator", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = NewFluentOperator(c, namespace, values)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -349,21 +351,21 @@ var _ = Describe("Fluent Operator", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(operatorManagedResource).To(DeepEqual(expectedMr))
+			Expect(operatorManagedResource).To(consistOf(
+				serviceAccount,
+				clusterRole,
+				clusterRoleBinding,
+				role,
+				roleBinding,
+				deployment,
+				vpa,
+			))
 
 			operatorManagedResourceSecret.Name = operatorManagedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(operatorManagedResourceSecret.Data).To(HaveLen(7))
 			Expect(operatorManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(operatorManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-			Expect(string(operatorManagedResourceSecret.Data["clusterrole____gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-			Expect(string(operatorManagedResourceSecret.Data["clusterrolebinding____fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-			Expect(string(operatorManagedResourceSecret.Data["role__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(role)))
-			Expect(string(operatorManagedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
-			Expect(string(operatorManagedResourceSecret.Data["deployment__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-			Expect(string(operatorManagedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 		})
 	})
 

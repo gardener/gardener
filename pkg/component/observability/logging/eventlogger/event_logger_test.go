@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
-	"github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -54,7 +53,7 @@ var _ = Describe("EventLogger", func() {
 	)
 
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 		c   client.Client
 
 		managedResource            *resourcesv1alpha1.ManagedResource
@@ -67,6 +66,7 @@ var _ = Describe("EventLogger", func() {
 
 		eventLoggerDeployer component.Deployer
 		fakeSecretManager   secretsmanager.Interface
+		consistOf           func(...client.Object) types.GomegaMatcher
 
 		clusterRoleForShoot = func() *rbacv1.ClusterRole {
 			return &rbacv1.ClusterRole{
@@ -221,6 +221,7 @@ var _ = Describe("EventLogger", func() {
 		var err error
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		eventLoggerDeployer, err = New(
 			c,
@@ -317,16 +318,13 @@ var _ = Describe("EventLogger", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			Expect(managedResource).To(consistOf(clusterRoleForShoot(), clusterRoleBinding))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(string(managedResourceSecret.Data["clusterrole____event-logger.yaml"])).To(Equal(test.Serialize(clusterRoleForShoot())))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_event-logger.yaml"])).To(Equal(test.Serialize(clusterRoleBinding)))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(eventLoggerServiceAccount), eventLoggerServiceAccount)).To(Succeed())
 			Expect(eventLoggerServiceAccount).To(DeepEqual(&corev1.ServiceAccount{

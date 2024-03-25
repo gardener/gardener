@@ -22,6 +22,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +43,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -71,7 +71,8 @@ var _ = Describe("GardenerControllerManager", func() {
 		deployer          component.DeployWaiter
 		values            Values
 
-		fakeOps *retryfake.Ops
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) types.GomegaMatcher
 
 		managedResourceRuntime       *resourcesv1alpha1.ManagedResource
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
@@ -87,7 +88,7 @@ var _ = Describe("GardenerControllerManager", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
@@ -101,6 +102,8 @@ var _ = Describe("GardenerControllerManager", func() {
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
+
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		managedResourceRuntime = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -254,6 +257,8 @@ var _ = Describe("GardenerControllerManager", func() {
 
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
+			var expectedRuntimeObjects []client.Object
+
 			BeforeEach(func() {
 				// test with typical values
 				values = Values{
@@ -312,6 +317,12 @@ var _ = Describe("GardenerControllerManager", func() {
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
+				expectedRuntimeObjects = []client.Object{
+					configMap(namespace, values),
+					serviceRuntime,
+					vpa,
+					deployment(namespace, "gardener-controller-manager-config-cff08f20", values),
+				}
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
 				expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
@@ -334,23 +345,15 @@ var _ = Describe("GardenerControllerManager", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
+				Expect(managedResourceVirtual).To(consistOf(clusterRole, clusterRoleBinding))
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
-
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
-				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-controller-manager-config-cff08f20.yaml"])).To(Equal(configMap(namespace, values)))
-				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
-				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-controller-manager-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-controller-manager.yaml"])).To(Equal(deployment(namespace, "gardener-controller-manager-config-cff08f20", values)))
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -358,7 +361,8 @@ var _ = Describe("GardenerControllerManager", func() {
 
 			Context("Kubernetes version >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
+					expectedRuntimeObjects = append(expectedRuntimeObjects, podDisruptionBudgetFor(true))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					Expect(deployer.Deploy(ctx)).To(Succeed())
 				})
 			})
@@ -369,7 +373,8 @@ var _ = Describe("GardenerControllerManager", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
+					expectedRuntimeObjects = append(expectedRuntimeObjects, podDisruptionBudgetFor(false))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					Expect(deployer.Deploy(ctx)).To(Succeed())
 				})
 			})
@@ -686,7 +691,7 @@ var (
 	}
 )
 
-func configMap(namespace string, testValues Values) string {
+func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 	controllerManagerConfig := &controllermanagerv1alpha1.ControllerManagerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "controllermanager.config.gardener.cloud/v1alpha1",
@@ -770,10 +775,10 @@ func configMap(namespace string, testValues Values) string {
 	}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-	return componenttest.Serialize(configMap)
+	return configMap
 }
 
-func deployment(namespace, configSecretName string, testValues Values) string {
+func deployment(namespace, configSecretName string, testValues Values) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-controller-manager",
@@ -911,5 +916,5 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return componenttest.Serialize(deployment)
+	return deployment
 }

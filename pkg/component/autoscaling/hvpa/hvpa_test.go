@@ -20,6 +20,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -40,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -50,7 +50,7 @@ import (
 
 var _ = Describe("HVPA", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
@@ -63,6 +63,7 @@ var _ = Describe("HVPA", func() {
 
 		c         client.Client
 		component component.DeployWaiter
+		consistOf func(object ...client.Object) types.GomegaMatcher
 
 		managedResourceName   = "hvpa"
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -83,6 +84,7 @@ var _ = Describe("HVPA", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = New(c, namespace, values)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		serviceAccount = &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{
@@ -372,6 +374,8 @@ var _ = Describe("HVPA", func() {
 	})
 
 	Describe("#Deploy", func() {
+		var expectedObjects []client.Object
+
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
@@ -395,27 +399,30 @@ var _ = Describe("HVPA", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
+			expectedObjects = []client.Object{
+				serviceAccount,
+				clusterRole,
+				clusterRoleBinding,
+				service,
+				deployment,
+				role,
+				roleBinding,
+				vpa,
+				serviceMonitor,
+			}
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(managedResourceSecret.Data).To(HaveLen(10))
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(service)))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(role)))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
+
 		})
 
 		Context("Kubernetes versions < 1.26", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(false))))
+				expectedObjects = append(expectedObjects, podDisruptionBudgetFor(false))
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 		})
 
@@ -426,7 +433,8 @@ var _ = Describe("HVPA", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetFor(true))))
+				expectedObjects = append(expectedObjects, podDisruptionBudgetFor(true))
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 		})
 	})

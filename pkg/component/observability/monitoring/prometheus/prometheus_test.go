@@ -20,6 +20,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -41,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -80,7 +80,9 @@ honor_labels: true`
 		deployer   component.DeployWaiter
 		values     Values
 
-		fakeOps *retryfake.Ops
+		fakeOps   *retryfake.Ops
+		consistOf func(...client.Object) types.GomegaMatcher
+		contain   func(...client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -122,6 +124,9 @@ honor_labels: true`
 			&retry.Until, fakeOps.Until,
 			&retry.UntilTimeout, fakeOps.UntilTimeout,
 		))
+
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
+		contain = NewManagedResourceContainsObjectsMatcher(fakeClient)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -503,28 +508,25 @@ honor_labels: true`
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(11))
-				Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
-				Expect(string(managedResourceSecret.Data["service__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(service)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
-				Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(""))))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(vpa)))
-
 				prometheusRule.Namespace = namespace
 				metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["prometheusrule__some-namespace__"+name+"-rule.yaml"])).To(Equal(componenttest.Serialize(prometheusRule)))
-
 				metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["scrapeconfig__default__"+name+"-scrape.yaml"])).To(Equal(componenttest.Serialize(scrapeConfig)))
-
 				metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["servicemonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(serviceMonitor)))
-
 				metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
-				Expect(string(managedResourceSecret.Data["podmonitor__default__"+name+"-monitor.yaml"])).To(Equal(componenttest.Serialize(podMonitor)))
 
-				Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-scrape-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalScrapeConfigs)))
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__configmap.yaml"])).To(Equal(componenttest.Serialize(additionalConfigMap)))
+				Expect(managedResource).To(consistOf(
+					serviceAccount,
+					service,
+					clusterRoleBinding,
+					prometheusFor(""),
+					vpa,
+					prometheusRule,
+					scrapeConfig,
+					serviceMonitor,
+					podMonitor,
+					secretAdditionalScrapeConfigs,
+					additionalConfigMap,
+				))
 			})
 
 			When("ingress is configured", func() {
@@ -540,7 +542,7 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(string(managedResourceSecret.Data["ingress__some-namespace__prometheus-"+name+".yaml"])).To(Equal(componenttest.Serialize(ingress)))
+					Expect(managedResource).To(contain(ingress))
 				})
 			})
 
@@ -553,8 +555,10 @@ honor_labels: true`
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecret.Data).To(HaveLen(12))
 
-					Expect(string(managedResourceSecret.Data["prometheus__some-namespace__"+name+".yaml"])).To(Equal(componenttest.Serialize(prometheusFor(alertmanagerName))))
-					Expect(string(managedResourceSecret.Data["secret__some-namespace__prometheus-"+name+"-additional-alert-relabel-configs.yaml"])).To(Equal(componenttest.Serialize(secretAdditionalAlertRelabelConfigs)))
+					Expect(managedResource).To(contain(
+						prometheusFor(alertmanagerName),
+						secretAdditionalAlertRelabelConfigs,
+					))
 				})
 			})
 		})

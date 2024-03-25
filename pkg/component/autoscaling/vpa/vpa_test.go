@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/autoscaling/vpa"
-	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -59,7 +59,7 @@ import (
 
 var _ = Describe("VPA", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace    = "some-namespace"
 		secretNameCA = "ca"
@@ -73,9 +73,11 @@ var _ = Describe("VPA", func() {
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
 		}
 
-		c   client.Client
-		sm  secretsmanager.Interface
-		vpa component.DeployWaiter
+		c         client.Client
+		sm        secretsmanager.Interface
+		vpa       component.DeployWaiter
+		consistOf func(...client.Object) types.GomegaMatcher
+		contain   func(...client.Object) types.GomegaMatcher
 
 		imageAdmissionController = "some-image:for-admission-controller"
 		imageRecommender         = "some-image:for-recommender"
@@ -153,6 +155,8 @@ var _ = Describe("VPA", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+		contain = NewManagedResourceContainsObjectsMatcher(c)
 
 		valuesAdmissionController = ValuesAdmissionController{
 			Image:             imageAdmissionController,
@@ -1213,6 +1217,8 @@ var _ = Describe("VPA", func() {
 			})
 
 			Context("Different Kubernetes versions", func() {
+				var expectedObjects []client.Object
+
 				JustBeforeEach(func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
@@ -1243,7 +1249,6 @@ var _ = Describe("VPA", func() {
 					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Data).To(HaveLen(27))
 
 					By("Verify vpa-updater resources")
 					clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
@@ -1253,11 +1258,13 @@ var _ = Describe("VPA", func() {
 					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
-					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(serviceAccountUpdater)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingUpdater)))
-					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(vpaUpdater)))
+					expectedObjects = []client.Object{
+						serviceAccountUpdater,
+						clusterRoleUpdater,
+						clusterRoleBindingUpdater,
+						deploymentUpdater,
+						vpaUpdater,
+					}
 
 					By("Verify vpa-recommender resources")
 					clusterRoleRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleRecommenderMetricsReader.Name)
@@ -1273,16 +1280,19 @@ var _ = Describe("VPA", func() {
 					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
-					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceAccountRecommender)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderMetricsReader)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderMetricsReader)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_status-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderStatusActor)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_status-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderStatusActor)))
-					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
-					Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(serviceRecommenderFor(component.ClusterTypeSeed))))
-					Expect(string(managedResourceSecret.Data["podmonitor__"+namespace+"__seed-vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(podMonitorRecommender)))
+					expectedObjects = append(expectedObjects,
+						serviceAccountRecommender,
+						clusterRoleRecommenderMetricsReader,
+						clusterRoleBindingRecommenderMetricsReader,
+						clusterRoleRecommenderCheckpointActor,
+						clusterRoleBindingRecommenderCheckpointActor,
+						clusterRoleRecommenderStatusActor,
+						clusterRoleBindingRecommenderStatusActor,
+						deploymentRecommender,
+						serviceRecommenderFor(component.ClusterTypeSeed),
+						podMonitorRecommender,
+					)
+
 					Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
 					By("Verify vpa-admission-controller resources")
@@ -1293,12 +1303,14 @@ var _ = Describe("VPA", func() {
 					deploymentAdmissionController := deploymentAdmissionControllerFor(true)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
 
-					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccountAdmissionController)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleAdmissionController)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAdmissionController)))
-					Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(componenttest.Serialize(serviceAdmissionControllerFor(component.ClusterTypeSeed, false))))
-					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(deploymentAdmissionController)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(vpaAdmissionController)))
+					expectedObjects = append(expectedObjects,
+						serviceAccountAdmissionController,
+						clusterRoleAdmissionController,
+						clusterRoleBindingAdmissionController,
+						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
+						deploymentAdmissionController,
+						vpaAdmissionController,
+					)
 
 					By("Verify general resources")
 					clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
@@ -1316,16 +1328,19 @@ var _ = Describe("VPA", func() {
 						},
 					}
 
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralActor)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralActor)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____zzz-vpa-webhook-config-source.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
+					expectedObjects = append(expectedObjects,
+						clusterRoleGeneralActor,
+						clusterRoleBindingGeneralActor,
+						clusterRoleGeneralTargetReader,
+						clusterRoleBindingGeneralTargetReader,
+						mutatingWebhookConfiguration,
+					)
 				})
 
 				Context("Kubernetes versions < 1.26", func() {
 					It("should successfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetAdmissionController)))
+						expectedObjects = append(expectedObjects, podDisruptionBudgetAdmissionController)
+						Expect(managedResource).To(consistOf(expectedObjects...))
 					})
 				})
 
@@ -1345,7 +1360,8 @@ var _ = Describe("VPA", func() {
 					It("should successfully deploy all resources", func() {
 						unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
 						podDisruptionBudgetAdmissionController.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudgetAdmissionController)))
+						expectedObjects = append(expectedObjects, podDisruptionBudgetAdmissionController)
+						Expect(managedResource).To(consistOf(expectedObjects...))
 					})
 				})
 			})
@@ -1414,8 +1430,7 @@ var _ = Describe("VPA", func() {
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(componenttest.Serialize(deploymentUpdater)))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(componenttest.Serialize(deploymentRecommender)))
+				Expect(managedResource).To(contain(deploymentUpdater, deploymentRecommender))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
@@ -1469,8 +1484,7 @@ var _ = Describe("VPA", func() {
 					By("Verify vpa-updater application resources")
 					clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
 
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUpdater)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingUpdater)))
+					Expect(managedResource).To(contain(clusterRoleUpdater, clusterRoleBindingUpdater))
 					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -1495,10 +1509,12 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
 					clusterRoleBindingRecommenderCheckpointActor.Subjects[0].Namespace = "kube-system"
 
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderMetricsReader)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_metrics-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderMetricsReader)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleRecommenderCheckpointActor)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_checkpoint-actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingRecommenderCheckpointActor)))
+					Expect(managedResource).To(contain(
+						clusterRoleRecommenderMetricsReader,
+						clusterRoleBindingRecommenderMetricsReader,
+						clusterRoleRecommenderCheckpointActor,
+						clusterRoleBindingRecommenderCheckpointActor,
+					))
 
 					By("Verify vpa-recommender runtime resources")
 					secret = &corev1.Secret{}
@@ -1526,8 +1542,7 @@ var _ = Describe("VPA", func() {
 					By("Verify vpa-admission-controller application resources")
 					clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
 
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleAdmissionController)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAdmissionController)))
+					Expect(managedResource).To(contain(clusterRoleAdmissionController, clusterRoleBindingAdmissionController))
 
 					By("Verify vpa-admission-controller runtime resources")
 					secret = &corev1.Secret{}
@@ -1559,11 +1574,13 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingGeneralTargetReader.Subjects[1].Namespace = "kube-system"
 					clusterRoleBindingGeneralTargetReader.Subjects[2].Namespace = "kube-system"
 
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralActor)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralActor)))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGeneralTargetReader)))
-					Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____zzz-vpa-webhook-config-target.yaml"])).To(Equal(componenttest.Serialize(mutatingWebhookConfiguration)))
+					Expect(managedResource).To(contain(
+						clusterRoleGeneralActor,
+						clusterRoleBindingGeneralActor,
+						clusterRoleGeneralTargetReader,
+						clusterRoleBindingGeneralTargetReader,
+						mutatingWebhookConfiguration,
+					))
 					Expect(managedResourceSecret.Data).To(HaveKey("crd-verticalpodautoscalercheckpoints.yaml"))
 					Expect(managedResourceSecret.Data).To(HaveKey("crd-verticalpodautoscalers.yaml"))
 				})
