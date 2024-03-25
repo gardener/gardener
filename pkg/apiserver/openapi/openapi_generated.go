@@ -2679,7 +2679,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used. Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config for additional providers.",
+							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used. Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -2751,13 +2751,13 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional configuration.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
 					"primary": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Primary indicates that this DNSProvider is used for shoot related domains. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional and non-primary providers.",
+							Description: "Primary indicates that this DNSProvider is used for shoot related domains. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -2778,7 +2778,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional configuration.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},

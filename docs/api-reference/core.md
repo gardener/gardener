@@ -4051,7 +4051,8 @@ kubeconfig that is handed out to end-users. This field is immutable.</p>
 <em>(Optional)</em>
 <p>Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 not a default domain is used.
-Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config for additional providers.</p>
+Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.</p>
 </td>
 </tr>
 </tbody>
@@ -4128,7 +4129,8 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Domains contains information about which domains shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional configuration.</p>
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
 <tr>
@@ -4141,7 +4143,8 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Primary indicates that this DNSProvider is used for shoot related domains.
-Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional and non-primary providers.</p>
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.</p>
 </td>
 </tr>
 <tr>
@@ -4183,7 +4186,8 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Zones contains information about which hosted zones shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config for additional configuration.</p>
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
 </tbody>
