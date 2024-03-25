@@ -17,6 +17,7 @@ package main
 import (
 	"os"
 
+	_ "k8s.io/component-base/logs/json/register" // for JSON log format registration
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
