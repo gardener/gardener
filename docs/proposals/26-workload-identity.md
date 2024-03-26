@@ -458,6 +458,27 @@ so that the extensions can easily select them and make adjustments via admission
 webhooks, e.g. transform the service provider config and the token into
 canonical form usable by the respective service provider SDK.
 
+A sample secret bearing workload identity token will look like:
+
+```yaml
+apiVersion: v1
+kind: Secret
+data:
+  config: YXBpVmV...bmZpZw==
+  token: eyJhbGciOiJ....OkBBrVWA
+metadata:
+  name: cloudprovider
+  namespace: shoot--local--foo
+  annotations:
+    workloadidentity.authentication.gardener.cloud/namespace: garden-local
+    workloadidentity.authentication.gardener.cloud/name: banana-testing
+    workloadidentity.authentication.gardener.cloud/context-object: '{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot","name":"foo","namespace":"garden-local","uid":"54d09554-6a68-4f46-a23a-e3592385d820"}'
+  labels:
+    authentication.gardener.cloud/purpose: workload-identity-token-requestor
+    workloadidentity.authentication.gardener.cloud/provider: aws # {aws,azure,gcp,...}
+type: Opaque
+```
+
 The secret `cloudprovider` that now holds the static credentials will be reused
 to store the token and the provider config when the shoot is using workload
 identity as infrastructure credentials. For each extension using workload
