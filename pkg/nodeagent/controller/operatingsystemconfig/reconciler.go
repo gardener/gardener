@@ -170,9 +170,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	metav1.SetMetaDataLabel(&node.ObjectMeta, v1beta1constants.LabelWorkerKubernetesVersion, r.Config.KubernetesVersion.String())
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
 
-	// TODO(rfranzke): Remove this after v1.90 has been released.
-	delete(node.Annotations, v1beta1constants.LabelWorkerKubernetesVersion)
-
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
 
