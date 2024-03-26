@@ -314,10 +314,10 @@ spec:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.
     domain: crazy-botany.core.my-custom-domain.com
+    # Provider configuration required if custom shoot domain is configured.
   # providers:
   # - type: aws-route53
   #   secretName: my-custom-domain-secret
-  #   primary: true # `true` indicates that this provider is also used to manage the shoot domain `.spec.dns.domain`
   extensions:
   - type: foobar
   # providerConfig:
