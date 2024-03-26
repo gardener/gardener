@@ -142,6 +142,29 @@ subjects:
   name: node-problem-detector
   namespace: kube-system
 `
+
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: node-problem-detector
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+    gardener.cloud/role: system-component
+  name: node-problem-detector
+  namespace: kube-system
+spec:
+  ports:
+  - port: 20257
+    protocol: TCP
+    targetPort: 20257
+  selector:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+status:
+  loadBalancer: {}
+`
 			hostPathFileOrCreate = corev1.HostPathFileOrCreate
 
 			daemonsetYAMLFor = func(apiserverHost string, vpaEnabled bool) string {
@@ -310,11 +333,12 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__node-problem-detector.yaml"])).To(Equal(serviceYAML))
 		})
 
 		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
 			})
 		})
@@ -331,7 +355,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
 			})

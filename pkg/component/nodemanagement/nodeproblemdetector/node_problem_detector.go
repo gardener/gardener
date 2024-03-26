@@ -26,6 +26,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,7 @@ const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName                          = "shoot-core-node-problem-detector"
 	serviceAccountName                           = "node-problem-detector"
+	serviceName                                  = "node-problem-detector"
 	containerName                                = "node-problem-detector"
 	daemonSetName                                = "node-problem-detector"
 	clusterRoleName                              = "node-problem-detector"
@@ -307,6 +309,29 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 			},
 		}
 
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					"app.kubernetes.io/instance": "shoot-core",
+					"app.kubernetes.io/name":     labelValue,
+					v1beta1constants.LabelApp:    labelValue,
+					v1beta1constants.GardenRole:  v1beta1constants.GardenRoleSystemComponent,
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: getLabels(),
+				Ports: []corev1.ServicePort{
+					{
+						Port:       int32(daemonSetPrometheusPort),
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt32(daemonSetPrometheusPort),
+					},
+				},
+			},
+		}
+
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
@@ -354,6 +379,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 		clusterRole,
 		clusterRoleBinding,
 		daemonSet,
+		service,
 		vpa,
 	)
 }
