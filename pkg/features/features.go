@@ -65,13 +65,6 @@ const (
 	// beta: v1.91.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
-	// APIServerFastRollout enables fast rollouts for Shoot kube-apiservers on the given Seed.
-	// When enabled, maxSurge for Shoot kube-apiserver deployments is set to 100%.
-	// owner: @oliver-goetz
-	// beta: v1.82.0
-	// GA: v1.90.0
-	APIServerFastRollout featuregate.Feature = "APIServerFastRollout"
-
 	// UseGardenerNodeAgent enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker
 	// nodes.
 	// owner: @rfranzke @oliver-goetz
@@ -113,7 +106,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
-	APIServerFastRollout:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseGardenerNodeAgent:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 }
 
