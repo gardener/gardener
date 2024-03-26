@@ -240,7 +240,7 @@ The `lifecycle` field tells Gardener when to perform a certain action on the `Ex
 - `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
 - `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../operations/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
 
-The lifecycle value `AfterWorker` is only avaiable during `reconcile`. When specified, the extension resource will be reconciled after the workers are deployed. This is useful for extensions that want to deploy a workload in the shoot control plane and want to wait for the workload to run and get ready on a node. During shoot creation the extension will be reconciled before the first worker joins the cluster and extensions should be able to handle that.
+The lifecycle value `AfterWorker` is only avaiable during `reconcile`. When specified, the extension resource will be reconciled after the workers are deployed. This is useful for extensions that want to deploy a workload in the shoot control plane and want to wait for the workload to run and get ready on a node. During shoot creation the extension will start its reconciliation before the first workers have joined the cluster, they will become available at some later point.
 
 ### Deployment Configuration Options
 
