@@ -168,7 +168,7 @@ spec:
   duration: 48h # Optional field, gardener will have default value of token duration if the field is unset.
   targetSystem: # Required field.
     type: aws # Required field.
-    providerConfig: # Optional field of type []byte, extensions can make it mandatory via admission webhooks.
+    providerConfig: # Optional field of type *runtime.RawExtension, extensions can make it mandatory via admission webhooks.
       apiVersion: aws.authentication.gardener.cloud/v1alpha1
       kind: Config
       iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
@@ -258,7 +258,7 @@ quotas: []
 # # namespace: garden-quoatas
 ```
 
-Shoot API will be extended with new field `.spec.credentialsBindingName` which
+Shoot API will be extended with new field `.spec.credentialsBindingName` whose
 value will be the name of a `CredentialsBinding` resource from the namespace of
 the shoot resource. The shoot field `.spec.secretBindingName` and the
 `SecretBinding` API will be deprecated in favour of `CredentialsBinding`, and
@@ -303,7 +303,7 @@ spec:
 
 Wherever the Seed API is referring to secrets, it will be extended to refer to
 workload identities, as of now these are the fields `spec.backup.` and
-`spec.dns.provider` and they will have new field `workloadidentityRef` holding
+`spec.dns.provider` and they will have new field `workloadIdentityRef` holding
 the name and the namespace of a workload identity resource. The respective
 `secretRef` fields will be made optional and validation will ensure only one of
 `secretRef` and `workloadIdentityRef` is used at a time.
@@ -315,12 +315,12 @@ metadata:
   name: seed
 spec:
   backup:
-    workloadidentityRef:
+    workloadIdentityRef:
       name: backup-workloadidentity
       namespace: garden
   dns:
     provider:
-      workloadidentityRef:
+      workloadIdentityRef:
         name: ingress-workloadidentity
         namespace: garden
 ```
@@ -351,7 +351,7 @@ day long.
 The Kubernetes API server extended by the Gardener API server is already issuing
 JWTs for the Kubernetes service accounts. To completely separate workload
 identity JWTs from service accounts JWTs, Gardener API will accept an issuer URL
-parameter which value should not be the same as the issuer of the Kubernetes
+parameter whose value should not be the same as the issuer of the Kubernetes
 service accounts. The workload identity issuer url should not be among the
 accepted issuers of the Kubernetes API server. Other configuration options for
 the Gardener API server will be the private key used to sign the tokens, the
@@ -466,7 +466,7 @@ identity, the secret will be named
 `workloadidentity-dns-<dns-provider-type>`.
 
 The reconciliation flow for a component using workload identity tokens will look
-like:
+like this:
 
 1. A gardenlet controller creates/updates a `secret` resource in the seed with
    the above mentioned annotations and labels based on the configuration of the
