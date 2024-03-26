@@ -1423,7 +1423,7 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.
+gardener-node-agent already running on a bootstrapped VM.
 This field is immutable.</p>
 </td>
 </tr>
@@ -1440,7 +1440,8 @@ string
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
 &ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
-TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3740,7 +3741,7 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.
+gardener-node-agent already running on a bootstrapped VM.
 This field is immutable.</p>
 </td>
 </tr>
@@ -3757,7 +3758,8 @@ string
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
 &ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
-TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3878,7 +3880,8 @@ string
 <p>Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 &ldquo;/usr/bin/reload-cloud-config -from-file=<path>&rdquo;. The <path> is optionally provided by Gardener
 in the .spec.reloadConfigFilePath field.
-TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3892,7 +3895,8 @@ TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is p
 <em>(Optional)</em>
 <p>Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
 restarted when a new version has been downloaded.
-TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3906,7 +3910,8 @@ TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is p
 <em>(Optional)</em>
 <p>Files is a list of file paths that are part of the generated Cloud Config and shall be
 written to the host&rsquo;s file system.
-TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.</p>
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 </tbody>

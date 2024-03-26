@@ -81,14 +81,15 @@ type OperatingSystemConfigSpec struct {
 	DefaultSpec `json:",inline"`
 	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
-	// cloud-config-downloader script already running on a bootstrapped VM.
+	// gardener-node-agent already running on a bootstrapped VM.
 	// This field is immutable.
 	Purpose OperatingSystemConfigPurpose `json:"purpose"`
 	// ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
 	// are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 	// the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
 	// "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
-	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
+	// Deprecated: This field is deprecated and has no further usage.
+	// TODO(rfranzke): Remove this field after v1.95 got released.
 	// +optional
 	ReloadConfigFilePath *string `json:"reloadConfigFilePath,omitempty"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
@@ -221,17 +222,20 @@ type OperatingSystemConfigStatus struct {
 	// Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
 	// in the .spec.reloadConfigFilePath field.
-	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
+	// Deprecated: This field is deprecated and has no further usage.
+	// TODO(rfranzke): Remove this field after v1.95 got released.
 	// +optional
 	Command *string `json:"command,omitempty"`
 	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
 	// restarted when a new version has been downloaded.
-	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
+	// Deprecated: This field is deprecated and has no further usage.
+	// TODO(rfranzke): Remove this field after v1.95 got released.
 	// +optional
 	Units []string `json:"units,omitempty"`
 	// Files is a list of file paths that are part of the generated Cloud Config and shall be
 	// written to the host's file system.
-	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
+	// Deprecated: This field is deprecated and has no further usage.
+	// TODO(rfranzke): Remove this field after v1.95 got released.
 	// +optional
 	Files []string `json:"files,omitempty"`
 }
@@ -251,7 +255,7 @@ const (
 	// new VM.
 	OperatingSystemConfigPurposeProvision OperatingSystemConfigPurpose = "provision"
 	// OperatingSystemConfigPurposeReconcile describes that the operating system configuration is executed on an already
-	// provisioned VM by the cloud-config-downloader script.
+	// provisioned VM by the gardener-node-agent.
 	OperatingSystemConfigPurposeReconcile OperatingSystemConfigPurpose = "reconcile"
 
 	// OperatingSystemConfigDefaultFilePermission is the default value for a permission of a file.
