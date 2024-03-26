@@ -17,7 +17,3 @@ rules:
   - github.com/gardener/gardener/pkg/component
 # allow the transitive import of github.com/gardener/gardener/pkg/features
 # which is imported by github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet
-# TODO(ialidzhikov): Remove the below rule when the UseGardenerNodeAgent feature gate is promoted to GA.
-- selectorRegexp: github[.]com/gardener/gardener/pkg/features
-  allowedPrefixes:
-  - github.com/gardener/gardener/pkg/features
