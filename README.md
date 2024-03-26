@@ -33,7 +33,7 @@ Please find more information regarding the concepts and a detailed description o
 
 ----
 
-## K8s Conformance Test Coverage <img src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/versionless/color/certified-kubernetes-color.svg" alt="certified kubernetes logo" width="50" align="right"/>
+## K8s Conformance Test Coverage <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/kubernetes/certified-kubernetes/versionless/color/certified-kubernetes-color.svg" alt="certified kubernetes logo" width="50" align="right"/>
 
 Gardener takes part in the [Certified Kubernetes Conformance Program](https://www.cncf.io/certification/software-conformance/) to attest its compatibility with the K8s conformance testsuite. Currently Gardener is certified for K8s versions up to v1.29, see [the conformance spreadsheet](https://docs.google.com/spreadsheets/d/1uF9BoDzzisHSQemXHIKegMhuythuq_GL3N1mlUUK2h0/edit#gid=0&range=107:108).
 
