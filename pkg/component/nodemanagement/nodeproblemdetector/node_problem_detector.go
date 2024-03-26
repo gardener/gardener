@@ -41,7 +41,6 @@ const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName                          = "shoot-core-node-problem-detector"
 	serviceAccountName                           = "node-problem-detector"
-	deploymentName                               = "node-problem-detector"
 	containerName                                = "node-problem-detector"
 	daemonSetName                                = "node-problem-detector"
 	clusterRoleName                              = "node-problem-detector"
