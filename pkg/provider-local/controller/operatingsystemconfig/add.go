@@ -33,15 +33,13 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// UseGardenerNodeAgent specifies whether the gardener-node-agent feature is enabled.
-	UseGardenerNodeAgent bool
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
-		Actuator:          NewActuator(mgr, opts.UseGardenerNodeAgent),
+		Actuator:          NewActuator(mgr),
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Types:             []string{local.Type},
 		ControllerOptions: opts.Controller,

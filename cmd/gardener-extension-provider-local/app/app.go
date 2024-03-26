@@ -62,7 +62,6 @@ import (
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -264,11 +263,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
-
-			// TODO(rfranzke): Remove the UseGardenerNodeAgent fields as soon as the general options no longer support
-			//  the GardenletUsesGardenerNodeAgent field.
-			localoperatingsystemconfig.DefaultAddOptions.UseGardenerNodeAgent = generalOpts.Completed().GardenletUsesGardenerNodeAgent
-			controlplanewebhook.UseGardenerNodeAgent = generalOpts.Completed().GardenletUsesGardenerNodeAgent
 
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 				return fmt.Errorf("could not add readycheck for informers: %w", err)

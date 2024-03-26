@@ -40,17 +40,15 @@ import (
 )
 
 // NewEnsurer creates a new controlplane ensurer.
-func NewEnsurer(logger logr.Logger, useGardenerNodeAgent bool) genericmutator.Ensurer {
+func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
 	return &ensurer{
-		logger:               logger.WithName("local-controlplane-ensurer"),
-		useGardenerNodeAgent: useGardenerNodeAgent,
+		logger: logger.WithName("local-controlplane-ensurer"),
 	}
 }
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
-	logger               logr.Logger
-	useGardenerNodeAgent bool
+	logger logr.Logger
 }
 
 // EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
@@ -97,20 +95,7 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 	return nil
 }
 
-func (e *ensurer) EnsureAdditionalFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	// TODO(rfranzke): Remove this function when UseGardenerNodeAgent feature gate gets promoted to GA.
-	ensureRegistryMirrorConfig(new)
-	return nil
-}
-
 func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	if e.useGardenerNodeAgent {
-		ensureRegistryMirrorConfig(new)
-	}
-	return nil
-}
-
-func ensureRegistryMirrorConfig(new *[]extensionsv1alpha1.File) {
 	mirrors := []RegistryMirror{
 		{UpstreamHost: "localhost:5001", UpstreamServer: "http://localhost:5001", MirrorHost: "http://garden.local.gardener.cloud:5001"},
 		{UpstreamHost: "gcr.io", UpstreamServer: "https://gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5003"},
@@ -136,6 +121,8 @@ func ensureRegistryMirrorConfig(new *[]extensionsv1alpha1.File) {
 			},
 		})
 	}
+
+	return nil
 }
 
 func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
