@@ -73,7 +73,6 @@ const (
 	// MetricsPort is the port metrics can be scraped at.
 	MetricsPort = 15000
 
-	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"
 
 	fileNameEnvoyConfig = "envoy.yaml"
@@ -82,14 +81,12 @@ const (
 	volumeMountPathDevNetTun   = "/dev/net/tun"
 	volumeMountPathCerts       = "/srv/secrets/vpn-server"
 	volumeMountPathTLSAuth     = "/srv/secrets/tlsauth"
-	volumeMountPathDH          = "/srv/secrets/dh"
 	volumeMountPathEnvoyConfig = "/etc/envoy"
 	volumeMountPathStatusDir   = "/srv/status"
 
 	volumeNameDevNetTun   = "dev-net-tun"
 	volumeNameCerts       = "certs"
 	volumeNameTLSAuth     = "tlsauth"
-	volumeNameDH          = "dh"
 	volumeNameEnvoyConfig = "envoy-config"
 	volumeNameStatusDir   = "openvpn-status"
 )
