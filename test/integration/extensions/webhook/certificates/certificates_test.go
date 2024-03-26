@@ -296,7 +296,7 @@ var _ = Describe("Certificates tests", func() {
 
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
@@ -501,7 +501,7 @@ var _ = Describe("Certificates tests", func() {
 			BeforeEach(func() {
 				By("Prepare existing shoot webhook resources")
 				Expect(testClient.Create(ctx, cluster)).To(Succeed())
-				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionNamespace.Name, extensionName, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
+				Expect(extensionsshootwebhook.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, shootWebhookManagedResourceName, *shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}}, true)).To(Succeed())
 
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
