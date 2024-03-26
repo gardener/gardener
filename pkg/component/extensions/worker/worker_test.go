@@ -717,17 +717,21 @@ var _ = Describe("Worker", func() {
 	})
 
 	Describe("#Restore", func() {
-		shootState := &gardencorev1beta1.ShootState{
-			Spec: gardencorev1beta1.ShootStateSpec{
-				Gardener: []gardencorev1beta1.GardenerResourceData{
-					{
-						Name: "machine-state",
-						Type: "machine-state",
-						Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAAA6tWKs7PTVWyUiouSSxJVaoFACDAdOAQAAAA"}`)},
+		var shootState *gardencorev1beta1.ShootState
+
+		BeforeEach(func() {
+			shootState = &gardencorev1beta1.ShootState{
+				Spec: gardencorev1beta1.ShootStateSpec{
+					Extensions: []gardencorev1beta1.ExtensionResourceState{
+						{
+							Name:  &w.Name,
+							Kind:  extensionsv1alpha1.WorkerResource,
+							State: &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)},
+						},
 					},
 				},
-			},
-		}
+			}
+		})
 
 		It("should properly restore the worker state if it exists", func() {
 			defer test.WithVars(
