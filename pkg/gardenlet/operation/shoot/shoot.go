@@ -291,7 +291,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.BackupEntryName = backupEntryName
 
-	shoot.CloudConfigExecutionMaxDelaySeconds = 300
+	oscSyncJitterPeriod := 300
 	if v, ok := shootObject.Annotations[v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds]; ok {
 		seconds, err := strconv.Atoi(v)
 		if err != nil {
@@ -299,10 +299,10 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		}
 
 		if seconds <= 1800 {
-			shoot.CloudConfigExecutionMaxDelaySeconds = seconds
+			oscSyncJitterPeriod = seconds
 		}
 	}
-	shoot.OSCSyncJitterPeriod = &metav1.Duration{Duration: time.Duration(shoot.CloudConfigExecutionMaxDelaySeconds) * time.Second}
+	shoot.OSCSyncJitterPeriod = &metav1.Duration{Duration: time.Duration(oscSyncJitterPeriod) * time.Second}
 
 	if lastOperation := shootObject.Status.LastOperation; lastOperation != nil &&
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore &&

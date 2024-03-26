@@ -178,7 +178,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 		var userData []byte
 		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Downloader.Content)
+			userData = []byte(val.Init.Content)
 		}
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()

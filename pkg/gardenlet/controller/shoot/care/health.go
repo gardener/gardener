@@ -47,7 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -630,20 +629,7 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	roleValue, oscOutdatedReason := v1beta1constants.GardenRoleCloudConfig, "CloudConfigOutdated"
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		oscOutdatedReason = "OperatingSystemConfigOutdated"
-
-		oscSecretsExist, err := kubernetesutils.ResourcesExist(ctx, shootClient.Client(), &corev1.SecretList{}, shootClient.Client().Scheme(), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleOperatingSystemConfig})
-		if err != nil {
-			return nil, err
-		}
-		if oscSecretsExist {
-			roleValue = v1beta1constants.GardenRoleOperatingSystemConfig
-		}
-	}
-
-	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClient.Client(), roleValue)
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClient.Client(), v1beta1constants.GardenRoleOperatingSystemConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +653,7 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	if err := botanist.OperatingSystemConfigUpdatedForAllWorkerPools(h.shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
-		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, oscOutdatedReason, err.Error())
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "OperatingSystemConfigOutdated", err.Error())
 		return &c, nil
 	}
 
@@ -709,16 +695,14 @@ func (h *Health) CheckClusterNodes(
 		}
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		leaseList := &coordinationv1.LeaseList{}
-		if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(metav1.NamespaceSystem)); err != nil {
-			return nil, err
-		}
+	leaseList := &coordinationv1.LeaseList{}
+	if err := shootClient.Client().List(ctx, leaseList, client.InNamespace(metav1.NamespaceSystem)); err != nil {
+		return nil, err
+	}
 
-		if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
-			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
-			return &c, nil
-		}
+	if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
+		return &c, nil
 	}
 
 	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
@@ -774,10 +758,6 @@ func CheckNodeAgentLeases(nodeList *corev1.NodeList, leaseList *coordinationv1.L
 			nodeName := strings.ReplaceAll(lease.Name, gardenerutils.NodeLeasePrefix, "")
 			nodeNameToLease[nodeName] = lease
 		}
-	}
-	// TODO(rfranzke): Remove this if-condition as soon as the UseGardenerNodeAgent feature gate gets removed.
-	if len(nodeNameToLease) == 0 {
-		return nil // node-agent might not yet be deployed even though the feature gate is turned on, so let's accept this and don't report an error
 	}
 
 	for _, node := range nodeList.Items {

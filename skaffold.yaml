@@ -858,8 +858,6 @@ build:
             - pkg/component/extensions/infrastructure
             - pkg/component/extensions/network
             - pkg/component/extensions/operatingsystemconfig
-            - pkg/component/extensions/operatingsystemconfig/downloader
-            - pkg/component/extensions/operatingsystemconfig/executor
             - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/original
             - pkg/component/extensions/operatingsystemconfig/original/components

@@ -25,9 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	mockcomponents "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Original", func() {
@@ -124,8 +122,8 @@ var _ = Describe("Original", func() {
 				"kernel-config",
 				"kubelet",
 				"sshd-ensurer",
-				"gardener-user",
 				"gardener-node-agent",
+				"gardener-user",
 			}))
 		})
 
@@ -145,29 +143,6 @@ var _ = Describe("Original", func() {
 				"kernel-config",
 				"kubelet",
 				"sshd-ensurer",
-				"gardener-node-agent",
-			}))
-		})
-
-		It("should compute the units and files when UseGardenerNodeAgent is enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
-
-			var order []string
-			for _, component := range Components(true) {
-				order = append(order, component.Name())
-			}
-
-			Expect(order).To(Equal([]string{
-				"valitail",
-				"var-lib-mount",
-				"root-certificates",
-				"containerd",
-				"containerd-initializer",
-				"journald",
-				"kernel-config",
-				"kubelet",
-				"sshd-ensurer",
-				"gardener-user",
 				"gardener-node-agent",
 			}))
 		})

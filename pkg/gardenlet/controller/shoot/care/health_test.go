@@ -17,7 +17,6 @@ package care_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -283,7 +282,7 @@ var _ = Describe("health check", func() {
 		})
 
 		DescribeTable("#CheckClusterNodes",
-			func(k8sversion *semver.Version, nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, oscSecretsExist bool, oscSecretMeta map[string]metav1.ObjectMeta, conditionMatcher types.GomegaMatcher) {
+			func(k8sversion *semver.Version, nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, oscSecretMeta map[string]metav1.ObjectMeta, conditionMatcher types.GomegaMatcher) {
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: nodes}
 					return nil
@@ -294,36 +293,16 @@ var _ = Describe("health check", func() {
 					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(len(nodes))},
 				})).To(Succeed())
 
-				roleValue := "cloud-config"
-				c.EXPECT().Scheme().Return(kubernetes.ShootScheme)
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace("kube-system"), client.MatchingLabels{"gardener.cloud/role": "operating-system-config"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					*list = metav1.PartialObjectMetadataList{}
-					if oscSecretsExist {
-						list.Items = append(list.Items, metav1.PartialObjectMetadata{})
-					}
-					return nil
-				})
-
-				if oscSecretsExist {
-					roleValue = "operating-system-config"
-				}
-
 				secretListOptions := []client.ListOption{
 					client.InNamespace(metav1.NamespaceSystem),
-					client.MatchingLabels{"gardener.cloud/role": roleValue},
+					client.MatchingLabels{"gardener.cloud/role": "operating-system-config"},
 				}
 
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), secretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					*list = corev1.SecretList{}
-					for workerPoolName, m := range oscSecretMeta {
-						meta := m.DeepCopy()
-						// regenerate OSC secret key because it might be different when UseGardenerNodeAgent feature gate is enabled
-						if strings.HasPrefix(meta.Name, "gardener-node-agent") || strings.HasPrefix(meta.Name, "cloud-config") {
-							meta.Name = operatingsystemconfig.Key(workerPoolName, kubernetesVersion, nil)
-						}
-
+					for _, m := range oscSecretMeta {
 						list.Items = append(list.Items, corev1.Secret{
-							ObjectMeta: *meta,
+							ObjectMeta: m,
 						})
 					}
 					return nil
@@ -372,7 +351,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				true,
 				nil,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("missing operating system config secret metadata for worker pool %q", workerPoolName1)))),
 			Entry("missing OSC secret checksum for a worker pool when shoot has not been reconciled yet",
@@ -387,7 +365,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				false,
 				nil,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("missing operating system config secret metadata for worker pool %q", workerPoolName1)))),
 			Entry("no OSC node checksum for a worker pool",
@@ -402,7 +379,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				true,
 				oscSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("the last successfully applied operating system config on node %q hasn't been reported yet", nodeName)))),
 			Entry("no OSC node checksum for a worker pool when shoot has not been reconciled yet",
@@ -417,7 +393,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				false,
 				oscSecretMeta,
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "OperatingSystemConfigOutdated", fmt.Sprintf("the last successfully applied operating system config on node %q hasn't been reported yet", nodeName)))),
 			Entry("outdated OSC secret checksum for a worker pool",
@@ -432,7 +407,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				true,
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
 						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil),
@@ -453,7 +427,6 @@ var _ = Describe("health check", func() {
 						Minimum: 1,
 					},
 				},
-				false,
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
 						Name:        operatingsystemconfig.Key(workerPoolName1, kubernetesVersion, nil),
@@ -634,8 +607,6 @@ var _ = Describe("health check", func() {
 			Expect(CheckNodeAgentLeases(&nodeList, &leaseList, fakeClock)).To(expected)
 		},
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
-			// TODO(rfranzke): Remove this test-entry as soon as the UseGardenerNodeAgent feature gate gets removed.
-			Entry("should return nil if no leases are present", nil, BeNil()),
 			Entry("should return Error that node agent is not running if no matching lease could be found for node", unrelatedLease, MatchError(ContainSubstring("not running"))),
 			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", expiredLease, MatchError(ContainSubstring("stopped running"))),
 		)

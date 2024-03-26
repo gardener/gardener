@@ -171,12 +171,12 @@ var _ = Describe("Worker", func() {
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
-					Downloader: operatingsystemconfig.Data{
+					Init: operatingsystemconfig.Data{
 						Content: string(worker1UserData),
 					},
 				},
 				worker2Name: {
-					Downloader: operatingsystemconfig.Data{
+					Init: operatingsystemconfig.Data{
 						Content: string(worker2UserData),
 					},
 				},
