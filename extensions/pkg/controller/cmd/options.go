@@ -73,10 +73,6 @@ const (
 
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
-	// GardenletUsesGardenerNodeAgentFlag is the name of the command line flag specifying whether gardenlet's feature gate
-	// 'UseGardenerNodeAgent' is activated.
-	// TODO(rfranzke): Remove this flag when the UseGardenerNodeAgent feature gate is promoted to GA.
-	GardenletUsesGardenerNodeAgentFlag = "gardenlet-uses-gardener-node-agent"
 
 	// LogLevelFlag is the name of the command line flag containing the log level.
 	LogLevelFlag = "log-level"
@@ -474,8 +470,6 @@ type SwitchConfig struct {
 type GeneralOptions struct {
 	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
-	// GardenletUsesGardenerNodeAgent specifies whether gardenlet's feature gate 'UseGardenerNodeAgent' is activated.
-	GardenletUsesGardenerNodeAgent bool
 
 	config *GeneralConfig
 }
@@ -484,13 +478,11 @@ type GeneralOptions struct {
 type GeneralConfig struct {
 	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
-	// GardenletUsesGardenerNodeAgent specifies whether gardenlet's feature gate 'UseGardenerNodeAgent' is activated.
-	GardenletUsesGardenerNodeAgent bool
 }
 
 // Complete implements Complete.
 func (r *GeneralOptions) Complete() error {
-	r.config = &GeneralConfig{r.GardenerVersion, r.GardenletUsesGardenerNodeAgent}
+	r.config = &GeneralConfig{r.GardenerVersion}
 	return nil
 }
 
@@ -502,5 +494,4 @@ func (r *GeneralOptions) Completed() *GeneralConfig {
 // AddFlags implements Flagger.AddFlags.
 func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
-	fs.BoolVar(&r.GardenletUsesGardenerNodeAgent, GardenletUsesGardenerNodeAgentFlag, false, "Specifies whether gardenlet's feature gate 'UseGardenerNodeAgent' is activated.")
 }
