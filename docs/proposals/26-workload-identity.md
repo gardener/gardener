@@ -255,7 +255,7 @@ workloadIdentityRef:
   # namespace: "...", allow reference across namespaces
 quotas: []
 # - name: quota-1
-# # namespace: garden-quoatas
+# # namespace: garden-quotas
 ```
 
 Shoot API will be extended with new field `.spec.credentialsBindingName` whose
