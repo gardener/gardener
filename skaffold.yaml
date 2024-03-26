@@ -1159,7 +1159,6 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
-            - pkg/component/extensions/operatingsystemconfig/downloader
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
