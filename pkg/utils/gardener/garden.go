@@ -121,7 +121,6 @@ func ReadGardenSecrets(
 		logInfo                                  []string
 		secretsMap                               = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets            = 0
-		numberOfOpenVPNDiffieHellmanSecrets      = 0
 		numberOfAlertingSecrets                  = 0
 		numberOfGlobalMonitoringSecrets          = 0
 		numberOfShootServiceAccountIssuerSecrets = 0
@@ -160,19 +159,6 @@ func ReadGardenSecrets(
 			secretsMap[v1beta1constants.GardenRoleInternalDomain] = &internalDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
 			numberOfInternalDomainSecrets++
-		}
-
-		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleOpenVPNDiffieHellman {
-			openvpnDiffieHellman := secret
-			key := "dh2048.pem"
-			if _, ok := secret.Data[key]; !ok {
-				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
-			}
-			secretsMap[v1beta1constants.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
-			logInfo = append(logInfo, fmt.Sprintf("OpenVPN Diffie Hellman secret %q", secret.Name))
-			numberOfOpenVPNDiffieHellmanSecrets++
 		}
 
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
@@ -228,15 +214,6 @@ func ReadGardenSecrets(
 	// domain it should use.
 	if enforceInternalDomainSecret && numberOfInternalDomainSecrets == 0 {
 		return nil, fmt.Errorf("need an internal domain secret but found none")
-	}
-
-	// The VPN bridge from a Shoot's control plane running in the Seed cluster to the worker nodes of the Shoots is based
-	// on OpenVPN. It requires a Diffie Hellman key. If no such key is explicitly provided as secret in the garden namespace
-	// then the Gardener will use a default one (not recommended, but useful for local development). If a secret is specified
-	// its key will be used for all Shoots. However, at most only one of such a secret is allowed to be specified (otherwise,
-	// the Gardener cannot determine which to choose).
-	if numberOfOpenVPNDiffieHellmanSecrets > 1 {
-		return nil, fmt.Errorf("can only accept at most one OpenVPN Diffie Hellman secret, but found %d", numberOfOpenVPNDiffieHellmanSecrets)
 	}
 
 	// Operators can configure gardener to send email alerts or send the alerts to an external alertmanager. If no configuration

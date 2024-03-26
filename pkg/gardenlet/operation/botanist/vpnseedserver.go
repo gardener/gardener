@@ -20,45 +20,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
-	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
-
-var (
-	diffieHellmanKeyData = map[string][]byte{
-		"dh2048.pem": []byte(`-----BEGIN DH PARAMETERS-----
-MIIBCAKCAQEA7cBXxG9an6KRz/sB5uiSOTf7Eg+uWVkhXO4peKDTARzMYa8b7WR8
-B/Aw+AyUXtB3tXtrzeC5M3IHnuhFwMo3K4oSOkFJxatLlYKeY15r+Kt5vnOOT3BW
-eN5OnWlR5Wi7GZBWbaQgXVR79N4yst43sVhJus6By0lN6Olc9xD/ys9GH/ykJVIh
-Z/NLrxAC5lxjwCqJMd8hrryChuDlz597vg6gYFuRV60U/YU4DK71F4H7mI07aGJ9
-l+SK8TbkKWF5ITI7kYWbc4zmtfXSXaGjMhM9omQUaTH9csB96hzFJdeZ4XjxybRf
-Vc3t7XP5q7afeaKmM3FhSXdeHKCTqQzQuwIBAg==
------END DH PARAMETERS-----
-`,
-		)}
-	diffieHellmanKeyChecksum string
-)
-
-// init calculates the checksum of the default diffie hellman key
-func init() {
-	diffieHellmanKeyChecksum = utils.ComputeChecksum(diffieHellmanKeyData)
-}
-
-func (b *Botanist) getDiffieHellmanSecret() component.Secret {
-	data, checksum := diffieHellmanKeyData, diffieHellmanKeyChecksum
-	if secret := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); secret != nil {
-		data, checksum = secret.Data, utils.ComputeSecretChecksum(secret.Data)
-	}
-
-	return component.Secret{
-		Name:     v1beta1constants.GardenRoleOpenVPNDiffieHellman,
-		Data:     data,
-		Checksum: checksum,
-	}
-}
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
 func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
@@ -108,7 +72,6 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 // DeployVPNServer deploys the vpn-seed-server.
 func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetNodeNetworkCIDR(b.Shoot.GetInfo().Spec.Networking.Nodes)
-	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{DiffieHellmanKey: b.getDiffieHellmanSecret()})
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)

@@ -29,10 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/component"
-	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -134,9 +131,6 @@ var _ = Describe("VPNSeedServer", func() {
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
 
-			secretNameDH     = v1beta1constants.GardenRoleOpenVPNDiffieHellman
-			secretChecksumDH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
 			namespaceUID    = types.UID("1234")
 			nodeNetworkCIDR = "10.0.0.0/24"
 		)
@@ -144,7 +138,6 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
-			botanist.StoreSecret(secretNameDH, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -178,9 +171,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 		BeforeEach(func() {
 			vpnSeedServer.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
-			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
-				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
-			})
 			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
 		})
 

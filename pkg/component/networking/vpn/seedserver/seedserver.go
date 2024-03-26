@@ -73,7 +73,6 @@ const (
 	// MetricsPort is the port metrics can be scraped at.
 	MetricsPort = 15000
 
-	secretNameDH            = "vpn-seed-server-dh"
 	envoyProxyContainerName = "envoy-proxy"
 
 	fileNameEnvoyConfig = "envoy.yaml"
@@ -82,14 +81,12 @@ const (
 	volumeMountPathDevNetTun   = "/dev/net/tun"
 	volumeMountPathCerts       = "/srv/secrets/vpn-server"
 	volumeMountPathTLSAuth     = "/srv/secrets/tlsauth"
-	volumeMountPathDH          = "/srv/secrets/dh"
 	volumeMountPathEnvoyConfig = "/etc/envoy"
 	volumeMountPathStatusDir   = "/srv/status"
 
 	volumeNameDevNetTun   = "dev-net-tun"
 	volumeNameCerts       = "certs"
 	volumeNameTLSAuth     = "tlsauth"
-	volumeNameDH          = "dh"
 	volumeNameEnvoyConfig = "envoy-config"
 	volumeNameStatusDir   = "openvpn-status"
 )
@@ -100,19 +97,11 @@ type Interface interface {
 	component.MonitoringComponent
 
 	SetNodeNetworkCIDR(nodes *string)
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// SetSeedNamespaceObjectUID sets UID for the namespace
 	SetSeedNamespaceObjectUID(namespaceUID types.UID)
 
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
-}
-
-// Secrets is collection of secrets for the vpn-seed-server.
-type Secrets struct {
-	// DiffieHellmanKey is a secret containing the diffie hellman key.
-	DiffieHellmanKey component.Secret
 }
 
 // NetworkValues contains the configuration values for the network.
@@ -172,7 +161,6 @@ type vpnSeedServer struct {
 	secretsManager     secretsmanager.Interface
 	namespaceUID       types.UID
 	values             Values
-	secrets            Secrets
 	istioNamespaceFunc func() string
 }
 
@@ -181,10 +169,6 @@ func (v *vpnSeedServer) GetValues() Values {
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
-	if v.secrets.DiffieHellmanKey.Name == "" || v.secrets.DiffieHellmanKey.Checksum == "" {
-		return fmt.Errorf("missing DH secret information")
-	}
-
 	var (
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -195,19 +179,9 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				fileNameEnvoyConfig: v.getEnvoyConfig(),
 			},
 		}
-
-		dhSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameDH,
-				Namespace: v.namespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: v.secrets.DiffieHellmanKey.Data,
-		}
 	)
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dhSecret))
 
 	secretCAVPN, found := v.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
@@ -236,11 +210,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := v.client.Create(ctx, dhSecret); client.IgnoreAlreadyExists(err) != nil {
-		return err
-	}
-
-	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
+	podTemplate := v.podTemplate(configMap, secretCAVPN, secretServer, secretTLSAuth)
 	labels := getLabels()
 
 	if v.values.HighAvailabilityEnabled {
@@ -284,7 +254,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	return v.deployVPA(ctx)
 }
 
-func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
+func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	hostPathCharDev := corev1.HostPathCharDev
 	var ipFamilies []string
 	for _, v := range v.values.Network.IPFamilies {
@@ -386,10 +356,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 							Name:      volumeNameTLSAuth,
 							MountPath: volumeMountPathTLSAuth,
 						},
-						{
-							Name:      volumeNameDH,
-							MountPath: volumeMountPathDH,
-						},
 					},
 				},
 			},
@@ -447,15 +413,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretTLSAuth.Name,
-							DefaultMode: ptr.To(int32(0400)),
-						},
-					},
-				},
-				{
-					Name: volumeNameDH,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName:  dhSecret.Name,
 							DefaultMode: ptr.To(int32(0400)),
 						},
 					},
@@ -839,8 +796,6 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 
 func (v *vpnSeedServer) Wait(_ context.Context) error        { return nil }
 func (v *vpnSeedServer) WaitCleanup(_ context.Context) error { return nil }
-
-func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
 
 func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	v.namespaceUID = namespaceUID

@@ -72,9 +72,6 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
     * This external AlertManager is not managed by Gardener and can be configured however the operator sees fit.
     * Supported authentication types are no authentication, basic, or mutual TLS.
 
-* **OpenVPN Diffie-Hellmann Key secret** (optional) - contains the self-generated Diffie-Hellmann key used by OpenVPN in your landscape, please see this [yaml file](../../example/10-secret-openvpn-diffie-hellman.yaml) for an example.
-  * If you don't specify a custom key, then a default key is used, but for productive landscapes it's recommend to create a landscape-specific key and define it.
-
 * **Global monitoring secrets** (optional) - contains basic authentication credentials for the Prometheus aggregating metrics for all clusters.
   * These secrets are synced to each seed cluster and used to gain access to the aggregate monitoring components.
 

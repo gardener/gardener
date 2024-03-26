@@ -43,7 +43,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -72,25 +71,14 @@ var _ = Describe("VpnSeedServer", func() {
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		namespaceUID     = types.UID("123456")
 
-		secretNameDH      = "vpn-seed-server-dh"
 		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
-		secretChecksumDH  = "9012"
-		secretDataDH      = map[string][]byte{"dh2048.pem": []byte("baz")}
-		secrets           = Secrets{}
 
 		listenAddress   = "0.0.0.0"
 		listenAddressV6 = "::"
 		dnsLookUpFamily = "ALL"
 
 		expectedConfigMap *corev1.ConfigMap
-		expectedSecretDH  = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
-			Type:       corev1.SecretTypeOpaque,
-			Data:       secretDataDH,
-		}
 	)
-
-	Expect(kubernetesutils.MakeUnique(expectedSecretDH)).To(Succeed())
 
 	var (
 		deploymentObjectMeta = &metav1.ObjectMeta{
@@ -202,10 +190,6 @@ var _ = Describe("VpnSeedServer", func() {
 									Name:      "tlsauth",
 									MountPath: "/srv/secrets/tlsauth",
 								},
-								{
-									Name:      "dh",
-									MountPath: "/srv/secrets/dh",
-								},
 							},
 						},
 					},
@@ -263,15 +247,6 @@ var _ = Describe("VpnSeedServer", func() {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameTLSAuth,
-									DefaultMode: ptr.To(int32(0400)),
-								},
-							},
-						},
-						{
-							Name: "dh",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  expectedSecretDH.Name,
 									DefaultMode: ptr.To(int32(0400)),
 								},
 							},
@@ -636,10 +611,6 @@ var _ = Describe("VpnSeedServer", func() {
 	BeforeEach(func() {
 		runtimeKubernetesVersion = semver.MustParse("1.25.0")
 
-		secrets = Secrets{
-			DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
-		}
-
 		values = Values{
 			ImageAPIServerProxy: "envoyproxy/envoy:v4.5.6",
 			ImageVPNSeedServer:  vpnImage,
@@ -668,21 +639,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 		values.RuntimeKubernetesVersion = runtimeKubernetesVersion
 		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, values)
-		vpnSeedServer.SetSecrets(secrets)
 		vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 	})
 
 	Describe("#Deploy", func() {
-		Context("missing secret information", func() {
-			BeforeEach(func() {
-				secrets = Secrets{}
-			})
-
-			It("should return an error because the DH secret information is not provided", func() {
-				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing DH secret information")))
-			})
-		})
-
 		Context("secret information available", func() {
 			JustBeforeEach(func() {
 				statefulSet := statefulSet(values.Network.NodeCIDR)
@@ -710,11 +670,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameTLSAuth), actualSecretTLSAuth)).To(Succeed())
 				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
-
-				actualSecretDH := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedSecretDH.Namespace, expectedSecretDH.Name), actualSecretDH)).To(Succeed())
-				Expect(expectedSecretDH.Immutable).To(PointTo(BeTrue()))
-				Expect(expectedSecretDH.Data).NotTo(BeEmpty())
 
 				actualService := &corev1.Service{}
 				Expect(c.Get(ctx, kubernetesutils.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
@@ -821,11 +776,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameTLSAuth), actualSecretTLSAuth)).To(Succeed())
 				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
-
-				actualSecretDH := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedSecretDH.Namespace, expectedSecretDH.Name), actualSecretDH)).To(Succeed())
-				Expect(expectedSecretDH.Immutable).To(PointTo(BeTrue()))
-				Expect(expectedSecretDH.Data).NotTo(BeEmpty())
 
 				for i := 0; i < 2; i++ {
 					actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
