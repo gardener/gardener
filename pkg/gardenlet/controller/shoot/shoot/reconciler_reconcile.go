@@ -751,7 +751,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployExtensionResourcesAfterWorker = g.Add(flow.Task{
 			Name:         "Deploying extension resources after workers",
 			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
