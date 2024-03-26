@@ -41,9 +41,7 @@ var availableExtensionStrategies = sets.New(
 	string(core.AfterKubeAPIServer),
 )
 
-var availableExtensionStrategiesForReconcile = sets.New(
-	string(core.BeforeKubeAPIServer),
-	string(core.AfterKubeAPIServer),
+var availableExtensionStrategiesForReconcile = availableExtensionStrategies.Clone().Insert(
 	string(core.AfterWorker),
 )
 
