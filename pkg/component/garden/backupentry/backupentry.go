@@ -193,8 +193,12 @@ func (b *backupEntry) Destroy(ctx context.Context) error {
 	)
 }
 
-// WaitCleanup is not implemented yet.
-func (b *backupEntry) WaitCleanup(_ context.Context) error { return nil }
+// WaitCleanup waits until the BackupEntry is deleted.
+func (b *backupEntry) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, b.waitTimeout)
+	defer cancel()
+	return kubernetesutils.WaitUntilResourceDeleted(timeoutCtx, b.client, b.backupEntry, b.waitInterval)
+}
 
 // Get retrieves and returns the BackupEntry resource based on the configured values.
 func (b *backupEntry) Get(ctx context.Context) (*gardencorev1beta1.BackupEntry, error) {
