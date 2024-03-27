@@ -165,4 +165,51 @@ var _ = Describe("PrepareForCreate", func() {
 		Entry("only kubernetes set", true, false),
 		Entry("both kubernetes and machineImages set", true, true),
 	)
+
+	Describe("generation increment", func() {
+		var (
+			ctx context.Context
+
+			oldNamespacedCloudProfile *core.NamespacedCloudProfile
+			newNamespacedCloudProfile *core.NamespacedCloudProfile
+		)
+
+		BeforeEach(func() {
+			ctx = context.TODO()
+
+			oldNamespacedCloudProfile = &core.NamespacedCloudProfile{}
+			newNamespacedCloudProfile = &core.NamespacedCloudProfile{}
+		})
+
+		It("should set generation to 1 initially", func() {
+			namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, newNamespacedCloudProfile)
+
+			Expect(newNamespacedCloudProfile.Generation).To(Equal(int64(1)))
+		})
+
+		It("should not increment generation if spec has not changed", func() {
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation))
+		})
+
+		It("should increment generation if spec has changed", func() {
+			newNamespacedCloudProfile.Spec.Parent = core.CloudProfileReference{
+				Kind: "abc",
+				Name: "def",
+			}
+
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+		})
+
+		It("should increment generation if deletion timestamp is set", func() {
+			newNamespacedCloudProfile.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+		})
+	})
 })

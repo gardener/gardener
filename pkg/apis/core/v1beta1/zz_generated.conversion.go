@@ -4459,6 +4459,7 @@ func autoConvert_v1beta1_NamespacedCloudProfileStatus_To_core_NamespacedCloudPro
 	if err := Convert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(&in.CloudProfileSpec, &out.CloudProfileSpec, s); err != nil {
 		return err
 	}
+	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
 
@@ -4471,6 +4472,7 @@ func autoConvert_core_NamespacedCloudProfileStatus_To_v1beta1_NamespacedCloudPro
 	if err := Convert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(&in.CloudProfileSpec, &out.CloudProfileSpec, s); err != nil {
 		return err
 	}
+	out.ObservedGeneration = in.ObservedGeneration
 	return nil
 }
 

@@ -71,6 +71,8 @@ type NamespacedCloudProfileSpec struct {
 type NamespacedCloudProfileStatus struct {
 	// CloudProfileSpec is the most recently generated CloudProfileSpec of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec
+	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
+	ObservedGeneration int64
 }
 
 // CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
