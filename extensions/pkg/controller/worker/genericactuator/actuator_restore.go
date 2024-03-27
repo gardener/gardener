@@ -67,7 +67,7 @@ func RestoreWithoutReconcile(
 	// Parse the worker state to a separate machineDeployment states and attach them to
 	// the corresponding machineDeployments which are to be deployed later
 	log.Info("Extracting machine state")
-	if err := addStateToMachineDeployment(ctx, log, gardenReader, cluster.Shoot, worker, wantedMachineDeployments); err != nil {
+	if err := addStateToMachineDeployment(ctx, log, gardenReader, cluster.Shoot, wantedMachineDeployments); err != nil {
 		return err
 	}
 
@@ -113,7 +113,6 @@ func addStateToMachineDeployment(
 	log logr.Logger,
 	gardenReader client.Reader,
 	shoot *gardencorev1beta1.Shoot,
-	worker *extensionsv1alpha1.Worker,
 	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
 ) error {
 	var state []byte
@@ -132,15 +131,6 @@ func addStateToMachineDeployment(
 		if err != nil {
 			return err
 		}
-	} else {
-		// TODO(rfranzke): Drop this code after Gardener v1.86 has been released.
-		log.Info("Fetching machine state from ShootState not possible since the machine state was not found, falling back to Worker's .status.state field", "shootState", client.ObjectKeyFromObject(shootState))
-		if worker.Status.State == nil || len(worker.Status.State.Raw) <= 0 {
-			log.Info("Worker's .status.state field is empty, no state to add")
-			return nil
-		}
-		log.Info("Fetching machine state from Worker's .status.state field succeeded")
-		state = worker.Status.State.Raw
 	}
 
 	if len(state) == 0 {

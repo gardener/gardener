@@ -203,7 +203,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
 

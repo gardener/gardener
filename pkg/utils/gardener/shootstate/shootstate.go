@@ -50,7 +50,7 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		},
 	}
 
-	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID, shoot.Name)
+	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID)
 	if err != nil {
 		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
@@ -73,9 +73,6 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		for _, data := range spec.Extensions {
 			extensionsData.Upsert(data.DeepCopy())
 		}
-		// Temporarily not persist the Worker state since this data is already explicitly persisted by gardenlet in `.spec.gardener[]`.
-		// TODO(rfranzke): Delete the next line after Gardener v1.86 has been released.
-		extensionsData.Delete(extensionsv1alpha1.WorkerResource, &shoot.Name, nil)
 		shootState.Spec.Extensions = extensionsData
 
 		resourcesData := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
@@ -108,8 +105,8 @@ func Delete(ctx context.Context, gardenClient client.Client, shoot *gardencorev1
 	return client.IgnoreNotFound(gardenClient.Delete(ctx, shootState))
 }
 
-func computeSpec(ctx context.Context, seedClient client.Client, seedNamespace, shootName string) (*gardencorev1beta1.ShootStateSpec, error) {
-	gardener, err := computeGardenerData(ctx, seedClient, seedNamespace, shootName)
+func computeSpec(ctx context.Context, seedClient client.Client, seedNamespace string) (*gardencorev1beta1.ShootStateSpec, error) {
+	gardener, err := computeGardenerData(ctx, seedClient, seedNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing Gardener data: %w", err)
 	}
@@ -130,7 +127,6 @@ func computeGardenerData(
 	ctx context.Context,
 	seedClient client.Client,
 	seedNamespace string,
-	shootName string,
 ) (
 	[]gardencorev1beta1.GardenerResourceData,
 	error,
@@ -140,7 +136,7 @@ func computeGardenerData(
 		return nil, err
 	}
 
-	machineState, err := computeMachineState(ctx, seedClient, seedNamespace, shootName)
+	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +219,7 @@ func computeExtensionsDataAndResources(
 		{extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }},
 		{extensionsv1alpha1.NetworkResource, func() client.ObjectList { return &extensionsv1alpha1.NetworkList{} }},
 		{extensionsv1alpha1.OperatingSystemConfigResource, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }},
-		// Temporarily not persist the Worker state since this data is already explicitly persisted by gardenlet in `.spec.gardener[]`.
-		// TODO(rfranzke): Uncomment next line after Gardener v1.86 has been released.
-		// {extensionsv1alpha1.WorkerResource, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
+		{extensionsv1alpha1.WorkerResource, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
 	} {
 		objList := extension.newObjectListFunc()
 		if err := seedClient.List(ctx, objList, client.InNamespace(seedNamespace)); err != nil {

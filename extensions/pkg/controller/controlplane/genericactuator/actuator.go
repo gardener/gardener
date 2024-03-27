@@ -249,7 +249,7 @@ func (a *actuator) reconcileControlPlane(
 			return false, fmt.Errorf("expected *webhook.Configs, got %T", value)
 		}
 
-		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, a.webhookServerNamespace, a.providerName, ShootWebhooksResourceName, *webhookConfig, cluster, true); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhookConfig(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, *webhookConfig, cluster, true); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
 	}
