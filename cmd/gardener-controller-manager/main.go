@@ -15,7 +15,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -23,14 +22,16 @@ import (
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
+	log := logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON)
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
-		fmt.Println(err)
+		log.Error(err, "Error starting app", "app", app.Name)
 		os.Exit(1)
 	}
 }

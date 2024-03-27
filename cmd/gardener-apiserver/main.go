@@ -23,14 +23,17 @@ import (
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/apiserver/features"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
-
 	ctx := signals.SetupSignalHandler()
+	log := logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON)
+
 	if err := app.NewCommand().ExecuteContext(ctx); err != nil {
+		log.Error(err, "Error starting app", "app", app.Name)
 		os.Exit(1)
 	}
 }

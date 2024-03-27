@@ -67,6 +67,9 @@ import (
 
 var hostIP string
 
+// Name is the name of this component.
+const Name = local.Name + "-controller-manager"
+
 func init() {
 	addrs, err := net.InterfaceAddrs()
 	utilruntime.Must(err)
@@ -186,7 +189,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use: fmt.Sprintf("%s-controller-manager", local.Name),
+		Use: Name,
 
 		RunE: func(_ *cobra.Command, _ []string) error {
 			seedName := os.Getenv("SEED_NAME")

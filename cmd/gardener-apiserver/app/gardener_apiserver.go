@@ -71,12 +71,15 @@ import (
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
+// Name is the name of this component.
+const Name = "gardener-apiserver"
+
 // NewCommand creates a *cobra.Command object with default parameters.
 func NewCommand() *cobra.Command {
 	opts := NewOptions()
 
 	cmd := &cobra.Command{
-		Use:   "gardener-apiserver",
+		Use:   Name,
 		Short: "Launch the Gardener API server",
 		Long: `In essence, the Gardener is an extension API server along with a bundle
 of Kubernetes controllers which introduce new API objects in an existing Kubernetes
