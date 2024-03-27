@@ -292,6 +292,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	if err != nil {
 		return "", nil, err
 	}
+	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet, worker.Kubernetes)
 
 	hyperkubeImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
@@ -300,7 +301,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		secretName = operatingsystemconfig.LegacyKey(worker.Name, kubernetesVersion, worker.CRI)
+		secretName = operatingsystemconfig.LegacyKey(worker.Name, kubernetesVersion, worker.CRI, kubeReserved)
 	)
 
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
@@ -366,7 +367,8 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	if err != nil {
 		return "", nil, fmt.Errorf("failed computing the effective Kubernetes version for pool %q: %w", worker.Name, err)
 	}
-	secretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
+	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet, worker.Kubernetes)
+	secretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI, kubeReserved)
 
 	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, secretName, worker.Name)
 	if err != nil {

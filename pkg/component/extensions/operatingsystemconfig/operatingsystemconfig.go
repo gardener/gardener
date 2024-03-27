@@ -387,6 +387,14 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 	)
 }
 
+func (o *operatingSystemConfig) calculateOSCName(worker *gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (string, error) {
+	oscKey, err := KeyFromWorker(worker, o.values.KubernetesVersion, o.values.KubeletConfig)
+	if err != nil {
+		return "", err
+	}
+	return oscKey + keySuffix(worker.Machine.Image.Name, purpose), nil
+}
+
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
 func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
@@ -401,11 +409,11 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			oscName, err := o.calculateOSCName(&worker, purpose)
 			if err != nil {
 				return nil, err
 			}
-			wantedOSCNames.Insert(Key(worker.Name, kubernetesVersion, worker.CRI) + keySuffix(worker.Machine.Image.Name, purpose))
+			wantedOSCNames.Insert(oscName)
 		}
 	}
 
@@ -422,11 +430,10 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			oscName, err := o.calculateOSCName(&worker, purpose)
 			if err != nil {
 				return err
 			}
-			oscName := Key(worker.Name, kubernetesVersion, worker.CRI) + keySuffix(worker.Machine.Image.Name, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -533,12 +540,17 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		}
 	}
 
+	key, err := KeyFromWorker(&worker, o.values.KubernetesVersion, o.values.KubeletConfig)
+	if err != nil {
+		return deployer{}, err
+	}
+
 	return deployer{
 		client:                  o.client,
 		osc:                     osc,
 		worker:                  worker,
 		purpose:                 purpose,
-		key:                     Key(worker.Name, kubernetesVersion, worker.CRI),
+		key:                     key,
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterCASecretName:     clusterCASecret.Name,
@@ -652,7 +664,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:           d.clusterDomain,
 		CRIName:                 d.criName,
 		Images:                  d.images,
-		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
 		KubeletCABundle:         d.kubeletCABundle,
 		KubeletConfigParameters: d.kubeletConfigParameters,
 		KubeletCLIFlags:         d.kubeletCLIFlags,
@@ -801,23 +813,34 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
-// configuration.
-func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		return key("gardener-node-agent", workerName, kubernetesVersion, criConfig)
+// KeyFromWorker returns the key that can be used as secret name based on the provided worker object,
+// default Kubernetes version and default Kubelet configuration.
+func KeyFromWorker(worker *gardencorev1beta1.Worker, kubernetesVersion *semver.Version, kubeletConfig *gardencorev1beta1.KubeletConfig) (string, error) {
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(kubernetesVersion, worker.Kubernetes)
+	if err != nil {
+		return "", err
 	}
-	return LegacyKey(workerName, kubernetesVersion, criConfig)
+	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(kubeletConfig, worker.Kubernetes)
+	return Key(worker.Name, kubernetesVersion, worker.CRI, kubeReserved), nil
+}
+
+// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version, CRI
+// configuration and kubeReserved value.
+func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI, kubeReserved *gardencorev1beta1.KubeletConfigReserved) string {
+	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
+		return key("gardener-node-agent", workerName, kubernetesVersion, criConfig, kubeReserved)
+	}
+	return LegacyKey(workerName, kubernetesVersion, criConfig, kubeReserved)
 }
 
 // LegacyKey returns the legacy key that can be used as secret name based on the provided worker name, Kubernetes
-// version and CRI configuration.
+// version, CRI configuration and kubeReserved value.
 // TODO(rfranzke): Remove this function when UseGardenerNodeAgent feature gate gets removed.
-func LegacyKey(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
-	return key("cloud-config", workerName, kubernetesVersion, criConfig)
+func LegacyKey(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI, kubeReserved *gardencorev1beta1.KubeletConfigReserved) string {
+	return key("cloud-config", workerName, kubernetesVersion, criConfig, kubeReserved)
 }
 
-func key(prefix string, workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
+func key(prefix string, workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI, kubeReserved *gardencorev1beta1.KubeletConfigReserved) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
@@ -825,13 +848,17 @@ func key(prefix string, workerName string, kubernetesVersion *semver.Version, cr
 	var (
 		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 		criName                     gardencorev1beta1.CRIName
+		resourceString              string
 	)
 
 	if criConfig != nil {
 		criName = criConfig.Name
 	}
+	if kubeReserved != nil {
+		resourceString = fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage)
+	}
 
-	return fmt.Sprintf("%s-%s-%s", prefix, workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
+	return fmt.Sprintf("%s-%s-%s", prefix, workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName) + resourceString))[:5])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
