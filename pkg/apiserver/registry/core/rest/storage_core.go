@@ -34,6 +34,7 @@ import (
 	controllerregistrationstore "github.com/gardener/gardener/pkg/apiserver/registry/core/controllerregistration/storage"
 	exposureclassstore "github.com/gardener/gardener/pkg/apiserver/registry/core/exposureclass/storage"
 	internalsecretstore "github.com/gardener/gardener/pkg/apiserver/registry/core/internalsecret/storage"
+	namespacedcloudprofilestore "github.com/gardener/gardener/pkg/apiserver/registry/core/namespacedcloudprofile/storage"
 	projectstore "github.com/gardener/gardener/pkg/apiserver/registry/core/project/storage"
 	quotastore "github.com/gardener/gardener/pkg/apiserver/registry/core/quota/storage"
 	secretbindingstore "github.com/gardener/gardener/pkg/apiserver/registry/core/secretbinding/storage"
@@ -77,6 +78,10 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
+	namespacedcloudprofileStorage := namespacedcloudprofilestore.NewStorage(restOptionsGetter)
+	storage["namespacedcloudprofiles"] = namespacedcloudprofileStorage.NamespacedCloudProfile
+	storage["namespacedcloudprofiles/status"] = namespacedcloudprofileStorage.Status
 
 	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
 	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
