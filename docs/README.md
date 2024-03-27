@@ -111,6 +111,7 @@
 * [GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](proposals/23-autoscaling-kube-apiserver-via-independent-hpa-and-vpa.md)
 * [GEP-24: Shoot OIDC Issuer](proposals/24-shoot-oidc-issuer.md)
 * [GEP-25: Namespaced Cloud Profiles](proposals/25-namespaced-cloud-profiles.md)
+* [GEP-26: Workload Identity - Trust Based Authentication](proposals/26-workload-identity.md)
 
 ## Development
 
