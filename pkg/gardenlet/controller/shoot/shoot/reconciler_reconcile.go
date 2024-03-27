@@ -278,11 +278,9 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Waiting until source backup entry has been deleted",
-			Fn: func(ctx context.Context) error {
-				return botanist.Shoot.Components.SourceBackupEntry.WaitCleanup(ctx)
-			},
-			SkipIf:       !allowBackup,
+			Name:         "Waiting until source backup entry has been deleted",
+			Fn:           botanist.Shoot.Components.SourceBackupEntry.WaitCleanup,
+			SkipIf:       !allowBackup || skipReadiness || !botanist.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
