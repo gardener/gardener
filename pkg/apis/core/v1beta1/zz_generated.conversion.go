@@ -4423,7 +4423,6 @@ func autoConvert_v1beta1_NamespacedCloudProfileSpec_To_core_NamespacedCloudProfi
 	out.MachineImages = *(*[]core.MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]core.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Regions = *(*[]core.Region)(unsafe.Pointer(&in.Regions))
-	out.SeedSelector = (*core.SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.VolumeTypes = *(*[]core.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	if err := Convert_v1beta1_CloudProfileReference_To_core_CloudProfileReference(&in.Parent, &out.Parent, s); err != nil {
 		return err
@@ -4442,7 +4441,6 @@ func autoConvert_core_NamespacedCloudProfileSpec_To_v1beta1_NamespacedCloudProfi
 	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Regions = *(*[]Region)(unsafe.Pointer(&in.Regions))
-	out.SeedSelector = (*SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	if err := Convert_core_CloudProfileReference_To_v1beta1_CloudProfileReference(&in.Parent, &out.Parent, s); err != nil {
 		return err

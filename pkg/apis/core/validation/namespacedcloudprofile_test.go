@@ -143,11 +143,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							Kind: "CloudProfile",
 							Name: "unknown",
 						},
-						SeedSelector: &core.SeedSelector{
-							LabelSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{"foo": "bar"},
-							},
-						},
 						Kubernetes: &core.KubernetesSettings{
 							Versions: []core.ExpirableVersion{{
 								Version: "1.11.4",

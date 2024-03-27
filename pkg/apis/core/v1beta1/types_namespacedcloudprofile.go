@@ -67,13 +67,6 @@ type NamespacedCloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Regions []Region `json:"regions" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,5,opt,name=regions"`
-	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
-	// An empty list means that all seeds of the same provider type are supported.
-	// This is useful for environments that are of the same type (like openstack) but may have different "instances"/landscapes.
-	// Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
-	// type of the seed must match the shoot's provider.
-	// +optional
-	SeedSelector *SeedSelector `json:"seedSelector,omitempty" protobuf:"bytes,6,opt,name=seedSelector"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
