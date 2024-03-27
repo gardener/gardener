@@ -7974,6 +7974,18 @@ CloudProfileSpec
 <p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>observedGeneration</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ObservedGeneration is the most recent generation observed for this project.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Networking">Networking

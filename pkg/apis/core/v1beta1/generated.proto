@@ -1817,6 +1817,10 @@ message NamespacedCloudProfileSpec {
 message NamespacedCloudProfileStatus {
   // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
   optional CloudProfileSpec cloudProfileSpec = 1;
+
+  // ObservedGeneration is the most recent generation observed for this project.
+  // +optional
+  optional int64 observedGeneration = 2;
 }
 
 // Networking defines networking parameters for the shoot cluster.

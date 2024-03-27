@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -43,6 +44,7 @@ func (namespacedCloudProfileStrategy) PrepareForCreate(_ context.Context, obj ru
 	namespacedCloudProfile := obj.(*core.NamespacedCloudProfile)
 
 	dropExpiredVersions(namespacedCloudProfile)
+	namespacedCloudProfile.Generation = 1
 	namespacedCloudProfile.Status = core.NamespacedCloudProfileStatus{}
 }
 
@@ -59,8 +61,26 @@ func (namespacedCloudProfileStrategy) AllowCreateOnUpdate() bool {
 }
 
 func (namespacedCloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
-	_ = oldObj.(*core.NamespacedCloudProfile)
-	_ = newObj.(*core.NamespacedCloudProfile)
+	oldNamespacedCloudProfile := oldObj.(*core.NamespacedCloudProfile)
+	newNamespacedCloudProfile := newObj.(*core.NamespacedCloudProfile)
+
+	if mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile) {
+		newNamespacedCloudProfile.Generation = oldNamespacedCloudProfile.Generation + 1
+	}
+}
+
+func mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile *core.NamespacedCloudProfile) bool {
+	// The NamespacedCloudProfile specification changes.
+	if !apiequality.Semantic.DeepEqual(oldNamespacedCloudProfile.Spec, newNamespacedCloudProfile.Spec) {
+		return true
+	}
+
+	// The deletion timestamp was set.
+	if oldNamespacedCloudProfile.DeletionTimestamp == nil && newNamespacedCloudProfile.DeletionTimestamp != nil {
+		return true
+	}
+
+	return false
 }
 
 func (namespacedCloudProfileStrategy) AllowUnconditionalUpdate() bool {

@@ -5387,6 +5387,13 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec"),
 						},
 					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this project.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},
