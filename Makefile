@@ -182,7 +182,7 @@ define GENERATE_HELP_INFO
 #   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck monitoring-docs")
 #   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups
 #                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups
-#                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups provider_local_groups extensions_config_groups")
+#                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups shootresourcereservation_groups provider_local_groups extensions_config_groups")
 #   MANIFESTS_DIRS    - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
 #   MODE              - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
 #

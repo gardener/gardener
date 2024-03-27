@@ -19,7 +19,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -156,27 +155,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
-		}
-
-		var (
-			kubeReservedMemory = resource.MustParse("1Gi")
-			kubeReservedCPU    = resource.MustParse("80m")
-			kubeReservedPID    = resource.MustParse("20k")
-		)
-
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
-			obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
-			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
-		} else {
-			if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
-				obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
-			}
-			if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
-				obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
-			}
-			if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
-				obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
-			}
 		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
