@@ -1057,24 +1057,6 @@ KubernetesSettings
 </tr>
 <tr>
 <td>
-<code>seedSelector</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSelector">
-SeedSelector
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
-An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
-Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
-type of the seed must match the shoot&rsquo;s provider.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>volumeTypes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.VolumeType">
@@ -7899,24 +7881,6 @@ KubernetesSettings
 </tr>
 <tr>
 <td>
-<code>seedSelector</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSelector">
-SeedSelector
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
-An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
-Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
-type of the seed must match the shoot&rsquo;s provider.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>volumeTypes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.VolumeType">
@@ -9497,7 +9461,6 @@ string
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ExposureClassScheduling">ExposureClassScheduling</a>, 
-<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>

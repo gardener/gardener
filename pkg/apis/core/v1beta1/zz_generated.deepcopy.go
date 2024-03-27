@@ -3046,11 +3046,6 @@ func (in *NamespacedCloudProfileSpec) DeepCopyInto(out *NamespacedCloudProfileSp
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SeedSelector != nil {
-		in, out := &in.SeedSelector, &out.SeedSelector
-		*out = new(SeedSelector)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.VolumeTypes != nil {
 		in, out := &in.VolumeTypes, &out.VolumeTypes
 		*out = make([]VolumeType, len(*in))
