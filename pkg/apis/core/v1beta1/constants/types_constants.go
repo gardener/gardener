@@ -265,8 +265,6 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
-	// GardenRoleCloudConfig is the value of the GardenRole key indicating type 'cloud-config'.
-	GardenRoleCloudConfig = "cloud-config"
 	// GardenRoleOperatingSystemConfig is the value of the GardenRole key indicating type 'operating-system-config'.
 	GardenRoleOperatingSystemConfig = "operating-system-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
@@ -628,7 +626,7 @@ const (
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
 	// AnnotationShootCloudConfigExecutionMaxDelaySeconds is a key for an annotation on a Shoot resource that declares
 	// the maximum delay in seconds when potentially updated cloud-config user data is executed on the worker nodes.
-	// Concretely, the cloud-config-downloader/gardener-node-agent systemd service running on all worker nodes will wait
+	// Concretely, the gardener-node-agent systemd service running on all worker nodes will wait
 	// for a random duration based on the configured value before executing the user data (default value is 300) plus an
 	// additional offset of 30s. If set to 0 then no random delay will be applied and the minimum delay (30s) applies.
 	// Any value above 1800 is ignored (in this case the default value is used).

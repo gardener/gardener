@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/component/extensions/worker/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -58,16 +57,12 @@ var _ = Describe("Worker", func() {
 		infrastructure        *mockinfrastructure.MockInterface
 		botanist              *Botanist
 
-		ctx                                   = context.TODO()
-		namespace                             = "namespace"
-		fakeErr                               = fmt.Errorf("fake")
-		shootState                            = &gardencorev1beta1.ShootState{}
-		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
-		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
-		cloudConfigSecretListOptions          = []client.ListOption{
-			client.InNamespace(metav1.NamespaceSystem),
-			client.MatchingLabels{"gardener.cloud/role": "cloud-config"},
-		}
+		ctx                                    = context.TODO()
+		namespace                              = "namespace"
+		fakeErr                                = fmt.Errorf("fake")
+		shootState                             = &gardencorev1beta1.ShootState{}
+		infrastructureProviderStatus           = &runtime.RawExtension{Raw: []byte("infrastatus")}
+		workerNameToOperatingSystemConfigMaps  = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
 		operatingSystemConfigSecretListOptions = []client.ListOption{
 			client.InNamespace(metav1.NamespaceSystem),
 			client.MatchingLabels{"gardener.cloud/role": "operating-system-config"},
@@ -210,80 +205,70 @@ var _ = Describe("Worker", func() {
 	})
 
 	Describe("#WorkerPoolToOperatingSystemConfigSecretMetaMap", func() {
-		tests := func(roleValue string, listOptions []client.ListOption) {
-			It("should return an error when the list fails", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), listOptions).Return(fakeErr)
+		It("should return an error when the list fails", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions).Return(fakeErr)
 
-				workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, roleValue)
-				Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
-				Expect(err).To(MatchError(fakeErr))
-			})
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
+			Expect(err).To(MatchError(fakeErr))
+		})
 
-			It("should return an empty map when there are no secrets", func() {
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), listOptions)
+		It("should return an empty map when there are no secrets", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions)
 
-				workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, roleValue)
-				Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
-				Expect(err).NotTo(HaveOccurred())
-			})
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-			It("should return a map of secret checksums per worker pool if the label and the annotation are present", func() {
-				var (
-					pool1     = "pool1"
-					pool2     = "pool1"
-					checksum1 = "foo"
-					checksum2 = "bar"
+		It("should return a map of secret checksums per worker pool if the label and the annotation are present", func() {
+			var (
+				pool1     = "pool1"
+				pool2     = "pool1"
+				checksum1 = "foo"
+				checksum2 = "bar"
 
-					secret1 = corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels:      map[string]string{"worker.gardener.cloud/pool": pool1},
-							Annotations: map[string]string{"checksum/data-script": checksum1},
-						},
-					}
-					secret2 = corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels:      map[string]string{"worker.gardener.cloud/pool": pool2},
-							Annotations: map[string]string{"checksum/data-script": checksum2},
-						},
-					}
-					secret3WithoutLabel = corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{"checksum/data-script": "baz"},
-						},
-					}
-					secret4WithoutAnnotations = corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{"worker.gardener/cloud": pool2},
-						},
-					}
-				)
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-					*list = corev1.SecretList{Items: []corev1.Secret{secret1, secret2, secret3WithoutLabel, secret4WithoutAnnotations}}
-					return nil
-				})
-
-				workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, roleValue)
-				Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
-					pool1: {
+				secret1 = corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
 						Labels:      map[string]string{"worker.gardener.cloud/pool": pool1},
 						Annotations: map[string]string{"checksum/data-script": checksum1},
 					},
-					pool2: {
+				}
+				secret2 = corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
 						Labels:      map[string]string{"worker.gardener.cloud/pool": pool2},
 						Annotations: map[string]string{"checksum/data-script": checksum2},
 					},
-				}))
-				Expect(err).NotTo(HaveOccurred())
+				}
+				secret3WithoutLabel = corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{"checksum/data-script": "baz"},
+					},
+				}
+				secret4WithoutAnnotations = corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"worker.gardener/cloud": pool2},
+					},
+				}
+			)
+
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+				*list = corev1.SecretList{Items: []corev1.Secret{secret1, secret2, secret3WithoutLabel, secret4WithoutAnnotations}}
+				return nil
 			})
-		}
 
-		When("UseGardenerNodeAgent feature gate is disabled", func() {
-			tests("cloud-config", cloudConfigSecretListOptions)
-		})
-
-		When("UseGardenerNodeAgent feature gate is enabled", func() {
-			tests("operating-system-config", operatingSystemConfigSecretListOptions)
+			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c, "operating-system-config")
+			Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
+				pool1: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool1},
+					Annotations: map[string]string{"checksum/data-script": checksum1},
+				},
+				pool2: {
+					Labels:      map[string]string{"worker.gardener.cloud/pool": pool2},
+					Annotations: map[string]string{"checksum/data-script": checksum2},
+				},
+			}))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -401,174 +386,162 @@ var _ = Describe("Worker", func() {
 			botanist.ShootClientSet = shootInterface
 		})
 
-		tests := func(managedResourceName string, listOptions []client.ListOption, secretNamePrefix string, expectedCloudConfigDownloaderCleanup bool) {
-			It("should fail when the operating system config secret was not updated yet", func() {
-				DeferCleanup(test.WithVars(
-					&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
-					&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return 5 * time.Millisecond },
-				))
+		It("should fail when the operating system config secret was not updated yet", func() {
+			DeferCleanup(test.WithVars(
+				&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return 5 * time.Millisecond },
+			))
 
-				gomock.InOrder(
-					seedInterface.EXPECT().Client().Return(seedClient),
-					seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: managedResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{Generation: 2},
-						Status:     resourcesv1alpha1.ManagedResourceStatus{ObservedGeneration: 1},
-					})).AnyTimes(),
-				)
+			gomock.InOrder(
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{Generation: 2},
+					Status:     resourcesv1alpha1.ManagedResourceStatus{ObservedGeneration: 1},
+				})).AnyTimes(),
+			)
 
-				Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("the operating system configs for the worker nodes were not populated yet")))
+		})
+
+		It("should fail when the operating system config was not updated for all worker pools", func() {
+			DeferCleanup(test.WithVars(
+				&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
+			))
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Name: "pool1"},
+						},
+					},
+				},
 			})
 
-			It("should fail when the operating system config was not updated for all worker pools", func() {
-				DeferCleanup(test.WithVars(
-					&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
-					&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
-				))
-
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Provider: gardencorev1beta1.Provider{
-							Workers: []gardencorev1beta1.Worker{
-								{Name: "pool1"},
+			gomock.InOrder(
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},
-				})
-
-				gomock.InOrder(
-					seedInterface.EXPECT().Client().Return(seedClient),
-					seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: managedResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+				})),
+				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
+					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
-							Generation: 1,
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               "pool1",
+								"worker.gardener.cloud/kubernetes-version": "1.24.0",
+							},
+							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
+					}}}
+					return nil
+				}).AnyTimes(),
+				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					*list = corev1.SecretList{Items: []corev1.Secret{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "gardener-node-agent-pool1-c63c0",
+							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
+							Annotations: map[string]string{"checksum/data-script": "bar"},
 						},
-					})),
-					shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-					shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
-						*list = corev1.NodeList{Items: []corev1.Node{{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"worker.gardener.cloud/pool":               "pool1",
-									"worker.gardener.cloud/kubernetes-version": "1.24.0",
-								},
-								Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
-							},
-						}}}
-						return nil
-					}).AnyTimes(),
-					shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-					shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-						*list = corev1.SecretList{Items: []corev1.Secret{{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:        secretNamePrefix + "-pool1-c63c0",
-								Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
-								Annotations: map[string]string{"checksum/data-script": "bar"},
-							},
-						}}}
-						return nil
-					}).AnyTimes(),
-				)
+					}}}
+					return nil
+				}).AnyTimes(),
+			)
 
-				Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("is outdated")))
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(MatchError(ContainSubstring("is outdated")))
+		})
+
+		It("should succeed when the operating system config was updated for all worker pools", func() {
+			DeferCleanup(test.WithVars(
+				&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
+			))
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Name: "pool1"},
+						},
+					},
+				},
 			})
 
-			It("should succeed when the operating system config was updated for all worker pools", func() {
-				DeferCleanup(test.WithVars(
-					&IntervalWaitOperatingSystemConfigUpdated, time.Millisecond,
-					&GetTimeoutWaitOperatingSystemConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
-				))
-
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Provider: gardencorev1beta1.Provider{
-							Workers: []gardencorev1beta1.Worker{
-								{Name: "pool1"},
+			gomock.InOrder(
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},
-				})
-
-				gomock.InOrder(
-					seedInterface.EXPECT().Client().Return(seedClient),
-					seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: managedResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+				})),
+				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
+					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
-							Generation: 1,
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               "pool1",
+								"worker.gardener.cloud/kubernetes-version": "1.26.0",
+							},
+							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
+					}}}
+					return nil
+				}).AnyTimes(),
+				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
+				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), operatingSystemConfigSecretListOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					*list = corev1.SecretList{Items: []corev1.Secret{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "gardener-node-agent-pool1-5dcdf",
+							Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
+							Annotations: map[string]string{"checksum/data-script": "foo"},
 						},
-					})),
-					shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-					shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
-						*list = corev1.NodeList{Items: []corev1.Node{{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"worker.gardener.cloud/pool":               "pool1",
-									"worker.gardener.cloud/kubernetes-version": "1.26.0",
-								},
-								Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
-							},
-						}}}
-						return nil
-					}).AnyTimes(),
-					shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
-					shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-						*list = corev1.SecretList{Items: []corev1.Secret{{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:        secretNamePrefix + "-pool1-5dcdf",
-								Labels:      map[string]string{"worker.gardener.cloud/pool": "pool1"},
-								Annotations: map[string]string{"checksum/data-script": "foo"},
-							},
-						}}}
-						return nil
-					}).AnyTimes(),
-				)
+					}}}
+					return nil
+				}).AnyTimes(),
+			)
 
-				if expectedCloudConfigDownloaderCleanup {
-					gomock.InOrder(
-						seedInterface.EXPECT().Client().Return(seedClient),
-						seedClient.EXPECT().Delete(gomock.Any(), &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}),
-						seedInterface.EXPECT().Client().Return(seedClient),
-						seedClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}}),
-						seedInterface.EXPECT().Client().Return(seedClient),
-						seedClient.EXPECT().DeleteAllOf(gomock.Any(), &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": name}),
-						shootInterface.EXPECT().Client().Return(shootClient),
-						shootClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: "kube-system"}}),
-					)
-				}
+			gomock.InOrder(
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().Delete(gomock.Any(), &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}),
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}}),
+				seedInterface.EXPECT().Client().Return(seedClient),
+				seedClient.EXPECT().DeleteAllOf(gomock.Any(), &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": name}),
+				shootInterface.EXPECT().Client().Return(shootClient),
+				shootClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: "kube-system"}}),
+			)
 
-				Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(Succeed())
-			})
-		}
-
-		When("UseGardenerNodeAgent feature gate is enabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseGardenerNodeAgent, true))
-			})
-
-			tests("shoot-gardener-node-agent", operatingSystemConfigSecretListOptions, "gardener-node-agent", true)
+			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(Succeed())
 		})
 	})
 })

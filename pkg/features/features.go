@@ -64,14 +64,6 @@ const (
 	// alpha: v1.81.0
 	// beta: v1.91.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
-
-	// UseGardenerNodeAgent enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker
-	// nodes.
-	// owner: @rfranzke @oliver-goetz
-	// alpha: v1.82.0
-	// beta: v1.89.0
-	// GA: v1.90.0
-	UseGardenerNodeAgent featuregate.Feature = "UseGardenerNodeAgent"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -106,7 +98,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
-	UseGardenerNodeAgent:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

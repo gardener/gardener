@@ -124,23 +124,23 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
-	userData, command, unitNames, fileNames, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	var secret *corev1.Secret
-	if len(userData) > 0 {
-		secret, err = r.reconcileOSCResultSecret(ctx, osc, userData)
-		if err != nil {
-			_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
-			return reconcilerutils.ReconcileErr(err)
-		}
+	// For backwards-compatibility, we have to always create a secret since gardenlet expects to find it - even if the
+	// user data is nil/empty (which should always be the case when purpose=reconcile).
+	// https://github.com/gardener/gardener/blob/328e10d975c7b6caa5db139badcc42ac8f772d31/pkg/component/extensions/operatingsystemconfig/operatingsystemconfig.go#L257-L259
+	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
+	if err != nil {
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, unitNames, fileNames, extensionUnits, extensionFiles)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
@@ -172,23 +172,23 @@ func (r *reconciler) restore(
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
-	userData, command, units, files, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	var secret *corev1.Secret
-	if len(userData) > 0 {
-		secret, err = r.reconcileOSCResultSecret(ctx, osc, userData)
-		if err != nil {
-			_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
-			return reconcilerutils.ReconcileErr(err)
-		}
+	// For backwards-compatibility, we have to always create a secret since gardenlet expects to find it - even if the
+	// user data is nil/empty (which should always be the case when purpose=reconcile).
+	// https://github.com/gardener/gardener/blob/328e10d975c7b6caa5db139badcc42ac8f772d31/pkg/component/extensions/operatingsystemconfig/operatingsystemconfig.go#L257-L259
+	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
+	if err != nil {
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units, files, extensionUnits, extensionFiles)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
@@ -305,8 +305,6 @@ func (r *reconciler) reconcileOSCResultSecret(ctx context.Context, osc *extensio
 func setOSCStatus(
 	osc *extensionsv1alpha1.OperatingSystemConfig,
 	secret *corev1.Secret,
-	command *string,
-	units, files []string,
 	extensionUnits []extensionsv1alpha1.Unit,
 	extensionFiles []extensionsv1alpha1.File,
 ) {
@@ -318,11 +316,6 @@ func setOSCStatus(
 			},
 		}
 	}
-	if command != nil {
-		osc.Status.Command = command
-	}
-	osc.Status.Units = units
-	osc.Status.Files = files
 	osc.Status.ExtensionUnits = extensionUnits
 	osc.Status.ExtensionFiles = extensionFiles
 }

@@ -28,9 +28,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
-| UseGardenerNodeAgent               | `false` | `Alpha` | `1.82` | `1.88` |
-| UseGardenerNodeAgent               | `true`  | `Beta`  | `1.89` |        |
-| UseGardenerNodeAgent               | `true`  | `GA`    | `1.90` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -149,6 +146,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerFastRollout                         | `true`  | `Beta`       | `1.82` | `1.89` |
 | APIServerFastRollout                         | `true`  | `GA`         | `1.90` | `1.91` |
 | APIServerFastRollout                         |         | `Removed`    | `1.92` |        |
+| UseGardenerNodeAgent                         | `false` | `Alpha`      | `1.82` | `1.88` |
+| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89` |        |
+| UseGardenerNodeAgent                         | `true`  | `GA`         | `1.90` | `1.91` |
+| UseGardenerNodeAgent                         |         | `Removed`    | `1.92` |        |
 
 ## Using a Feature
 
@@ -195,4 +196,3 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | IPv6SingleStack                    | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
 | MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
-| UseGardenerNodeAgent               | `gardenlet`                       | Enables the `gardener-node-agent` instead of the `cloud-config-downloader` for shoot worker nodes.                                                                                                                                                                                                                                                                                 |

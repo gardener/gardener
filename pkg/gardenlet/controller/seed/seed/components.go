@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -764,7 +763,6 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		kubescheduler.CentralLoggingConfiguration,
 		machinecontrollermanager.CentralLoggingConfiguration,
 		// shoot worker components
-		downloader.CentralLoggingConfiguration,
 		nodeagent.CentralLoggingConfiguration,
 		// shoot system components
 		nodeexporter.CentralLoggingConfiguration,

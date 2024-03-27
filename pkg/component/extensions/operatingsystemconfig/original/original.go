@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
-	"github.com/gardener/gardener/pkg/features"
 )
 
 // ComponentsFn is a function that returns the list of original operating system config components.
@@ -66,14 +65,11 @@ func Components(sshAccessEnabled bool) []components.Component {
 		kernelconfig.New(),
 		kubelet.New(),
 		sshdensurer.New(),
+		nodeagent.New(),
 	}
 
 	if sshAccessEnabled {
 		components = append(components, gardeneruser.New())
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.UseGardenerNodeAgent) {
-		components = append(components, nodeagent.New())
 	}
 
 	return components

@@ -109,11 +109,9 @@ type Shoot struct {
 	Networks                                *Networks
 	BackupEntryName                         string
 	OSCSyncJitterPeriod                     *metav1.Duration
-	// TODO(rfranzke): Remove this field when UseGardenerNodeAgent feature gate gets removed.
-	CloudConfigExecutionMaxDelaySeconds int
-	ResourcesToEncrypt                  []string
-	EncryptedResources                  []string
-	ServiceAccountIssuerHostname        *string
+	ResourcesToEncrypt                      []string
+	EncryptedResources                      []string
+	ServiceAccountIssuerHostname            *string
 
 	Components *Components
 }

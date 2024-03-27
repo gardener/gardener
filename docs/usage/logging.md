@@ -90,9 +90,9 @@ Examples:
 
   > **Note:** Under `unit` label there is only the `docker`, `containerd`, `kubelet` and `kernel` logs.
 
-3. If you want to get the logs from `cloud-config-downloader` systemd service of a given node and search for a string in the logs:
+3. If you want to get the logs from `gardener-node-agent` systemd service of a given node and search for a string in the logs:
 
-    ```{job="systemd-combine-journal",nodename="ip-10-222-31-182.eu-central-1.compute.internal"} | unpack | unit="cloud-config-downloader.service" |~ "last execution was"```
+    ```{job="systemd-combine-journal",nodename="ip-10-222-31-182.eu-central-1.compute.internal"} | unpack | unit="gardener-node-agent.service"```
 
 > **Note:** `{job="systemd-combine-journal",nodename="<node name>"}` stream [pack](https://github.com/credativ/plutono) all logs from systemd services except `docker`, `containerd`, `kubelet`, and `kernel`. To filter those log by unit, you have to [unpack](https://github.com/credativ/plutono) them first.
 

@@ -47,7 +47,6 @@ import (
 	"github.com/gardener/gardener/cmd/utils"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -207,12 +206,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
-	var (
-		fs   = afero.Afero{Fs: afero.NewOsFs()}
-		dbus = dbus.New(log)
-	)
-
 	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
+	fs := afero.Afero{Fs: afero.NewOsFs()}
 	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
 		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
 	}
@@ -225,7 +220,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		},
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(ctx context.Context) error { return controller.AddToManager(ctx, cancel, mgr, cfg, hostName) }),
-			&bootstrappers.CloudConfigDownloaderCleaner{Log: log.WithName("legacy-cloud-config-downloader-cleaner"), FS: fs, DBus: dbus},
 		},
 	}); err != nil {
 		return fmt.Errorf("failed adding runnables to manager: %w", err)
@@ -253,14 +247,6 @@ func getRESTConfig(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.C
 	} else if err == nil {
 		log.Info("Token file already exists, nothing to be done", "path", restConfig.BearerTokenFile)
 		return restConfig, false, nil
-	}
-
-	if _, err := os.Stat(downloader.PathCredentialsToken); err != nil && !os.IsNotExist(err) {
-		return nil, false, fmt.Errorf("failed checking whether cloud-config-downloader token file %q exists: %w", downloader.PathCredentialsToken, err)
-	} else if err == nil {
-		log.Info("Token file does not exist, but legacy cloud-config-downloader token file does - using it", "path", downloader.PathCredentialsToken)
-		restConfig.BearerTokenFile = downloader.PathCredentialsToken
-		return restConfig, true, nil
 	}
 
 	if _, err := os.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !os.IsNotExist(err) {
