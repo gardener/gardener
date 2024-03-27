@@ -84,7 +84,7 @@ var (
 	_ rest.Updater = &StatusREST{}
 )
 
-// New creates a new (empty) internal BackupBucket object.
+// New creates a new (empty) internal NamespacedCloudProfile object.
 func (r *StatusREST) New() runtime.Object {
 	return &core.NamespacedCloudProfile{}
 }
