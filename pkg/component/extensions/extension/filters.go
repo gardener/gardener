@@ -36,6 +36,13 @@ func deployAfterKubeAPIServer(e Extension) bool {
 	return *e.Lifecycle.Reconcile == gardencorev1beta1.AfterKubeAPIServer
 }
 
+func deployAfterWorker(e Extension) bool {
+	if e.Lifecycle == nil || e.Lifecycle.Reconcile == nil {
+		return false
+	}
+	return *e.Lifecycle.Reconcile == gardencorev1beta1.AfterWorker
+}
+
 func deleteBeforeKubeAPIServer(e Extension) bool {
 	if e.Lifecycle == nil || e.Lifecycle.Delete == nil {
 		return true
