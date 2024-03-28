@@ -37,6 +37,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/settings"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -224,6 +225,11 @@ func ReadGardenSecrets(
 
 	if numberOfGlobalMonitoringSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
+	}
+
+	// Ensure that configuration exists if the ShootManagedIssuer feature gate is enabled.
+	if features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer) && numberOfShootServiceAccountIssuerSecrets == 0 {
+		return nil, fmt.Errorf("feature gate ShootManagedIssuer is enabled, but shoot service account issuer secret is missing")
 	}
 
 	// The managed shoot service account issuer is configured centrally per Garden cluster.
