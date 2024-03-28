@@ -92,13 +92,8 @@ func (b *Botanist) DeploySourceBackupEntry(ctx context.Context) error {
 	return b.Shoot.Components.SourceBackupEntry.Deploy(ctx)
 }
 
-// DestroySourceBackupEntry destroys the source BackupEntry. It returns nil if the
-// Seed backup is not enabled or the Shoot is not in restore phase.
+// DestroySourceBackupEntry destroys the source BackupEntry.
 func (b *Botanist) DestroySourceBackupEntry(ctx context.Context) error {
-	if b.Seed.GetInfo().Spec.Backup == nil || !b.IsRestorePhase() {
-		return nil
-	}
-
 	if err := b.Shoot.Components.SourceBackupEntry.SetForceDeletionAnnotation(ctx); err != nil {
 		return err
 	}

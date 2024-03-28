@@ -274,7 +274,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           botanist.DestroySourceBackupEntry,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || botanist.Seed.GetInfo().Spec.Backup == nil || !botanist.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		_ = g.Add(flow.Task{
