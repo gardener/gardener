@@ -119,7 +119,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	}
 
 	if ginkgo.Label("default").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) {
-		// TODO(maboehm) The extension is not available in the previous gardener
+		// TODO(maboehm): Add permanently to default shoot after v1.92
+		// The extension is not available in the previous gardener
 		// version (so during upgrade tests), so only set it for default tests.
 		shoot.Spec.Extensions = append(shoot.Spec.Extensions,
 			gardencorev1beta1.Extension{
