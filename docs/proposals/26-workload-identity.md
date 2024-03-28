@@ -469,6 +469,11 @@ kind: Secret
 data:
   config: YXBpVmV...bmZpZw==
   token: eyJhbGciOiJ....OkBBrVWA
+stringData:
+  credentialsFile: | # Field injected by extension admission webhook, key name is controller by the extension
+    [default]
+    role_arn=arn:aws:iam::112233445566:role/gardener-dev
+    web_identity_token_file=/var/run/workload-identity/aws/token
 metadata:
   name: cloudprovider
   namespace: shoot--local--foo
@@ -496,14 +501,47 @@ like this:
    the above mentioned annotations and labels based on the configuration of the
    `WorkloadIdentity` and resource using it. The workload identity provider
    config is also written into the secret at this step.
+1. Optionally, extension webhook intercepts the `CREATE` or
+   `UPDATE` request for the secret and makes extension specific adjustment to
+   the secret.
 1. The dedicated controller watches these secrets and receives event to
-   reconcile it.
-1. The controller reads the current token from the secret and if it does not
-   exist or is due for rotation, a new token is requested via `TokenRequest` on
-   the respective `WorkloadIdentity/token` subresource. The controller writes
-   the returned token into the secret.
+   reconcile it. The controller reads the current token from the secret and if
+   it does not exist or is due for rotation, a new token is requested via
+   `TokenRequest` on the respective `WorkloadIdentity/token` subresource. The
+   controller writes the returned token into the secret.
+1. Optionally, extension webhook intercepts the `UPDATE` request for the secret
+   and makes extension specific adjustment to the secret.
 1. The `secret` is requeued for reconciliation again when the token will be
    suitable for renewal.
+1. Secret is mounted as volume to the pods that requires credentials to interact
+   with the external service. Optionally, extension webhooks can change mount
+   paths, mount additional keys from the secret, set environment variables, etc.
+
+Just for completeness, here is how the flow will look like for cloud controller
+manager when AWS shoot cluster is using workload identity:
+
+1. The shoot controller from gardenlet creates the `cloudprovider` secret in the
+   shoot namespace in the seed with the above described labels and annotations,
+   also writing the workload identity `providerConfig` into the secret under the
+   `config` key.
+1. `gardener-extension-provider-aws` webhook intercepts the create request and
+   injects `credentialsFile` data key which value is derived from the content of
+   the `config` key. `credentialsFile` content is AWS profile config file
+   containing the ARN of the IAM role to be assumed and path to the web identity
+   token file.
+1. The gardenlet controller dedicated to manage the tokens, reconciles the
+   secret. A token is issued and written into the `token` key of the secret.
+1. The `gardener-extension-provider-aws` webhook is triggered again and the same
+   adjustments are made.
+1. The `controlplane` controller from `gardener-extension-provider-aws` deploys
+   the `cloud-controller-manager` with the required adjustments, e.g. mount the
+   `token` key from the `cloudprovider` secret on path
+   `/var/run/workload-identity/aws/token` and set the environment variables
+   `AWS_ROLE_ARN=arn:aws:iam::112233445566:role/gardener-dev`, and
+   `AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/workload-identity/aws/token`, or use
+   other options to configure the AWS SDK like `AWS_SHARED_CREDENTIALS_FILE`
+   environment variable having the value of the `credentialsFile` key from the
+   secret.
 
 ### Use cases
 
