@@ -33,6 +33,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -428,9 +429,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Sync public service account signing keys to Garden cluster",
-			Fn:           botanist.SyncPublicServiceAccountKeys,
-			SkipIf:       o.Shoot.HibernationEnabled || !v1beta1helper.HasManagedIssuer(botanist.Shoot.GetInfo()),
+			Name: "Sync public service account signing keys to Garden cluster",
+			Fn:   botanist.SyncPublicServiceAccountKeys,
+			SkipIf: o.Shoot.HibernationEnabled ||
+				!features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer) ||
+				!v1beta1helper.HasManagedIssuer(botanist.Shoot.GetInfo()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{
