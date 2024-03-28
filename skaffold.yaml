@@ -1097,7 +1097,6 @@ build:
             - pkg/resourcemanager/controller/networkpolicy
             - pkg/resourcemanager/controller/node
             - pkg/resourcemanager/controller/node/helper
-            - pkg/resourcemanager/controller/secret
             - pkg/resourcemanager/controller/tokeninvalidator
             - pkg/resourcemanager/predicate
             - pkg/resourcemanager/webhook
