@@ -29,6 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
+| ShootManagedIssuer                 | `false` | `Alpha` | `1.92` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -198,3 +199,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
 | ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
 | UseNamespacedCloudProfile          | `gardener-apiserver`              | Enables usage of `NamespacedCloudProfile`s in `Shoot`s.                                                                                                                                                                                                                                                                                                                            |
+| ShootManagedIssuer                 | `gardenlet`                       | Enables the shoot managed issuer functionality described in GEP 24.                                                                                                                                                                                                                                                                                                                |

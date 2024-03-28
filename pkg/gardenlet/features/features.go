@@ -34,5 +34,6 @@ func GetFeatures() []featuregate.Feature {
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,
+		features.ShootManagedIssuer,
 	}
 }
