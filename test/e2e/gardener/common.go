@@ -113,6 +113,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				{
 					Type: "local-ext-shoot",
 				},
+				{
+					Type: "local-ext-shoot-after-worker",
+				},
 			},
 		},
 	}

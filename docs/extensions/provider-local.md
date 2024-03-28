@@ -132,6 +132,9 @@ This controller reconciles `Extensions` of type `local-ext-seed`. It creates a s
 #### Extension Shoot
 This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
 
+#### Extension Shoot After Worker
+This controller reconciles `Extensions` of type `local-ext-shoot-after-worker`. It creates a `deployment` named `local-ext-shoot-after` in the `kube-system` namespace of the shoot. The extension is reconciled after the workers and waits until the deployment is ready. More on extension lifecycle strategies can be read [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
+
 #### Health Checks
 
 The health check controller leverages the [health check library](healthcheck-library.md) in order to:

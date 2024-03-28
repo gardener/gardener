@@ -32,6 +32,7 @@ import (
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localextensionseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/seed"
 	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
+	localextensionshootafterworkercontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shootafterworker"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
@@ -64,6 +65,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
+		extensionscmdcontroller.Switch(localextensionshootafterworkercontroller.ControllerName, localextensionshootafterworkercontroller.AddToManager),
 		extensionscmdcontroller.Switch(networkpolicycontroller.ControllerName, networkpolicycontroller.AddToManager),
 	)
 }
