@@ -129,11 +129,7 @@ Gardener as an OIDC compatible token issuer.
 
 A new resource `WorkloadIdentity` in `authentication.gardener.cloud` API Group
 will be implemented. It will specify different characteristics of the JWT, like
-the value for the `aud` claim. The `WorkloadIdentity` resource will allow the
-token duration to be set by Gardener users so they can use tokens with shorter
-or longer validity compared to the default one. This duration will be ensured to
-be between certain limits of minimal and maximal validity, in order to avoid
-frequent token renewals as well as tokens with too long validity.
+the value for the `aud` claim.
 
 Similarly to `providerConfig` in other Gardener APIs, `WorkloadIdentity`
 resource will feature a `providerConfig` field that will be of byte array type
@@ -165,7 +161,6 @@ metadata:
 spec:
   audiences: # Required field.
   - team-foo
-  duration: 48h # Optional field, gardener will have default value of token duration if the field is unset.
   targetSystem: # Required field.
     type: aws # Required field.
     providerConfig: # Optional field of type *runtime.RawExtension, extensions can make it mandatory via admission webhooks.
@@ -186,8 +181,13 @@ is being used, e.g. shoot or backup entry identifier. Gardener API server must
 verify the provided metadata and it can enhance the JWT with additional
 information derived from the context, for example with information for the
 project and the seed of the shoot cluster. Gardener API can also add global
-information like a garden cluster identity. As `WorkloadIdentity` already
-specifies duration of the token, `TokenRequest` will not feature such field.
+information like a garden cluster identity. `TokenRequest` will feature optional
+field `duration` that will allow clients to specify for how long the issued
+workload identity token to be valid. This duration will be ensured to be between
+certain limits of minimal and maximal validity, in order to avoid frequent token
+renewals as well as tokens with too long validity. If the duration field is not
+set, a default duration will applied.
+
 `TokenRequest` resources will never be persisted in the storage layer, the
 generated token will be written in the `.status.token` field and returned to the
 client as response. The expiration timestamp of the token will be also available
@@ -203,6 +203,7 @@ spec:
     name: foo
     namespace: garden-local
     uid: 54d09554-6a68-4f46-a23a-e3592385d820
+  duration: 48h # Optional field, gardener will have default value of token duration if the field is unset.
 status:
   token: eyJhbGciOiJ....OkBBrVWA # The generated OIDC token
   expirationTimestamp: 2024-02-09T16:35:02Z
@@ -419,8 +420,10 @@ A sample payload of a token will look like:
 ### Distribution of Workload Identity Tokens
 
 Gardenlet will request tokens as per the global configurations and renew them
-regularly. It will be responsible to provide information for the specific usage
-of the token, e.g. shoot name, namespace and UID, via the `TokenRequest` API.
+regularly. It is expected gardenlet to not specify duration for the tokens using
+the default token duration, but this can be changed later based on the actual
+needs. It will be responsible to provide information for the specific usage of
+the token, e.g. shoot name, namespace and UID, via the `TokenRequest` API.
 `gardenlet` will be the only Gardener component authorized to create and refresh
 workload identity tokens. Seed Authorizer will be extended to allow gardenlets
 to request workload identity tokens only for `WorkloadIdentity` that they are
