@@ -180,7 +180,7 @@ images:
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.51.0
+  tag: v2.51.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
