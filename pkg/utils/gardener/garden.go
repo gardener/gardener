@@ -37,7 +37,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/settings"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -114,6 +113,7 @@ func ReadGardenSecrets(
 	c client.Reader,
 	namespace string,
 	enforceInternalDomainSecret bool,
+	enforceShootServiceAccountIssuerSecret bool,
 ) (
 	map[string]*corev1.Secret,
 	error,
@@ -228,7 +228,7 @@ func ReadGardenSecrets(
 	}
 
 	// Ensure that configuration exists if the ShootManagedIssuer feature gate is enabled.
-	if features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer) && numberOfShootServiceAccountIssuerSecrets == 0 {
+	if enforceShootServiceAccountIssuerSecret && numberOfShootServiceAccountIssuerSecrets == 0 {
 		return nil, fmt.Errorf("feature gate ShootManagedIssuer is enabled, but shoot service account issuer secret is missing")
 	}
 

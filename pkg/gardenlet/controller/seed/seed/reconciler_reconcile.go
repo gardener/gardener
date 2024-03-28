@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -175,7 +176,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true)
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true, features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer))
 	if err != nil {
 		return err
 	}
