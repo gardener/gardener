@@ -35,6 +35,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -174,32 +175,26 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      daemonSetName,
 				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					"app.kubernetes.io/instance":    "shoot-core",
-					"app.kubernetes.io/name":        labelValue,
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				},
+				}),
 			},
 			Spec: appsv1.DaemonSetSpec{
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:    labelValue,
-						"app.kubernetes.io/instance": "shoot-core",
-						"app.kubernetes.io/name":     labelValue,
-					},
+					MatchLabels: utils.MergeStringMaps(getLabels(), map[string]string{
+						v1beta1constants.LabelApp: labelValue,
+					}),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
+						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 							v1beta1constants.LabelApp:                           labelValue,
-							"app.kubernetes.io/instance":                        "shoot-core",
-							"app.kubernetes.io/name":                            labelValue,
 							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,
 							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
-						},
+						}),
 					},
 					Spec: corev1.PodSpec{
 						DNSPolicy:                     corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
@@ -313,12 +308,10 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					"app.kubernetes.io/instance": "shoot-core",
-					"app.kubernetes.io/name":     labelValue,
-					v1beta1constants.LabelApp:    labelValue,
-					v1beta1constants.GardenRole:  v1beta1constants.GardenRoleSystemComponent,
-				},
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.LabelApp:   labelValue,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
+				}),
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: getLabels(),
