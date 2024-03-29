@@ -16,6 +16,7 @@ package clientmap_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -87,7 +88,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should failed to create a new ClientSet if factory fails", func() {
-				fakeErr := fmt.Errorf("fake")
+				fakeErr := errors.New("fake")
 				factory.EXPECT().NewClientSet(ctx, key).Return(nil, "", fakeErr)
 
 				clientSet, err := cm.GetClient(ctx, key)
@@ -149,7 +150,7 @@ var _ = Describe("GenericClientMap", func() {
 				By("Should fail to refresh the ClientSet's server version because DiscoverVersion fails")
 				// let the max refresh interval pass
 				fakeClock.Sleep(MaxRefreshInterval)
-				cs.EXPECT().DiscoverVersion().Return(nil, fmt.Errorf("fake"))
+				cs.EXPECT().DiscoverVersion().Return(nil, errors.New("fake"))
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("fake")))
@@ -188,7 +189,7 @@ var _ = Describe("GenericClientMap", func() {
 				By("Should fail to get the ClientSet again because CalculateClientSetHash fails")
 				// let the max refresh interval pass again
 				fakeClock.Sleep(MaxRefreshInterval)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", errors.New("fake"))
 
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist
+package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +28,7 @@ import (
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
@@ -43,7 +44,7 @@ var _ = Describe("controlplane", func() {
 		botanist             *Botanist
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 	)
 
 	BeforeEach(func() {

@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -69,7 +70,7 @@ var _ = Describe("Etcd", func() {
 		botanist         *Botanist
 
 		ctx                   = context.TODO()
-		fakeErr               = fmt.Errorf("fake err")
+		fakeErr               = errors.New("fake err")
 		namespace             = "shoot--foo--bar"
 		role                  = "test"
 		class                 = etcd.ClassImportant

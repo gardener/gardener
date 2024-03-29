@@ -398,7 +398,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	)
 
 	for _, taint := range c.config.IgnoreTaints {
-		command = append(command, fmt.Sprintf("--ignore-taint=%s", taint))
+		command = append(command, "--ignore-taint="+taint)
 	}
 
 	for _, machineDeployment := range c.machineDeployments {

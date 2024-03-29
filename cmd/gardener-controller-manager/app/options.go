@@ -15,6 +15,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -55,7 +56,7 @@ func (o *options) addFlags(fs *pflag.FlagSet) {
 
 func (o *options) Complete() error {
 	if len(o.configFile) == 0 {
-		return fmt.Errorf("missing config file")
+		return errors.New("missing config file")
 	}
 
 	data, err := os.ReadFile(o.configFile)

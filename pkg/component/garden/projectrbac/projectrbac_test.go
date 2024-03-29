@@ -16,7 +16,7 @@ package projectrbac_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +43,7 @@ var _ = Describe("ProjectRBAC", func() {
 		err         error
 
 		ctx         = context.TODO()
-		fakeErr     = fmt.Errorf("fake error")
+		fakeErr     = errors.New("fake error")
 		projectName = "foobar"
 		namespace   = "garden-" + projectName
 

@@ -28,6 +28,7 @@ func FetchNodeByHostName(ctx context.Context, c client.Client, hostName string) 
 	// node name not known yet, try to fetch it via label selector based on hostname
 	nodeList := &metav1.PartialObjectMetadataList{}
 	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+
 	if err := c.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: hostName}); err != nil {
 		return nil, fmt.Errorf("unable to list nodes with label selector %s=%s: %w", corev1.LabelHostname, hostName, err)
 	}

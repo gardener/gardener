@@ -16,6 +16,7 @@ package seedrestriction
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -129,7 +130,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if string(seed.UID) != request.Name {
-			return admission.Errored(http.StatusForbidden, fmt.Errorf("cannot delete unrelated BackupBucket"))
+			return admission.Errored(http.StatusForbidden, errors.New("cannot delete unrelated BackupBucket"))
 		}
 		return admission.Allowed("")
 	}
@@ -214,7 +215,7 @@ func (h *Handler) admitCertificateSigningRequest(seedName string, userType seedi
 	}
 
 	if userType == seedidentity.UserTypeExtension {
-		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client may not create CertificateSigningRequests"))
+		return admission.Errored(http.StatusForbidden, errors.New("extension client may not create CertificateSigningRequests"))
 	}
 
 	csr := &certificatesv1.CertificateSigningRequest{}

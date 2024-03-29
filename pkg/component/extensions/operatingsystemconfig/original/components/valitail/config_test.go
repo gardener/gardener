@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package valitail
+package valitail_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -21,6 +21,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )

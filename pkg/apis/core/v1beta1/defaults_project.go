@@ -30,6 +30,7 @@ func SetDefaults_Project(obj *Project) {
 		if obj.Spec.Tolerations == nil {
 			obj.Spec.Tolerations = &ProjectTolerations{}
 		}
+
 		addTolerations(&obj.Spec.Tolerations.Whitelist, Toleration{Key: SeedTaintProtected})
 		addTolerations(&obj.Spec.Tolerations.Defaults, Toleration{Key: SeedTaintProtected})
 	}

@@ -16,7 +16,7 @@ package fake
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -35,13 +35,15 @@ type Ops struct {
 
 // Until implements retry.Ops without waiting between retries.
 func (o *Ops) Until(ctx context.Context, _ time.Duration, f retry.Func) error {
-	var minorErr error
-	attempts := 0
+	var (
+		minorErr error
+		attempts = 0
+	)
 
 	for {
 		attempts++
 		if attempts > o.MaxAttempts {
-			return retry.NewError(fmt.Errorf("max attempts reached"), minorErr)
+			return retry.NewError(errors.New("max attempts reached"), minorErr)
 		}
 
 		done, err := f(ctx)

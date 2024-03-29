@@ -297,6 +297,7 @@ func MapStringBoolToCommandLineParameter(m map[string]bool, param string) string
 	for k := range m {
 		keys = append(keys, k)
 	}
+
 	slices.Sort(keys)
 
 	out := param
@@ -690,7 +691,7 @@ func ClientCertificateFromRESTConfig(restConfig *rest.Config) (*tls.Certificate,
 	}
 
 	if len(cert.Certificate) < 1 {
-		return nil, fmt.Errorf("the X509 certificate is invalid, no cert/key data found")
+		return nil, errors.New("the X509 certificate is invalid, no cert/key data found")
 	}
 
 	certs, err := x509.ParseCertificates(cert.Certificate[0])
@@ -699,7 +700,7 @@ func ClientCertificateFromRESTConfig(restConfig *rest.Config) (*tls.Certificate,
 	}
 
 	if len(certs) < 1 {
-		return nil, fmt.Errorf("the X509 certificate bundle does not contain exactly one certificate")
+		return nil, errors.New("the X509 certificate bundle does not contain exactly one certificate")
 	}
 
 	cert.Leaf = certs[0]

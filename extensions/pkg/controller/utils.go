@@ -61,6 +61,7 @@ type AddToManagerBuilder []func(context.Context, manager.Manager) error
 // NewAddToManagerBuilder creates a new AddToManagerBuilder and registers the given functions.
 func NewAddToManagerBuilder(funcs ...func(context.Context, manager.Manager) error) AddToManagerBuilder {
 	var builder AddToManagerBuilder
+
 	builder.Register(funcs...)
 	return builder
 }
@@ -90,6 +91,7 @@ type WatchBuilder []func(controller.Controller) error
 // NewWatchBuilder creates a new WatchBuilder and registers the given functions.
 func NewWatchBuilder(funcs ...func(controller.Controller) error) WatchBuilder {
 	var builder WatchBuilder
+
 	builder.Register(funcs...)
 	return builder
 }

@@ -24,6 +24,7 @@ func computeChecksum(data map[string][]byte) string {
 	for k := range data {
 		keys = append(keys, k)
 	}
+
 	slices.Sort(keys)
 
 	var hash string

@@ -16,7 +16,7 @@ package backupbucket
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -145,7 +145,7 @@ func ToSelectableFields(backupBucket *core.BackupBucket) fields.Set {
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	backupBucket, ok := obj.(*core.BackupBucket)
 	if !ok {
-		return nil, nil, fmt.Errorf("not a backupBucket")
+		return nil, nil, errors.New("not a backupBucket")
 	}
 	return labels.Set(backupBucket.ObjectMeta.Labels), ToSelectableFields(backupBucket), nil
 }

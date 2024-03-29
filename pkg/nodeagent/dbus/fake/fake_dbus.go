@@ -72,6 +72,7 @@ func (d *DBus) DaemonReload(_ context.Context) error {
 	d.Actions = append(d.Actions, SystemdAction{
 		Action: ActionDaemonReload,
 	})
+
 	return nil
 }
 
@@ -84,6 +85,7 @@ func (d *DBus) Disable(_ context.Context, unitNames ...string) error {
 		Action:    ActionDisable,
 		UnitNames: unitNames,
 	})
+
 	return nil
 }
 

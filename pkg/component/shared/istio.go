@@ -16,6 +16,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -158,7 +159,7 @@ func AddIstioIngressGateway(
 ) error {
 	gatewayValues := istioDeployer.GetValues().IngressGateway
 	if len(gatewayValues) < 1 {
-		return fmt.Errorf("at least one ingress gateway must be present before adding further ones")
+		return errors.New("at least one ingress gateway must be present before adding further ones")
 	}
 
 	// Take the first ingress gateway values to create additional gateways

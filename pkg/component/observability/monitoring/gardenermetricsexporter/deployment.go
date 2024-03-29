@@ -15,7 +15,7 @@
 package gardenermetricsexporter
 
 import (
-	"fmt"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								"/gardener-metrics-exporter",
 								"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 								"--bind-address=0.0.0.0",
-								"--port=" + fmt.Sprint(probePort),
+								"--port=" + strconv.Itoa(probePort),
 							},
 							SecurityContext: &corev1.SecurityContext{
 								ReadOnlyRootFilesystem: ptr.To(true),

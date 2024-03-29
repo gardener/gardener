@@ -229,6 +229,7 @@ func (u unstructuredStatusAccessor) GetConditions() []gardencorev1beta1.Conditio
 	if err != nil || !ok {
 		return nil
 	}
+
 	var conditions []gardencorev1beta1.Condition
 	interfaceConditionSlice := val.([]interface{})
 	for _, interfaceCondition := range interfaceConditionSlice {

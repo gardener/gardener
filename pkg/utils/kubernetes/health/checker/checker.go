@@ -295,6 +295,7 @@ func (h *HealthChecker) checkManagedResourceConditions(
 			}
 			return &c
 		}
+
 		delete(conditionsToCheck, cond.Type)
 	}
 

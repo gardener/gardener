@@ -199,6 +199,7 @@ func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, k8sClie
 	if err != nil {
 		return err
 	}
+
 	scanner := bufio.NewScanner(bytes.NewReader(logs))
 	for scanner.Scan() {
 		log.Info(scanner.Text()) //nolint:logcheck

@@ -17,7 +17,6 @@ package flow_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
@@ -127,12 +126,12 @@ var _ = Describe("task functions", func() {
 				cancelled = make(chan struct{})
 
 				f1 = flow.TaskFn(func(_ context.Context) error {
-					return fmt.Errorf("task1")
+					return errors.New("task1")
 				})
 				f2 = flow.TaskFn(func(ctx context.Context) error {
 					<-ctx.Done()
 					close(cancelled)
-					return fmt.Errorf("task2")
+					return errors.New("task2")
 				})
 			)
 

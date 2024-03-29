@@ -112,6 +112,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		}
 
 		var obj client.Object
+
 		switch ref.Kind {
 		case "Deployment":
 			obj = &appsv1.Deployment{}

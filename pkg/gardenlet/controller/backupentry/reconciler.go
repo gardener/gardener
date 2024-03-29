@@ -80,6 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
@@ -231,7 +232,7 @@ func (r *Reconciler) reconcileBackupEntry(
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupentry status
-		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+		lastObservedError = errors.New("extension did not record a last operation yet")
 		if !metav1.HasAnnotation(extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation) {
 			mustReconcileExtensionBackupEntry = true
 		}
@@ -439,6 +440,7 @@ func (r *Reconciler) migrateBackupEntry(
 		if lastOperation == nil {
 			return reconcile.Result{}, fmt.Errorf("extension object did not record a lastOperation yet")
 		}
+
 		switch lastOperation.Type {
 		case gardencorev1beta1.LastOperationTypeMigrate:
 			if extensionBackupEntry.Status.LastError != nil ||
@@ -500,6 +502,7 @@ func (r *Reconciler) migrateBackupEntry(
 
 func (r *Reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of BackupEntry state initialized."
@@ -598,7 +601,7 @@ func (r *Reconciler) updateBackupEntryStatusPending(ctx context.Context, be *gar
 func (r *Reconciler) emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("entry-%s", backupEntry.Name),
+			Name:      "entry-" + backupEntry.Name,
 			Namespace: r.GardenNamespace,
 		},
 	}

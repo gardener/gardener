@@ -81,6 +81,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	if spec.RecordType == extensionsv1alpha1.DNSRecordTypeCNAME && len(spec.Values) > 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("values"), spec.Values, "CNAME records must have a single value"))
 	}
+
 	for i, value := range spec.Values {
 		allErrs = append(allErrs, validateValue(spec.RecordType, value, fldPath.Child("values").Index(i))...)
 	}
@@ -112,6 +113,7 @@ func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, del
 
 func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	switch recordType {
 	case extensionsv1alpha1.DNSRecordTypeA:
 		allErrs = append(allErrs, validation.IsValidIPv4Address(fldPath, value)...)

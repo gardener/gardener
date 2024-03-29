@@ -82,6 +82,7 @@ func getFileCodec(encoding string) (extensionsv1alpha1helper.FileCodec, error) {
 	if encoding == "" {
 		return nil, nil
 	}
+
 	fileCodecID, err := extensionsv1alpha1helper.ParseFileCodecID(encoding)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse file codec ID '%s': %w", encoding, err)

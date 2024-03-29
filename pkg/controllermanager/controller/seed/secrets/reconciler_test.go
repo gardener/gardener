@@ -16,7 +16,7 @@ package secrets_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -98,7 +98,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should fail if get namespace fails", func() {
-			cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fmt.Errorf("fake"))
+			cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(errors.New("fake"))
 
 			_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 			Expect(err).To(MatchError(ContainSubstring("fake")))
@@ -110,7 +110,7 @@ var _ = Describe("Reconciler", func() {
 				return nil
 			})
 
-			cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
+			cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(errors.New("fake"))
 
 			_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 			Expect(err).To(MatchError(ContainSubstring("fake")))
@@ -208,7 +208,7 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				cl.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				cl.EXPECT().Create(gomock.Any(), namespace).Return(fmt.Errorf("fake"))
+				cl.EXPECT().Create(gomock.Any(), namespace).Return(errors.New("fake"))
 
 				_, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(MatchError(ContainSubstring("fake")))

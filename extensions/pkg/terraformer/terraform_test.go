@@ -17,6 +17,7 @@ package terraformer_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -191,7 +192,7 @@ var _ = Describe("terraformer", func() {
 			It("should return error when the ConfigMap creation fails", func() {
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()).
-					Return(apierrors.NewForbidden(configMapGroupResource, name, fmt.Errorf("not allowed to create ConfigMap")))
+					Return(apierrors.NewForbidden(configMapGroupResource, name, errors.New("not allowed to create ConfigMap")))
 
 				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
 				Expect(err).To(HaveOccurred())

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -47,7 +47,7 @@ import (
 var _ = Describe("MachineControllerManager", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		ctrl               *gomock.Controller
 		kubernetesClient   *kubernetesmock.MockInterface

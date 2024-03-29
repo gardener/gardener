@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedseed
+package managedseed_test
 
 import (
 	"context"
@@ -36,6 +36,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
@@ -51,6 +52,9 @@ var _ = Describe("Add", func() {
 		managedSeedShoot       *seedmanagementv1alpha1.Shoot
 		shoot                  *gardencorev1beta1.Shoot
 		seedNameFromSeedConfig string
+
+		name      = "test"
+		namespace = "garden"
 	)
 
 	BeforeEach(func() {

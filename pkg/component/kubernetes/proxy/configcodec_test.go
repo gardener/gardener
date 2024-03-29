@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package proxy
+package proxy_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeproxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 
+	. "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

@@ -321,7 +321,7 @@ spec:
 					env = append(env, []corev1.EnvVar{
 						{
 							Name:  "VPN_SERVER_INDEX",
-							Value: fmt.Sprintf("%d", *index),
+							Value: strconv.Itoa(*index),
 						},
 						{
 							Name: "POD_NAME",

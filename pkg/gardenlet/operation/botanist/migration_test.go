@@ -17,7 +17,6 @@ package botanist_test
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/hashicorp/go-multierror"
@@ -64,7 +63,7 @@ var _ = Describe("migration", func() {
 		botanist *Botanist
 
 		ctx                     = context.TODO()
-		fakeErr                 = fmt.Errorf("fake")
+		fakeErr                 = errors.New("fake")
 		fakeClient              client.Client
 		fakeKubernetesInterface kubernetes.Interface
 	)

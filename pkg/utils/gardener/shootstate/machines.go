@@ -184,6 +184,7 @@ func compressMachineState(state []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed creating gzip writer for compressing machine state data: %w", err)
 	}
+
 	defer gzipWriter.Close()
 
 	if _, err := gzipWriter.Write(state); err != nil {

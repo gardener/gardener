@@ -16,7 +16,7 @@ package etcd
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strconv"
 	"time"
 
@@ -446,7 +446,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 	}
 
 	if len(etcdList.Items) > 0 {
-		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
+		return errors.New("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
 	etcdCopyBackupsTaskList := &druidv1alpha1.EtcdCopyBackupsTaskList{}
@@ -455,7 +455,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 	}
 
 	if len(etcdCopyBackupsTaskList.Items) > 0 {
-		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
+		return errors.New("cannot debootstrap etcd-druid because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)

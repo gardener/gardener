@@ -32,6 +32,7 @@ func APIGroupMatches(limit admissioncontrollerconfig.ResourceLimit, group string
 			return true
 		}
 	}
+
 	return false
 }
 

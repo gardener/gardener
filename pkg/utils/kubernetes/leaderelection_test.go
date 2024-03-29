@@ -16,6 +16,7 @@ package kubernetes_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -38,7 +39,7 @@ var _ = Describe("LeaderElection", func() {
 		c    *mockclient.MockClient
 
 		ctx       = context.TODO()
-		fakeErr   = fmt.Errorf("fake err")
+		fakeErr   = errors.New("fake err")
 		namespace = "namespace"
 		name      = "name"
 		lock      string

@@ -41,6 +41,7 @@ func SplitOrigin(origin string) (string, types.NamespacedName, error) {
 		clusterID string
 		key       string
 	)
+
 	switch len(parts) {
 	case 1:
 		// no clusterID

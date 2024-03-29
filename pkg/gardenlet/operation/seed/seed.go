@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +31,7 @@ import (
 func NewBuilder() *Builder {
 	return &Builder{
 		seedObjectFunc: func(_ context.Context) (*gardencorev1beta1.Seed, error) {
-			return nil, fmt.Errorf("seed object is required but not set")
+			return nil, errors.New("seed object is required but not set")
 		},
 	}
 }
@@ -91,6 +92,7 @@ func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerg
 	defer s.infoMutex.Unlock()
 
 	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())
@@ -118,6 +120,7 @@ func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrateg
 	defer s.infoMutex.Unlock()
 
 	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())

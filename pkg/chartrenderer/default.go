@@ -99,6 +99,7 @@ func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, names
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse values for chart %s: %w", chart.Metadata.Name, err)
 	}
+
 	valuesCopy, err := chartutil.ReadValues(parsedValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read values for chart %s: %w", chart.Metadata.Name, err)
@@ -166,6 +167,7 @@ func (c *RenderedChart) Manifest() []byte {
 // and values as the content of the corresponding file.
 func (c *RenderedChart) Files() map[string]map[string]string {
 	var files = make(map[string]map[string]string)
+
 	for _, manifest := range c.Manifests {
 		resourceName := getResourceName(manifest)
 		if resourceName == "" {
@@ -184,12 +186,14 @@ func (c *RenderedChart) Files() map[string]map[string]string {
 // FileContent returns explicitly the content of the provided <filename>.
 func (c *RenderedChart) FileContent(filename string) string {
 	var fileContent strings.Builder
+
 	for _, mf := range c.Manifests {
 		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
 			if fileContent.String() != "" {
 				// Add "---" to separate different resources
 				fileContent.WriteString("\n---\n")
 			}
+
 			fileContent.WriteString(mf.Content)
 		}
 	}
@@ -233,6 +237,7 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 		if err != nil {
 			return nil, err
 		}
+
 		rules = r
 	}
 

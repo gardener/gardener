@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shared
+package shared_test
 
 import (
 	"context"
@@ -30,6 +30,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
@@ -44,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
+	. "github.com/gardener/gardener/pkg/component/shared"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -347,9 +351,31 @@ var _ = Describe("KubeAPIServer", func() {
 					configData    *runtime.RawExtension
 					err           error
 					kubeAPIServer kubeapiserver.Interface
+
+					runtimeScheme = runtime.NewScheme()
+					codec         runtime.Codec
 				)
 
 				JustBeforeEach(func() {
+					utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
+					utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+					utilruntime.Must(admissionapiv1.AddToScheme(runtimeScheme))
+
+					var (
+						ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
+							Yaml:   true,
+							Pretty: false,
+							Strict: false,
+						})
+						versions = schema.GroupVersions([]schema.GroupVersion{
+							admissionapiv1alpha1.SchemeGroupVersion,
+							admissionapiv1beta1.SchemeGroupVersion,
+							admissionapiv1.SchemeGroupVersion,
+						})
+					)
+
+					codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
+
 					configData = nil
 					kubeAPIServer, err = NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				})

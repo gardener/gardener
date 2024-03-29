@@ -46,6 +46,7 @@ func InitRun(cmd *cobra.Command, opts Options, name string) (logr.Logger, error)
 	if err := opts.Complete(); err != nil {
 		return logr.Discard(), err
 	}
+
 	if err := opts.Validate(); err != nil {
 		return logr.Discard(), err
 	}
@@ -55,6 +56,7 @@ func InitRun(cmd *cobra.Command, opts Options, name string) (logr.Logger, error)
 	if err != nil {
 		return logr.Discard(), fmt.Errorf("error instantiating zap logger: %w", err)
 	}
+
 	logf.SetLogger(log)
 	klog.SetLogger(log)
 

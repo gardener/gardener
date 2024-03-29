@@ -205,6 +205,7 @@ ip6.arpa:53 {
 			},
 		}
 	)
+
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	var (
@@ -416,6 +417,7 @@ ip6.arpa:53 {
 		}
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
+
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
 	if c.values.VPAEnabled {

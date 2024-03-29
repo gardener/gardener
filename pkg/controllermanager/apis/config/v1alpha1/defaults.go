@@ -112,6 +112,7 @@ func SetDefaults_ProjectControllerConfiguration(obj *ProjectControllerConfigurat
 			Duration: 12 * time.Hour,
 		}
 	}
+
 	for i, quota := range obj.Quotas {
 		if quota.ProjectSelector == nil {
 			obj.Quotas[i].ProjectSelector = &metav1.LabelSelector{}

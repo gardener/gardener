@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -101,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, err error) {
-	description := fmt.Sprintf("Failed to schedule Shoot: %s", err.Error())
+	description := "Failed to schedule Shoot: " + err.Error()
 	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, description)
 
 	patch := client.MergeFrom(shoot.DeepCopy())
@@ -327,12 +328,12 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 		}
 
 		if !v1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
-			candidateErrors[seed.Name] = fmt.Errorf("shoot does not tolerate the seed's taints")
+			candidateErrors[seed.Name] = errors.New("shoot does not tolerate the seed's taints")
 			continue
 		}
 
 		if allocatableShoots, ok := seed.Status.Allocatable[gardencorev1beta1.ResourceShoots]; ok && int64(seedUsage[seed.Name]) >= allocatableShoots.Value() {
-			candidateErrors[seed.Name] = fmt.Errorf("seed does not have available capacity for shoots")
+			candidateErrors[seed.Name] = errors.New("seed does not have available capacity for shoots")
 			continue
 		}
 

@@ -94,6 +94,7 @@ func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
 	if shoot.Spec.DNS == nil {
 		return nil
 	}
+
 	var names = make([]string, 0, len(shoot.Spec.DNS.Providers))
 	for _, provider := range shoot.Spec.DNS.Providers {
 		if provider.SecretName == nil {

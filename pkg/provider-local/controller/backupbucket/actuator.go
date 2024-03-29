@@ -49,6 +49,7 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, backupBucket 
 		filePath             = filepath.Join(a.bbDirectory, backupBucket.Name)
 		fileMode os.FileMode = 0775
 	)
+
 	log.Info("Reconciling directory", "path", filePath)
 	if err := os.Mkdir(filePath, fileMode); err != nil && !os.IsExist(err) {
 		return err

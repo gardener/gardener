@@ -26,6 +26,7 @@ func CheckVerticalPodAutoscaler(vpa *vpaautoscalingv1.VerticalPodAutoscaler) err
 			if err := checkConditionState(string(condition.Type), string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
 				return err
 			}
+
 			break
 		}
 	}

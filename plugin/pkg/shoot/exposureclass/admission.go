@@ -196,6 +196,7 @@ func uniteTolerations(shootTolerations []core.Toleration, exposureClassToleratio
 		if shootTolerationsKeys.Has(toleration.Key) {
 			return nil, fmt.Errorf("toleration with key %q conflicts with the ones of referenced exposureclass", toleration.Key)
 		}
+
 		shootTolerations = append(shootTolerations, core.Toleration{Key: toleration.Key, Value: toleration.Value})
 	}
 

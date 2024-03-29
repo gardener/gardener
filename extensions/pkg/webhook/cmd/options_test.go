@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package cmd_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.uber.org/mock/gomock"
 
+	. "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 

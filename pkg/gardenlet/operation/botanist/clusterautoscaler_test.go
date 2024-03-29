@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,7 +43,7 @@ import (
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		ctrl             *gomock.Controller
 		botanist         *Botanist

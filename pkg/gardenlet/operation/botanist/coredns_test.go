@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 	"time"
 
@@ -126,7 +126,7 @@ var _ = Describe("CoreDNS", func() {
 			c                client.Client
 
 			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {

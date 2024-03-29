@@ -386,7 +386,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 				gardenCoreClient.AddReactor("get", "controllerdeployments", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
+					return true, nil, errors.New("nope, out of luck")
 				})
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -431,7 +431,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced secret does not exist", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
+					return true, nil, errors.New("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -806,7 +806,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 
 				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
+					return true, nil, errors.New("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -832,7 +832,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				}
 
 				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
+					return true, nil, errors.New("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -861,7 +861,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreShoot.DeletionTimestamp = &now
 
 				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("nope, out of luck")
+					return true, nil, errors.New("nope, out of luck")
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}

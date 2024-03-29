@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -427,7 +428,7 @@ var _ = Describe("Util", func() {
 
 				coreV1Client.AddReactor("create", "serviceaccounts", func(action testing.Action) (bool, runtime.Object, error) {
 					if action.GetSubresource() != "token" {
-						return false, nil, fmt.Errorf("subresource should be 'token'")
+						return false, nil, errors.New("subresource should be 'token'")
 					}
 
 					cAction, ok := action.(testing.CreateAction)

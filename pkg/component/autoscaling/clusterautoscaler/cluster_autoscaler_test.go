@@ -264,7 +264,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
-					fmt.Sprintf("--expander=%s", string(configExpander)),
+					"--expander="+string(configExpander),
 					fmt.Sprintf("--max-graceful-termination-sec=%d", configMaxGracefulTerminationSeconds),
 					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),

@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -207,7 +208,7 @@ func (g *GardenerAPIServer) runAPIServerInProcess() error {
 func (g *GardenerAPIServer) defaultSettings() error {
 	var err error
 	if g.EtcdURL == nil {
-		return fmt.Errorf("expected EtcdURL to be configured")
+		return errors.New("expected EtcdURL to be configured")
 	}
 
 	if g.CertDir == "" {
@@ -262,7 +263,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 		"--etcd-servers=" + g.EtcdURL.String(),
 		"--tls-cert-file=" + filepath.Join(g.CertDir, "tls.crt"),
 		"--tls-private-key-file=" + filepath.Join(g.CertDir, "tls.key"),
-		"--secure-port=" + fmt.Sprintf("%d", g.SecurePort),
+		"--secure-port=" + strconv.Itoa(g.SecurePort),
 		"--cluster-identity=envtest",
 		"--authorization-always-allow-paths=" + g.HealthCheckEndpoint,
 		"--authentication-kubeconfig=" + kubeconfigFile,
@@ -456,7 +457,7 @@ func (g *GardenerAPIServer) Stop() error {
 		case <-g.exited:
 			break
 		case <-time.After(g.StopTimeout):
-			errList = append(errList, fmt.Errorf("timeout waiting for gardener-apiserver to stop"))
+			errList = append(errList, errors.New("timeout waiting for gardener-apiserver to stop"))
 		}
 	}
 

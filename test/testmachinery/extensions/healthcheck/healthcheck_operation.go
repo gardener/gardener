@@ -177,6 +177,7 @@ func deleteSeedDeploymentCheck(ctx context.Context, f *framework.ShootFramework,
 	if err := f.SeedClient.Client().Delete(ctx, &cloudControllerDeployment); err != nil {
 		return err
 	}
+
 	defer func() {
 		err = f.GardenerFramework.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile

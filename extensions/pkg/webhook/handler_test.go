@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package webhook_test
 
 import (
 	"context"
@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	. "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )

@@ -36,6 +36,7 @@ func GenerateRandomString(n int) (string, error) {
 func GenerateRandomStringFromCharset(n int, allowedCharacters string) (string, error) {
 	output := make([]byte, n)
 	max := new(big.Int).SetInt64(int64(len(allowedCharacters)))
+
 	for i := range output {
 		randomCharacter, err := cryptorand.Int(cryptorand.Reader, max)
 		if err != nil {

@@ -55,6 +55,7 @@ func DetermineIdentity() (*gardencorev1beta1.Gardener, error) {
 		reader := bufio.NewReader(cGroupFile)
 
 		var cgroupV1 string
+
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {

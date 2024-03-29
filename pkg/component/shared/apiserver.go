@@ -81,6 +81,7 @@ func computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins [
 			if defaultPlugin.Name == plugin.Name {
 				pluginOverwritesDefault = true
 				defaultPlugins[i] = plugin
+
 				break
 			}
 		}

@@ -24,6 +24,7 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 	if len(obj.LogLevel) == 0 {
 		obj.LogLevel = "info"
 	}
+
 	if len(obj.LogFormat) == 0 {
 		obj.LogFormat = "json"
 	}
@@ -42,6 +43,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	if obj.HealthProbes == nil {
 		obj.HealthProbes = &Server{}
 	}
+
 	if obj.HealthProbes.Port == 0 {
 		obj.HealthProbes.Port = 2722
 	}
@@ -49,6 +51,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 	if obj.Metrics == nil {
 		obj.Metrics = &Server{}
 	}
+
 	if obj.Metrics.Port == 0 {
 		obj.Metrics.Port = 2723
 	}
@@ -68,6 +71,7 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 	if obj.QPS == 0.0 {
 		obj.QPS = 50.0
 	}
+
 	if obj.Burst == 0 {
 		obj.Burst = 100
 	}

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -59,7 +59,7 @@ var _ = Describe("Worker", func() {
 
 		ctx                                    = context.TODO()
 		namespace                              = "namespace"
-		fakeErr                                = fmt.Errorf("fake")
+		fakeErr                                = errors.New("fake")
 		shootState                             = &gardencorev1beta1.ShootState{}
 		infrastructureProviderStatus           = &runtime.RawExtension{Raw: []byte("infrastatus")}
 		workerNameToOperatingSystemConfigMaps  = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}

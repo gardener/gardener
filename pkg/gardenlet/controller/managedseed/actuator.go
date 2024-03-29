@@ -16,6 +16,7 @@ package managedseed
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -210,7 +211,7 @@ func (a *actuator) Delete(
 
 	// Update SeedRegistered condition
 	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
-		fmt.Sprintf("Unregistering seed %s", ms.Name))
+		"Unregistering seed "+ms.Name)
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
@@ -470,7 +471,7 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 			return err
 		}
 		if seedVPAAdmissionControllerExists {
-			return fmt.Errorf("seed VPA is enabled but shoot already has a VPA")
+			return errors.New("seed VPA is enabled but shoot already has a VPA")
 		}
 	}
 

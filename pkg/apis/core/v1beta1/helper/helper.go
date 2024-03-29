@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -209,7 +210,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 		return nil, nil
 	}
 	if !ok2 {
-		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
+		return nil, errors.New("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
 	}
 
 	var apiServerAutoscaler ManagedSeedAPIServerAutoscaler
@@ -219,6 +220,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 		if err != nil {
 			return nil, err
 		}
+
 		apiServerAutoscaler.MinReplicas = &minReplicas
 	}
 
@@ -226,6 +228,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 	if err != nil {
 		return nil, err
 	}
+
 	apiServerAutoscaler.MaxReplicas = maxReplicas
 
 	return &apiServerAutoscaler, nil
@@ -270,6 +273,7 @@ func setDefaults_ManagedSeedAPIServer(apiServer *ManagedSeedAPIServer) {
 			MaxReplicas: 3,
 		}
 	}
+
 	setDefaults_ManagedSeedAPIServerAutoscaler(apiServer.Autoscaler)
 }
 
@@ -700,11 +704,13 @@ func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.Expirable
 	}
 
 	skippedNextMajorMinor := false
+
 	if foundVersion {
 		parse, err := semver.NewVersion(qualifyingVersion.Version)
 		if err != nil {
 			return false, "", err
 		}
+
 		skippedNextMajorMinor = getMajorOrMinor(*parse) > nextMinorOrMajorVersion
 	}
 
@@ -731,8 +737,10 @@ func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.Expirable
 // A version qualifies if its classification is not preview and the optional predicate does not filter out the version.
 // If the predicate returns true, the version is not considered for the latest qualifying version.
 func GetLatestQualifyingVersion(versions []gardencorev1beta1.ExpirableVersion, predicate ...VersionPredicate) (qualifyingVersionFound bool, latest *gardencorev1beta1.ExpirableVersion, err error) {
-	latestSemanticVersion := &semver.Version{}
-	var latestVersion *gardencorev1beta1.ExpirableVersion
+	var (
+		latestSemanticVersion = &semver.Version{}
+		latestVersion         *gardencorev1beta1.ExpirableVersion
+	)
 OUTER:
 	for _, v := range versions {
 		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
@@ -1028,6 +1036,7 @@ func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) 
 	if bb == nil {
 		return false, ""
 	}
+
 	lastErr := bb.Status.LastError
 	if lastErr == nil {
 		return false, ""

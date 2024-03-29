@@ -46,13 +46,14 @@ func CheckAPIServerAvailability(
 
 	// Determine the status code of the response.
 	var statusCode int
+
 	response.StatusCode(&statusCode)
 
 	if statusCode != http.StatusOK {
 		var body string
 		bodyRaw, err := response.Raw()
 		if err != nil {
-			body = fmt.Sprintf("Could not parse response body: %s", err.Error())
+			body = "Could not parse response body: " + err.Error()
 		} else {
 			body = string(bodyRaw)
 		}

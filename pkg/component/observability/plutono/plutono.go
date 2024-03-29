@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -378,7 +379,7 @@ datasources:
 	datasource += `- name: vali
   type: vali
   access: proxy
-  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(valiconstants.ValiPort) + `
+  url: http://logging.` + p.namespace + `.svc:` + strconv.Itoa(valiconstants.ValiPort) + `
   jsonData:
     maxLines: ` + maxLine + `
 `

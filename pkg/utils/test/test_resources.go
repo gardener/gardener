@@ -116,8 +116,11 @@ func readDocuments(fp string) ([][]byte, error) {
 		return nil, err
 	}
 
-	var docs [][]byte
-	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	var (
+		docs   [][]byte
+		reader = utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	)
+
 	for {
 		// Read document
 		doc, err := reader.Read()

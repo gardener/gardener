@@ -16,7 +16,7 @@ package kubernetes_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -95,7 +95,7 @@ var _ = Describe("Pods", func() {
 		It("should return error if port forward fails", func() {
 			defer goleak.VerifyNone(GinkgoT(), goleak.IgnoreCurrent())
 			fw := fake.PortForwarder{
-				Err:      fmt.Errorf("foo"),
+				Err:      errors.New("foo"),
 				DoneChan: make(chan struct{}, 1),
 			}
 			close(fw.DoneChan)

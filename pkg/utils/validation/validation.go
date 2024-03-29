@@ -24,6 +24,7 @@ func ShouldEnforceImmutability(new, old []string) bool {
 		if equal(newA, old) {
 			return false
 		}
+
 		return ShouldEnforceImmutability(newA, old)
 	}
 	return sizeDelta < 0 || sizeDelta == 0

@@ -60,6 +60,7 @@ func IsExtendedResourceName(name corev1.ResourceName) bool {
 	if errs := validation.IsQualifiedName(nameForQuota); len(errs) != 0 {
 		return false
 	}
+
 	return true
 }
 

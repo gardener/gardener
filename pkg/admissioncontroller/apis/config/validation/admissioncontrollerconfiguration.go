@@ -31,6 +31,7 @@ func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.
 	if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
 	}
+
 	if !sets.New(logger.AllLogFormats...).Has(config.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
 	}
@@ -39,6 +40,7 @@ func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.
 	if config.Server.ResourceAdmissionConfiguration != nil {
 		allErrs = append(allErrs, ValidateResourceAdmissionConfiguration(config.Server.ResourceAdmissionConfiguration, serverPath.Child("resourceAdmissionConfiguration"))...)
 	}
+
 	return allErrs
 }
 
@@ -59,6 +61,7 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.Re
 		if !allowedSubjectKinds.Has(subject.Kind) {
 			allErrs = append(allErrs, field.NotSupported(fld.Child("kind"), subject.Kind, allowedSubjectKinds.UnsortedList()))
 		}
+
 		if subject.Name == "" {
 			allErrs = append(allErrs, field.Invalid(fld.Child("name"), subject.Name, "name must not be empty"))
 		}
@@ -68,6 +71,7 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.Re
 			if subject.Namespace == "" {
 				allErrs = append(allErrs, field.Invalid(fld.Child("namespace"), subject.Namespace, "name must not be empty"))
 			}
+
 			if subject.APIGroup != "" {
 				allErrs = append(allErrs, field.Invalid(fld.Child("apiGroup"), subject.APIGroup, "apiGroup must be empty"))
 			}
@@ -75,6 +79,7 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.Re
 			if subject.Namespace != "" {
 				allErrs = append(allErrs, field.Invalid(fld.Child("namespace"), subject.Namespace, "name must be empty"))
 			}
+
 			if subject.APIGroup != rbacv1.GroupName {
 				allErrs = append(allErrs, field.NotSupported(fld.Child("apiGroup"), subject.APIGroup, []string{rbacv1.GroupName}))
 			}
@@ -84,12 +89,15 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.Re
 	for i, limit := range config.Limits {
 		fld := fldPath.Child("limits").Index(i)
 		hasResources := false
+
 		for j, resource := range limit.Resources {
 			hasResources = true
+
 			if resource == "" {
 				allErrs = append(allErrs, field.Invalid(fld.Child("resources").Index(j), resource, "must not be empty"))
 			}
 		}
+
 		if !hasResources {
 			allErrs = append(allErrs, field.Invalid(fld.Child("resources"), limit.Resources, "must at least have one element"))
 		}
@@ -101,10 +109,12 @@ func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.Re
 		hasVersions := false
 		for j, version := range limit.APIVersions {
 			hasVersions = true
+
 			if version == "" {
 				allErrs = append(allErrs, field.Invalid(fld.Child("versions").Index(j), version, "must not be empty"))
 			}
 		}
+
 		if !hasVersions {
 			allErrs = append(allErrs, field.Invalid(fld.Child("versions"), limit.Resources, "must at least have one element"))
 		}

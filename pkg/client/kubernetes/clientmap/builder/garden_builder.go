@@ -15,7 +15,7 @@
 package builder
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/go-logr/logr"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -58,10 +58,10 @@ func (b *GardenClientMapBuilder) WithGardenNamespace(namespace string) *GardenCl
 // Build builds the GardenClientMap using the provided attributes.
 func (b *GardenClientMapBuilder) Build(log logr.Logger) (clientmap.ClientMap, error) {
 	if b.runtimeClient == nil {
-		return nil, fmt.Errorf("runtime client is required but not set")
+		return nil, errors.New("runtime client is required but not set")
 	}
 	if b.clientConnectionConfig == nil {
-		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
+		return nil, errors.New("clientConnectionConfig is required but not set")
 	}
 
 	return clientmap.NewGardenClientMap(log, &clientmap.GardenClientSetFactory{

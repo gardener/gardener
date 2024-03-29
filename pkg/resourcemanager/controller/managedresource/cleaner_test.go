@@ -16,7 +16,7 @@ package managedresource
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -97,7 +97,7 @@ var _ = Describe("cleaner", func() {
 		})
 
 		It("should do nothing if list PVCs fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
 				DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
@@ -119,7 +119,7 @@ var _ = Describe("cleaner", func() {
 		})
 
 		It("should delete all PVCs of the StatefulSet", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).

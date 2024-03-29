@@ -128,6 +128,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	for id := range objectsToGarbageCollect {
 		objId := id
+
 		wg.StartWithContext(ctx, func(ctx context.Context) {
 			var (
 				meta = metav1.ObjectMeta{Namespace: objId.namespace, Name: objId.name}

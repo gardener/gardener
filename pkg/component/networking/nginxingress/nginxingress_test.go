@@ -16,7 +16,7 @@ package nginxingress_test
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -646,7 +646,7 @@ metadata:
   labels:
     app: nginx-ingress
     component: controller
-  name: nginx-ingress-controller-` + fmt.Sprintf("%d", index) + `
+  name: nginx-ingress-controller-` + strconv.Itoa(index) + `
   namespace: ` + namespace + `
 spec:
   exportTo:

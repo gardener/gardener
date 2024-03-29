@@ -714,8 +714,8 @@ images:
 				Expect(image).To(Equal(&Image{
 					Name:       name,
 					Repository: repository,
-					Tag:        ptr.To(fmt.Sprintf("v%s", version)),
-					Version:    ptr.To(fmt.Sprintf("v%s", version)),
+					Tag:        ptr.To("v" + version),
+					Version:    ptr.To("v" + version),
 				}))
 			})
 		})

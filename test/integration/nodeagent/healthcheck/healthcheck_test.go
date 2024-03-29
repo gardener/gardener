@@ -16,6 +16,7 @@ package healthcheck_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -276,7 +277,7 @@ type fakeContainerdClient struct {
 
 func (f *fakeContainerdClient) Version(_ context.Context) (containerd.Version, error) {
 	if f.returnError {
-		return containerd.Version{}, fmt.Errorf("calling fake containerd socket error")
+		return containerd.Version{}, errors.New("calling fake containerd socket error")
 	}
 	return containerd.Version{Version: "fake version"}, nil
 }

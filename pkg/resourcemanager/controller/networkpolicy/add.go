@@ -17,7 +17,7 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"maps"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -160,7 +160,7 @@ func fromPolicyAnnotationsChanged(oldAnnotations, newAnnotations map[string]stri
 	getPolicies(oldAnnotations, oldFromPolicies)
 	getPolicies(newAnnotations, newFromPolicies)
 
-	return !reflect.DeepEqual(oldFromPolicies, newFromPolicies)
+	return !maps.Equal(oldFromPolicies, newFromPolicies)
 }
 
 // IngressPredicate returns a predicate which filters UPDATE events on Ingresses such that only updates to the rules

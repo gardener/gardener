@@ -15,6 +15,7 @@
 package gardener
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -66,7 +67,7 @@ const (
 // GetDomainInfoFromAnnotations returns the provider, domain, and zones that are specified in the given annotations.
 func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, zone string, err error) {
 	if annotations == nil {
-		return "", "", "", fmt.Errorf("domain secret has no annotations")
+		return "", "", "", errors.New("domain secret has no annotations")
 	}
 
 	if providerAnnotation, ok := annotations[DNSProvider]; ok {

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -48,7 +48,7 @@ var _ = Describe("Extensions", func() {
 		botanist     *Botanist
 
 		ctx        = context.TODO()
-		fakeErr    = fmt.Errorf("fake")
+		fakeErr    = errors.New("fake")
 		shootState = &gardencorev1beta1.ShootState{}
 		namespace  = "shoot--name--space"
 	)

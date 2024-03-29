@@ -226,7 +226,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 									"--collector.stat",
 									"--collector.pressure",
 									"--collector.textfile",
-									fmt.Sprintf("--collector.textfile.directory=%s", volumeMountPathTextFileCollector),
+									"--collector.textfile.directory=" + volumeMountPathTextFileCollector,
 								},
 								Ports: []corev1.ContainerPort{
 									{

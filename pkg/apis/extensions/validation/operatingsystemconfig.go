@@ -128,6 +128,7 @@ func validateFileDuplicates(osc *extensionsv1alpha1.OperatingSystemConfig) field
 				if paths.Has(file.Path) {
 					allErrs = append(allErrs, field.Duplicate(idxPath.Child("path"), file.Path))
 				}
+
 				paths.Insert(file.Path)
 			}
 		}

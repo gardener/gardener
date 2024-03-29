@@ -1962,7 +1962,7 @@ rules:
 							},
 							{
 								Name:  "VPN_SERVER_INDEX",
-								Value: fmt.Sprintf("%d", index),
+								Value: strconv.Itoa(index),
 							},
 							{
 								Name:  "HA_VPN_SERVERS",

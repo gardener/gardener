@@ -70,6 +70,7 @@ func validateStrategy(strategy schedulerconfig.CandidateDeterminationStrategy, f
 
 	for _, s := range schedulerconfig.Strategies {
 		supportedStrategies = append(supportedStrategies, string(s))
+
 		if s == strategy {
 			return allErrs
 		}

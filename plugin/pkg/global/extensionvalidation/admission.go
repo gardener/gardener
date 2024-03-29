@@ -405,6 +405,7 @@ func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*gard
 
 func (r requiredExtensions) areSupportedForWorkerlessShoots(workerlessSupportedExtensionTypes sets.Set[string]) error {
 	var result error
+
 	for _, requiredExtension := range r {
 		if requiredExtension.extensionKind != extensionsv1alpha1.ExtensionResource {
 			continue

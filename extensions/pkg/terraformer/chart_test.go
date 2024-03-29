@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package terraformer
+package terraformer_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"helm.sh/helm/v3/pkg/releaseutil"
 
+	. "github.com/gardener/gardener/extensions/pkg/terraformer"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 func mkManifest(name string, content string) releaseutil.Manifest {
 	return releaseutil.Manifest{
-		Name:    fmt.Sprintf("/templates/%s", name),
+		Name:    "/templates/" + name,
 		Content: content,
 	}
 }

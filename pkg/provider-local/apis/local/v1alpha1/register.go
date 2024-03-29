@@ -51,5 +51,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CloudProfileConfig{},
 		&WorkerStatus{},
 	)
+
 	return nil
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper
+package mapper_test
 
 import (
 	"context"
@@ -32,6 +32,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )

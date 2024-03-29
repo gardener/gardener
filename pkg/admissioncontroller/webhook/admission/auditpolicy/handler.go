@@ -16,6 +16,7 @@ package auditpolicy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -212,7 +213,7 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 	if len(request.OldObject.Raw) != 0 {
 		return h.Decoder.DecodeRaw(request.OldObject, oldObj)
 	}
-	return fmt.Errorf("could not find old object")
+	return errors.New("could not find old object")
 }
 
 func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error) {
@@ -235,10 +236,10 @@ func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error)
 func getAuditPolicy(cm *corev1.ConfigMap) (string, error) {
 	auditPolicy, ok := cm.Data[auditPolicyConfigMapDataKey]
 	if !ok {
-		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap")
+		return "", errors.New("missing '.data.policy' in audit policy configmap")
 	}
 	if len(auditPolicy) == 0 {
-		return "", fmt.Errorf("empty audit policy. Provide non-empty audit policy")
+		return "", errors.New("empty audit policy. Provide non-empty audit policy")
 	}
 	return auditPolicy, nil
 }

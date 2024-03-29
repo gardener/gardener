@@ -15,6 +15,7 @@
 package errors_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -37,8 +38,8 @@ var _ = Describe("Errors", func() {
 		err1, err2 error
 	)
 	BeforeEach(func() {
-		err1 = fmt.Errorf("error 1")
-		err2 = fmt.Errorf("error 2")
+		err1 = errors.New("error 1")
+		err2 = errors.New("error 2")
 	})
 
 	Describe("#WithSuppressed", func() {
@@ -125,13 +126,13 @@ var _ = Describe("Errors", func() {
 
 		It("Should call default failure handler", func() {
 			errorID := "x1"
-			errorText := fmt.Sprintf("Error in %s", errorID)
+			errorText := "Error in " + errorID
 			expectedErr := errorsutils.WithID(errorID, fmt.Errorf("%s failed (%s)", errorID, errorText))
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				nil,
 				errorsutils.ToExecute(errorID, func() error {
-					return fmt.Errorf(errorText)
+					return errors.New(errorText)
 				}),
 			)
 
@@ -148,7 +149,7 @@ var _ = Describe("Errors", func() {
 					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
 				},
 				errorsutils.ToExecute(errID, func() error {
-					return fmt.Errorf(errorText)
+					return errors.New(errorText)
 				}),
 			)
 

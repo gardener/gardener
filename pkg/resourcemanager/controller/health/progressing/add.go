@@ -97,6 +97,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 				return err
 			}
 			c.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
+
 			continue
 		}
 

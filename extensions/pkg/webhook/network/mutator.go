@@ -16,6 +16,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -58,13 +59,13 @@ func (m *mutator) Mutate(_ context.Context, new, old client.Object) error {
 
 	newNetwork, ok = new.(*extensionsv1alpha1.Network)
 	if !ok {
-		return fmt.Errorf("could not mutate, object is not of type \"Network\"")
+		return fmt.Errorf("could not mutate, object is not of type %q", "Network")
 	}
 
 	if old != nil {
 		oldNetwork, ok = old.(*extensionsv1alpha1.Network)
 		if !ok {
-			return fmt.Errorf("could not cast old object to extensionsv1alpha1.Network")
+			return errors.New("could not cast old object to extensionsv1alpha1.Network")
 		}
 	}
 

@@ -16,7 +16,7 @@ package botanist_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -118,7 +118,7 @@ var _ = Describe("NginxIngress", func() {
 
 		ctx     = context.TODO()
 		now     = time.Now()
-		testErr = fmt.Errorf("test")
+		testErr = errors.New("test")
 	)
 
 	BeforeEach(func() {

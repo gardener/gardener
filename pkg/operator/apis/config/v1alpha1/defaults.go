@@ -95,6 +95,7 @@ func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
 	if obj.ETCDConfig == nil {
 		obj.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
 	}
+
 	gardenletv1alpha1.SetDefaults_ETCDConfig(obj.ETCDConfig)
 	gardenletv1alpha1.SetDefaults_ETCDController(obj.ETCDConfig.ETCDController)
 	gardenletv1alpha1.SetDefaults_CustodianController(obj.ETCDConfig.CustodianController)

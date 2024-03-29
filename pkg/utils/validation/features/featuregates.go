@@ -270,9 +270,10 @@ type FeatureGateVersionRange struct {
 
 func isFeatureLockedToDefault(featureGate, version string) (bool, error) {
 	var constraint string
+
 	vr := featureGateVersionRanges[featureGate]
 	if vr.LockedToDefaultInVersion != "" {
-		constraint = fmt.Sprintf(">= %s", vr.LockedToDefaultInVersion)
+		constraint = ">= " + vr.LockedToDefaultInVersion
 		return versionutils.CheckVersionMeetsConstraint(version, constraint)
 	}
 
@@ -288,7 +289,7 @@ func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath 
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
 		} else if !supported {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("not supported in Kubernetes version %s", version)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported in Kubernetes version "+version))
 		} else {
 			isLockedToDefault, err := isFeatureLockedToDefault(featureGate, version)
 			if err != nil {

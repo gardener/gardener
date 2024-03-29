@@ -69,6 +69,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		body        []byte
 		err         error
 	)
+
 	defer cancel()
 
 	// Verify that body is non-empty
@@ -117,6 +118,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var status authorizationv1.SubjectAccessReviewStatus
+
 	switch decision {
 	case auth.DecisionAllow:
 		status = Allowed()
@@ -167,6 +169,7 @@ func (h *Handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccess
 	// isn't set. By setting TypeMeta of an unregistered type to the v1 GVK, the decoder will coerce a v1beta1
 	// SubjectAccessReview to v1.
 	var obj unversionedAdmissionReview
+
 	obj.SetGroupVersionKind(authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
 
 	_, gvk, err := codecs.UniversalDeserializer().Decode(body, nil, &obj)
@@ -174,7 +177,7 @@ func (h *Handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccess
 		return nil, nil, err
 	}
 	if gvk == nil {
-		return nil, nil, fmt.Errorf("could not determine GVK for object in the request body")
+		return nil, nil, errors.New("could not determine GVK for object in the request body")
 	}
 
 	// The only difference in v1beta1 is that the JSON key name of the 'Groups' field is different. Hence, when we

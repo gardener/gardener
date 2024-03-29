@@ -101,6 +101,7 @@ func getName(kind string) string {
 func buildSelector(kind, provider string) (*metav1.LabelSelector, error) {
 	// Determine label selector key from the kind
 	var key string
+
 	switch kind {
 	case KindSeed:
 		key = v1beta1constants.LabelSeedProvider

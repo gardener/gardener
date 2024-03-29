@@ -50,5 +50,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&NodeAgentConfiguration{},
 	)
+
 	return nil
 }

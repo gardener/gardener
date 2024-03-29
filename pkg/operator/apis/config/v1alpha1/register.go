@@ -50,6 +50,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&OperatorConfiguration{},
 	)
+
 	return nil
 }
 

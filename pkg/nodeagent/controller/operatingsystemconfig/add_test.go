@@ -16,7 +16,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -187,7 +187,7 @@ var _ = Describe("Add", func() {
 						When("there are other nodes", func() {
 							BeforeEach(func() {
 								for i := 2; i <= 5; i++ {
-									otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%d", i)}}
+									otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: strconv.Itoa(i)}}
 
 									Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
 									DeferCleanup(func() {
@@ -198,7 +198,7 @@ var _ = Describe("Add", func() {
 
 							test := func(node int) {
 								BeforeEach(func() {
-									nodeName = fmt.Sprintf("%d", node)
+									nodeName = strconv.Itoa(node)
 								})
 
 								It("should enqueue the object with the expected delay", func() {
@@ -234,7 +234,7 @@ var _ = Describe("Add", func() {
 							nodeName = "8"
 
 							for i := 2; i <= 15; i++ {
-								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%d", i)}}
+								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: strconv.Itoa(i)}}
 
 								Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
 								DeferCleanup(func() {

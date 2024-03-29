@@ -63,7 +63,7 @@ var _ = Describe("errors", func() {
 		},
 
 		Entry("no wrapped error",
-			fmt.Errorf("foo"),
+			errors.New("foo"),
 			errors.New("foo"),
 		),
 		Entry("no code to extract",

@@ -63,6 +63,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 
 	twoMinutes := 2 * time.Minute
 	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
+
 	defer cancelSeedCtx()
 	return managedresources.WaitUntilHealthy(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed)
 }

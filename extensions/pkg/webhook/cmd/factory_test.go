@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package cmd_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	. "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 )
 
 var _ = Describe("FactoryAggregator", func() {

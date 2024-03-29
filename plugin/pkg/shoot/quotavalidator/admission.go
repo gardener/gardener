@@ -278,6 +278,7 @@ func (q *QuotaValidator) determineAllocatedResources(quota gardencorev1beta1.Quo
 		if err != nil {
 			return nil, err
 		}
+
 		for _, metric := range quotaMetricNames {
 			allocatedResources[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
 		}
@@ -308,6 +309,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 	if err != nil {
 		return nil, err
 	}
+
 	for _, binding := range allSecretBindings {
 		for _, quotaRef := range binding.Quotas {
 			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
@@ -321,6 +323,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 		if err != nil {
 			return nil, err
 		}
+
 		for _, s := range shoots {
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
@@ -474,14 +477,17 @@ func quotaVerificationNeeded(new, old core.Shoot) bool {
 	// Check for diffs on workers
 	for _, worker := range new.Spec.Provider.Workers {
 		oldHasWorker := false
+
 		for _, oldWorker := range old.Spec.Provider.Workers {
 			if worker.Name == oldWorker.Name {
 				oldHasWorker = true
+
 				if worker.Machine.Type != oldWorker.Machine.Type || worker.Maximum != oldWorker.Maximum || !apiequality.Semantic.DeepEqual(worker.Volume, oldWorker.Volume) {
 					return true
 				}
 			}
 		}
+
 		if !oldHasWorker {
 			return true
 		}

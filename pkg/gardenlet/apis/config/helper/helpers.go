@@ -15,7 +15,7 @@
 package helper
 
 import (
-	"fmt"
+	"errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,7 +65,7 @@ func ConvertGardenletConfiguration(obj runtime.Object) (*config.GardenletConfigu
 	}
 	result, ok := obj.(*config.GardenletConfiguration)
 	if !ok {
-		return nil, fmt.Errorf("could not convert GardenletConfiguration to internal version")
+		return nil, errors.New("could not convert GardenletConfiguration to internal version")
 	}
 	return result, nil
 }
@@ -78,7 +78,7 @@ func ConvertGardenletConfigurationExternal(obj runtime.Object) (*gardenletv1alph
 	}
 	result, ok := obj.(*gardenletv1alpha1.GardenletConfiguration)
 	if !ok {
-		return nil, fmt.Errorf("could not convert GardenletConfiguration to version %s", gardenletv1alpha1.SchemeGroupVersion.String())
+		return nil, errors.New("could not convert GardenletConfiguration to version " + gardenletv1alpha1.SchemeGroupVersion.String())
 	}
 	return result, nil
 }

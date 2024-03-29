@@ -16,7 +16,7 @@ package managedresource_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -79,7 +79,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 	It("should do nothing, if list fails", func() {
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			Return(fmt.Errorf("fake"))
+			Return(errors.New("fake"))
 
 		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(BeEmpty())

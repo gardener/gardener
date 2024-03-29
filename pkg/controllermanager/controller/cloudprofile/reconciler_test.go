@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudprofile
+package cloudprofile_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -53,7 +55,7 @@ var _ = Describe("Reconciler", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		cloudProfileName = "test-cloudprofile"
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 		reconciler = &Reconciler{Client: c, Recorder: &record.FakeRecorder{}}
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{

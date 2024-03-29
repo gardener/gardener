@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -64,7 +65,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		ctx        = context.TODO()
 		namespace  = "namespace"
-		fakeErr    = fmt.Errorf("fake")
+		fakeErr    = errors.New("fake")
 		shootState = &gardencorev1beta1.ShootState{}
 
 		apiServerAddress  = "1.2.3.4"

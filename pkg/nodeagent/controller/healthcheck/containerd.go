@@ -70,6 +70,7 @@ func (c *containerdHealthChecker) Check(ctx context.Context, node *corev1.Node) 
 		if c.firstFailure == nil {
 			now := c.clock.Now()
 			c.firstFailure = &now
+
 			log.Error(err, "Unable to get containerd version, considered unhealthy")
 			c.recorder.Eventf(node, corev1.EventTypeWarning, "containerd", "Containerd is unhealthy: %s", err.Error())
 		}

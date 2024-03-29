@@ -155,5 +155,6 @@ var _ = Describe("validation", func() {
 func prepareBastionForUpdate(obj *operations.Bastion) *operations.Bastion {
 	newObj := obj.DeepCopy()
 	newObj.ResourceVersion = "1"
+
 	return newObj
 }

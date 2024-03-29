@@ -15,8 +15,6 @@
 package helper_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -82,12 +80,12 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip2),
+								CIDR: ip2 + "/32",
 							},
 						},
 					},
@@ -96,17 +94,17 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip3),
+								CIDR: ip3 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip4),
+								CIDR: ip4 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip2),
+								CIDR: ip2 + "/32",
 							},
 						},
 					},
@@ -158,7 +156,7 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 					},
@@ -173,7 +171,7 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 					},

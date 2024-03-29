@@ -53,7 +53,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		id, err := utils.GenerateRandomStringFromCharset(3, allowedCharacters)
 		framework.ExpectNoError(err)
 
-		containerdWorker.Name = fmt.Sprintf("test-%s", id)
+		containerdWorker.Name = "test-" + id
 		containerdWorker.Maximum = 1
 		containerdWorker.Minimum = 1
 		containerdWorker.CRI = &gardencorev1beta1.CRI{

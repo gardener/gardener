@@ -33,10 +33,12 @@ func NewAPIServerHealthz(ctx context.Context, restClient rest.Interface) healthz
 		}
 
 		var statusCode int
+
 		result.StatusCode(&statusCode)
 		if statusCode != http.StatusOK {
 			return fmt.Errorf("failed talking to the source cluster's kube-apiserver (status code: %d)", statusCode)
 		}
+
 		return nil
 	}
 }
