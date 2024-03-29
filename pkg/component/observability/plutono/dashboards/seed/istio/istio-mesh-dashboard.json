@@ -79,15 +79,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(istio_tcp_received_bytes_total{destination_service=~\"$tcp_service\"})",
+          "expr": "sum(rate(istio_tcp_received_bytes_total{destination_service=~\"$tcp_service\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Received",
           "refId": "A"
         },
         {
-          "expr": "sum(istio_tcp_sent_bytes_total{destination_service=~\"$tcp_service\"})",
+          "expr": "sum(rate(istio_tcp_sent_bytes_total{destination_service=~\"$tcp_service\"}[$__rate_interval]))",
           "interval": "",
-          "legendFormat": "Send",
+          "legendFormat": "Sent",
           "refId": "B"
         }
       ],
