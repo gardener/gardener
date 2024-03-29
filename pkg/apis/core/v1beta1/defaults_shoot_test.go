@@ -932,7 +932,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:       &metav1.Duration{Duration: 5 * time.Minute},
 				EvictionRateBurst:            ptr.To[int32](2),
-				EvictionRateLimit:            ptr.To(float64(1)),
+				EvictionRateLimit:            ptr.To[float64](1),
 				EvictionTolerance:            &evictionTolerance,
 				RecommendationMarginFraction: &recommendationMarginFraction,
 				UpdaterInterval:              &metav1.Duration{Duration: 2 * time.Minute},
