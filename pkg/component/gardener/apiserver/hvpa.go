@@ -47,7 +47,7 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 			Labels:    utils.MergeStringMaps(GetLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 			Hpa: hvpav1alpha1.HpaSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
 				Deploy:   true,
@@ -73,14 +73,14 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 						},
@@ -98,11 +98,11 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("300m"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("200M"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
@@ -114,22 +114,22 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("600m"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("600M"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1"),
-						Percentage: ptr.To(int32(70)),
+						Percentage: ptr.To[int32](70),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1G"),
-						Percentage: ptr.To(int32(70)),
+						Percentage: ptr.To[int32](70),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{

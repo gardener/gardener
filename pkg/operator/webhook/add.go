@@ -79,7 +79,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To(int32(10)),
+				TimeoutSeconds: ptr.To[int32](10),
 			},
 		},
 	}
@@ -117,7 +117,7 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 				SideEffects:    &sideEffects,
 				FailurePolicy:  &failurePolicy,
 				MatchPolicy:    &matchPolicy,
-				TimeoutSeconds: ptr.To(int32(10)),
+				TimeoutSeconds: ptr.To[int32](10),
 			},
 		},
 	}

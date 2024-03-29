@@ -275,7 +275,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		setGardenerResourceManagerReplicas = g.Add(flow.Task{
 			Name: "Setting gardener-resource-manager replicas to 2",
 			Fn: flow.TaskFn(func(_ context.Context) error {
-				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(ptr.To(int32(2)))
+				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(ptr.To[int32](2))
 				return nil
 			}),
 			SkipIf:       !cleanupShootResources,

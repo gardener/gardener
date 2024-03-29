@@ -154,14 +154,14 @@ var _ = Describe("Seed controller tests", func() {
 				ETCDConfig: &config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
 						EnableBackupCompaction: ptr.To(false),
-						EventsThreshold:        ptr.To(int64(1)),
-						Workers:                ptr.To(int64(1)),
+						EventsThreshold:        ptr.To[int64](1),
+						Workers:                ptr.To[int64](1),
 					},
 					CustodianController: &config.CustodianController{
-						Workers: ptr.To(int64(1)),
+						Workers: ptr.To[int64](1),
 					},
 					ETCDController: &config.ETCDController{
-						Workers: ptr.To(int64(1)),
+						Workers: ptr.To[int64](1),
 					},
 				},
 				SeedConfig: &config.SeedConfig{

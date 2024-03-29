@@ -1147,10 +1147,10 @@ var _ = Describe("Validation Tests", func() {
 							Entry("valid (unset)", nil, BeEmpty()),
 							Entry("valid (fields unset)", &gardencorev1beta1.WatchCacheSizes{}, BeEmpty()),
 							Entry("valid (default=0)", &gardencorev1beta1.WatchCacheSizes{
-								Default: ptr.To(int32(0)),
+								Default: ptr.To[int32](0),
 							}, BeEmpty()),
 							Entry("valid (default>0)", &gardencorev1beta1.WatchCacheSizes{
-								Default: ptr.To(int32(42)),
+								Default: ptr.To[int32](42),
 							}, BeEmpty()),
 							Entry("invalid (default<0)", &gardencorev1beta1.WatchCacheSizes{
 								Default: ptr.To(negativeSize),
@@ -1235,16 +1235,16 @@ var _ = Describe("Validation Tests", func() {
 							Entry("valid (unset)", nil, BeEmpty()),
 							Entry("valid (fields unset)", &gardencorev1beta1.APIServerLogging{}, BeEmpty()),
 							Entry("valid (verbosity=0)", &gardencorev1beta1.APIServerLogging{
-								Verbosity: ptr.To(int32(0)),
+								Verbosity: ptr.To[int32](0),
 							}, BeEmpty()),
 							Entry("valid (httpAccessVerbosity=0)", &gardencorev1beta1.APIServerLogging{
-								HTTPAccessVerbosity: ptr.To(int32(0)),
+								HTTPAccessVerbosity: ptr.To[int32](0),
 							}, BeEmpty()),
 							Entry("valid (verbosity>0)", &gardencorev1beta1.APIServerLogging{
-								Verbosity: ptr.To(int32(3)),
+								Verbosity: ptr.To[int32](3),
 							}, BeEmpty()),
 							Entry("valid (httpAccessVerbosity>0)", &gardencorev1beta1.APIServerLogging{
-								HTTPAccessVerbosity: ptr.To(int32(3)),
+								HTTPAccessVerbosity: ptr.To[int32](3),
 							}, BeEmpty()),
 							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: ptr.To(negativeSize),
@@ -1262,8 +1262,8 @@ var _ = Describe("Validation Tests", func() {
 					Context("Requests", func() {
 						It("should not allow too high values for max inflight requests fields", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
-								MaxNonMutatingInflight: ptr.To(int32(123123123)),
-								MaxMutatingInflight:    ptr.To(int32(412412412)),
+								MaxNonMutatingInflight: ptr.To[int32](123123123),
+								MaxMutatingInflight:    ptr.To[int32](412412412),
 							}
 
 							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

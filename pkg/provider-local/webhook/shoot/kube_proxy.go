@@ -31,7 +31,7 @@ func (m *mutator) mutateKubeProxyConfigMap(_ context.Context, configmap *corev1.
 		return err
 	}
 
-	config.Conntrack.MaxPerCore = ptr.To(int32(0))
+	config.Conntrack.MaxPerCore = ptr.To[int32](0)
 
 	data, err := m.kubeProxyConfigCodec.Encode(config)
 	if err != nil {

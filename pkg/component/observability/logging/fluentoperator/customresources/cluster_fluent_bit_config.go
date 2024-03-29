@@ -35,13 +35,13 @@ func GetClusterFluentBitConfig(fluentBitName string, matchLabels map[string]stri
 		},
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 			Service: &fluentbitv1alpha2.Service{
-				FlushSeconds: ptr.To(int64(30)),
+				FlushSeconds: ptr.To[int64](30),
 				Daemon:       ptr.To(false),
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",
 				HttpServer:   ptr.To(true),
 				HttpListen:   "0.0.0.0",
-				HttpPort:     ptr.To(int32(2020)),
+				HttpPort:     ptr.To[int32](2020),
 			},
 			InputSelector: metav1.LabelSelector{
 				MatchLabels: matchLabels,

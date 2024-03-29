@@ -120,8 +120,8 @@ var _ = Describe("ValuesHelper", func() {
 		vh = NewValuesHelper(parentConfig)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(1)),
+			ReplicaCount:         ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](1),
 			Image: &seedmanagementv1alpha1.Image{
 				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			},
@@ -152,8 +152,8 @@ var _ = Describe("ValuesHelper", func() {
 		}
 
 		mergedDeployment = &seedmanagementv1alpha1.GardenletDeployment{
-			ReplicaCount:         ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(1)),
+			ReplicaCount:         ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](1),
 			Image: &seedmanagementv1alpha1.Image{
 				Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet"),
 				Tag:        ptr.To("v0.0.0-master+$Format:%H$"),

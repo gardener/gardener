@@ -59,7 +59,7 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("nil value", nil, int64(120)),
-		Entry("non-nil value", ptr.To(int64(300)), int64(300)),
+		Entry("non-nil value", ptr.To[int64](300), int64(300)),
 	)
 
 	Describe("#DeterminePrimaryIPFamily", func() {

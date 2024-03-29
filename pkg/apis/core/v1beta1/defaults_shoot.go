@@ -88,10 +88,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(300))
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To[int64](300)
 		}
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
-			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(300))
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To[int64](300)
 		}
 
 		if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -149,10 +149,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			}
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To(int32(50))
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To[int32](50)
 		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
-			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To(int32(40))
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To[int32](40)
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
@@ -215,10 +215,10 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Requests = &APIServerRequests{}
 	}
 	if obj.Requests.MaxNonMutatingInflight == nil {
-		obj.Requests.MaxNonMutatingInflight = ptr.To(int32(400))
+		obj.Requests.MaxNonMutatingInflight = ptr.To[int32](400)
 	}
 	if obj.Requests.MaxMutatingInflight == nil {
-		obj.Requests.MaxMutatingInflight = ptr.To(int32(200))
+		obj.Requests.MaxMutatingInflight = ptr.To[int32](200)
 	}
 	if obj.EnableAnonymousAuthentication == nil {
 		obj.EnableAnonymousAuthentication = ptr.To(false)
@@ -230,7 +230,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 		obj.Logging = &APIServerLogging{}
 	}
 	if obj.Logging.Verbosity == nil {
-		obj.Logging.Verbosity = ptr.To(int32(2))
+		obj.Logging.Verbosity = ptr.To[int32](2)
 	}
 }
 
@@ -331,19 +331,19 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
 	}
 	if obj.MaxGracefulTerminationSeconds == nil {
-		obj.MaxGracefulTerminationSeconds = ptr.To(int32(600))
+		obj.MaxGracefulTerminationSeconds = ptr.To[int32](600)
 	}
 	if obj.IgnoreDaemonsetsUtilization == nil {
 		obj.IgnoreDaemonsetsUtilization = ptr.To(false)
 	}
 	if obj.Verbosity == nil {
-		obj.Verbosity = ptr.To(int32(2))
+		obj.Verbosity = ptr.To[int32](2)
 	}
 	if obj.NewPodScaleUpDelay == nil {
 		obj.NewPodScaleUpDelay = &metav1.Duration{Duration: 0}
 	}
 	if obj.MaxEmptyBulkDelete == nil {
-		obj.MaxEmptyBulkDelete = ptr.To(int32(10))
+		obj.MaxEmptyBulkDelete = ptr.To[int32](10)
 	}
 }
 
@@ -362,7 +362,7 @@ func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
 		// If shoot is using IPv6 single-stack, don't be stingy and allocate larger pod CIDRs per node.
 		// We don't calculate a nodeCIDRMaskSize matching the maxPods settings in this case, and simply apply
 		// kube-controller-manager's default value for the --node-cidr-mask-size flag.
-		return ptr.To(int32(64))
+		return ptr.To[int32](64)
 	}
 
 	var maxPods int32 = 110 // default maxPods setting on kubelet

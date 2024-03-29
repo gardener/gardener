@@ -63,7 +63,7 @@ func (g *gardenerAPIServer) deployment(
 		},
 		Spec: appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Replicas:             g.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 			Strategy: appsv1.DeploymentStrategy{
@@ -91,9 +91,9 @@ func (g *gardenerAPIServer) deployment(
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To(int64(65532)),
-						RunAsGroup:   ptr.To(int64(65532)),
-						FSGroup:      ptr.To(int64(65532)),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
 					},
 					Containers: []corev1.Container{{
 						Name:            containerName,

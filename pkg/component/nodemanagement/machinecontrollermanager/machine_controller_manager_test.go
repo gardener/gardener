@@ -176,7 +176,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &replicas,
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
@@ -242,7 +242,7 @@ var _ = Describe("MachineControllerManager", func() {
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
-						TerminationGracePeriodSeconds: ptr.To(int64(5)),
+						TerminationGracePeriodSeconds: ptr.To[int64](5),
 					},
 				},
 			},
@@ -588,7 +588,7 @@ subjects:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To(int32(1))
+				deploy.Spec.Replicas = ptr.To[int32](1)
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},

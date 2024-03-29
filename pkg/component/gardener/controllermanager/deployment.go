@@ -48,8 +48,8 @@ func (g *gardenerControllerManager) deployment(secretGenericTokenKubeconfig, sec
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -67,9 +67,9 @@ func (g *gardenerControllerManager) deployment(secretGenericTokenKubeconfig, sec
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To(int64(65532)),
-						RunAsGroup:   ptr.To(int64(65532)),
-						FSGroup:      ptr.To(int64(65532)),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
 					},
 					Containers: []corev1.Container{
 						{

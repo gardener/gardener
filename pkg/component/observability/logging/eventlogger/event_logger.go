@@ -245,7 +245,7 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, l.client, deployment, func() error {
 		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To[int32](1),
 			Replicas:             ptr.To(l.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),

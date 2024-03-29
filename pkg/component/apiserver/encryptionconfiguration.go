@@ -196,7 +196,7 @@ func InjectEncryptionSettings(deployment *appsv1.Deployment, secretETCDEncryptio
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretETCDEncryptionConfiguration.Name,
-				DefaultMode: ptr.To(int32(0640)),
+				DefaultMode: ptr.To[int32](0640),
 			},
 		},
 	})

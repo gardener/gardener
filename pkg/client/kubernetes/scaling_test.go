@@ -54,7 +54,7 @@ var _ = Describe("scale", func() {
 				Generation: 2,
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas: ptr.To(int32(2)),
+				Replicas: ptr.To[int32](2),
 			},
 			Status: appsv1.StatefulSetStatus{
 				ObservedGeneration: 2,
@@ -99,7 +99,7 @@ var _ = Describe("scale", func() {
 							Generation: 2,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To(int32(2)),
+							Replicas: ptr.To[int32](2),
 						},
 						Status: appsv1.DeploymentStatus{
 							ObservedGeneration: 2,

@@ -543,7 +543,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Replicas:             ptr.To(p.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),

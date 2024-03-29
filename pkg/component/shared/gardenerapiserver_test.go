@@ -362,8 +362,8 @@ var _ = Describe("GardenerAPIServer", func() {
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    ptr.To(int32(1)),
-					MaxNonMutatingInflight: ptr.To(int32(2)),
+					MaxMutatingInflight:    ptr.To[int32](1),
+					MaxNonMutatingInflight: ptr.To[int32](2),
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{Requests: requests}
 
@@ -382,7 +382,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   ptr.To(int32(1)),
+					Default:   ptr.To[int32](1),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{WatchCacheSizes: watchCacheSizes}

@@ -222,13 +222,13 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("HVPA is enabled", apiserver.AutoscalingConfig{HVPAEnabled: true}),
 				Entry("replicas is nil", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
-				Entry("replicas is 0", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: ptr.To(int32(0))}),
+				Entry("replicas is 0", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: ptr.To[int32](0)}),
 			)
 
 			BeforeEach(func() {
 				autoscalingConfig = apiserver.AutoscalingConfig{
 					HVPAEnabled: false,
-					Replicas:    ptr.To(int32(2)),
+					Replicas:    ptr.To[int32](2),
 					MinReplicas: 4,
 					MaxReplicas: 6,
 				}
@@ -261,7 +261,7 @@ var _ = Describe("KubeAPIServer", func() {
 									Name: "cpu",
 									Target: autoscalingv2.MetricTarget{
 										Type:               autoscalingv2.UtilizationMetricType,
-										AverageUtilization: ptr.To(int32(80)),
+										AverageUtilization: ptr.To[int32](80),
 									},
 								},
 							},
@@ -271,7 +271,7 @@ var _ = Describe("KubeAPIServer", func() {
 									Name: "memory",
 									Target: autoscalingv2.MetricTarget{
 										Type:               autoscalingv2.UtilizationMetricType,
-										AverageUtilization: ptr.To(int32(80)),
+										AverageUtilization: ptr.To[int32](80),
 									},
 								},
 							},
@@ -350,7 +350,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("HVPA disabled", apiserver.AutoscalingConfig{HVPAEnabled: false}),
 				Entry("HVPA enabled but replicas nil", apiserver.AutoscalingConfig{HVPAEnabled: true}),
-				Entry("HVPA enabled but replicas zero", apiserver.AutoscalingConfig{HVPAEnabled: true, Replicas: ptr.To(int32(0))}),
+				Entry("HVPA enabled but replicas zero", apiserver.AutoscalingConfig{HVPAEnabled: true, Replicas: ptr.To[int32](0)}),
 			)
 
 			var (
@@ -360,7 +360,7 @@ var _ = Describe("KubeAPIServer", func() {
 						Type: "Resource",
 						Resource: &autoscalingv2beta1.ResourceMetricSource{
 							Name:                     "cpu",
-							TargetAverageUtilization: ptr.To(int32(80)),
+							TargetAverageUtilization: ptr.To[int32](80),
 						},
 					},
 				}
@@ -417,7 +417,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: hvpav1alpha1.HvpaSpec{
-							Replicas: ptr.To(int32(1)),
+							Replicas: ptr.To[int32](1),
 							Hpa: hvpav1alpha1.HpaSpec{
 								Selector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{"role": "apiserver-hpa"},
@@ -457,11 +457,11 @@ var _ = Describe("KubeAPIServer", func() {
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
 											Value:      ptr.To("300m"),
-											Percentage: ptr.To(int32(80)),
+											Percentage: ptr.To[int32](80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
 											Value:      ptr.To("200M"),
-											Percentage: ptr.To(int32(80)),
+											Percentage: ptr.To[int32](80),
 										},
 									},
 								},
@@ -473,22 +473,22 @@ var _ = Describe("KubeAPIServer", func() {
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
 											Value:      ptr.To("300m"),
-											Percentage: ptr.To(int32(80)),
+											Percentage: ptr.To[int32](80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
 											Value:      ptr.To("200M"),
-											Percentage: ptr.To(int32(80)),
+											Percentage: ptr.To[int32](80),
 										},
 									},
 								},
 								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 									CPU: hvpav1alpha1.ChangeParams{
 										Value:      ptr.To("1"),
-										Percentage: ptr.To(int32(70)),
+										Percentage: ptr.To[int32](70),
 									},
 									Memory: hvpav1alpha1.ChangeParams{
 										Value:      ptr.To("1G"),
-										Percentage: ptr.To(int32(70)),
+										Percentage: ptr.To[int32](70),
 									},
 								},
 								Template: hvpav1alpha1.VpaTemplate{
@@ -515,7 +515,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default behaviour",
 					apiserver.AutoscalingConfig{
 						HVPAEnabled: true,
-						Replicas:    ptr.To(int32(2)),
+						Replicas:    ptr.To[int32](2),
 						MinReplicas: 5,
 						MaxReplicas: 5,
 					},
@@ -528,7 +528,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("UseMemoryMetricForHvpaHPA is true",
 					apiserver.AutoscalingConfig{
 						HVPAEnabled:               true,
-						Replicas:                  ptr.To(int32(2)),
+						Replicas:                  ptr.To[int32](2),
 						UseMemoryMetricForHvpaHPA: true,
 						MinReplicas:               5,
 						MaxReplicas:               5,
@@ -540,14 +540,14 @@ var _ = Describe("KubeAPIServer", func() {
 							Type: "Resource",
 							Resource: &autoscalingv2beta1.ResourceMetricSource{
 								Name:                     "cpu",
-								TargetAverageUtilization: ptr.To(int32(80)),
+								TargetAverageUtilization: ptr.To[int32](80),
 							},
 						},
 						{
 							Type: "Resource",
 							Resource: &autoscalingv2beta1.ResourceMetricSource{
 								Name:                     "memory",
-								TargetAverageUtilization: ptr.To(int32(80)),
+								TargetAverageUtilization: ptr.To[int32](80),
 							},
 						},
 					},
@@ -557,7 +557,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("scale down is disabled",
 					apiserver.AutoscalingConfig{
 						HVPAEnabled:              true,
-						Replicas:                 ptr.To(int32(2)),
+						Replicas:                 ptr.To[int32](2),
 						MinReplicas:              5,
 						MaxReplicas:              5,
 						ScaleDownDisabledForHvpa: true,
@@ -571,7 +571,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("max replicas > min replicas",
 					apiserver.AutoscalingConfig{
 						HVPAEnabled: true,
-						Replicas:    ptr.To(int32(2)),
+						Replicas:    ptr.To[int32](2),
 						MinReplicas: 3,
 						MaxReplicas: 5,
 					},
@@ -1992,7 +1992,7 @@ rules:
 						},
 						SecurityContext: &corev1.SecurityContext{
 							RunAsNonRoot: ptr.To(false),
-							RunAsUser:    ptr.To(int64(0)),
+							RunAsUser:    ptr.To[int64](0),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
 							},
@@ -2091,7 +2091,7 @@ rules:
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsNonRoot: ptr.To(false),
-						RunAsUser:    ptr.To(int64(0)),
+						RunAsUser:    ptr.To[int64](0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -2110,7 +2110,7 @@ rules:
 						Name: "vpn-seed-client",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To(int32(400)),
+								DefaultMode: ptr.To[int32](400),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -2195,8 +2195,8 @@ rules:
 							EnabledAdmissionPlugins: admissionPlugins,
 							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
 							Logging: &gardencorev1beta1.APIServerLogging{
-								Verbosity:           ptr.To(int32(3)),
-								HTTPAccessVerbosity: ptr.To(int32(3)),
+								Verbosity:           ptr.To[int32](3),
+								HTTPAccessVerbosity: ptr.To[int32](3),
 							},
 							RuntimeVersion: runtimeVersion,
 						},
@@ -2416,7 +2416,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameEtcd,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2425,7 +2425,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKey,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2434,7 +2434,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServiceAccountKeyBundle,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2451,7 +2451,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAggregator,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2460,7 +2460,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameETCDEncryptionConfig,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2469,7 +2469,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameServer,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2516,7 +2516,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameKubeAPIServerToKubelet,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -2793,8 +2793,8 @@ rules:
 
 				It("should configure the request settings if provided", func() {
 					requests := &gardencorev1beta1.APIServerRequests{
-						MaxNonMutatingInflight: ptr.To(int32(123)),
-						MaxMutatingInflight:    ptr.To(int32(456)),
+						MaxNonMutatingInflight: ptr.To[int32](123),
+						MaxMutatingInflight:    ptr.To[int32](456),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -2876,7 +2876,7 @@ rules:
 
 				It("should configure the watch cache settings if provided", func() {
 					watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To(int32(123)),
+						Default: ptr.To[int32](123),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{Resource: "foo", CacheSize: 456},
 							{Resource: "bar", CacheSize: 789, APIGroup: ptr.To("baz")},
@@ -2913,8 +2913,8 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						DefaultNotReadyTolerationSeconds:    ptr.To(int64(120)),
-						DefaultUnreachableTolerationSeconds: ptr.To(int64(130)),
+						DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
+						DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
 						Images:                              images,
 						Version:                             version,
 					})
@@ -2929,8 +2929,8 @@ rules:
 
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
 					logging := &gardencorev1beta1.APIServerLogging{
-						Verbosity:           ptr.To(int32(3)),
-						HTTPAccessVerbosity: ptr.To(int32(3)),
+						Verbosity:           ptr.To[int32](3),
+						HTTPAccessVerbosity: ptr.To[int32](3),
 					}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3007,7 +3007,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameHTTPProxy,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -3104,7 +3104,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "existing-secret",
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -3113,7 +3113,7 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "kube-apiserver-tls-sni-1-ec321de5",
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -3124,7 +3124,7 @@ rules:
 					values.Audit = &apiserver.AuditConfig{
 						Webhook: &apiserver.AuditWebhook{
 							Kubeconfig:   []byte("foo"),
-							BatchMaxSize: ptr.To(int32(30)),
+							BatchMaxSize: ptr.To[int32](30),
 							Version:      ptr.To("audit.k8s.io/v1beta1"),
 						},
 					}
@@ -3406,7 +3406,7 @@ rules:
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
-				deploy.Spec.Replicas = ptr.To(int32(0))
+				deploy.Spec.Replicas = ptr.To[int32](0)
 				deploy.Status.Conditions = []appsv1.DeploymentCondition{
 					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 					{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -3478,7 +3478,7 @@ rules:
 
 	Describe("#GetAutoscalingReplicas", func() {
 		It("should properly get the field", func() {
-			v := ptr.To(int32(2))
+			v := ptr.To[int32](2)
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
 		})
@@ -3494,7 +3494,7 @@ rules:
 
 	Describe("#SetAutoscalingReplicas", func() {
 		It("should properly set the field", func() {
-			v := ptr.To(int32(2))
+			v := ptr.To[int32](2)
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetValues().Autoscaling.Replicas).To(Equal(v))
 		})

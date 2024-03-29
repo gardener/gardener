@@ -56,8 +56,8 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 					}, p.values.AdditionalPodLabels),
 				},
 				PriorityClassName: p.values.PriorityClassName,
-				Replicas:          ptr.To(int32(1)),
-				Shards:            ptr.To(int32(1)),
+				Replicas:          ptr.To[int32](1),
+				Shards:            ptr.To[int32](1),
 				Image:             &p.values.Image,
 				ImagePullPolicy:   corev1.PullIfNotPresent,
 				Version:           p.values.Version,
@@ -68,7 +68,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 					},
 				},
 				ServiceAccountName: p.name(),
-				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
 				Storage: &monitoringv1.StorageSpec{
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "prometheus-db"},

@@ -44,7 +44,7 @@ func createShootClientFromDynamicKubeconfig(
 	kubernetes.Interface,
 	error,
 ) {
-	kubeconfig, err := requestFn(ctx, gardenClient, shoot, ptr.To(int64(7200)))
+	kubeconfig, err := requestFn(ctx, gardenClient, shoot, ptr.To[int64](7200))
 	if err != nil {
 		return nil, err
 	}

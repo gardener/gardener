@@ -54,7 +54,7 @@ var _ = Describe("Values", func() {
 					Object: &object{
 						String: ptr.To("foo"),
 					},
-					Int: ptr.To(int32(42)),
+					Int: ptr.To[int32](42),
 				},
 			},
 			Bool: ptr.To(true),
@@ -66,7 +66,7 @@ var _ = Describe("Values", func() {
 					Object: &objectUpperCase{
 						String: ptr.To("foo"),
 					},
-					Int: ptr.To(int32(42)),
+					Int: ptr.To[int32](42),
 				},
 			},
 			Bool: ptr.To(true),
@@ -139,13 +139,13 @@ var _ = Describe("Values", func() {
 						},
 						Objects: []objectUpperCase{
 							{
-								Int: ptr.To(int32(50)),
+								Int: ptr.To[int32](50),
 								Object: &objectUpperCase{
 									String: ptr.To("bar"),
 								},
 							},
 						},
-						Int: ptr.To(int32(42)),
+						Int: ptr.To[int32](42),
 					},
 				},
 				Bool: ptr.To(true),
@@ -206,7 +206,7 @@ var _ = Describe("Values", func() {
 									Objects: []object{
 										{
 											String: ptr.To(""),
-											Int:    ptr.To(int32(3)),
+											Int:    ptr.To[int32](3),
 										},
 									},
 								},
@@ -214,13 +214,13 @@ var _ = Describe("Values", func() {
 									String: ptr.To("two-l2"),
 									Objects: []object{
 										{
-											Int: ptr.To(int32(4)),
+											Int: ptr.To[int32](4),
 										},
 									},
 								},
 							},
 						},
-						Int: ptr.To(int32(42)),
+						Int: ptr.To[int32](42),
 					},
 				},
 				Bool: ptr.To(true),

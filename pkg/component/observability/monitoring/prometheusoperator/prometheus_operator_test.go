@@ -138,8 +138,8 @@ var _ = Describe("PrometheusOperator", func() {
 				Labels:    map[string]string{"app": "prometheus-operator"},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(1)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -154,7 +154,7 @@ var _ = Describe("PrometheusOperator", func() {
 						PriorityClassName:  priorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:   ptr.To(true),
-							RunAsUser:      ptr.To(int64(65532)),
+							RunAsUser:      ptr.To[int64](65532),
 							SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
 						Containers: []corev1.Container{

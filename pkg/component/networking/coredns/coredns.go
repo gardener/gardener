@@ -351,8 +351,8 @@ import custom/*.server
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(2)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](2),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -374,8 +374,8 @@ import custom/*.server
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To(int64(65534)),
-							FSGroup:            ptr.To(int64(1)),
+							RunAsUser:          ptr.To[int64](65534),
+							FSGroup:            ptr.To[int64](1),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -485,7 +485,7 @@ import custom/*.server
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configMapCustom.Name,
 										},
-										DefaultMode: ptr.To(int32(420)),
+										DefaultMode: ptr.To[int32](420),
 										Optional:    ptr.To(true),
 									},
 								},
@@ -569,9 +569,9 @@ import custom/*.server
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To(int64(65534)),
+							RunAsUser:          ptr.To[int64](65534),
 							SupplementalGroups: []int64{65534},
-							FSGroup:            ptr.To(int64(65534)),
+							FSGroup:            ptr.To[int64](65534),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},
@@ -657,7 +657,7 @@ import custom/*.server
 				},
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				MinReplicas: ptr.To(int32(2)),
+				MinReplicas: ptr.To[int32](2),
 				MaxReplicas: 5,
 				Metrics: []autoscalingv2.MetricSpec{{
 					Type: autoscalingv2.ResourceMetricSourceType,
@@ -665,7 +665,7 @@ import custom/*.server
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(int32(70)),
+							AverageUtilization: ptr.To[int32](70),
 						},
 					},
 				}},

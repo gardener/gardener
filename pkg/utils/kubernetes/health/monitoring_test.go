@@ -32,7 +32,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).To(matcher)
 		},
 		Entry("healthy", &monitoringv1.Prometheus{
-			Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(1))}},
+			Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](1)}},
 			Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 		}, BeNil()),
 		Entry("healthy with nil replicas", &monitoringv1.Prometheus{
@@ -47,7 +47,7 @@ var _ = Describe("Monitoring", func() {
 			Status: monitoringv1.PrometheusStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionFalse}}},
 		}, MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`))),
 		Entry("not enough ready replicas", &monitoringv1.Prometheus{
-			Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(2))}},
+			Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](2)}},
 			Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 		}, MatchError(ContainSubstring(`not enough available replicas (1/2)`))),
 	)
@@ -63,7 +63,7 @@ var _ = Describe("Monitoring", func() {
 					Generation: 42,
 				},
 				Spec: monitoringv1.PrometheusSpec{
-					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To(int32(3))},
+					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](3)},
 				},
 				Status: monitoringv1.PrometheusStatus{
 					Conditions:      []monitoringv1.Condition{{Type: monitoringv1.Reconciled, Status: monitoringv1.ConditionTrue, ObservedGeneration: 42}},
@@ -110,7 +110,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).To(matcher)
 		},
 		Entry("healthy", &monitoringv1.Alertmanager{
-			Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(1))},
+			Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](1)},
 			Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 		}, BeNil()),
 		Entry("healthy with nil replicas", &monitoringv1.Alertmanager{
@@ -125,7 +125,7 @@ var _ = Describe("Monitoring", func() {
 			Status: monitoringv1.AlertmanagerStatus{Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionFalse}}},
 		}, MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`))),
 		Entry("not enough ready replicas", &monitoringv1.Alertmanager{
-			Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To(int32(2))},
+			Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](2)},
 			Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
 		}, MatchError(ContainSubstring(`not enough available replicas (1/2)`))),
 	)
@@ -141,7 +141,7 @@ var _ = Describe("Monitoring", func() {
 					Generation: 42,
 				},
 				Spec: monitoringv1.AlertmanagerSpec{
-					Replicas: ptr.To(int32(3)),
+					Replicas: ptr.To[int32](3),
 				},
 				Status: monitoringv1.AlertmanagerStatus{
 					Conditions:      []monitoringv1.Condition{{Type: monitoringv1.Reconciled, Status: monitoringv1.ConditionTrue, ObservedGeneration: 42}},

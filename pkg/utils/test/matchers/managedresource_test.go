@@ -86,7 +86,7 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 				Namespace: resourceNamespace,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: ptr.To(int32(2)),
+				Replicas: ptr.To[int32](2),
 				Paused:   true,
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{

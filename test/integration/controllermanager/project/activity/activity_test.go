@@ -299,7 +299,7 @@ var _ = Describe("Project Activity controller tests", func() {
 				}
 			},
 			func(obj client.Object) {
-				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = ptr.To(int32(14))
+				obj.(*gardencorev1beta1.Quota).Spec.ClusterLifetimeDays = ptr.To[int32](14)
 			},
 			true,
 		)

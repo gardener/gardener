@@ -226,7 +226,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &k.replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(1))
+		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -243,9 +243,9 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					// use the nonroot user from a distroless container
 					// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 					RunAsNonRoot: ptr.To(true),
-					RunAsUser:    ptr.To(int64(65532)),
-					RunAsGroup:   ptr.To(int64(65532)),
-					FSGroup:      ptr.To(int64(65532)),
+					RunAsUser:    ptr.To[int64](65532),
+					RunAsGroup:   ptr.To[int64](65532),
+					FSGroup:      ptr.To[int64](65532),
 				},
 				Containers: []corev1.Container{
 					{
@@ -303,7 +303,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Name: volumeNameClientCA,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To(int32(420)),
+								DefaultMode: ptr.To[int32](420),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -325,7 +325,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: ptr.To(int32(0640)),
+								DefaultMode: ptr.To[int32](0640),
 							},
 						},
 					},

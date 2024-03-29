@@ -185,7 +185,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &m.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(2))
+		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -246,7 +246,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: ptr.To(int64(5)),
+				TerminationGracePeriodSeconds: ptr.To[int64](5),
 			},
 		}
 

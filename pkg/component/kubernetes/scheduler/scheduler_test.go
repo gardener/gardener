@@ -227,7 +227,7 @@ var _ = Describe("KubeScheduler", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To[int32](1),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -250,9 +250,9 @@ var _ = Describe("KubeScheduler", func() {
 							AutomountServiceAccountToken: ptr.To(false),
 							SecurityContext: &corev1.PodSecurityContext{
 								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To(int64(65532)),
-								RunAsGroup:   ptr.To(int64(65532)),
-								FSGroup:      ptr.To(int64(65532)),
+								RunAsUser:    ptr.To[int64](65532),
+								RunAsGroup:   ptr.To[int64](65532),
+								FSGroup:      ptr.To[int64](65532),
 							},
 							Containers: []corev1.Container{
 								{
@@ -310,7 +310,7 @@ var _ = Describe("KubeScheduler", func() {
 									Name: "client-ca",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To(int32(420)),
+											DefaultMode: ptr.To[int32](420),
 											Sources: []corev1.VolumeProjection{
 												{
 													Secret: &corev1.SecretProjection{
@@ -332,7 +332,7 @@ var _ = Describe("KubeScheduler", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: ptr.To(int32(0640)),
+											DefaultMode: ptr.To[int32](0640),
 										},
 									},
 								},

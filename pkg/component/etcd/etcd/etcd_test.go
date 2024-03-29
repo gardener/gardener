@@ -77,7 +77,7 @@ var _ = Describe("Etcd", func() {
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
 		class                   = ClassNormal
-		replicas                = ptr.To(int32(1))
+		replicas                = ptr.To[int32](1)
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		storageClassName        = "my-storage-class"
@@ -220,8 +220,8 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						ServerPort:              ptr.To(int32(2380)),
-						ClientPort:              ptr.To(int32(2379)),
+						ServerPort:              ptr.To[int32](2380),
+						ClientPort:              ptr.To[int32](2379),
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
@@ -248,7 +248,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						Port:                    ptr.To(int32(8080)),
+						Port:                    ptr.To[int32](8080),
 						Resources:               resourcesContainerBackupRestore,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
 						GarbageCollectionPeriod: &garbageCollectionPeriod,
@@ -347,7 +347,7 @@ var _ = Describe("Etcd", func() {
 					},
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceTimeWindow.Begin,
 						End:   maintenanceTimeWindow.End,
@@ -373,14 +373,14 @@ var _ = Describe("Etcd", func() {
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceCPU,
-											TargetAverageUtilization: ptr.To(int32(80)),
+											TargetAverageUtilization: ptr.To[int32](80),
 										},
 									},
 									{
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceMemory,
-											TargetAverageUtilization: ptr.To(int32(80)),
+											TargetAverageUtilization: ptr.To[int32](80),
 										},
 									},
 								},
@@ -402,11 +402,11 @@ var _ = Describe("Etcd", func() {
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
 									Value:      ptr.To("1"),
-									Percentage: ptr.To(int32(80)),
+									Percentage: ptr.To[int32](80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
 									Value:      ptr.To("2G"),
-									Percentage: ptr.To(int32(80)),
+									Percentage: ptr.To[int32](80),
 								},
 							},
 						},
@@ -418,22 +418,22 @@ var _ = Describe("Etcd", func() {
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
 									Value:      ptr.To("1"),
-									Percentage: ptr.To(int32(80)),
+									Percentage: ptr.To[int32](80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
 									Value:      ptr.To("2G"),
-									Percentage: ptr.To(int32(80)),
+									Percentage: ptr.To[int32](80),
 								},
 							},
 						},
 						LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("2"),
-								Percentage: ptr.To(int32(40)),
+								Percentage: ptr.To[int32](40),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("5G"),
-								Percentage: ptr.To(int32(40)),
+								Percentage: ptr.To[int32](40),
 							},
 						},
 						Template: hvpav1alpha1.VpaTemplate{
@@ -1182,7 +1182,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			JustBeforeEach(func() {
-				replicas = ptr.To(int32(3))
+				replicas = ptr.To[int32](3)
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
@@ -1342,7 +1342,7 @@ var _ = Describe("Etcd", func() {
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
-					Replicas:                ptr.To(int32(0)),
+					Replicas:                ptr.To[int32](0),
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
@@ -1441,7 +1441,7 @@ var _ = Describe("Etcd", func() {
 				class := ClassImportant
 				updateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
 
-				replicas = ptr.To(int32(1))
+				replicas = ptr.To[int32](1)
 
 				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                        testRole,
@@ -1498,7 +1498,7 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
-				Replicas:                ptr.To(int32(1)),
+				Replicas:                ptr.To[int32](1),
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -1721,7 +1721,7 @@ var _ = Describe("Etcd", func() {
 
 			expectedHvpa := hvpaObj.DeepCopy()
 			expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
-			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(int32(3))
+			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To[int32](3)
 			test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
 
 			Expect(etcd.Scale(ctx, 3)).To(Succeed())
@@ -1747,7 +1747,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("when HA control-plane is not requested", func() {
 			BeforeEach(func() {
-				replicas = ptr.To(int32(1))
+				replicas = ptr.To[int32](1)
 			})
 
 			It("should do nothing and succeed without expectations", func() {
@@ -1781,14 +1781,14 @@ var _ = Describe("Etcd", func() {
 						},
 					},
 					Status: druidv1alpha1.EtcdStatus{
-						ObservedGeneration: ptr.To(int64(1)),
+						ObservedGeneration: ptr.To[int64](1),
 						Ready:              ptr.To(true),
 					},
 				}
 			}
 
 			BeforeEach(func() {
-				replicas = ptr.To(int32(3))
+				replicas = ptr.To[int32](3)
 				DeferCleanup(test.WithVar(&TimeNow, func() time.Time { return now }))
 			})
 

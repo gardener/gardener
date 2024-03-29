@@ -385,8 +385,8 @@ var _ = Describe("EventLogger", func() {
 					ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: ptr.To(int32(1)),
-					Replicas:             ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To[int32](1),
+					Replicas:             ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":                 name,
@@ -439,7 +439,7 @@ var _ = Describe("EventLogger", func() {
 									Name: "kubeconfig",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: ptr.To(int32(420)),
+											DefaultMode: ptr.To[int32](420),
 											Sources: []corev1.VolumeProjection{
 												{
 													Secret: &corev1.SecretProjection{

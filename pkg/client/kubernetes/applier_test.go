@@ -668,22 +668,22 @@ spec:
 					Entry(
 						"old without replicas, new with replicas", func() {
 							oldDeployment.Spec.Replicas = nil
-							newDeployment.Spec.Replicas = ptr.To(int32(2))
-							expected.Spec.Replicas = ptr.To(int32(2))
+							newDeployment.Spec.Replicas = ptr.To[int32](2)
+							expected.Spec.Replicas = ptr.To[int32](2)
 						},
 					),
 					Entry(
 						"old with replicas, new without replicas", func() {
-							oldDeployment.Spec.Replicas = ptr.To(int32(3))
+							oldDeployment.Spec.Replicas = ptr.To[int32](3)
 							newDeployment.Spec.Replicas = nil
-							expected.Spec.Replicas = ptr.To(int32(3))
+							expected.Spec.Replicas = ptr.To[int32](3)
 						},
 					),
 					Entry(
 						"old with replicas, new with replicas", func() {
-							oldDeployment.Spec.Replicas = ptr.To(int32(3))
-							newDeployment.Spec.Replicas = ptr.To(int32(4))
-							expected.Spec.Replicas = ptr.To(int32(3))
+							oldDeployment.Spec.Replicas = ptr.To[int32](3)
+							newDeployment.Spec.Replicas = ptr.To[int32](4)
+							expected.Spec.Replicas = ptr.To[int32](3)
 						},
 					),
 				)

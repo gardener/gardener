@@ -135,7 +135,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 	deployment.Labels = v.getDeploymentLabels(updater)
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
-		RevisionHistoryLimit: ptr.To(int32(2)),
+		RevisionHistoryLimit: ptr.To[int32](2),
 		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(updater)},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{

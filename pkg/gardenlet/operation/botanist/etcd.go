@@ -241,7 +241,7 @@ func (b *Botanist) restoreMultiNodeEtcd(ctx context.Context) error {
 			// is added to the reconciliation flow that depends on the etcd's replica count.
 			component.SetReplicas(originalReplicas)
 		}()
-		component.SetReplicas(ptr.To(int32(1)))
+		component.SetReplicas(ptr.To[int32](1))
 	}
 
 	return flow.Parallel(

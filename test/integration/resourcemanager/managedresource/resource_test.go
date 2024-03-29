@@ -757,7 +757,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -887,7 +887,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"},
 						},
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 						Template: *defaultPodTemplateSpec,
 					},
 				}
@@ -926,7 +926,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = ptr.To(int32(5))
+						deployment.Spec.Replicas = ptr.To[int32](5)
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						patch = client.MergeFrom(managedResource.DeepCopy())
@@ -955,7 +955,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 						)
 
 						patch := client.MergeFrom(deployment.DeepCopy())
-						deployment.Spec.Replicas = ptr.To(int32(5))
+						deployment.Spec.Replicas = ptr.To[int32](5)
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Consistently(func(g Gomega) int32 {

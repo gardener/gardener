@@ -81,8 +81,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				EnableStaticTokenKubeconfig: ptr.To(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
 					SerializeImagePulls: ptr.To(false),
-					RegistryPullQPS:     ptr.To(int32(10)),
-					RegistryBurst:       ptr.To(int32(20)),
+					RegistryPullQPS:     ptr.To[int32](10),
+					RegistryBurst:       ptr.To[int32](20),
 				},
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},

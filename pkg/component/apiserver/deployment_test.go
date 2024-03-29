@@ -40,15 +40,15 @@ var _ = Describe("Deployment", func() {
 				values           = Values{
 					FeatureGates: map[string]bool{"Foo": true, "Bar": false},
 					Requests: &gardencorev1beta1.APIServerRequests{
-						MaxMutatingInflight:    ptr.To(int32(1)),
-						MaxNonMutatingInflight: ptr.To(int32(2)),
+						MaxMutatingInflight:    ptr.To[int32](1),
+						MaxNonMutatingInflight: ptr.To[int32](2),
 					},
 					Logging: &gardencorev1beta1.APIServerLogging{
-						Verbosity:           ptr.To(int32(3)),
-						HTTPAccessVerbosity: ptr.To(int32(4)),
+						Verbosity:           ptr.To[int32](3),
+						HTTPAccessVerbosity: ptr.To[int32](4),
 					},
 					WatchCacheSizes: &gardencorev1beta1.WatchCacheSizes{
-						Default: ptr.To(int32(6)),
+						Default: ptr.To[int32](6),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{APIGroup: ptr.To("foo"), Resource: "bar"},
 							{APIGroup: ptr.To("baz"), Resource: "foo", CacheSize: 7},
@@ -113,7 +113,7 @@ var _ = Describe("Deployment", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretETCDClient.Name,
-											DefaultMode: ptr.To(int32(0640)),
+											DefaultMode: ptr.To[int32](0640),
 										},
 									},
 								},
@@ -122,7 +122,7 @@ var _ = Describe("Deployment", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretServer.Name,
-											DefaultMode: ptr.To(int32(0640)),
+											DefaultMode: ptr.To[int32](0640),
 										},
 									},
 								},

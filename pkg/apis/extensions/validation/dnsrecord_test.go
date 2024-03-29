@@ -256,7 +256,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 			newDNSRecord.Spec.Region = ptr.To("region")
 			newDNSRecord.Spec.Zone = ptr.To("zone")
 			newDNSRecord.Spec.Values = []string{"5.6.7.8"}
-			newDNSRecord.Spec.TTL = ptr.To(int64(300))
+			newDNSRecord.Spec.TTL = ptr.To[int64](300)
 
 			errorList := ValidateDNSRecordUpdate(newDNSRecord, dns)
 

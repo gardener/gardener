@@ -48,8 +48,8 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -65,9 +65,9 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To(int64(65532)),
-						RunAsGroup:   ptr.To(int64(65532)),
-						FSGroup:      ptr.To(int64(65532)),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
 					},
 					Containers: []corev1.Container{
 						{

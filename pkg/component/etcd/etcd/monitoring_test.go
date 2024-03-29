@@ -32,7 +32,7 @@ var _ = Describe("Monitoring", func() {
 			etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 				Role:     testRole,
 				Class:    ClassNormal,
-				Replicas: ptr.To(int32(1)),
+				Replicas: ptr.To[int32](1),
 			})
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore, expectedScrapeConfigDruid)
 		})
@@ -45,7 +45,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassNormal,
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -58,7 +58,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassImportant,
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -73,7 +73,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassNormal,
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -87,7 +87,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassImportant,
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -104,7 +104,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassNormal,
-						Replicas: ptr.To(int32(3)),
+						Replicas: ptr.To[int32](3),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -117,7 +117,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassImportant,
-						Replicas: ptr.To(int32(3)),
+						Replicas: ptr.To[int32](3),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -132,7 +132,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassNormal,
-						Replicas: ptr.To(int32(3)),
+						Replicas: ptr.To[int32](3),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -146,7 +146,7 @@ var _ = Describe("Monitoring", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
 						Role:     testRole,
 						Class:    ClassImportant,
-						Replicas: ptr.To(int32(3)),
+						Replicas: ptr.To[int32](3),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(

@@ -333,14 +333,14 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 									Type: autoscalingv2beta1.ResourceMetricSourceType,
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceCPU,
-										TargetAverageUtilization: ptr.To(int32(80)),
+										TargetAverageUtilization: ptr.To[int32](80),
 									},
 								},
 								{
 									Type: autoscalingv2beta1.ResourceMetricSourceType,
 									Resource: &autoscalingv2beta1.ResourceMetricSource{
 										Name:                     corev1.ResourceMemory,
-										TargetAverageUtilization: ptr.To(int32(80)),
+										TargetAverageUtilization: ptr.To[int32](80),
 									},
 								},
 							},
@@ -362,11 +362,11 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("100m"),
-								Percentage: ptr.To(int32(80)),
+								Percentage: ptr.To[int32](80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("300M"),
-								Percentage: ptr.To(int32(80)),
+								Percentage: ptr.To[int32](80),
 							},
 						},
 					},
@@ -378,22 +378,22 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 						MinChange: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("200m"),
-								Percentage: ptr.To(int32(80)),
+								Percentage: ptr.To[int32](80),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
 								Value:      ptr.To("500M"),
-								Percentage: ptr.To(int32(80)),
+								Percentage: ptr.To[int32](80),
 							},
 						},
 					},
 					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("300m"),
-							Percentage: ptr.To(int32(40)),
+							Percentage: ptr.To[int32](40),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1G"),
-							Percentage: ptr.To(int32(40)),
+							Percentage: ptr.To[int32](40),
 						},
 					},
 					Template: hvpav1alpha1.VpaTemplate{
@@ -651,9 +651,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged:   ptr.To(true),
-									RunAsUser:    ptr.To(int64(0)),
+									RunAsUser:    ptr.To[int64](0),
 									RunAsNonRoot: ptr.To(false),
-									RunAsGroup:   ptr.To(int64(0)),
+									RunAsGroup:   ptr.To[int64](0),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -768,7 +768,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: ptr.To(int32(0520)),
+									DefaultMode: ptr.To[int32](0520),
 								},
 							},
 						}},
@@ -826,8 +826,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 					Protocol:      corev1.ProtocolTCP,
 				}},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To(int64(65532)),
-					RunAsGroup:             ptr.To(int64(65534)),
+					RunAsUser:              ptr.To[int64](65532),
+					RunAsGroup:             ptr.To[int64](65534),
 					RunAsNonRoot:           ptr.To(true),
 					ReadOnlyRootFilesystem: ptr.To(true),
 				},

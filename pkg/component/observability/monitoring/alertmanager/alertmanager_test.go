@@ -198,7 +198,7 @@ var _ = Describe("Alertmanager", func() {
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
 				},
-				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
 				Storage: &monitoringv1.StorageSpec{
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},
@@ -550,7 +550,7 @@ var _ = Describe("Alertmanager", func() {
 				It("should successfully deploy all resources", func() {
 					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-tcp-9094"] = "allowed"
 					alertManager.Spec.PodMetadata.Labels["networking.resources.gardener.cloud/to-alertmanager-operated-udp-9094"] = "allowed"
-					alertManager.Spec.Replicas = ptr.To(int32(2))
+					alertManager.Spec.Replicas = ptr.To[int32](2)
 
 					Expect(managedResource).To(consistOf(
 						service,
