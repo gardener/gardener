@@ -400,7 +400,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          ptr.To(int32(10)),
+			TimeoutSeconds:          ptr.To[int32](10),
 		}
 
 		if webhook.TimeoutSeconds != nil {
@@ -425,7 +425,7 @@ func createAndAddToWebhookConfig(
 			ObjectSelector:          webhook.ObjectSelector,
 			Rules:                   rules,
 			SideEffects:             sideEffects,
-			TimeoutSeconds:          ptr.To(int32(10)),
+			TimeoutSeconds:          ptr.To[int32](10),
 		}
 
 		if webhook.TimeoutSeconds != nil {

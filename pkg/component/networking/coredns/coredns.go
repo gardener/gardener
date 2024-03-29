@@ -351,8 +351,8 @@ import custom/*.server
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(2)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](2),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -485,7 +485,7 @@ import custom/*.server
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: configMapCustom.Name,
 										},
-										DefaultMode: ptr.To(int32(420)),
+										DefaultMode: ptr.To[int32](420),
 										Optional:    ptr.To(true),
 									},
 								},
@@ -657,7 +657,7 @@ import custom/*.server
 				},
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				MinReplicas: ptr.To(int32(2)),
+				MinReplicas: ptr.To[int32](2),
 				MaxReplicas: 5,
 				Metrics: []autoscalingv2.MetricSpec{{
 					Type: autoscalingv2.ResourceMetricSourceType,
@@ -665,7 +665,7 @@ import custom/*.server
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(int32(70)),
+							AverageUtilization: ptr.To[int32](70),
 						},
 					},
 				}},

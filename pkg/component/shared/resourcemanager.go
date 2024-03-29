@@ -98,7 +98,7 @@ func NewRuntimeGardenerResourceManager(
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,
 		PriorityClassName:                   priorityClassName,
-		Replicas:                            ptr.To(int32(2)),
+		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},

@@ -391,37 +391,37 @@ var _ = Describe("Shoot defaulting", func() {
 				It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
 					obj.Spec.Provider.Workers = []Worker{{}}
 					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: ptr.To(int32(250)),
+						MaxPods: ptr.To[int32](250),
 					}
 
 					SetObjectDefaults_Shoot(obj)
 
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To(int32(23))))
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
 				})
 
 				It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
 					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: ptr.To(int32(64)),
+						MaxPods: ptr.To[int32](64),
 					}
 					obj.Spec.Provider.Workers = []Worker{{
 						Name: "1",
 						Kubernetes: &WorkerKubernetes{
 							Kubelet: &KubeletConfig{
-								MaxPods: ptr.To(int32(100)),
+								MaxPods: ptr.To[int32](100),
 							},
 						},
 					}, {
 						Name: "2",
 						Kubernetes: &WorkerKubernetes{
 							Kubelet: &KubeletConfig{
-								MaxPods: ptr.To(int32(260)),
+								MaxPods: ptr.To[int32](260),
 							},
 						},
 					}}
 
 					SetObjectDefaults_Shoot(obj)
 
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To(int32(22))))
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
 				})
 			})
 
@@ -651,7 +651,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set values for log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: ptr.To(int32(3))}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: ptr.To[int32](3)}}
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -883,9 +883,9 @@ var _ = Describe("Shoot defaulting", func() {
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
 				MaxGracefulTerminationSeconds: ptr.To(int32(60 * 60 * 24)),
 				IgnoreDaemonsetsUtilization:   ptr.To(true),
-				Verbosity:                     ptr.To(int32(4)),
+				Verbosity:                     ptr.To[int32](4),
 				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:            ptr.To(int32(20)),
+				MaxEmptyBulkDelete:            ptr.To[int32](20),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -931,7 +931,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
 			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{
 				EvictAfterOOMThreshold:       &metav1.Duration{Duration: 5 * time.Minute},
-				EvictionRateBurst:            ptr.To(int32(2)),
+				EvictionRateBurst:            ptr.To[int32](2),
 				EvictionRateLimit:            ptr.To(float64(1)),
 				EvictionTolerance:            &evictionTolerance,
 				RecommendationMarginFraction: &recommendationMarginFraction,

@@ -266,8 +266,8 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(1)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{

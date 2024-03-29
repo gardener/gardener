@@ -181,7 +181,7 @@ var _ = BeforeSuite(func() {
 	Expect((&lease.Reconciler{
 		SeedRESTClient: kubernetesClient.RESTClient(),
 		Config: config.SeedControllerConfiguration{
-			LeaseResyncSeconds: ptr.To(int32(1)),
+			LeaseResyncSeconds: ptr.To[int32](1),
 		},
 		Clock:          fakeClock,
 		HealthManager:  healthManager,

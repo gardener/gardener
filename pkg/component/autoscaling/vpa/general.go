@@ -224,7 +224,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		MatchPolicy:             &matchPolicy,
 		ReinvocationPolicy:      &reinvocationPolicy,
 		SideEffects:             &sideEffects,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 		Rules: []admissionregistrationv1.RuleWithOperations{
 			{
 				Rule: admissionregistrationv1.Rule{

@@ -48,8 +48,8 @@ func (g *gardenerControllerManager) deployment(secretGenericTokenKubeconfig, sec
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},

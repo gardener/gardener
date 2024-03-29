@@ -437,8 +437,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(labelValueBackend, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(1)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps(n.getLabels(labelValueBackend, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -499,8 +499,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, true),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To(int32(2)),
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				Replicas:             ptr.To[int32](2),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, false), map[string]string{
 						labelKeyRelease: labelValueAddons,
@@ -687,7 +687,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			Type: corev1.SeccompProfileTypeRuntimeDefault,
 		}
 
-		deploymentController.Spec.Replicas = ptr.To(int32(1))
+		deploymentController.Spec.Replicas = ptr.To[int32](1)
 		deploymentController.Spec.Template.Annotations = map[string]string{"checksum/config": utils.ComputeChecksum(configMap.Data)}
 		deploymentController.Spec.Template.Spec.DNSPolicy = corev1.DNSClusterFirst
 		deploymentController.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyAlways

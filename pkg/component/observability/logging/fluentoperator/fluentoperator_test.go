@@ -216,8 +216,8 @@ var _ = Describe("Fluent Operator", func() {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To(int32(2)),
-				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             ptr.To[int32](1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						v1beta1constants.LabelApp:   name,

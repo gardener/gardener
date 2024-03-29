@@ -276,8 +276,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(name),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To(int32(2)),
-				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             ptr.To[int32](1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{labelKey: name},
 				},
@@ -383,8 +383,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				Labels:    getLabels(scraperName),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To(int32(2)),
-				Replicas:             ptr.To(int32(1)),
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             ptr.To[int32](1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{labelKey: scraperName},
 				},

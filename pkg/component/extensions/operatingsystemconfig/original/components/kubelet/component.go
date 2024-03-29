@@ -70,7 +70,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	kubeletFiles := []extensionsv1alpha1.File{
 		{
 			Path:        PathKubeletCACert,
-			Permissions: ptr.To(int32(0644)),
+			Permissions: ptr.To[int32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -80,14 +80,14 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		{
 			Path:        PathKubeletConfig,
-			Permissions: ptr.To(int32(0644)),
+			Permissions: ptr.To[int32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: fileContentKubeletConfig,
 			},
 		},
 		{
 			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
-			Permissions: ptr.To(int32(0755)),
+			Permissions: ptr.To[int32](0755),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),

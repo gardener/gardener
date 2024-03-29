@@ -85,7 +85,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	files = append(files, extensionsv1alpha1.File{
 		Path:        PathBinary,
-		Permissions: ptr.To(int32(0755)),
+		Permissions: ptr.To[int32](0755),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images[imagevector.ImageNameGardenerNodeAgent].String(),
@@ -163,7 +163,7 @@ func Files(config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alph
 
 	return []extensionsv1alpha1.File{{
 		Path:        nodeagentv1alpha1.ConfigFilePath,
-		Permissions: ptr.To(int32(0600)),
+		Permissions: ptr.To[int32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
 }

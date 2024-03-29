@@ -154,7 +154,7 @@ var _ = Describe("Handler", func() {
 						Name: "kube-api-access-gardener",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To(int32(420)),
+								DefaultMode: ptr.To[int32](420),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{

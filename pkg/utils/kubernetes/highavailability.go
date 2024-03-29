@@ -32,10 +32,10 @@ func GetReplicaCount(failureToleranceType *gardencorev1beta1.FailureToleranceTyp
 	if failureToleranceType != nil &&
 		*failureToleranceType == "" &&
 		componentType == resourcesv1alpha1.HighAvailabilityConfigTypeController {
-		return ptr.To(int32(1))
+		return ptr.To[int32](1)
 	}
 
-	return ptr.To(int32(2))
+	return ptr.To[int32](2)
 }
 
 // GetNodeSelectorRequirementForZones returns a node selector requirement to ensure all pods are scheduled only on

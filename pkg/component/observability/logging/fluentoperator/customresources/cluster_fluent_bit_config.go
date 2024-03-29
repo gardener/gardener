@@ -41,7 +41,7 @@ func GetClusterFluentBitConfig(fluentBitName string, matchLabels map[string]stri
 				ParsersFile:  "parsers.conf",
 				HttpServer:   ptr.To(true),
 				HttpListen:   "0.0.0.0",
-				HttpPort:     ptr.To(int32(2020)),
+				HttpPort:     ptr.To[int32](2020),
 			},
 			InputSelector: metav1.LabelSelector{
 				MatchLabels: matchLabels,

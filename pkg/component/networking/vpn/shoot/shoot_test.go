@@ -371,7 +371,7 @@ spec:
 						Name: name,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To(int32(0400)),
+								DefaultMode: ptr.To[int32](0400),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -411,7 +411,7 @@ spec:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretNameTLSAuth,
-							DefaultMode: ptr.To(int32(0400)),
+							DefaultMode: ptr.To[int32](0400),
 						},
 					},
 				})
@@ -579,8 +579,8 @@ spec:
 					},
 					ObjectMeta: *objectMetaFor(secretNameCA, secretNameClient, secretNameTLSAuth),
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: ptr.To(int32(2)),
-						Replicas:             ptr.To(int32(1)),
+						RevisionHistoryLimit: ptr.To[int32](2),
+						Replicas:             ptr.To[int32](1),
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 							RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -607,7 +607,7 @@ spec:
 					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth),
 					Spec: appsv1.StatefulSetSpec{
 						PodManagementPolicy:  appsv1.ParallelPodManagement,
-						RevisionHistoryLimit: ptr.To(int32(2)),
+						RevisionHistoryLimit: ptr.To[int32](2),
 						Replicas:             ptr.To(int32(replicas)),
 						UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 							Type: appsv1.RollingUpdateStatefulSetStrategyType,

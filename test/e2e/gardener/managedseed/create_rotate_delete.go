@@ -160,7 +160,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 					// See https://github.com/gardener/gardener/issues/6766 for details
 
 					patch := client.MergeFrom(deployment.DeepCopy())
-					deployment.Spec.Replicas = ptr.To(int32(0))
+					deployment.Spec.Replicas = ptr.To[int32](0)
 					g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
 				}
 
@@ -179,8 +179,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				// valid and then renews it.
 				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
-					AutoRotationJitterPercentageMin: ptr.To(int32(40)),
-					AutoRotationJitterPercentageMax: ptr.To(int32(41)),
+					AutoRotationJitterPercentageMin: ptr.To[int32](40),
+					AutoRotationJitterPercentageMax: ptr.To[int32](41),
 				})
 			}).Should(Succeed())
 			verifier.After(ctx, true)
@@ -302,7 +302,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 			Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 				Config: *gardenletConfig,
 				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-					ReplicaCount: ptr.To(int32(1)), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
+					ReplicaCount: ptr.To[int32](1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
 				},
 			},
 		},

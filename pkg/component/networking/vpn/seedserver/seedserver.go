@@ -374,7 +374,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Name: volumeNameCerts,
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To(int32(420)),
+							DefaultMode: ptr.To[int32](420),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -413,7 +413,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretTLSAuth.Name,
-							DefaultMode: ptr.To(int32(0400)),
+							DefaultMode: ptr.To[int32](0400),
 						},
 					},
 				},
@@ -593,7 +593,7 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To[int32](1),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -635,7 +635,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		deployment.Labels = labels
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To(int32(1)),
+			RevisionHistoryLimit: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: DeploymentName,
 			}},

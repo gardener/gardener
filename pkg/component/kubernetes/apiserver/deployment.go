@@ -189,7 +189,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Replicas:             k.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
@@ -337,7 +337,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKey.Name,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -346,7 +346,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKeyBundle.Name,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -363,7 +363,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretKubeAggregator.Name,
-									DefaultMode: ptr.To(int32(0640)),
+									DefaultMode: ptr.To[int32](0640),
 								},
 							},
 						},
@@ -515,7 +515,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  sni.secretName,
-					DefaultMode: ptr.To(int32(0640)),
+					DefaultMode: ptr.To[int32](0640),
 				},
 			},
 		})
@@ -586,7 +586,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretHTTPProxy.Name,
-					DefaultMode: ptr.To(int32(0640)),
+					DefaultMode: ptr.To[int32](0640),
 				},
 			},
 		},
@@ -668,7 +668,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameAPIServerAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: ptr.To[int32](420),
 					Sources: []corev1.VolumeProjection{
 						{
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -706,7 +706,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameVPNSeedClient,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To(int32(400)),
+					DefaultMode: ptr.To[int32](400),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -987,7 +987,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretKubeletClient.Name,
-					DefaultMode: ptr.To(int32(0640)),
+					DefaultMode: ptr.To[int32](0640),
 				},
 			},
 		},

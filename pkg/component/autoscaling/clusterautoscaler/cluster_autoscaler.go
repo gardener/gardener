@@ -188,7 +188,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &c.replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(1))
+		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{

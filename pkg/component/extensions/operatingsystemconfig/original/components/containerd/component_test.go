@@ -82,7 +82,7 @@ WantedBy=multi-user.target`),
 
 			monitorFile := extensionsv1alpha1.File{
 				Path:        "/opt/bin/health-monitor-containerd",
-				Permissions: ptr.To(int32(0755)),
+				Permissions: ptr.To[int32](0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -93,7 +93,7 @@ WantedBy=multi-user.target`),
 
 			logrotateConfigFile := extensionsv1alpha1.File{
 				Path:        "/etc/systemd/containerd.conf",
-				Permissions: ptr.To(int32(0644)),
+				Permissions: ptr.To[int32](0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: logRotateData,

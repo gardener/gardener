@@ -78,7 +78,7 @@ func AddToManagerWithOptions(
 		Path:           name,
 		Webhook:        &admission.Webhook{Handler: handler, RecoverPanic: true},
 		FailurePolicy:  &failurePolicy,
-		TimeoutSeconds: ptr.To(int32(5)),
+		TimeoutSeconds: ptr.To[int32](5),
 		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelShootProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
 		}},

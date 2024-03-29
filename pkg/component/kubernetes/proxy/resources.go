@@ -331,7 +331,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: k.configMapCleanupScript.Name,
 										},
-										DefaultMode: ptr.To(int32(0777)),
+										DefaultMode: ptr.To[int32](0777),
 									},
 								},
 							},
@@ -456,7 +456,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		MetricsBindAddress: fmt.Sprintf("0.0.0.0:%d", portMetrics),
 		Mode:               k.getMode(),
 		Conntrack: kubeproxyconfigv1alpha1.KubeProxyConntrackConfiguration{
-			MaxPerCore: ptr.To(int32(524288)),
+			MaxPerCore: ptr.To[int32](524288),
 		},
 		FeatureGates: k.values.FeatureGates,
 	}

@@ -108,8 +108,8 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.GardenClientConnection.KubeconfigValidity).To(Equal(&KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To(int32(70)),
-				AutoRotationJitterPercentageMax: ptr.To(int32(90)),
+				AutoRotationJitterPercentageMin: ptr.To[int32](70),
+				AutoRotationJitterPercentageMax: ptr.To[int32](90),
 			}))
 		})
 
@@ -118,8 +118,8 @@ var _ = Describe("Defaults", func() {
 			obj.GardenClientConnection = &GardenClientConnection{
 				KubeconfigValidity: &KubeconfigValidity{
 					Validity:                        &v,
-					AutoRotationJitterPercentageMin: ptr.To(int32(10)),
-					AutoRotationJitterPercentageMax: ptr.To(int32(50)),
+					AutoRotationJitterPercentageMin: ptr.To[int32](10),
+					AutoRotationJitterPercentageMax: ptr.To[int32](50),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -316,8 +316,8 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				Seed: &SeedControllerConfiguration{
 					SyncPeriod:               &syncPeriod,
-					LeaseResyncSeconds:       ptr.To(int32(1)),
-					LeaseResyncMissThreshold: ptr.To(int32(5)),
+					LeaseResyncSeconds:       ptr.To[int32](1),
+					LeaseResyncMissThreshold: ptr.To[int32](5),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)

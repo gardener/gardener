@@ -208,7 +208,7 @@ var _ = Describe("VpnSeedServer", func() {
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To(int32(420)),
+									DefaultMode: ptr.To[int32](420),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{
@@ -247,7 +247,7 @@ var _ = Describe("VpnSeedServer", func() {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretNameTLSAuth,
-									DefaultMode: ptr.To(int32(0400)),
+									DefaultMode: ptr.To[int32](0400),
 								},
 							},
 						},
@@ -412,7 +412,7 @@ var _ = Describe("VpnSeedServer", func() {
 				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             ptr.To(values.Replicas),
-					RevisionHistoryLimit: ptr.To(int32(1)),
+					RevisionHistoryLimit: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
 					}},
@@ -436,8 +436,8 @@ var _ = Describe("VpnSeedServer", func() {
 				ObjectMeta: *deploymentObjectMeta,
 				Spec: appsv1.StatefulSetSpec{
 					PodManagementPolicy:  appsv1.ParallelPodManagement,
-					Replicas:             ptr.To(int32(3)),
-					RevisionHistoryLimit: ptr.To(int32(1)),
+					Replicas:             ptr.To[int32](3),
+					RevisionHistoryLimit: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
 					}},

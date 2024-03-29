@@ -249,7 +249,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 
 	deployment.Labels = deploymentLabels
 	deployment.Spec.Replicas = &k.values.Replicas
-	deployment.Spec.RevisionHistoryLimit = ptr.To(int32(2))
+	deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 	deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: k.getLabels()}
 	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,

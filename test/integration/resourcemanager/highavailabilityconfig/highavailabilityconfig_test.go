@@ -82,7 +82,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -101,7 +101,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				ObjectMeta: objectMeta,
 				Spec: appsv1.StatefulSetSpec{
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: labels,
@@ -211,7 +211,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 							Context("current replicas are higher than the computed replicas", func() {
 								BeforeEach(func() {
-									setReplicas(ptr.To(int32(5)))
+									setReplicas(ptr.To[int32](5))
 								})
 
 								It("should not mutate the replicas", func() {
@@ -233,7 +233,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 							Context("current replicas are higher than the computed replicas", func() {
 								BeforeEach(func() {
-									setReplicas(ptr.To(int32(5)))
+									setReplicas(ptr.To[int32](5))
 								})
 
 								It("should not mutate the replicas", func() {
@@ -250,7 +250,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 						Context("when replicas are 0", func() {
 							BeforeEach(func() {
-								setReplicas(ptr.To(int32(0)))
+								setReplicas(ptr.To[int32](0))
 							})
 
 							It("should not mutate the replicas", func() {
@@ -566,7 +566,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 					Context("when replicas are >= 2", func() {
 						BeforeEach(func() {
-							setReplicas(ptr.To(int32(2)))
+							setReplicas(ptr.To[int32](2))
 						})
 
 						Context("when failure-tolerance-type is empty", func() {
@@ -598,7 +598,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        ptr.To(int32(2)),
+												MinDomains:        ptr.To[int32](2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},
@@ -649,7 +649,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
-												MinDomains:        ptr.To(int32(2)),
+												MinDomains:        ptr.To[int32](2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},

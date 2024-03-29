@@ -134,8 +134,8 @@ var _ = Describe("GardenletConfiguration", func() {
 					cfg.GardenClientConnection = &config.GardenClientConnection{
 						KubeconfigValidity: &config.KubeconfigValidity{
 							Validity:                        &metav1.Duration{Duration: time.Hour},
-							AutoRotationJitterPercentageMin: ptr.To(int32(13)),
-							AutoRotationJitterPercentageMax: ptr.To(int32(37)),
+							AutoRotationJitterPercentageMin: ptr.To[int32](13),
+							AutoRotationJitterPercentageMax: ptr.To[int32](37),
 						},
 					}
 
@@ -159,7 +159,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid auto rotation jitter percentage min less than 1", func() {
 					cfg.GardenClientConnection = &config.GardenClientConnection{
 						KubeconfigValidity: &config.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To(int32(0)),
+							AutoRotationJitterPercentageMin: ptr.To[int32](0),
 						},
 					}
 
@@ -173,7 +173,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid auto rotation jitter percentage max more than 100", func() {
 					cfg.GardenClientConnection = &config.GardenClientConnection{
 						KubeconfigValidity: &config.KubeconfigValidity{
-							AutoRotationJitterPercentageMax: ptr.To(int32(101)),
+							AutoRotationJitterPercentageMax: ptr.To[int32](101),
 						},
 					}
 
@@ -187,8 +187,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid auto rotation jitter percentage min equal max", func() {
 					cfg.GardenClientConnection = &config.GardenClientConnection{
 						KubeconfigValidity: &config.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To(int32(13)),
-							AutoRotationJitterPercentageMax: ptr.To(int32(13)),
+							AutoRotationJitterPercentageMin: ptr.To[int32](13),
+							AutoRotationJitterPercentageMax: ptr.To[int32](13),
 						},
 					}
 
@@ -202,8 +202,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				It("should forbid auto rotation jitter percentage min higher than max", func() {
 					cfg.GardenClientConnection = &config.GardenClientConnection{
 						KubeconfigValidity: &config.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To(int32(14)),
-							AutoRotationJitterPercentageMax: ptr.To(int32(13)),
+							AutoRotationJitterPercentageMin: ptr.To[int32](14),
+							AutoRotationJitterPercentageMax: ptr.To[int32](13),
 						},
 					}
 

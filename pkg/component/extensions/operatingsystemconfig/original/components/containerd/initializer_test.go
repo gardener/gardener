@@ -68,7 +68,7 @@ ExecStart=/opt/bin/init-containerd`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/opt/bin/init-containerd",
-					Permissions: ptr.To(int32(744)),
+					Permissions: ptr.To[int32](744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -78,7 +78,7 @@ ExecStart=/opt/bin/init-containerd`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-					Permissions: ptr.To(int32(0644)),
+					Permissions: ptr.To[int32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: `[Unit]

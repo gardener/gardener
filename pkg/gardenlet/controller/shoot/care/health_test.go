@@ -446,9 +446,9 @@ var _ = Describe("health check", func() {
 		)
 
 		BeforeEach(func() {
-			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
-			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
-			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To(int32(1))}}
+			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
 		})
 
 		It("should report an error because a required relevant deployment does not exist", func() {
@@ -469,7 +469,7 @@ var _ = Describe("health check", func() {
 
 		It("should report names because some relevant deployment have replicas == 0", func() {
 			deploymentKCM.Spec.Replicas = nil
-			deploymentMCM.Spec.Replicas = ptr.To(int32(0))
+			deploymentMCM.Spec.Replicas = ptr.To[int32](0)
 
 			Expect(fakeClient.Create(ctx, deploymentCA)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
@@ -494,7 +494,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To(int32(40)),
+					LeaseDurationSeconds: ptr.To[int32](40),
 				},
 			}
 
@@ -516,7 +516,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To(int32(40)),
+					LeaseDurationSeconds: ptr.To[int32](40),
 				},
 			}
 		)
@@ -562,7 +562,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To(int32(40)),
+					LeaseDurationSeconds: ptr.To[int32](40),
 				},
 			}
 
@@ -582,7 +582,7 @@ var _ = Describe("health check", func() {
 				},
 				Spec: coordinationv1.LeaseSpec{
 					RenewTime:            &metav1.MicroTime{Time: fakeClock.Now()},
-					LeaseDurationSeconds: ptr.To(int32(40)),
+					LeaseDurationSeconds: ptr.To[int32](40),
 				},
 			}
 

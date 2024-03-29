@@ -326,7 +326,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To(int32(420)),
+							DefaultMode: ptr.To[int32](420),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -365,8 +365,8 @@ var _ = Describe("KubeStateMetrics", func() {
 					Labels:    deploymentLabels,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To(int32(0)),
-					RevisionHistoryLimit: ptr.To(int32(2)),
+					Replicas:             ptr.To[int32](0),
+					RevisionHistoryLimit: ptr.To[int32](2),
 					Selector:             &metav1.LabelSelector{MatchLabels: selectorLabels},
 					Strategy: appsv1.DeploymentStrategy{
 						Type: appsv1.RollingUpdateDeploymentStrategyType,

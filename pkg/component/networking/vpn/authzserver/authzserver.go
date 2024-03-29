@@ -93,8 +93,8 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{

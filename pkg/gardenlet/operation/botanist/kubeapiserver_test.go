@@ -270,10 +270,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: ptr.To(int32(16)),
+								MinReplicas: ptr.To[int32](16),
 								MaxReplicas: 32,
 							},
-							Replicas: ptr.To(int32(24)),
+							Replicas: ptr.To[int32](24),
 						}
 					},
 					map[featuregate.Feature]bool{
@@ -298,10 +298,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: ptr.To(int32(16)),
+								MinReplicas: ptr.To[int32](16),
 								MaxReplicas: 32,
 							},
-							Replicas: ptr.To(int32(24)),
+							Replicas: ptr.To[int32](24),
 						}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
@@ -315,7 +315,7 @@ var _ = Describe("KubeAPIServer", func() {
 						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
-						Replicas:                  ptr.To(int32(24)),
+						Replicas:                  ptr.To[int32](24),
 						UseMemoryMetricForHvpaHPA: true,
 						ScaleDownDisabledForHvpa:  false,
 					},
@@ -325,10 +325,10 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
 							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: ptr.To(int32(16)),
+								MinReplicas: ptr.To[int32](16),
 								MaxReplicas: 32,
 							},
-							Replicas: ptr.To(int32(24)),
+							Replicas: ptr.To[int32](24),
 						}
 					},
 					map[featuregate.Feature]bool{
@@ -344,7 +344,7 @@ var _ = Describe("KubeAPIServer", func() {
 						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
-						Replicas:                  ptr.To(int32(24)),
+						Replicas:                  ptr.To[int32](24),
 						UseMemoryMetricForHvpaHPA: true,
 						ScaleDownDisabledForHvpa:  false,
 					},

@@ -35,11 +35,11 @@ var _ = Describe("ReplicaSet", func() {
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		}, HaveOccurred()),
 		Entry("not enough ready replicas", &appsv1.ReplicaSet{
-			Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To(int32(2))},
+			Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
 			Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 		}, HaveOccurred()),
 		Entry("healthy", &appsv1.ReplicaSet{
-			Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To(int32(2))},
+			Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
 			Status: appsv1.ReplicaSetStatus{ReadyReplicas: 2},
 		}, BeNil()),
 	)

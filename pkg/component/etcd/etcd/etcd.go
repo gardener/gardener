@@ -424,7 +424,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			hvpa.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			})
-			hvpa.Spec.Replicas = ptr.To(int32(1))
+			hvpa.Spec.Replicas = ptr.To[int32](1)
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: e.values.HvpaConfig.MaintenanceTimeWindow.Begin,
 				End:   e.values.HvpaConfig.MaintenanceTimeWindow.End,
@@ -444,14 +444,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 						},
@@ -469,11 +469,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("2G"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
@@ -485,22 +485,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("1"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("2G"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("2"),
-						Percentage: ptr.To(int32(40)),
+						Percentage: ptr.To[int32](40),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("5G"),
-						Percentage: ptr.To(int32(40)),
+						Percentage: ptr.To[int32](40),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{

@@ -124,7 +124,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hvpa, func() error {
 		metav1.SetMetaDataLabel(&hvpa.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
-		hvpa.Spec.Replicas = ptr.To(int32(1))
+		hvpa.Spec.Replicas = ptr.To[int32](1)
 		hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
 			Deploy:   true,
@@ -160,11 +160,11 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: ptr.To(int32(80)),
+						Percentage: ptr.To[int32](80),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("200M"),
-						Percentage: ptr.To(int32(80)),
+						Percentage: ptr.To[int32](80),
 					},
 				},
 			},
@@ -176,22 +176,22 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				MinChange: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: ptr.To(int32(80)),
+						Percentage: ptr.To[int32](80),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("200M"),
-						Percentage: ptr.To(int32(80)),
+						Percentage: ptr.To[int32](80),
 					},
 				},
 			},
 			LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 				CPU: hvpav1alpha1.ChangeParams{
 					Value:      ptr.To("1"),
-					Percentage: ptr.To(int32(70)),
+					Percentage: ptr.To[int32](70),
 				},
 				Memory: hvpav1alpha1.ChangeParams{
 					Value:      ptr.To("1G"),
-					Percentage: ptr.To(int32(70)),
+					Percentage: ptr.To[int32](70),
 				},
 			},
 			Template: hvpav1alpha1.VpaTemplate{

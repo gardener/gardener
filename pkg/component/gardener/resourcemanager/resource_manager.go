@@ -810,7 +810,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = r.values.Replicas
-		deployment.Spec.RevisionHistoryLimit = ptr.To(int32(2))
+		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -900,7 +900,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						Name: volumeNameAPIServerAccess,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To(int32(420)),
+								DefaultMode: ptr.To[int32](420),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -939,7 +939,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretServer.Name,
-								DefaultMode: ptr.To(int32(420)),
+								DefaultMode: ptr.To[int32](420),
 							},
 						},
 					},
@@ -968,7 +968,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  clusterCASecret.Name,
-						DefaultMode: ptr.To(int32(420)),
+						DefaultMode: ptr.To[int32](420),
 					},
 				},
 			})
@@ -984,7 +984,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  r.secrets.BootstrapKubeconfig.Name,
-							DefaultMode: ptr.To(int32(420)),
+							DefaultMode: ptr.To[int32](420),
 						},
 					},
 				})
@@ -1355,7 +1355,7 @@ func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1386,7 +1386,7 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          ptr.To(int32(10)),
+			TimeoutSeconds:          ptr.To[int32](10),
 		},
 		{
 			Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1428,7 +1428,7 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          ptr.To(int32(10)),
+			TimeoutSeconds:          ptr.To[int32](10),
 		},
 	}
 }
@@ -1571,7 +1571,7 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
-			TimeoutSeconds:          ptr.To(int32(10)),
+			TimeoutSeconds:          ptr.To[int32](10),
 		})
 	}
 
@@ -1614,7 +1614,7 @@ func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelecto
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1644,7 +1644,7 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1698,7 +1698,7 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1745,7 +1745,7 @@ func GetSeccompProfileMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1801,7 +1801,7 @@ func GetKubernetesServiceHostMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(2)),
+		TimeoutSeconds:          ptr.To[int32](2),
 	}
 }
 
@@ -1844,7 +1844,7 @@ func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1919,7 +1919,7 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 
@@ -1960,7 +1960,7 @@ func GetEndpointSliceHintsMutatingWebhook(
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
 		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To(int32(10)),
+		TimeoutSeconds:          ptr.To[int32](10),
 	}
 }
 

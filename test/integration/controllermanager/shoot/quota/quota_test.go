@@ -49,7 +49,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Project",
 				},
-				ClusterLifetimeDays: ptr.To(int32(1)),
+				ClusterLifetimeDays: ptr.To[int32](1),
 			},
 		}
 

@@ -137,7 +137,7 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &s.values.ReserveExcessCapacity.Replicas,
-				RevisionHistoryLimit: ptr.To(int32(2)),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{

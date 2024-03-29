@@ -129,10 +129,10 @@ func SetDefaults_GardenClientConnection(obj *GardenClientConnection) {
 // SetDefaults_KubeconfigValidity sets defaults for the controller objects.
 func SetDefaults_KubeconfigValidity(obj *KubeconfigValidity) {
 	if obj.AutoRotationJitterPercentageMin == nil {
-		obj.AutoRotationJitterPercentageMin = ptr.To(int32(70))
+		obj.AutoRotationJitterPercentageMin = ptr.To[int32](70)
 	}
 	if obj.AutoRotationJitterPercentageMax == nil {
-		obj.AutoRotationJitterPercentageMax = ptr.To(int32(90))
+		obj.AutoRotationJitterPercentageMax = ptr.To[int32](90)
 	}
 }
 
@@ -293,11 +293,11 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 	}
 
 	if obj.LeaseResyncSeconds == nil {
-		obj.LeaseResyncSeconds = ptr.To(int32(2))
+		obj.LeaseResyncSeconds = ptr.To[int32](2)
 	}
 
 	if obj.LeaseResyncMissThreshold == nil {
-		obj.LeaseResyncMissThreshold = ptr.To(int32(10))
+		obj.LeaseResyncMissThreshold = ptr.To[int32](10)
 	}
 }
 

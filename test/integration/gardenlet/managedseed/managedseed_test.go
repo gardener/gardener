@@ -145,8 +145,8 @@ var _ = Describe("ManagedSeed controller test", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-						ReplicaCount:         ptr.To(int32(1)),
-						RevisionHistoryLimit: ptr.To(int32(1)),
+						ReplicaCount:         ptr.To[int32](1),
+						RevisionHistoryLimit: ptr.To[int32](1),
 						Image: &seedmanagementv1alpha1.Image{
 							PullPolicy: ptr.To(corev1.PullIfNotPresent),
 						},

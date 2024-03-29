@@ -667,8 +667,8 @@ func ComputeExpectedGardenletConfiguration(
 				Burst: 130,
 			},
 			KubeconfigValidity: &gardenletv1alpha1.KubeconfigValidity{
-				AutoRotationJitterPercentageMin: ptr.To(int32(70)),
-				AutoRotationJitterPercentageMax: ptr.To(int32(90)),
+				AutoRotationJitterPercentageMin: ptr.To[int32](70),
+				AutoRotationJitterPercentageMax: ptr.To[int32](90),
 			},
 		},
 		SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
@@ -698,8 +698,8 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
-				LeaseResyncSeconds:       ptr.To(int32(2)),
-				LeaseResyncMissThreshold: ptr.To(int32(10)),
+				LeaseResyncSeconds:       ptr.To[int32](2),
+				LeaseResyncMissThreshold: ptr.To[int32](10),
 			},
 			Shoot: &gardenletv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: ptr.To(false),
@@ -961,8 +961,8 @@ func ComputeExpectedGardenletDeploymentSpec(
 	}
 
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: ptr.To(int32(2)),
-		Replicas:             ptr.To(int32(2)),
+		RevisionHistoryLimit: ptr.To[int32](2),
+		Replicas:             ptr.To[int32](2),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -1044,7 +1044,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 					Name: "kube-api-access-gardener",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: ptr.To(int32(420)),
+							DefaultMode: ptr.To[int32](420),
 							Sources: []corev1.VolumeProjection{
 								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",

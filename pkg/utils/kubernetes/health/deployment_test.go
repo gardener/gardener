@@ -173,7 +173,7 @@ var _ = Describe("Deployment", func() {
 					Namespace: "namespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
 				},
 			}
@@ -181,7 +181,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should consider the deployment as updated", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 				{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -208,7 +208,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since there are still terminating pods", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 				{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -237,7 +237,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since it is not healthy", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 			}
@@ -255,7 +255,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since it is not progressing", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = ptr.To(int32(1))
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "False", Message: "whatever message"},
 			}
@@ -290,7 +290,7 @@ var _ = Describe("Deployment", func() {
 					Namespace: "namespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
 				},
 			}

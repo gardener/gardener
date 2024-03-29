@@ -171,7 +171,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
-			BackoffLimit: ptr.To(int32(0)),
+			BackoffLimit: ptr.To[int32](0),
 		},
 	}
 	return &job, c.Create(ctx, &job)

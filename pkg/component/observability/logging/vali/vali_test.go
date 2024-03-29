@@ -400,7 +400,7 @@ var _ = Describe("Vali", func() {
 					Generation: 2,
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: ptr.To(int32(0)),
+					Replicas: ptr.To[int32](0),
 				},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
@@ -1056,7 +1056,7 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 			}),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 			MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: maintenanceBegin,
 				End:   maintenanceEnd,
@@ -1075,21 +1075,21 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 						},
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: ptr.To(int32(1)),
+						MinReplicas: ptr.To[int32](1),
 						MaxReplicas: 1,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "cpu",
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "memory",
-									TargetAverageUtilization: ptr.To(int32(80)),
+									TargetAverageUtilization: ptr.To[int32](80),
 								},
 							},
 						},
@@ -1111,11 +1111,11 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("100m"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("300M"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
@@ -1127,22 +1127,22 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("200m"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("500M"),
-							Percentage: ptr.To(int32(80)),
+							Percentage: ptr.To[int32](80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: ptr.To(int32(40)),
+						Percentage: ptr.To[int32](40),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1G"),
-						Percentage: ptr.To(int32(40)),
+						Percentage: ptr.To[int32](40),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{
@@ -1265,7 +1265,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -1419,7 +1419,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: ptr.To(int32(0520)),
+									DefaultMode: ptr.To[int32](0520),
 								},
 							},
 						},
@@ -1558,7 +1558,7 @@ wait
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To(int32(420)),
+						DefaultMode: ptr.To[int32](420),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{

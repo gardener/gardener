@@ -61,7 +61,7 @@ WantedBy=multi-user.target`),
 
 			sshdEnsurerFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/sshd-ensurer/run.sh",
-				Permissions: ptr.To(int32(0755)),
+				Permissions: ptr.To[int32](0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -98,7 +98,7 @@ WantedBy=multi-user.target`),
 
 			sshdEnsurerFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/sshd-ensurer/run.sh",
-				Permissions: ptr.To(int32(0755)),
+				Permissions: ptr.To[int32](0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

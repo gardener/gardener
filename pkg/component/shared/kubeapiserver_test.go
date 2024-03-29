@@ -797,8 +797,8 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    ptr.To(int32(1)),
-					MaxNonMutatingInflight: ptr.To(int32(2)),
+					MaxMutatingInflight:    ptr.To[int32](1),
+					MaxNonMutatingInflight: ptr.To[int32](2),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
@@ -844,7 +844,7 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   ptr.To(int32(1)),
+					Default:   ptr.To[int32](1),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
@@ -1036,7 +1036,7 @@ exemptions:
 
 			Entry("no change due to already set",
 				nil,
-				apiserver.AutoscalingConfig{Replicas: ptr.To(int32(1))},
+				apiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
@@ -1059,7 +1059,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To(int32(3)),
+							Replicas: ptr.To[int32](3),
 						},
 					})).To(Succeed())
 				},
@@ -1075,7 +1075,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: ptr.To(int32(0)),
+							Replicas: ptr.To[int32](0),
 						},
 					})).To(Succeed())
 				},

@@ -302,7 +302,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -320,7 +320,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newDeployment.Spec.Replicas = ptr.To(int32(2))
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			expected := old.DeepCopy()
 
@@ -329,7 +329,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newDeployment.Spec.Replicas = ptr.To(int32(2))
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			expected := newDeployment.DeepCopy()
 
@@ -377,7 +377,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -387,7 +387,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserve-replicas is unset", func() {
-			newDeployment.Spec.Replicas = ptr.To(int32(2))
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
@@ -399,7 +399,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
-			newDeployment.Spec.Replicas = ptr.To(int32(2))
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
@@ -473,7 +473,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: ptr.To(int32(1)),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -491,7 +491,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newStatefulSet.Spec.Replicas = ptr.To(int32(2))
+			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
 
 			expected := old.DeepCopy()
 
@@ -500,7 +500,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newStatefulSet.Spec.Replicas = ptr.To(int32(2))
+			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
 
 			expected := newStatefulSet.DeepCopy()
 

@@ -126,7 +126,7 @@ var _ = Describe("Registration", func() {
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    ptr.To(int32(1337)),
+					TimeoutSeconds:    ptr.To[int32](1337),
 				},
 				{
 					Name:          "webhook4",
@@ -166,7 +166,7 @@ var _ = Describe("Registration", func() {
 					Path:              "path3",
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"baz": "foo"}},
 					ObjectSelector:    &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "baz"}},
-					TimeoutSeconds:    ptr.To(int32(1337)),
+					TimeoutSeconds:    ptr.To[int32](1337),
 				},
 				{
 					Action:        "validating",

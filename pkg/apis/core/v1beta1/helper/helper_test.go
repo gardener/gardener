@@ -470,9 +470,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: ptr.To(int32(3)),
+				Replicas: ptr.To[int32](3),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: ptr.To(int32(3)),
+					MinReplicas: ptr.To[int32](3),
 					MaxReplicas: 3,
 				},
 			}))
@@ -487,9 +487,9 @@ var _ = Describe("Helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: ptr.To(int32(3)),
+				Replicas: ptr.To[int32](3),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: ptr.To(int32(3)),
+					MinReplicas: ptr.To[int32](3),
 					MaxReplicas: 6,
 				},
 			}))

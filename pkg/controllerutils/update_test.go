@@ -88,7 +88,7 @@ var _ = Describe("utils", func() {
 						Namespace: namespace,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas: ptr.To(int32(1)),
+						Replicas: ptr.To[int32](1),
 					},
 				}
 

@@ -795,8 +795,8 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas:             ptr.To(int32(1)),
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			Replicas:             ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -883,7 +883,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 							Name: "kubeconfig",
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
-									DefaultMode: ptr.To(int32(420)),
+									DefaultMode: ptr.To[int32](420),
 									Sources: []corev1.VolumeProjection{
 										{
 											Secret: &corev1.SecretProjection{

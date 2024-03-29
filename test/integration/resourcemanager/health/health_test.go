@@ -771,7 +771,7 @@ func generateDeploymentTestResource(name string) *appsv1.Deployment {
 			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"test": "foo",
@@ -814,7 +814,7 @@ func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
 			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"test": "foo",
@@ -862,7 +862,7 @@ func generatePrometheusTestResource(name string) *monitoringv1.Prometheus {
 		},
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-				Replicas: ptr.To(int32(1)),
+				Replicas: ptr.To[int32](1),
 			},
 		},
 		Status: monitoringv1.PrometheusStatus{
@@ -894,7 +894,7 @@ func generateAlertmanagerTestResource(name string) *monitoringv1.Alertmanager {
 			Namespace: testNamespace.Name,
 		},
 		Spec: monitoringv1.AlertmanagerSpec{
-			Replicas: ptr.To(int32(1)),
+			Replicas: ptr.To[int32](1),
 		},
 		Status: monitoringv1.AlertmanagerStatus{
 			Replicas:          1,
