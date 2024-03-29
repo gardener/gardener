@@ -165,17 +165,18 @@ func (b *Builder) WithDefaultDomains(defaultDomains []*gardenerutils.Domain) *Bu
 // Should be called before [Builder.Build].
 func (b *Builder) WithServiceAccountIssuerHostname(secret *corev1.Secret) *Builder {
 	b.serviceAccountIssuerHostname = func() (*string, error) {
-		if secret != nil {
-			if host, ok := secret.Data["hostname"]; ok {
-				hostname := string(host)
-				if strings.TrimSpace(hostname) == "" {
-					return nil, errors.New("service account issuer secret has an empty hostname key")
-				}
-				return &hostname, nil
-			}
+		if secret == nil {
+			return nil, nil
+		}
+		host, ok := secret.Data["hostname"]
+		if !ok {
 			return nil, errors.New("service account issuer secret is missing a hostname key")
 		}
-		return nil, nil
+		hostname := string(host)
+		if strings.TrimSpace(hostname) == "" {
+			return nil, errors.New("service account issuer secret has an empty hostname key")
+		}
+		return &hostname, nil
 	}
 	return b
 }
