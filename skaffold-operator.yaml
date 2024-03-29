@@ -18,6 +18,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-operator
             - cmd/gardener-operator/app
             - cmd/gardener-operator/app/bootstrappers
             - cmd/utils
@@ -201,6 +202,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-resource-manager
             - cmd/gardener-resource-manager/app
             - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
@@ -299,6 +301,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
             - pkg/api
@@ -475,6 +478,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-controller-manager
             - cmd/gardener-controller-manager/app
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
@@ -583,6 +587,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-scheduler
             - cmd/gardener-scheduler/app
             - cmd/utils
             - pkg/api/extensions
@@ -645,6 +650,7 @@ build:
       ko:
         dependencies:
           paths:
+            - cmd/gardener-admission-controller
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - pkg/admissioncontroller/apis/config

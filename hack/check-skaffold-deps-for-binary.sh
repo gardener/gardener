@@ -63,13 +63,14 @@ echo "$skaffold_yaml" |\
   sort -f |\
   uniq > "$path_current_skaffold_dependencies"
 
+echo "cmd/$binary_name" > "$path_actual_dependencies"
 module_name=$(go list -m)
 module_prefix="$module_name/"
 go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   grep "$module_prefix" |\
   sed "s@$module_prefix@@g" |\
   sort -f |\
-  uniq > "$path_actual_dependencies"
+  uniq >> "$path_actual_dependencies"
 
 # always add VERSION file
 echo "VERSION" >> "$path_actual_dependencies"
