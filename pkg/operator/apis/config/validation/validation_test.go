@@ -192,8 +192,8 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		It("should pass with valid toleration options", func() {
 			conf.NodeToleration = &config.NodeTolerationConfiguration{
-				DefaultNotReadyTolerationSeconds:    ptr.To(int64(60)),
-				DefaultUnreachableTolerationSeconds: ptr.To(int64(120)),
+				DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
+				DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 			}
 
 			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())

@@ -651,9 +651,9 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged:   ptr.To(true),
-									RunAsUser:    ptr.To(int64(0)),
+									RunAsUser:    ptr.To[int64](0),
 									RunAsNonRoot: ptr.To(false),
-									RunAsGroup:   ptr.To(int64(0)),
+									RunAsGroup:   ptr.To[int64](0),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -826,8 +826,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 					Protocol:      corev1.ProtocolTCP,
 				}},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To(int64(65532)),
-					RunAsGroup:             ptr.To(int64(65534)),
+					RunAsUser:              ptr.To[int64](65532),
+					RunAsGroup:             ptr.To[int64](65534),
 					RunAsNonRoot:           ptr.To(true),
 					ReadOnlyRootFilesystem: ptr.To(true),
 				},

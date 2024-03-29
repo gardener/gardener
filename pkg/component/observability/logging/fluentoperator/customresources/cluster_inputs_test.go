@@ -46,7 +46,7 @@ var _ = Describe("Logging", func() {
 								Tag:                    "kubernetes.*",
 								Path:                   "/var/log/containers/*.log",
 								ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
-								RefreshIntervalSeconds: ptr.To(int64(10)),
+								RefreshIntervalSeconds: ptr.To[int64](10),
 								MemBufLimit:            "30MB",
 								SkipLongLines:          ptr.To(true),
 								DB:                     "/var/fluentbit/flb_kube.db",

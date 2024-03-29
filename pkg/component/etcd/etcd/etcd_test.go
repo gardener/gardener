@@ -1781,7 +1781,7 @@ var _ = Describe("Etcd", func() {
 						},
 					},
 					Status: druidv1alpha1.EtcdStatus{
-						ObservedGeneration: ptr.To(int64(1)),
+						ObservedGeneration: ptr.To[int64](1),
 						Ready:              ptr.To(true),
 					},
 				}

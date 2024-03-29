@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 		}
-		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, ptr.To(int64(3600)))
+		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, ptr.To[int64](3600))
 		framework.ExpectNoError(err)
 
 		err = framework.TestHTTPEndpointWithToken(ctx, url, token)

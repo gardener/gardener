@@ -363,7 +363,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when expiration seconds is lower than 600", func() {
 					conf.Webhooks.ProjectedTokenMount.Enabled = true
-					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = ptr.To(int64(123))
+					conf.Webhooks.ProjectedTokenMount.ExpirationSeconds = ptr.To[int64](123)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -376,8 +376,8 @@ var _ = Describe("Validation", func() {
 
 			Context("high availability config", func() {
 				It("should succeed with valid toleration options", func() {
-					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To(int64(60))
-					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To(int64(120))
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = ptr.To[int64](60)
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = ptr.To[int64](120)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})

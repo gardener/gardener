@@ -87,8 +87,8 @@ var _ = Describe("ResourceManager", func() {
 		})
 
 		It("should consider node toleration configuration", func() {
-			notReadyTolerationSeconds := ptr.To(int64(60))
-			unreachableTolerationSeconds := ptr.To(int64(120))
+			notReadyTolerationSeconds := ptr.To[int64](60)
+			unreachableTolerationSeconds := ptr.To[int64](120)
 
 			botanist.Config = &gardenletconfig.GardenletConfiguration{
 				NodeToleration: &gardenletconfig.NodeToleration{

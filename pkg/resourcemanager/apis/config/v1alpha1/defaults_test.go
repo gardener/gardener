@@ -525,7 +525,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 		It("should not overwrite already set values for ProjectedTokenMountWebhookConfig", func() {
 			obj.Webhooks.ProjectedTokenMount = ProjectedTokenMountWebhookConfig{
 				Enabled:           true,
-				ExpirationSeconds: ptr.To(int64(1234)),
+				ExpirationSeconds: ptr.To[int64](1234),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)

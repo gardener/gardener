@@ -211,12 +211,12 @@ var _ = Describe("Garden controller tests", func() {
 						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfig.ETCDConfig{
-							ETCDController:      &gardenletconfig.ETCDController{Workers: ptr.To(int64(5))},
-							CustodianController: &gardenletconfig.CustodianController{Workers: ptr.To(int64(5))},
+							ETCDController:      &gardenletconfig.ETCDController{Workers: ptr.To[int64](5)},
+							CustodianController: &gardenletconfig.CustodianController{Workers: ptr.To[int64](5)},
 							BackupCompactionController: &gardenletconfig.BackupCompactionController{
 								EnableBackupCompaction: ptr.To(false),
-								Workers:                ptr.To(int64(5)),
-								EventsThreshold:        ptr.To(int64(100)),
+								Workers:                ptr.To[int64](5),
+								EventsThreshold:        ptr.To[int64](100),
 							},
 						},
 					},

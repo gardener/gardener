@@ -455,7 +455,7 @@ func CreateTokenForServiceAccount(ctx context.Context, k8sClient kubernetes.Inte
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.
 func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, serviceAccount *corev1.ServiceAccount) (kubernetes.Interface, error) {
-	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, ptr.To(int64(3600)))
+	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, ptr.To[int64](3600))
 	if err != nil {
 		return nil, err
 	}

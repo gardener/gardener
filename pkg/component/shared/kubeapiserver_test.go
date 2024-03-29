@@ -704,8 +704,8 @@ exemptions:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    ptr.To(int64(120)),
-					DefaultUnreachableTolerationSeconds: ptr.To(int64(130)),
+					DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
+					DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
 				}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)

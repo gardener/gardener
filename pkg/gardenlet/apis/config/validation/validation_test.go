@@ -54,7 +54,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
 					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
-					DNSEntryTTLSeconds:   ptr.To(int64(120)),
+					DNSEntryTTLSeconds:   ptr.To[int64](120),
 				},
 				ShootCare: &config.ShootCareControllerConfiguration{
 					ConcurrentSyncs:                     &concurrentSyncs,
@@ -259,7 +259,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too high values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To(int64(601))
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = ptr.To[int64](601)
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
@@ -615,8 +615,8 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			It("should pass with valid toleration options", func() {
 				cfg.NodeToleration = &config.NodeToleration{
-					DefaultNotReadyTolerationSeconds:    ptr.To(int64(60)),
-					DefaultUnreachableTolerationSeconds: ptr.To(int64(120)),
+					DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
+					DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 				}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())

@@ -242,7 +242,7 @@ var _ = Describe("MachineControllerManager", func() {
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",
-						TerminationGracePeriodSeconds: ptr.To(int64(5)),
+						TerminationGracePeriodSeconds: ptr.To[int64](5),
 					},
 				},
 			},

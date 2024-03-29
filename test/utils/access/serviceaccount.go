@@ -49,7 +49,7 @@ func CreateTargetClientFromDynamicServiceAccountToken(ctx context.Context, targe
 		tokenRequest := &authenticationv1.TokenRequest{
 			Spec: authenticationv1.TokenRequestSpec{
 				Audiences:         []string{v1beta1constants.GardenerAudience},
-				ExpirationSeconds: ptr.To(int64(3600)),
+				ExpirationSeconds: ptr.To[int64](3600),
 			},
 		}
 

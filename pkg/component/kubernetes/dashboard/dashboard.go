@@ -294,9 +294,9 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser:          ptr.To(int64(1001)),
-							RunAsGroup:         ptr.To(int64(2001)),
-							FSGroup:            ptr.To(int64(1)),
+							RunAsUser:          ptr.To[int64](1001),
+							RunAsGroup:         ptr.To[int64](2001),
+							FSGroup:            ptr.To[int64](1),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -394,7 +394,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
-							FSGroup:            ptr.To(int64(1)),
+							FSGroup:            ptr.To[int64](1),
 							SupplementalGroups: []int64{1},
 						},
 						Containers: []corev1.Container{
@@ -421,8 +421,8 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
 									ReadOnlyRootFilesystem:   ptr.To(true),
-									RunAsUser:                ptr.To(int64(1001)),
-									RunAsGroup:               ptr.To(int64(2001)),
+									RunAsUser:                ptr.To[int64](1001),
+									RunAsGroup:               ptr.To[int64](2001),
 									SeccompProfile: &corev1.SeccompProfile{
 										Type: corev1.SeccompProfileTypeRuntimeDefault,
 									},

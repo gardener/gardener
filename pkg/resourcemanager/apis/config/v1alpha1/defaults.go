@@ -191,6 +191,6 @@ func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfi
 // SetDefaults_ProjectedTokenMountWebhookConfig sets defaults for the ProjectedTokenMountWebhookConfig object.
 func SetDefaults_ProjectedTokenMountWebhookConfig(obj *ProjectedTokenMountWebhookConfig) {
 	if obj.Enabled && obj.ExpirationSeconds == nil {
-		obj.ExpirationSeconds = ptr.To(int64(43200))
+		obj.ExpirationSeconds = ptr.To[int64](43200)
 	}
 }

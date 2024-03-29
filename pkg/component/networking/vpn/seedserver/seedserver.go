@@ -359,7 +359,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 				},
 			},
-			TerminationGracePeriodSeconds: ptr.To(int64(30)),
+			TerminationGracePeriodSeconds: ptr.To[int64](30),
 			Volumes: []corev1.Volume{
 				{
 					Name: volumeNameDevNetTun,

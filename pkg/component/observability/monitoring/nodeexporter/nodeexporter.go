@@ -196,7 +196,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						AutomountServiceAccountToken: ptr.To(false),
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To(int64(65534)),
+							RunAsUser:    ptr.To[int64](65534),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},

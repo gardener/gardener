@@ -1992,7 +1992,7 @@ rules:
 						},
 						SecurityContext: &corev1.SecurityContext{
 							RunAsNonRoot: ptr.To(false),
-							RunAsUser:    ptr.To(int64(0)),
+							RunAsUser:    ptr.To[int64](0),
 							Capabilities: &corev1.Capabilities{
 								Add: []corev1.Capability{"NET_ADMIN"},
 							},
@@ -2091,7 +2091,7 @@ rules:
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsNonRoot: ptr.To(false),
-						RunAsUser:    ptr.To(int64(0)),
+						RunAsUser:    ptr.To[int64](0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
@@ -2913,8 +2913,8 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						DefaultNotReadyTolerationSeconds:    ptr.To(int64(120)),
-						DefaultUnreachableTolerationSeconds: ptr.To(int64(130)),
+						DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
+						DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
 						Images:                              images,
 						Version:                             version,
 					})

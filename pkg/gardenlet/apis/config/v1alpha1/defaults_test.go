@@ -367,7 +367,7 @@ var _ = Describe("Defaults", func() {
 					RespectSyncPeriodOverwrite: ptr.To(true),
 					ReconcileInMaintenanceOnly: ptr.To(true),
 					RetryDuration:              &v,
-					DNSEntryTTLSeconds:         ptr.To(int64(60)),
+					DNSEntryTTLSeconds:         ptr.To[int64](60),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
@@ -677,7 +677,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				ETCDController: &ETCDController{Workers: ptr.To(int64(5))},
+				ETCDController: &ETCDController{Workers: ptr.To[int64](5)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -694,7 +694,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for the ETCD custodian controller", func() {
 			obj.ETCDConfig = &ETCDConfig{
-				CustodianController: &CustodianController{Workers: ptr.To(int64(5))},
+				CustodianController: &CustodianController{Workers: ptr.To[int64](5)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -716,9 +716,9 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 30 * time.Second}
 			obj.ETCDConfig = &ETCDConfig{
 				BackupCompactionController: &BackupCompactionController{
-					Workers:                   ptr.To(int64(4)),
+					Workers:                   ptr.To[int64](4),
 					EnableBackupCompaction:    ptr.To(true),
-					EventsThreshold:           ptr.To(int64(900000)),
+					EventsThreshold:           ptr.To[int64](900000),
 					MetricsScrapeWaitDuration: &v,
 				}}
 			SetObjectDefaults_GardenletConfiguration(obj)

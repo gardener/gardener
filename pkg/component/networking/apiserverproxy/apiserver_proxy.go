@@ -318,7 +318,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 											"NET_BIND_SERVICE",
 										},
 									},
-									RunAsUser: ptr.To(int64(0)),
+									RunAsUser: ptr.To[int64](0),
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{

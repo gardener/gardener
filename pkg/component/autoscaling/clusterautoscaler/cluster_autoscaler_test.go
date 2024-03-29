@@ -366,7 +366,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 							},
 							PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 							ServiceAccountName:            serviceAccountName,
-							TerminationGracePeriodSeconds: ptr.To(int64(5)),
+							TerminationGracePeriodSeconds: ptr.To[int64](5),
 						},
 					},
 				},

@@ -84,7 +84,7 @@ WantedBy=multi-user.target`
 
 		When("kubelet data volume size is set", func() {
 			BeforeEach(func() {
-				bootstrapConfig.KubeletDataVolumeSize = ptr.To(int64(1234))
+				bootstrapConfig.KubeletDataVolumeSize = ptr.To[int64](1234)
 
 				DeferCleanup(test.WithVar(&ExecScript, func(scriptPath string) ([]byte, error) {
 					script, err := fakeFS.ReadFile(scriptPath)

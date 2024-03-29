@@ -1279,7 +1279,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 					PriorityClassName:            priorityClassName,
 					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:             ptr.To(int64(10001)),
+						FSGroup:             ptr.To[int64](10001),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 					},
 					InitContainers: []corev1.Container{
@@ -1293,9 +1293,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged:   ptr.To(true),
-								RunAsUser:    ptr.To(int64(0)),
+								RunAsUser:    ptr.To[int64](0),
 								RunAsNonRoot: ptr.To(false),
-								RunAsGroup:   ptr.To(int64(0)),
+								RunAsGroup:   ptr.To[int64](0),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1364,8 +1364,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              ptr.To(int64(10001)),
-								RunAsGroup:             ptr.To(int64(10001)),
+								RunAsUser:              ptr.To[int64](10001),
+								RunAsGroup:             ptr.To[int64](10001),
 								RunAsNonRoot:           ptr.To(true),
 								ReadOnlyRootFilesystem: ptr.To(true),
 							},
@@ -1404,8 +1404,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              ptr.To(int64(10001)),
-								RunAsGroup:             ptr.To(int64(10001)),
+								RunAsUser:              ptr.To[int64](10001),
+								RunAsGroup:             ptr.To[int64](10001),
 								RunAsNonRoot:           ptr.To(true),
 								ReadOnlyRootFilesystem: ptr.To(true),
 							},
@@ -1485,8 +1485,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To(int64(65532)),
-					RunAsGroup:             ptr.To(int64(65534)),
+					RunAsUser:              ptr.To[int64](65532),
+					RunAsGroup:             ptr.To[int64](65534),
 					RunAsNonRoot:           ptr.To(true),
 					ReadOnlyRootFilesystem: ptr.To(true),
 				},

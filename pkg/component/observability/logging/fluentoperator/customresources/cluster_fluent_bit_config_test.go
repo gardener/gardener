@@ -45,7 +45,7 @@ var _ = Describe("Logging", func() {
 					},
 					Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 						Service: &fluentbitv1alpha2.Service{
-							FlushSeconds: ptr.To(int64(30)),
+							FlushSeconds: ptr.To[int64](30),
 							Daemon:       ptr.To(false),
 							LogLevel:     "error",
 							ParsersFile:  "parsers.conf",

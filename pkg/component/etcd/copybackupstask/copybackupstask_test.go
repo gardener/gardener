@@ -124,7 +124,7 @@ var _ = Describe("CopyBackupsTask", func() {
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Generation = 1
-					etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(0))
+					etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
 					return nil
 				}).AnyTimes()
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring("observed generation outdated (0/1)")))
@@ -195,21 +195,21 @@ var _ = Describe("CopyBackupsTask", func() {
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(0))
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
 						return nil
 					}),
 				c.EXPECT().
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(1))
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
 						return nil
 					}),
 				c.EXPECT().
 					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
-						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To(int64(1))
+						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
 						etcdCopyBackupsTask.Status.Conditions = []druidv1alpha1.Condition{
 							{
 								Type:    druidv1alpha1.EtcdCopyBackupsTaskSucceeded,

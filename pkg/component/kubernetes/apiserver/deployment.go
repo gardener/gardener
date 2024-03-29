@@ -217,14 +217,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					TerminationGracePeriodSeconds: ptr.To(int64(30)),
+					TerminationGracePeriodSeconds: ptr.To[int64](30),
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To(int64(65532)),
-						RunAsGroup:   ptr.To(int64(65532)),
-						FSGroup:      ptr.To(int64(65532)),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
 					},
 					Containers: []corev1.Container{{
 						Name:                     ContainerNameKubeAPIServer,
@@ -812,7 +812,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    ptr.To(int64(0)),
+			RunAsUser:    ptr.To[int64](0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -872,7 +872,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    ptr.To(int64(0)),
+			RunAsUser:    ptr.To[int64](0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},

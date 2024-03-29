@@ -784,7 +784,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								Key:               "foo",
 								Operator:          "Exists",
 								Effect:            "NoExecute",
-								TolerationSeconds: ptr.To(int64(15)),
+								TolerationSeconds: ptr.To[int64](15),
 							},
 							{
 								Key:      "node.kubernetes.io/not-ready",
@@ -829,7 +829,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/not-ready",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: ptr.To(int64(300)),
+							TolerationSeconds: ptr.To[int64](300),
 						}}
 
 						BeforeEach(func() {
@@ -844,7 +844,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Key:               "node.kubernetes.io/not-ready",
 									Operator:          "Exists",
 									Effect:            "NoExecute",
-									TolerationSeconds: ptr.To(int64(300)),
+									TolerationSeconds: ptr.To[int64](300),
 								},
 								corev1.Toleration{
 									Key:               "node.kubernetes.io/unreachable",
@@ -861,7 +861,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							Key:               "node.kubernetes.io/unreachable",
 							Operator:          "Exists",
 							Effect:            "NoExecute",
-							TolerationSeconds: ptr.To(int64(300)),
+							TolerationSeconds: ptr.To[int64](300),
 						}}
 
 						BeforeEach(func() {
@@ -884,7 +884,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Operator:          "Exists",
 									Effect:            "NoExecute",
 									Value:             "",
-									TolerationSeconds: ptr.To(int64(300)),
+									TolerationSeconds: ptr.To[int64](300),
 								},
 							))
 						})

@@ -711,7 +711,7 @@ func ComputeExpectedGardenletConfiguration(
 				RetryDuration: &metav1.Duration{
 					Duration: 12 * time.Hour,
 				},
-				DNSEntryTTLSeconds: ptr.To(int64(120)),
+				DNSEntryTTLSeconds: ptr.To[int64](120),
 			},
 			ManagedSeed: &gardenletv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
@@ -858,20 +858,20 @@ func ComputeExpectedGardenletConfiguration(
 		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
 				EnableBackupCompaction:    ptr.To(false),
-				EventsThreshold:           ptr.To(int64(1000000)),
+				EventsThreshold:           ptr.To[int64](1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
-				Workers:                   ptr.To(int64(3)),
+				Workers:                   ptr.To[int64](3),
 			},
 			CustodianController: &gardenletv1alpha1.CustodianController{
-				Workers: ptr.To(int64(10)),
+				Workers: ptr.To[int64](10),
 			},
 			ETCDController: &gardenletv1alpha1.ETCDController{
-				Workers: ptr.To(int64(50)),
+				Workers: ptr.To[int64](50),
 			},
 		},
 		NodeToleration: &gardenletv1alpha1.NodeToleration{
-			DefaultNotReadyTolerationSeconds:    ptr.To(int64(60)),
-			DefaultUnreachableTolerationSeconds: ptr.To(int64(60)),
+			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
+			DefaultUnreachableTolerationSeconds: ptr.To[int64](60),
 		},
 	}
 
@@ -1030,13 +1030,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To(int64(60)),
+						TolerationSeconds: ptr.To[int64](60),
 						Effect:            "NoExecute",
 					},
 					{
 						Key:               "node.kubernetes.io/unreachable",
 						Operator:          "Exists",
-						TolerationSeconds: ptr.To(int64(60)),
+						TolerationSeconds: ptr.To[int64](60),
 						Effect:            "NoExecute",
 					},
 				},
@@ -1048,7 +1048,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 							Sources: []corev1.VolumeProjection{
 								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",
-									ExpirationSeconds: ptr.To(int64(43200)),
+									ExpirationSeconds: ptr.To[int64](43200),
 								}},
 								{ConfigMap: &corev1.ConfigMapProjection{
 									LocalObjectReference: corev1.LocalObjectReference{

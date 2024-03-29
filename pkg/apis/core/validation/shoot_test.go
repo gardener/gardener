@@ -2468,7 +2468,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to specify a valid defaultNotReadyTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To(int64(120))
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = ptr.To[int64](120)
 
 				errorList := ValidateShoot(shoot)
 
@@ -2487,7 +2487,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should allow to specify a valid defaultUnreachableTolerationSeconds", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To(int64(120))
+				shoot.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = ptr.To[int64](120)
 
 				errorList := ValidateShoot(shoot)
 

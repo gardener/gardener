@@ -144,7 +144,7 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 						Labels: getExcessCapacityReservationLabels(),
 					},
 					Spec: corev1.PodSpec{
-						TerminationGracePeriodSeconds: ptr.To(int64(5)),
+						TerminationGracePeriodSeconds: ptr.To[int64](5),
 						Containers: []corev1.Container{{
 							Name:            "pause-container",
 							Image:           s.values.ReserveExcessCapacity.Image,

@@ -376,9 +376,9 @@ var _ = Describe("KubeControllerManager", func() {
 							PriorityClassName:            priorityClassName,
 							SecurityContext: &corev1.PodSecurityContext{
 								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To(int64(65532)),
-								RunAsGroup:   ptr.To(int64(65532)),
-								FSGroup:      ptr.To(int64(65532)),
+								RunAsUser:    ptr.To[int64](65532),
+								RunAsGroup:   ptr.To[int64](65532),
+								FSGroup:      ptr.To[int64](65532),
 							},
 							Containers: []corev1.Container{
 								{

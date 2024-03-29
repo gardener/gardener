@@ -213,8 +213,8 @@ var _ = Describe("ResourceManager", func() {
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		}
 
-		defaultNotReadyTolerationSeconds = ptr.To(int64(60))
-		defaultUnreachableTolerationSeconds = ptr.To(int64(120))
+		defaultNotReadyTolerationSeconds = ptr.To[int64](60)
+		defaultUnreachableTolerationSeconds = ptr.To[int64](120)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -655,7 +655,7 @@ var _ = Describe("ResourceManager", func() {
 											Sources: []corev1.VolumeProjection{
 												{
 													ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-														ExpirationSeconds: ptr.To(int64(43200)),
+														ExpirationSeconds: ptr.To[int64](43200),
 														Path:              "token",
 													},
 												},

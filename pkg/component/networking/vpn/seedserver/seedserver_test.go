@@ -193,7 +193,7 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 					},
-					TerminationGracePeriodSeconds: ptr.To(int64(30)),
+					TerminationGracePeriodSeconds: ptr.To[int64](30),
 					Volumes: []corev1.Volume{
 						{
 							Name: "dev-net-tun",

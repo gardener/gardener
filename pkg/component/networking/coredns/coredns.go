@@ -374,8 +374,8 @@ import custom/*.server
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To(int64(65534)),
-							FSGroup:            ptr.To(int64(1)),
+							RunAsUser:          ptr.To[int64](65534),
+							FSGroup:            ptr.To[int64](1),
 							SupplementalGroups: []int64{1},
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -569,9 +569,9 @@ import custom/*.server
 						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:       ptr.To(true),
-							RunAsUser:          ptr.To(int64(65534)),
+							RunAsUser:          ptr.To[int64](65534),
 							SupplementalGroups: []int64{65534},
-							FSGroup:            ptr.To(int64(65534)),
+							FSGroup:            ptr.To[int64](65534),
 							SeccompProfile: &corev1.SeccompProfile{
 								Type: corev1.SeccompProfileTypeRuntimeDefault,
 							},

@@ -154,7 +154,7 @@ var _ = Describe("PrometheusOperator", func() {
 						PriorityClassName:  priorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsNonRoot:   ptr.To(true),
-							RunAsUser:      ptr.To(int64(65532)),
+							RunAsUser:      ptr.To[int64](65532),
 							SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 						},
 						Containers: []corev1.Container{

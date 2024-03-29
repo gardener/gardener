@@ -198,7 +198,7 @@ var _ = Describe("Alertmanager", func() {
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
 				},
-				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(0))},
+				SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
 				Storage: &monitoringv1.StorageSpec{
 					VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 						EmbeddedObjectMetadata: monitoringv1.EmbeddedObjectMetadata{Name: "alertmanager-db"},

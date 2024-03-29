@@ -68,15 +68,15 @@ var _ = Describe("Etcd", func() {
 	JustBeforeEach(func() {
 		etcdConfig = &config.ETCDConfig{
 			ETCDController: &config.ETCDController{
-				Workers: ptr.To(int64(25)),
+				Workers: ptr.To[int64](25),
 			},
 			CustodianController: &config.CustodianController{
-				Workers: ptr.To(int64(3)),
+				Workers: ptr.To[int64](3),
 			},
 			BackupCompactionController: &config.BackupCompactionController{
-				Workers:                   ptr.To(int64(3)),
+				Workers:                   ptr.To[int64](3),
 				EnableBackupCompaction:    ptr.To(true),
-				EventsThreshold:           ptr.To(int64(1000000)),
+				EventsThreshold:           ptr.To[int64](1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: time.Second * 60},
 				ActiveDeadlineDuration:    &metav1.Duration{Duration: time.Hour * 3},
 			},

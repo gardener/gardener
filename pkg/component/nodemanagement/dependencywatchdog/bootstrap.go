@@ -399,7 +399,7 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 				Spec: corev1.PodSpec{
 					PriorityClassName:             v1beta1constants.PriorityClassNameSeedSystem800,
 					ServiceAccountName:            serviceAccountName,
-					TerminationGracePeriodSeconds: ptr.To(int64(5)),
+					TerminationGracePeriodSeconds: ptr.To[int64](5),
 					Containers: []corev1.Container{{
 						Name:            prefixDependencyWatchdog,
 						Image:           b.values.Image,
