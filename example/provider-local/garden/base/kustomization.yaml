@@ -29,6 +29,13 @@ patches:
         kind: Extension
         type: local-ext-shoot
         workerlessSupported: true
+    - op: add
+      path: /spec/resources/-
+      value:
+        kind: Extension
+        type: local-ext-shoot-after-worker
+        lifecycle:
+          reconcile: AfterWorker
   target:
     group: core.gardener.cloud
     kind: ControllerRegistration

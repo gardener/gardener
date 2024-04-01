@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -63,7 +64,7 @@ func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
 func DefaultShoot(name string) *gardencorev1beta1.Shoot {
-	return &gardencorev1beta1.Shoot{
+	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
@@ -117,6 +118,18 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 		},
 	}
+
+	if ginkgo.Label("default").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) {
+		// TODO(maboehm): Add permanently to default shoot after v1.92
+		// The extension is not available in the previous gardener
+		// version (so during upgrade tests), so only set it for default tests.
+		shoot.Spec.Extensions = append(shoot.Spec.Extensions,
+			gardencorev1beta1.Extension{
+				Type: "local-ext-shoot-after-worker",
+			},
+		)
+	}
+	return shoot
 }
 
 // DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.

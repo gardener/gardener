@@ -68,6 +68,13 @@ type Interface interface {
 	// WaitAfterKubeAPIServer waits until all extensions that should be handled after the kube-apiserver are deployed and report readiness.
 	WaitAfterKubeAPIServer(ctx context.Context) error
 
+	// DeployAfterWorker deploys extensions that should be handled after the workers.
+	DeployAfterWorker(ctx context.Context) error
+	// RestoreAfterWorker restores extensions that should be handled after the workers.
+	RestoreAfterWorker(ctx context.Context, shootState *gardencorev1beta1.ShootState) error
+	// WaitAfterWorker waits until all extensions that should be handled after the workers are deployed and report readiness.
+	WaitAfterWorker(ctx context.Context) error
+
 	// DestroyBeforeKubeAPIServer deletes the extensions that should be handled before the kube-apiserver.
 	DestroyBeforeKubeAPIServer(context.Context) error
 	// WaitCleanupBeforeKubeAPIServer waits until the extensions that should be handled before the kube-apiserver are cleaned up.
@@ -161,6 +168,16 @@ func (e *extension) DeployBeforeKubeAPIServer(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
+// DeployAfterWorker uses the seed client to create or update the Extension resources that should be deployed after the workers.
+func (e *extension) DeployAfterWorker(ctx context.Context) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
+		_, err := e.deploy(ctx, ext, extType, providerConfig, v1beta1constants.GardenerOperationReconcile)
+		return err
+	}, deployAfterWorker)
+
+	return flow.Parallel(fns...)(ctx)
+}
+
 func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, ext, func() error {
 		metav1.SetMetaDataAnnotation(&ext.ObjectMeta, v1beta1constants.GardenerOperation, operation)
@@ -226,6 +243,25 @@ func (e *extension) WaitBeforeKubeAPIServer(ctx context.Context) error {
 	return flow.ParallelExitOnError(fns...)(ctx)
 }
 
+// WaitAfterWorker waits until the Extension resources that should be deployed after the workers are ready.
+func (e *extension) WaitAfterWorker(ctx context.Context) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
+		return extensions.WaitUntilExtensionObjectReady(
+			ctx,
+			e.client,
+			e.log,
+			ext,
+			extensionsv1alpha1.ExtensionResource,
+			e.waitInterval,
+			e.waitSevereThreshold,
+			timeout,
+			nil,
+		)
+	}, deployAfterWorker)
+
+	return flow.ParallelExitOnError(fns...)(ctx)
+}
+
 // WaitCleanup waits until the Extension resources are cleaned up.
 func (e *extension) WaitCleanup(ctx context.Context) error {
 	return e.waitCleanup(ctx, nil)
@@ -277,6 +313,23 @@ func (e *extension) RestoreBeforeKubeAPIServer(ctx context.Context, shootState *
 			},
 		)
 	}, deployBeforeKubeAPIServer)
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+// RestoreAfterWorker uses the seed client and the ShootState to create the Extension resources that should be deployed after the workers and restore their state.
+func (e *extension) RestoreAfterWorker(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
+	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, _ time.Duration) error {
+		return extensions.RestoreExtensionWithDeployFunction(
+			ctx,
+			e.client,
+			shootState,
+			extensionsv1alpha1.ExtensionResource,
+			func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
+				return e.deploy(ctx, ext, extType, providerConfig, operationAnnotation)
+			},
+		)
+	}, deployAfterWorker)
 
 	return flow.Parallel(fns...)(ctx)
 }

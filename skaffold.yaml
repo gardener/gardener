@@ -649,6 +649,7 @@ build:
             - pkg/provider-local/controller/dnsrecord
             - pkg/provider-local/controller/extension/seed
             - pkg/provider-local/controller/extension/shoot
+            - pkg/provider-local/controller/extension/shootafterworker
             - pkg/provider-local/controller/healthcheck
             - pkg/provider-local/controller/infrastructure
             - pkg/provider-local/controller/ingress
