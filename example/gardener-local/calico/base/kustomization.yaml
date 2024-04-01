@@ -4,7 +4,7 @@ kind: Kustomization
 resources:
 # TODO(plkokanov): upgrade calico version after https://github.com/projectcalico/calico/issues/8541 is fixed.
 # We currently use 'v3.27.0' because this issue affects versions 'v3.27.1' and 'v3.27.2'.
-- https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+- https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/calico.yaml
 
 images:
 - name: docker.io/calico/cni
