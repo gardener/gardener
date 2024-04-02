@@ -362,7 +362,7 @@ func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, web
 func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, shootWebhookConfigs extensionswebhook.Configs) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		if shootWebhookConfigs.HasWebhookConfig() {
-			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.Server.Namespace, c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, shootWebhookConfigs); err != nil {
+			if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.shootWebhookManagedResourceName, c.shootNamespaceSelector, shootWebhookConfigs); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}

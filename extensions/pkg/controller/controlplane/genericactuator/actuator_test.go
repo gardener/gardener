@@ -30,7 +30,6 @@ import (
 	"go.uber.org/mock/gomock"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -367,8 +366,6 @@ webhooks:
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "gardener-extension-" + providerName}})
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: webhookServerNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}})
 				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
 			}
 

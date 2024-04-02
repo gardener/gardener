@@ -31,7 +31,6 @@ import (
 
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -46,7 +45,6 @@ var _ = Describe("ActuatorRestore", func() {
 
 			shoot                    *gardencorev1beta1.Shoot
 			shootState               *gardencorev1beta1.ShootState
-			worker                   *extensionsv1alpha1.Worker
 			wantedMachineDeployments extensionsworkercontroller.MachineDeployments
 
 			stateDeployment1 = &shootstate.MachineDeploymentState{
@@ -72,7 +70,6 @@ var _ = Describe("ActuatorRestore", func() {
 
 			shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar", Namespace: "foo"}}
 			shootState = &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
-			worker = &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: "shoot--foo--bar"}}
 			wantedMachineDeployments = []extensionsworkercontroller.MachineDeployment{
 				{Name: "deploy1"},
 				{Name: "deploy2"},
@@ -94,8 +91,8 @@ var _ = Describe("ActuatorRestore", func() {
 			Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 		})
 
-		It("should do nothing because neither machine state exists in ShootState nor .status.state field is set", func() {
-			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
+		It("should do nothing because machine state does not exist in ShootState", func() {
+			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, wantedMachineDeployments)).To(Succeed())
 
 			Expect(wantedMachineDeployments[0].State).To(BeNil())
 			Expect(wantedMachineDeployments[1].State).To(BeNil())
@@ -113,7 +110,7 @@ var _ = Describe("ActuatorRestore", func() {
 			}
 			Expect(fakeGardenClient.Patch(ctx, shootState, patch)).To(Succeed())
 
-			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
+			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, wantedMachineDeployments)).To(Succeed())
 
 			Expect(wantedMachineDeployments[0].State).To(BeNil())
 			Expect(wantedMachineDeployments[1].State).To(BeNil())
@@ -131,17 +128,7 @@ var _ = Describe("ActuatorRestore", func() {
 			}
 			Expect(fakeGardenClient.Patch(ctx, shootState, patch)).To(Succeed())
 
-			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
-
-			Expect(wantedMachineDeployments[0].State).To(Equal(stateDeployment1))
-			Expect(wantedMachineDeployments[1].State).To(Equal(stateDeployment2))
-			Expect(wantedMachineDeployments[2].State).To(BeNil())
-		})
-
-		It("should fetch the state from the Worker's .status.state field when machine state does not exist in ShootState", func() {
-			worker.Status.State = &runtime.RawExtension{Raw: machineStateRaw}
-
-			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, worker, wantedMachineDeployments)).To(Succeed())
+			Expect(addStateToMachineDeployment(ctx, log, fakeGardenClient, shoot, wantedMachineDeployments)).To(Succeed())
 
 			Expect(wantedMachineDeployments[0].State).To(Equal(stateDeployment1))
 			Expect(wantedMachineDeployments[1].State).To(Equal(stateDeployment2))

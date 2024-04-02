@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,8 +40,6 @@ func ReconcileWebhookConfig(
 	ctx context.Context,
 	c client.Client,
 	shootNamespace string,
-	extensionNamespace string,
-	extensionName string,
 	managedResourceName string,
 	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
@@ -50,16 +47,6 @@ func ReconcileWebhookConfig(
 ) error {
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
-	}
-
-	// TODO(rfranzke): Remove this after Gardener v1.89 has been released.
-	{
-		if err := c.Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: "gardener-extension-" + extensionName}}); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete old egress network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
-		}
-		if err := c.Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete old ingress network policy for shoot webhooks in namespace '%s': %w", extensionNamespace, err)
-		}
 	}
 
 	data, err := managedresources.
@@ -86,8 +73,6 @@ func ReconcileWebhookConfig(
 func ReconcileWebhooksForAllNamespaces(
 	ctx context.Context,
 	c client.Client,
-	extensionNamespace string,
-	extensionName string,
 	managedResourceName string,
 	shootNamespaceSelector map[string]string,
 	shootWebhookConfigs webhook.Configs,
@@ -120,7 +105,7 @@ func ReconcileWebhooksForAllNamespaces(
 			}
 
 			// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
-			if err := ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); client.IgnoreNotFound(err) != nil {
+			if err := ReconcileWebhookConfig(ctx, c, namespaceName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 			return nil
