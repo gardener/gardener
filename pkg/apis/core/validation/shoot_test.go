@@ -5894,6 +5894,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 			})
 
+			It("should not allow using other Kind apart from CloudProfile and NamespacedCloudProfile", func() {
+				cloudProfileReference := &core.CloudProfileReference{
+					Kind: "Secret",
+					Name: "my-profile",
+				}
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("cloudProfile.kind"),
+						"Detail": Equal("supported values: \"CloudProfile\", \"NamespacedCloudProfile\""),
+					})),
+				))
+			})
+
 			It("should allow using a CloudProfile", func() {
 				cloudProfileReference := &core.CloudProfileReference{
 					Kind: "CloudProfile",
