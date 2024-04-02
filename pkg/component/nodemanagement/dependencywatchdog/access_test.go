@@ -98,7 +98,7 @@ rules:
   - list
 `
 
-		ClusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -191,7 +191,7 @@ users:
 				"role__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml":        []byte(roleYAML),
 				"rolebinding__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml": []byte(roleBindingYAML),
 				"clusterrole____gardener.cloud_target_dependency-watchdog.yaml":                []byte(clusterRoleYAML),
-				"clusterrolebinding____gardener.cloud_target_dependency-watchdog.yaml":         []byte(ClusterRoleBindingYAML),
+				"clusterrolebinding____gardener.cloud_target_dependency-watchdog.yaml":         []byte(clusterRoleBindingYAML),
 			},
 			Immutable: pointer.Bool(true),
 		}
