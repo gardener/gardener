@@ -21,6 +21,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&CloudProfileList{}, func(obj interface{}) { SetObjectDefaults_CloudProfileList(obj.(*CloudProfileList)) })
 	scheme.AddTypeDefaultingFunc(&ControllerRegistration{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistration(obj.(*ControllerRegistration)) })
 	scheme.AddTypeDefaultingFunc(&ControllerRegistrationList{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistrationList(obj.(*ControllerRegistrationList)) })
+	scheme.AddTypeDefaultingFunc(&NamespacedCloudProfile{}, func(obj interface{}) { SetObjectDefaults_NamespacedCloudProfile(obj.(*NamespacedCloudProfile)) })
+	scheme.AddTypeDefaultingFunc(&NamespacedCloudProfileList{}, func(obj interface{}) { SetObjectDefaults_NamespacedCloudProfileList(obj.(*NamespacedCloudProfileList)) })
 	scheme.AddTypeDefaultingFunc(&Project{}, func(obj interface{}) { SetObjectDefaults_Project(obj.(*Project)) })
 	scheme.AddTypeDefaultingFunc(&ProjectList{}, func(obj interface{}) { SetObjectDefaults_ProjectList(obj.(*ProjectList)) })
 	scheme.AddTypeDefaultingFunc(&SecretBinding{}, func(obj interface{}) { SetObjectDefaults_SecretBinding(obj.(*SecretBinding)) })
@@ -75,6 +77,48 @@ func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_ControllerRegistration(a)
+	}
+}
+
+func SetObjectDefaults_NamespacedCloudProfile(in *NamespacedCloudProfile) {
+	for i := range in.Spec.MachineImages {
+		a := &in.Spec.MachineImages[i]
+		SetDefaults_MachineImage(a)
+		for j := range a.Versions {
+			b := &a.Versions[j]
+			SetDefaults_MachineImageVersion(b)
+		}
+	}
+	for i := range in.Spec.MachineTypes {
+		a := &in.Spec.MachineTypes[i]
+		SetDefaults_MachineType(a)
+	}
+	for i := range in.Spec.VolumeTypes {
+		a := &in.Spec.VolumeTypes[i]
+		SetDefaults_VolumeType(a)
+	}
+	for i := range in.Status.CloudProfileSpec.MachineImages {
+		a := &in.Status.CloudProfileSpec.MachineImages[i]
+		SetDefaults_MachineImage(a)
+		for j := range a.Versions {
+			b := &a.Versions[j]
+			SetDefaults_MachineImageVersion(b)
+		}
+	}
+	for i := range in.Status.CloudProfileSpec.MachineTypes {
+		a := &in.Status.CloudProfileSpec.MachineTypes[i]
+		SetDefaults_MachineType(a)
+	}
+	for i := range in.Status.CloudProfileSpec.VolumeTypes {
+		a := &in.Status.CloudProfileSpec.VolumeTypes[i]
+		SetDefaults_VolumeType(a)
+	}
+}
+
+func SetObjectDefaults_NamespacedCloudProfileList(in *NamespacedCloudProfileList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_NamespacedCloudProfile(a)
 	}
 }
 

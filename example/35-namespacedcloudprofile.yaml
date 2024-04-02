@@ -1,0 +1,33 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: NamespacedCloudProfile
+metadata:
+  name: custom-cloudprofile-1
+  namespace: garden-local
+spec:
+  # Specifies a parent CloudProfile from which the NamespacedCloudProfile inherits, the result will be written into the status of the NamespacedCloudProfile.
+  # Every other field is optional in a NamespacedCloudProfile.
+  parent:
+    kind: CloudProfile
+    name: local # could be any CloudProfile
+# kubernetes: # overwrite kubernetes versions if necessary
+  machineImages:
+  - name: suse-chost-1
+    versions:
+    - version: 15.4.20220818
+    - version: 15.4.20220620
+      expirationDate: "2023-02-28T23:59:59Z"
+  - name: ubuntu-custom
+    versions:
+    - version: 18.04.201906170
+  machineTypes:
+  - name: m5.xlarge
+    cpu: "4"
+    gpu: "0"
+    memory: 16Gi
+    usable: true
+# volumeTypes: # add additional volume types if necessary
+# CA bundle that will be installed onto every shoot machine that is using this provider profile.
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----

@@ -305,6 +305,15 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
+// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+message CloudProfileReference {
+  // Kind contains a CloudProfile kind.
+  optional string kind = 1;
+
+  // Name contains the name of the referenced CloudProfile.
+  optional string name = 2;
+}
+
 // CloudProfileSpec is the specification of a CloudProfile.
 // It must contain exactly one of its defined keys.
 message CloudProfileSpec {
@@ -1736,6 +1745,76 @@ message NamedResourceReference {
   optional k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
 }
 
+// NamespacedCloudProfile represents certain properties about a provider environment.
+message NamespacedCloudProfile {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec defines the provider environment properties.
+  optional NamespacedCloudProfileSpec spec = 2;
+
+  // Most recently observed status of the NamespacedCloudProfile.
+  optional NamespacedCloudProfileStatus status = 3;
+}
+
+// NamespacedCloudProfileList is a collection of NamespacedCloudProfiles.
+message NamespacedCloudProfileList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of NamespacedCloudProfiles.
+  repeated NamespacedCloudProfile items = 2;
+}
+
+// NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.
+message NamespacedCloudProfileSpec {
+  // CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.
+  // +optional
+  optional string caBundle = 1;
+
+  // Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+  // +optional
+  optional KubernetesSettings kubernetes = 2;
+
+  // MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated MachineImage machineImages = 3;
+
+  // MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated MachineType machineTypes = 4;
+
+  // Regions contains constraints regarding allowed values for regions and zones.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated Region regions = 5;
+
+  // VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  // +optional
+  repeated VolumeType volumeTypes = 6;
+
+  // Parent contains a reference to a CloudProfile it inherits from.
+  optional CloudProfileReference parent = 7;
+}
+
+// NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
+message NamespacedCloudProfileStatus {
+  // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
+  optional CloudProfileSpec cloudProfileSpec = 1;
+
+  // ObservedGeneration is the most recent generation observed for this project.
+  // +optional
+  optional int64 observedGeneration = 2;
+}
+
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
   // Type identifies the type of the networking plugin. This field is immutable.
@@ -2778,6 +2857,10 @@ message ShootSpec {
   // This field is immutable.
   // +optional
   optional string schedulerName = 21;
+
+  // CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
+  // +optional
+  optional CloudProfileReference cloudProfile = 22;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

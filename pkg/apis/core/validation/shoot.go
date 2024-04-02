@@ -267,6 +267,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		workerless = len(spec.Provider.Workers) == 0
 	)
 
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, fldPath.Child("cloudProfile"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
@@ -1150,6 +1151,24 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 
 	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil && *maxEmptyBulkDelete < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
+	}
+
+	return allErrs
+}
+
+// ValidateCloudProfileReference validates the given CloudProfileReference fields.
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cloudProfileReference == nil {
+		return allErrs
+	}
+	cloudProfileReferenceKind := sets.New("CloudProfile", "NamespacedCloudProfile")
+	if !cloudProfileReferenceKind.Has(cloudProfileReference.Kind) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), cloudProfileReference.Kind, sets.List(cloudProfileReferenceKind)))
+	}
+	if len(cloudProfileReference.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a CloudProfile or NamespacedCloudProfile name"))
 	}
 
 	return allErrs

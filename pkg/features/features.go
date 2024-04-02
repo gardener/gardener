@@ -64,6 +64,12 @@ const (
 	// alpha: v1.81.0
 	// beta: v1.91.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
+
+	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
+	// nodes.
+	// owner: @timuthy @benedictweis
+	// alpha: v1.92.0
+	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -98,6 +104,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
+	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
