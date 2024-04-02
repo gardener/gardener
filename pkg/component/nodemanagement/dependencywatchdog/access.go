@@ -175,11 +175,40 @@ func (d *dependencyWatchdogAccess) createManagedResource(ctx context.Context) er
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:" + prefixDependencyWatchdog,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"nodes"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:" + prefixDependencyWatchdog,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      strings.TrimPrefix(KubeConfigSecretName, gardenerutils.SecretNamePrefixShootAccess),
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
 	)
 
 	resources, err := registry.AddAllAndSerialize(
 		role,
 		roleBinding,
+		clusterRole,
+		clusterRoleBinding,
 	)
 	if err != nil {
 		return err

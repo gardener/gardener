@@ -82,6 +82,36 @@ subjects:
   name: dependency-watchdog-probe
   namespace: kube-system
 `
+
+		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:dependency-watchdog
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+`
+
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:dependency-watchdog
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:target:dependency-watchdog
+subjects:
+- kind: ServiceAccount
+  name: dependency-watchdog-probe
+  namespace: kube-system
+`
 	)
 
 	BeforeEach(func() {
@@ -134,13 +164,13 @@ users:
 				Name:            "shoot-core-dependency-watchdog",
 				Namespace:       namespace,
 				Labels:          map[string]string{"origin": "gardener"},
-				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-2c6a3fae": "managedresource-shoot-core-dependency-watchdog-967328e8"},
+				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-03db818b": "managedresource-shoot-core-dependency-watchdog-31b5e010"},
 				ResourceVersion: "1",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{
-						Name: "managedresource-shoot-core-dependency-watchdog-967328e8",
+						Name: "managedresource-shoot-core-dependency-watchdog-31b5e010",
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
@@ -149,7 +179,7 @@ users:
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "managedresource-shoot-core-dependency-watchdog-967328e8",
+				Name:            "managedresource-shoot-core-dependency-watchdog-31b5e010",
 				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels: map[string]string{
@@ -160,6 +190,8 @@ users:
 			Data: map[string][]byte{
 				"role__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml":        []byte(roleYAML),
 				"rolebinding__kube-node-lease__gardener.cloud_target_dependency-watchdog.yaml": []byte(roleBindingYAML),
+				"clusterrole____gardener.cloud_target_dependency-watchdog.yaml":                []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_dependency-watchdog.yaml":         []byte(clusterRoleBindingYAML),
 			},
 			Immutable: ptr.To(true),
 		}
@@ -183,7 +215,7 @@ users:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-967328e8", Namespace: namespace}}
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-31b5e010", Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
 		})
@@ -195,7 +227,7 @@ users:
 			Expect(fakeClient.Create(ctx, reconciledInternalProbeSecret)).To(Succeed())
 			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-dependency-watchdog", Namespace: namespace}}
 			Expect(fakeClient.Create(ctx, reconciledManagedResource)).To(Succeed())
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-967328e8", Namespace: namespace}}
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-31b5e010", Namespace: namespace}}
 			Expect(fakeClient.Create(ctx, reconciledManagedResourceSecret)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
