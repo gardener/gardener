@@ -82,6 +82,12 @@ spec:
             limits:
               memory: 8Gi
           env:
+          - name: JWT_POLICY
+            value: third-party-jwt
+          - name: PILOT_CERT_PROVIDER
+            value: istiod
+          - name: CA_ADDR
+            value: istiod.{{ .Values.istiodNamespace }}.svc:15012
           - name: NODE_NAME
             valueFrom:
               fieldRef:
@@ -116,14 +122,6 @@ spec:
               fieldRef:
                 apiVersion: v1
                 fieldPath: spec.serviceAccountName
-          - name: JWT_POLICY
-            value: third-party-jwt
-          - name: PILOT_CERT_PROVIDER
-            value: istiod
-          - name: ISTIO_META_USER_SDS
-            value: "true"
-          - name: CA_ADDR
-            value: istiod.{{ .Values.istiodNamespace }}.svc:15012
           - name: ISTIO_META_WORKLOAD_NAME
             value: istio-ingressgateway
           - name: ISTIO_META_OWNER
