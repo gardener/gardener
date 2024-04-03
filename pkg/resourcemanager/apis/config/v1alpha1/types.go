@@ -104,7 +104,6 @@ type ResourceManagerControllerConfiguration struct {
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	// +optional
 	ResourceClass *string `json:"resourceClass,omitempty"`
-
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`
 	// Health is the configuration for the health controller.
@@ -117,8 +116,6 @@ type ResourceManagerControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
 	// Node is the configuration for the node controller.
 	Node NodeControllerConfig `json:"node"`
-	// Secret is the configuration for the secret controller.
-	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig `json:"tokenInvalidator"`
 	// TokenRequestor is the configuration for the token-requestor controller.
@@ -198,13 +195,6 @@ type IngressControllerSelector struct {
 	Namespace string `json:"namespace"`
 	// PodSelector is the selector for the ingress controller pods.
 	PodSelector metav1.LabelSelector `json:"podSelector"`
-}
-
-// SecretControllerConfig is the configuration for the secret controller.
-type SecretControllerConfig struct {
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // TokenInvalidatorControllerConfig is the configuration for the token-invalidator controller.

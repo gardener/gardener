@@ -66,8 +66,6 @@ controllers:
     enabled: true
     concurrentSyncs: 5
     backoff: 10s
-  secret:
-    concurrentSyncs: 5
   tokenInvalidator:
     enabled: true
     concurrentSyncs: 5

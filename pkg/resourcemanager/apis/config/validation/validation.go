@@ -113,8 +113,6 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 
 	allErrs = append(allErrs, validateManagedResourceControllerConfiguration(conf.ManagedResource, fldPath.Child("managedResources"))...)
 
-	allErrs = append(allErrs, validateConcurrentSyncs(conf.Secret.ConcurrentSyncs, fldPath.Child("secret"))...)
-
 	if conf.TokenRequestor.Enabled {
 		allErrs = append(allErrs, validateConcurrentSyncs(conf.TokenRequestor.ConcurrentSyncs, fldPath.Child("tokenRequestor"))...)
 	}

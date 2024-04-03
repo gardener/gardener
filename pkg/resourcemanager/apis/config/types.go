@@ -95,7 +95,6 @@ type ResourceManagerControllerConfiguration struct {
 	ClusterID *string
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	ResourceClass *string
-
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig
 	// Health is the configuration for the health controller.
@@ -108,8 +107,6 @@ type ResourceManagerControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfig
 	// Node is the configuration for the node controller.
 	Node NodeControllerConfig
-	// Secret is the configuration for the secret controller.
-	Secret SecretControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig
 	// TokenRequestor is the configuration for the token-requestor controller.
@@ -178,12 +175,6 @@ type IngressControllerSelector struct {
 	Namespace string
 	// PodSelector is the selector for the ingress controller pods.
 	PodSelector metav1.LabelSelector
-}
-
-// SecretControllerConfig is the configuration for the secret controller.
-type SecretControllerConfig struct {
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int
 }
 
 // TokenInvalidatorControllerConfig is the configuration for the token-invalidator controller.

@@ -148,13 +148,6 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 	}
 }
 
-// SetDefaults_SecretControllerConfig sets defaults for the SecretControllerConfig object.
-func SetDefaults_SecretControllerConfig(obj *SecretControllerConfig) {
-	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = ptr.To(5)
-	}
-}
-
 // SetDefaults_TokenInvalidatorControllerConfig sets defaults for the TokenInvalidatorControllerConfig object.
 func SetDefaults_TokenInvalidatorControllerConfig(obj *TokenInvalidatorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {

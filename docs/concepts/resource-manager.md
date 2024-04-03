@@ -24,7 +24,7 @@ Similar to other Gardener components, the `gardener-resource-manager` uses a so-
 It allows specifying certain central settings like log level and formatting, client connection configuration, server ports and bind addresses, etc.
 In addition, controllers and webhooks can be configured and sometimes even disabled.
 
-Note that the very basic `ManagedResource`, secret, and health controllers cannot be disabled.
+Note that the very basic `ManagedResource` and health controllers cannot be disabled.
 
 You can find an example configuration file [here](../../example/resource-manager/10-componentconfig.yaml).
 
