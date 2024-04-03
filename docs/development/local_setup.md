@@ -97,7 +97,7 @@ brew install jq
 [yq](https://mikefarah.gitbook.io/yq) is a lightweight and portable command-line YAML processor. On macOS run
 
 ```bash
-brew install jq
+brew install yq
 ```
 
 ## Installing GNU Parallel
