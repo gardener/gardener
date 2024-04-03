@@ -56,9 +56,6 @@ var _ = Describe("Validation", func() {
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
 						ManagedByLabelValue: ptr.To("foo"),
 					},
-					Secret: config.SecretControllerConfig{
-						ConcurrentSyncs: ptr.To(5),
-					},
 				},
 			}
 		})

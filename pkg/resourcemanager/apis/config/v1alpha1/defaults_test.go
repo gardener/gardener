@@ -356,26 +356,6 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("SecretControllerConfig defaulting", func() {
-		It("should default the SecretControllerConfig", func() {
-			obj.Controllers.Secret = SecretControllerConfig{}
-
-			SetObjectDefaults_ResourceManagerConfiguration(obj)
-
-			Expect(obj.Controllers.Secret.ConcurrentSyncs).To(PointTo(Equal(5)))
-		})
-
-		It("should not overwrite already set values for SecretControllerConfig", func() {
-			obj.Controllers.Secret = SecretControllerConfig{
-				ConcurrentSyncs: ptr.To(1),
-			}
-
-			SetObjectDefaults_ResourceManagerConfiguration(obj)
-
-			Expect(obj.Controllers.Secret.ConcurrentSyncs).To(PointTo(Equal(1)))
-		})
-	})
-
 	Describe("TokenInvalidatorControllerConfig defaulting", func() {
 		It("should not default the TokenInvalidatorControllerConfig because it is disabled", func() {
 			obj.Controllers.TokenInvalidator = TokenInvalidatorControllerConfig{}

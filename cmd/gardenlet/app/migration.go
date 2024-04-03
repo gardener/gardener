@@ -26,14 +26,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
@@ -42,24 +39,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	dwd "github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.Cluster) error {
-	log.Info("Cleaning up GRM secret finalizers")
-	if err := cleanupGRMSecretFinalizers(ctx, g.mgr.GetClient(), log); err != nil {
-		return fmt.Errorf("failed to clean up GRM secret finalizers: %w", err)
-	}
-
 	log.Info("Updating shoot Prometheus config for connection to cache Prometheus and seed Alertmanager")
 	if err := updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManager(ctx, g.mgr.GetClient()); err != nil {
 		return err
@@ -214,60 +203,6 @@ func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Cl
 		})
 	}
 	return flow.Parallel(tasks...)(ctx)
-}
-
-// TODO(Kostov6): Remove this code after v1.91 has been released.
-func cleanupGRMSecretFinalizers(ctx context.Context, seedClient client.Client, log logr.Logger) error {
-	var (
-		mrs      = &resourcesv1alpha1.ManagedResourceList{}
-		selector = labels.NewSelector()
-	)
-
-	// Exclude seed system components while listing
-	requirement, err := labels.NewRequirement(v1beta1constants.GardenRole, selection.NotIn, []string{v1beta1constants.GardenRoleSeedSystemComponent})
-	if err != nil {
-		return fmt.Errorf("failed to construct the requirement: %w", err)
-	}
-	labelSelector := selector.Add(*requirement)
-
-	if err := seedClient.List(ctx, mrs, client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
-		if meta.IsNoMatchError(err) {
-			log.Info("Received a 'no match error' while trying to list managed resources. Will assume that the managed resources CRD is not yet installed (for example new Seed creation) and will skip cleaning up GRM finalizers")
-			return nil
-		}
-		return fmt.Errorf("failed to list managed resources: %w", err)
-	}
-
-	return utilclient.ApplyToObjects(ctx, mrs, func(ctx context.Context, obj client.Object) error {
-		mr, ok := obj.(*resourcesv1alpha1.ManagedResource)
-		if !ok {
-			return fmt.Errorf("expected *resourcesv1alpha1.ManagedResource but got %T", obj)
-		}
-
-		// only patch MR secrets in shoot namespaces
-		if mr.Namespace == v1beta1constants.GardenNamespace {
-			return nil
-		}
-
-		for _, ref := range mr.Spec.SecretRefs {
-			secret := &corev1.Secret{}
-			if err := seedClient.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
-				if apierrors.IsNotFound(err) {
-					continue
-				}
-				return fmt.Errorf("failed to get secret '%s': %w", kubernetesutils.Key(mr.Namespace, ref.Name), err)
-			}
-
-			for _, finalizer := range secret.Finalizers {
-				if strings.HasPrefix(finalizer, "resources.gardener.cloud/gardener-resource-manager") {
-					if err := controllerutils.RemoveFinalizers(ctx, seedClient, secret, finalizer); err != nil {
-						return fmt.Errorf("failed to remove finalizer from secret '%s': %w", client.ObjectKeyFromObject(secret), err)
-					}
-				}
-			}
-		}
-		return nil
-	})
 }
 
 // TODO(rfranzke): Remove this code after v1.92 has been released.

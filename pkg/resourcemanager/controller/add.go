@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
@@ -84,13 +83,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
 		}
-	}
-
-	if err := (&secret.Reconciler{
-		Config:      cfg.Controllers.Secret,
-		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(ctx, mgr, sourceCluster); err != nil {
-		return fmt.Errorf("failed adding secret controller: %w", err)
 	}
 
 	if cfg.Controllers.TokenInvalidator.Enabled {

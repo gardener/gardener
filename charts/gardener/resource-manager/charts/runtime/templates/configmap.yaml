@@ -129,10 +129,6 @@ data:
         {{- if .Values.global.config.controllers.node.backoff }}
         backoff: {{ .Values.global.config.controllers.node.backoff }}
         {{- end }}
-      secret:
-        {{- if .Values.global.config.controllers.secret.concurrentSyncs }}
-        concurrentSyncs: {{ .Values.global.config.controllers.secret.concurrentSyncs }}
-        {{- end }}
       tokenInvalidator:
         enabled: {{ .Values.global.config.controllers.tokenInvalidator.enabled }}
         {{- if .Values.global.config.controllers.tokenInvalidator.concurrentSyncs }}
