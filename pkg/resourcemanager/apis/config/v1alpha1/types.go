@@ -104,6 +104,7 @@ type ResourceManagerControllerConfiguration struct {
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	// +optional
 	ResourceClass *string `json:"resourceClass,omitempty"`
+
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`
 	// Health is the configuration for the health controller.

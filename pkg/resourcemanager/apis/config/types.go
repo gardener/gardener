@@ -95,6 +95,7 @@ type ResourceManagerControllerConfiguration struct {
 	ClusterID *string
 	// ResourceClass is the name of the class in ManagedResources to filter for.
 	ResourceClass *string
+
 	// GarbageCollector is the configuration for the garbage-collector controller.
 	GarbageCollector GarbageCollectorControllerConfig
 	// Health is the configuration for the health controller.
