@@ -84,36 +84,6 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#DestroySourceBackupEntry", func() {
-		It("shouldn't destroy the SourceBackupEntry component when Seed backup is not enabled", func() {
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "seed",
-					Namespace: "garden",
-				},
-				Spec: gardencorev1beta1.SeedSpec{
-					Backup: nil,
-				},
-			})
-
-			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
-		})
-
-		It("shouldn't destroy the SourceBackupEntry component when Shoot is not in restore phase", func() {
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "foo",
-				},
-				Status: gardencorev1beta1.ShootStatus{
-					LastOperation: &gardencorev1beta1.LastOperation{
-						Type: gardencorev1beta1.LastOperationTypeReconcile,
-					},
-				},
-			})
-
-			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
-		})
-
 		It("should set force-deletion annotation and destroy the SourceBackupEntry component", func() {
 			sourceBackupEntry.EXPECT().SetForceDeletionAnnotation(ctx)
 			sourceBackupEntry.EXPECT().Destroy(ctx)

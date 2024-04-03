@@ -270,11 +270,17 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, helper.GetEtcdDeployTimeout(o.Shoot, defaultTimeout)),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
 		})
-		_ = g.Add(flow.Task{
+		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           botanist.DestroySourceBackupEntry,
-			SkipIf:       !allowBackup,
+			SkipIf:       !allowBackup || !botanist.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(deployETCD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until source backup entry has been deleted",
+			Fn:           botanist.Shoot.Components.SourceBackupEntry.WaitCleanup,
+			SkipIf:       !allowBackup || skipReadiness || !botanist.IsRestorePhase(),
+			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
