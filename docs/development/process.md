@@ -22,15 +22,16 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible                              |
 ------- | ----------- | ---------------------- | -------------------| ------------------------------------------------ |
-v1.85   | Week 47-48  | November 20, 2023      | December 3, 2023   | [@plkokanov](https://github.com/plkokanov)       |
-v1.86   | Week 49-50  | December 4, 2023       | December 17, 2023  | [@ialidzhikov](https://github.com/ialidzhikov)   |
-v1.87   | Week 01-04  | January 1, 2024        | January 28, 2024   | [@acumino](https://github.com/acumino)           |
-v1.88   | Week 05-06  | January 29, 2024       | February 11, 2024  | [@timuthy](https://github.com/timuthy)           |
-v1.89   | Week 07-08  | February 12, 2024      | February 25, 2024  | [@ScheererJ](https://github.com/ScheererJ)       |
-v1.90   | Week 09-10  | February 26, 2024      | March 10, 2024     | [@ary1992](https://github.com/ary1992)           |
-v1.91   | Week 11-12  | March 11, 2024         | March 24, 2024     | [@shafeeqes](https://github.com/shafeeqes)       |
-v1.92   | Week 13-14  | March 25, 2024         | April 7, 2024      | [@oliver-goetz](https://github.com/oliver-goetz) |
 v1.93   | Week 15-16  | April 8, 2024          | April 21, 2024     | [@rfranzke](https://github.com/rfranzke)         |
+v1.94   | Week 17-18  | April 22, 2024         | May 5, 2024        | [@plkokanov](https://github.com/plkokanov)       |
+v1.95   | Week 19-20  | May 6, 2024            | May 19, 2024       | [@ialidzhikov](https://github.com/ialidzhikov)   |
+v1.96   | Week 21-22  | May 20, 2024           | June 2, 2024       | [@acumino](https://github.com/acumino)           |
+v1.97   | Week 23-24  | June 3, 2024           | June 16, 2024      | [@timuthy](https://github.com/timuthy)           |
+v1.98   | Week 25-26  | June 17, 2024          | June 30, 2024      | [@ScheererJ](https://github.com/ScheererJ)       |
+v1.99   | Week 27-28  | July 1, 2024           | July 14, 2024      | [@ary1992](https://github.com/ary1992)           |
+v1.100  | Week 29-30  | July 15, 2024          | July 28, 2024      | [@shafeeqes](https://github.com/shafeeqes)       |
+v1.101  | Week 31-32  | July 29, 2024          | August 11, 2024    | [@oliver-goetz](https://github.com/oliver-goetz) |
+v1.102  | Week 33-34  | August 12, 2024        | August 25, 2024    | [@rfranzke](https://github.com/rfranzke)         |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
@@ -108,6 +109,14 @@ The release responsible is the main contact person for coordinating new feature 
   v1.82   | Week 41-42  | October 9, 2023        | October 22, 2023   | [@timuthy](https://github.com/timuthy)                                                 |
   v1.83   | Week 43-44  | October 23, 2023       | November 5, 2023   | [@oliver-goetz](https://github.com/oliver-goetz)                                       |
   v1.84   | Week 45-46  | November 6, 2023       | November 19, 2023  | [@rfranzke](https://github.com/rfranzke)                                               |
+  v1.85   | Week 47-48  | November 20, 2023      | December 3, 2023   | [@plkokanov](https://github.com/plkokanov)                                             |
+  v1.86   | Week 49-50  | December 4, 2023       | December 17, 2023  | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+  v1.87   | Week 01-04  | January 1, 2024        | January 28, 2024   | [@acumino](https://github.com/acumino)                                                 |
+  v1.88   | Week 05-06  | January 29, 2024       | February 11, 2024  | [@timuthy](https://github.com/timuthy)                                                 |
+  v1.89   | Week 07-08  | February 12, 2024      | February 25, 2024  | [@ScheererJ](https://github.com/ScheererJ)                                             |
+  v1.90   | Week 09-10  | February 26, 2024      | March 10, 2024     | [@ary1992](https://github.com/ary1992)                                                 |
+  v1.91   | Week 11-12  | March 11, 2024         | March 24, 2024     | [@shafeeqes](https://github.com/shafeeqes)                                             |
+  v1.92   | Week 13-14  | March 25, 2024         | April 7, 2024      | [@oliver-goetz](https://github.com/oliver-goetz)                                       |
 </details>
 
 ### Release Validation
