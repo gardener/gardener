@@ -86,8 +86,18 @@ brew install iproute2mac
 
 ## Installing jq
 
+[jq](https://jqlang.github.io/jq/) is a lightweight and flexible command-line JSON processor. On macOS run
+
 ```bash
 brew install jq
+```
+
+## Installing yq
+
+[yq](https://mikefarah.gitbook.io/yq) is a lightweight and portable command-line YAML processor. On macOS run
+
+```bash
+brew install yq
 ```
 
 ## Installing GNU Parallel
