@@ -77,7 +77,7 @@ func CentralPodMonitors() []*monitoringv1.PodMonitor {
 				// }},
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
 					Scheme:    "https",
-					TLSConfig: &monitoringv1.PodMetricsEndpointTLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: true},
 					RelabelConfigs: []*monitoringv1.RelabelConfig{
 						// TODO: These annotations should actually be labels so that PodMonitorSpec.Selector can be used
 						//  instead of manually crafting this relabel config.
