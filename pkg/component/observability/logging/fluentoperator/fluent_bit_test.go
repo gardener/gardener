@@ -53,6 +53,7 @@ var _ = Describe("Fluent Bit", func() {
 		values            = FluentBitValues{
 			Image:              image,
 			InitContainerImage: image,
+			ValiEnabled:        true,
 			PriorityClass:      priorityClassName,
 		}
 
@@ -297,6 +298,17 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
+		})
+
+		Context("with vali disabled", func() {
+			JustBeforeEach(func() {
+				values.ValiEnabled = false
+			})
+			It("should not deploy vali ClusterOutputs", func() {
+				Expect(component.Deploy(ctx)).To(Succeed())
+				Expect(customResourcesManagedResourceSecret.Data).NotTo(HaveKey("clusteroutput____journald.yaml"))
+			})
+
 		})
 	})
 

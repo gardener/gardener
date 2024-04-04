@@ -18,6 +18,7 @@ import (
 	"context"
 	"strings"
 
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -782,13 +783,18 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
 	}
 
+	var output *fluentbitv1alpha2.ClusterOutput
+	if gardenlethelper.IsValiEnabled(&r.Config) {
+		output = customresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource})
+	}
+
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		gardenlethelper.IsLoggingEnabled(&r.Config),
 		"",
 		centralLoggingConfigurations,
-		customresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}),
+		output,
 	)
 }
 
@@ -858,6 +864,7 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		gardenlethelper.IsLoggingEnabled(&r.Config),
+		gardenlethelper.IsValiEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
