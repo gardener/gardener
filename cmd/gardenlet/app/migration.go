@@ -44,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -56,11 +55,6 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 
 	log.Info("Creating new secret and managed resource required by dependency-watchdog")
 	if err := g.createNewDWDResources(ctx, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
-	log.Info("Cleaning up legacy 'shoot-core' ManagedResource")
-	if err := cleanupShootCoreManagedResource(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -245,26 +239,6 @@ func updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManage
 				return seedClient.Patch(ctx, configMap, patch)
 			},
 		)
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-// TODO(shafeeqes): Remove this code after gardener v1.92 has been released.
-func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Client) error {
-	shootNamespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, ns := range shootNamespaceList.Items {
-		namespace := ns
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			return managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, "shoot-core")
-		})
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
