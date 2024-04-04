@@ -96,7 +96,7 @@ In addition, we had issues with shoot clusters having more than one node (hence,
 
 #### `OperatingSystemConfig`
 
-This controller leverages the standard [`oscommon` library](../../extensions/pkg/controller/operatingsystemconfig/oscommon) in order to render a simple cloud-init template which can later be executed by the shoot worker nodes.
+This controller renders a simple cloud-init template which can later be executed by the shoot worker nodes.
 
 The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [gardener/machine-controller-manager-provider-local repository](https://github.com/gardener/machine-controller-manager-provider-local/tree/master/node) and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
@@ -108,7 +108,7 @@ Additionally, it generates the [`MachineClass`es](https://github.com/gardener/ma
 
 #### `Ingress`
 
-Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
+The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
 This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
 However, provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)).
 To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
