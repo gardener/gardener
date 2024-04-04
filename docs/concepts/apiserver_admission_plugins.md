@@ -190,4 +190,4 @@ Already existing `Shoot`s will not be affected by this admission plugin.
 _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
-It primarily validates if the referenced parent `CloudProfile` exits in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
+It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
