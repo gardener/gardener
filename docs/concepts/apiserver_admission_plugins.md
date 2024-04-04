@@ -184,3 +184,10 @@ _(disabled by default)_
 This admission controller reacts on `CREATE` operations for `Shoot`s.
 If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (for more information, see [DNS Search Path Optimization](../usage/dns-search-path-optimization.md)).
 Already existing `Shoot`s will not be affected by this admission plugin.
+
+## `NamespacedCloudProfileValidator`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `NamespacedCloudProfile`s.
+It primarily validates if the referenced parent `CloudProfile` exists in the system. In addition, the admission controller ensures that the `NamespacedCloudProfile` only configures new machine types, and does not overwrite those from the parent `CloudProfile`.
