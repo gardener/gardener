@@ -46,6 +46,8 @@ type FluentBitValues struct {
 	Image string
 	// InitContainerImage is the fluent-bit init container image.
 	InitContainerImage string
+	// VailEnabled specifies whether vali is used and should be configured as a ClusterOutput.
+	ValiEnabled bool
 	// PriorityClass is the name of the priority class of the fluent-bit.
 	PriorityClass string
 }
@@ -284,10 +286,13 @@ end
 		configMap,
 		customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass),
 		customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels()),
-		customresources.GetDefaultClusterOutput(getCustomResourcesLabels()),
 		serviceMonitor,
 		serviceMonitorPlugin,
 		prometheusRule,
+	}
+
+	if f.values.ValiEnabled {
+		resources = append(resources, customresources.GetDefaultClusterOutput(getCustomResourcesLabels()))
 	}
 
 	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {

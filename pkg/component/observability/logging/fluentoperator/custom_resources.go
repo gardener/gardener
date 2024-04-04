@@ -77,8 +77,8 @@ func (c *customResources) Deploy(ctx context.Context) error {
 		resources = append(resources, clusterParser)
 	}
 
-	for _, clusterParser := range c.values.Outputs {
-		resources = append(resources, clusterParser)
+	for _, clusterOutput := range c.values.Outputs {
+		resources = append(resources, clusterOutput)
 	}
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
