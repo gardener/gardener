@@ -2780,7 +2780,7 @@ spec:
                   When defined, enforcedSampleLimit specifies a global limit on the number
                   of scraped samples that will be accepted. This overrides any
                   `spec.sampleLimit` set by ServiceMonitor, PodMonitor, Probe objects
-                  unless `spec.sampleLimit` is greater than zero and less than than
+                  unless `spec.sampleLimit` is greater than zero and less than
                   `spec.enforcedSampleLimit`.
 
 
@@ -4501,9 +4501,8 @@ spec:
                 x-kubernetes-map-type: atomic
               podMonitorSelector:
                 description: |-
-                  *Experimental* PodMonitors to be selected for target discovery. An empty
-                  label selector matches all objects. A null label selector matches no
-                  objects.
+                  PodMonitors to be selected for target discovery. An empty label selector
+                  matches all objects. A null label selector matches no objects.
 
 
                   If `spec.serviceMonitorSelector`, `spec.podMonitorSelector`, `spec.probeSelector`
@@ -4574,7 +4573,7 @@ spec:
                 type: string
               probeNamespaceSelector:
                 description: |-
-                  *Experimental* Namespaces to match for Probe discovery. An empty label
+                  Namespaces to match for Probe discovery. An empty label
                   selector matches all namespaces. A null label selector matches the
                   current namespace only.
                 properties:
@@ -4621,9 +4620,8 @@ spec:
                 x-kubernetes-map-type: atomic
               probeSelector:
                 description: |-
-                  *Experimental* Probes to be selected for target discovery. An empty
-                  label selector matches all objects. A null label selector matches no
-                  objects.
+                  Probes to be selected for target discovery. An empty label selector
+                  matches all objects. A null label selector matches no objects.
 
 
                   If `spec.serviceMonitorSelector`, `spec.podMonitorSelector`, `spec.probeSelector`
@@ -5044,6 +5042,7 @@ spec:
                         batchSendDeadline:
                           description: BatchSendDeadline is the maximum time a sample
                             will wait in buffer.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                           type: string
                         capacity:
                           description: |-
@@ -5052,6 +5051,7 @@ spec:
                           type: integer
                         maxBackoff:
                           description: MaxBackoff is the maximum retry delay.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                           type: string
                         maxRetries:
                           description: MaxRetries is the maximum number of times to
@@ -5068,6 +5068,7 @@ spec:
                         minBackoff:
                           description: MinBackoff is the initial retry delay. Gets
                             doubled for every retry.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                           type: string
                         minShards:
                           description: MinShards is the minimum number of shards,
@@ -5076,8 +5077,17 @@ spec:
                         retryOnRateLimit:
                           description: |-
                             Retry upon receiving a 429 status code from the remote-write storage.
-                            This is experimental feature and might change in the future.
+
+
+                            This is an *experimental feature*, it may change in any upcoming release
+                            in a breaking way.
                           type: boolean
+                        sampleAgeLimit:
+                          description: |-
+                            SampleAgeLimit drops samples older than the limit.
+                            It requires Prometheus >= v2.50.0.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          type: string
                       type: object
                     remoteTimeout:
                       description: Timeout for requests to the remote write endpoint.
@@ -5498,8 +5508,12 @@ spec:
                 type: integer
               scrapeClasses:
                 description: |-
-                  EXPERIMENTAL List of scrape classes to expose to monitors and other scrape configs.
-                  This is experimental feature and might change in the future.
+                  List of scrape classes to expose to scraping objects such as
+                  PodMonitors, ServiceMonitors, Probes and ScrapeConfigs.
+
+
+                  This is an *experimental feature*, it may change in any upcoming release
+                  in a breaking way.
                 items:
                   properties:
                     default:
@@ -5513,6 +5527,110 @@ spec:
                       description: Name of the scrape class.
                       minLength: 1
                       type: string
+                    relabelings:
+                      description: |-
+                        Relabelings configures the relabeling rules to apply to all scrape targets.
+
+
+                        The Operator automatically adds relabelings for a few standard Kubernetes fields
+                        like `__meta_kubernetes_namespace` and `__meta_kubernetes_service_name`.
+                        Then the Operator adds the scrape class relabelings defined here.
+                        Then the Operator adds the target-specific relabelings defined in the scrape object.
+
+
+                        More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+                      items:
+                        description: |-
+                          RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                          scraped samples and remote write samples.
+
+
+                          More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+                        properties:
+                          action:
+                            default: replace
+                            description: |-
+                              Action to perform based on the regex matching.
+
+
+                              `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                              `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+
+                              Default: "Replace"
+                            enum:
+                            - replace
+                            - Replace
+                            - keep
+                            - Keep
+                            - drop
+                            - Drop
+                            - hashmod
+                            - HashMod
+                            - labelmap
+                            - LabelMap
+                            - labeldrop
+                            - LabelDrop
+                            - labelkeep
+                            - LabelKeep
+                            - lowercase
+                            - Lowercase
+                            - uppercase
+                            - Uppercase
+                            - keepequal
+                            - KeepEqual
+                            - dropequal
+                            - DropEqual
+                            type: string
+                          modulus:
+                            description: |-
+                              Modulus to take of the hash of the source label values.
+
+
+                              Only applicable when the action is `HashMod`.
+                            format: int64
+                            type: integer
+                          regex:
+                            description: Regular expression against which the extracted
+                              value is matched.
+                            type: string
+                          replacement:
+                            description: |-
+                              Replacement value against which a Replace action is performed if the
+                              regular expression matches.
+
+
+                              Regex capture groups are available.
+                            type: string
+                          separator:
+                            description: Separator is the string between concatenated
+                              SourceLabels.
+                            type: string
+                          sourceLabels:
+                            description: |-
+                              The source labels select values from existing labels. Their content is
+                              concatenated using the configured Separator and matched against the
+                              configured regular expression.
+                            items:
+                              description: |-
+                                LabelName is a valid Prometheus label name which may only contain ASCII
+                                letters, numbers, as well as underscores.
+                              pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                              type: string
+                            type: array
+                          targetLabel:
+                            description: |-
+                              Label to which the resulting string is written in a replacement.
+
+
+                              It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                              `KeepEqual` and `DropEqual` actions.
+
+
+                              Regex capture groups are available.
+                            type: string
+                        type: object
+                      type: array
                     tlsConfig:
                       description: TLSConfig section for scrapes.
                       properties:
@@ -5661,7 +5779,10 @@ spec:
                 description: |-
                   Namespaces to match for ScrapeConfig discovery. An empty label selector
                   matches all namespaces. A null label selector matches the current
-                  current namespace only.
+                  namespace only.
+
+
+                  Note that the ScrapeConfig custom resource definition is currently at Alpha level.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -5706,9 +5827,8 @@ spec:
                 x-kubernetes-map-type: atomic
               scrapeConfigSelector:
                 description: |-
-                  *Experimental* ScrapeConfigs to be selected for target discovery. An
-                  empty label selector matches all objects. A null label selector matches
-                  no objects.
+                  ScrapeConfigs to be selected for target discovery. An empty label
+                  selector matches all objects. A null label selector matches no objects.
 
 
                   If `spec.serviceMonitorSelector`, `spec.podMonitorSelector`, `spec.probeSelector`
@@ -5719,6 +5839,9 @@ spec:
                   This behavior is *deprecated* and will be removed in the next major version
                   of the custom resource definition. It is recommended to use
                   `spec.additionalScrapeConfigs` instead.
+
+
+                  Note that the ScrapeConfig custom resource definition is currently at Alpha level.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -6096,7 +6219,7 @@ spec:
                 x-kubernetes-map-type: atomic
               shards:
                 description: |-
-                  EXPERIMENTAL: Number of shards to distribute targets onto. `spec.replicas`
+                  Number of shards to distribute targets onto. `spec.replicas`
                   multiplied by `spec.shards` is the total number of Pods created.
 
 
@@ -7054,9 +7177,11 @@ spec:
                 type: array
               tracingConfig:
                 description: |-
-                  EXPERIMENTAL: TracingConfig configures tracing in Prometheus. This is an
-                  experimental feature, it may change in any upcoming release in a
-                  breaking way.
+                  TracingConfig configures tracing in Prometheus.
+
+
+                  This is an *experimental feature*, it may change in any upcoming release
+                  in a breaking way.
                 properties:
                   clientType:
                     description: Client used to export the traces. Supported values
