@@ -215,6 +215,28 @@ spec:
     #   featureGates:
     #     SomeGardenerFeature: true
     #   logLevel: info # either {debug,info,error}
+      gardenerDashboard:
+        logLevel: info # either {trace,debug,info,warn,error}
+    #   enableTokenLogin: true
+    #   frontendConfigMapRef:
+    #     name: dashboard-frontend-config
+    #   gitHub:
+    #     apiURL: https://github.com/api/v3/
+    #     organisation: kubernetes-dev
+    #     repository: issues-dev
+    #     secretRef:
+    #       name: gardener-dashboard-github
+    #   oidc:
+    #     sessionLifetime: 12h
+    #     additionalScopes: [ profile, offline_access ]
+    #     secretRef:
+    #       name: gardener-dashboard-oidc
+    #   terminal:
+    #     allowedHostSourceList:
+    #     - "*.seed.local.gardener.cloud"
+    #     container:
+    #       image: busybox:latest
+    #       description: A nice container for debugging purposes
     maintenance:
       timeWindow:
         begin: 220000+0100
