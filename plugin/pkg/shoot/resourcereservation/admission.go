@@ -130,6 +130,11 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
+	if len(shoot.Spec.Provider.Workers) == 0 {
+		// not relevant for workerless shoots
+		return nil
+	}
+
 	if !c.useGKEFormula {
 		setStaticResourceReservationDefaults(shoot)
 		return nil
