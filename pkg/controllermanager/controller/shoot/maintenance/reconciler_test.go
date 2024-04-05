@@ -1368,6 +1368,18 @@ var _ = Describe("Shoot Maintenance", func() {
 									},
 								},
 							},
+							{
+								Name: "cpu-worker-2",
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Kubelet: &gardencorev1beta1.KubeletConfig{
+										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+											FeatureGates: map[string]bool{
+												supportedfeatureGate1: true,
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -1407,6 +1419,9 @@ var _ = Describe("Shoot Maintenance", func() {
 			}))
 			Expect(shoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 				supportedfeatureGate2: true,
+			}))
+			Expect(shoot.Spec.Provider.Workers[2].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
+				supportedfeatureGate1: true,
 			}))
 		})
 	})
@@ -1458,6 +1473,24 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(result).To(ConsistOf(
 				ContainSubstring("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", "1.13.5", fmt.Sprintf("%s, %s", unsupportedAdmissionPlugin1, unsupportedAdmissionPlugin2)),
 			))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
+				HaveField("Name", Equal(supportedAdmissionPlugin1)),
+				HaveField("Name", Equal(supportedAdmissionPlugin2)),
+			))
+		})
+
+		It("should maintain admission plugins if there are no unsupported plugins", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{
+					Name: supportedAdmissionPlugin1,
+				},
+				{
+					Name: supportedAdmissionPlugin2,
+				},
+			}
+
+			result := maintainAdmissionPluginsForShoot(shoot)
+			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 				HaveField("Name", Equal(supportedAdmissionPlugin1)),
 				HaveField("Name", Equal(supportedAdmissionPlugin2)),
