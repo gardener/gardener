@@ -55,8 +55,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 		},
 	}}
 
-	if globalMonitoringSecret != nil {
-		// if len(prometheusAggregateTargets) > 0 && globalMonitoringSecret != nil {
+	if len(prometheusAggregateTargets) > 0 && globalMonitoringSecret != nil {
 		out = append(out, &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + aggregate.Label},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
