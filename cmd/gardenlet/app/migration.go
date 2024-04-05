@@ -370,10 +370,17 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			patch := client.MergeFrom(persistentVolume.DeepCopy())
 
-			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaRegion)
-			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaZone)
-
-			if persistentVolume.Spec.NodeAffinity != nil && persistentVolume.Spec.NodeAffinity.Required != nil {
+			if persistentVolume.Spec.NodeAffinity == nil {
+				// when PV is very old and has no node affinity, we just replace the topology labels
+				if v, ok := persistentVolume.Labels[corev1.LabelFailureDomainBetaRegion]; ok {
+					persistentVolume.Labels[corev1.LabelTopologyRegion] = v
+				}
+				if v, ok := persistentVolume.Labels[corev1.LabelFailureDomainBetaZone]; ok {
+					persistentVolume.Labels[corev1.LabelTopologyZone] = v
+				}
+			} else if persistentVolume.Spec.NodeAffinity.Required != nil {
+				// when PV has node affinity then we do not need the labels but just need to replace the topology keys
+				// in the node selector term match expressions
 				for i, term := range persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms {
 					for j, expression := range term.MatchExpressions {
 						if expression.Key == corev1.LabelFailureDomainBetaRegion {
@@ -386,6 +393,11 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 					}
 				}
 			}
+
+			// either new topology labels were added above, or node affinity keys were adjusted
+			// in both cases, the old, deprecated topology labels are no longer needed and can be removed
+			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaRegion)
+			delete(persistentVolume.Labels, corev1.LabelFailureDomainBetaZone)
 
 			// prevent sending empty patches
 			if data, err := patch.Data(&persistentVolume); err != nil {
