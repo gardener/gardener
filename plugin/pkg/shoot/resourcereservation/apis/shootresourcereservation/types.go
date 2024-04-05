@@ -23,7 +23,7 @@ import (
 // Configuration provides configuration for the ShootResourceReservation admission controller.
 type Configuration struct {
 	metav1.TypeMeta
-	// TypeDependentReservations enables the calculation of resource reservations based on
+	// UseGKEFormula enables the calculation of resource reservations based on
 	// the CPU and memory resources available for a machine type.
-	TypeDependentReservations bool `json:"typeDependentReservations,omitempty"`
+	UseGKEFormula bool `json:"useGKEFormula,omitempty"`
 }

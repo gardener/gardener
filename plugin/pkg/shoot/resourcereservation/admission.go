@@ -48,7 +48,7 @@ func Register(plugins *admission.Plugins) {
 			return nil, err
 		}
 
-		return New(cfg.TypeDependentReservations), nil
+		return New(cfg.UseGKEFormula), nil
 	})
 }
 
@@ -58,7 +58,7 @@ type ResourceReservation struct {
 	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
 	readyFunc          admission.ReadyFunc
 
-	typeDependentReservations bool
+	useGKEFormula bool
 }
 
 var (
@@ -68,10 +68,10 @@ var (
 )
 
 // New creates a new ResourceReservation admission plugin.
-func New(typeDependentReservations bool) admission.MutationInterface {
+func New(useGKEFormula bool) admission.MutationInterface {
 	return &ResourceReservation{
-		Handler:                   admission.NewHandler(admission.Create, admission.Update),
-		typeDependentReservations: typeDependentReservations,
+		Handler:       admission.NewHandler(admission.Create, admission.Update),
+		useGKEFormula: useGKEFormula,
 	}
 }
 
@@ -130,13 +130,13 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	if !c.typeDependentReservations {
+	if !c.useGKEFormula {
 		setStaticResourceReservationDefaults(shoot)
 		return nil
 	}
 
 	if shoot.Spec.Kubernetes.Kubelet != nil && shoot.Spec.Kubernetes.Kubelet.KubeReserved != nil {
-		// Inject static defaults for shoots with shoot-level resource reservations
+		// Inject static defaults for shoots with global resource reservations
 		setStaticResourceReservationDefaults(shoot)
 		return nil
 	}
@@ -224,9 +224,7 @@ func injectResourceReservations(worker *core.Worker, cloudProfile *gardencorev1b
 	return allErrs
 }
 
-func calculateResourceReservationForMachineType(cloudProfile *gardencorev1beta1.CloudProfile,
-	machineType string) (*core.KubeletConfigReserved, error) {
-
+func calculateResourceReservationForMachineType(cloudProfile *gardencorev1beta1.CloudProfile, machineType string) (*core.KubeletConfigReserved, error) {
 	kubeReservedPID := resource.MustParse("20k")
 	for _, machine := range cloudProfile.Spec.MachineTypes {
 		if machine.Name == machineType {

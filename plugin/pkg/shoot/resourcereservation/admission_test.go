@@ -30,7 +30,6 @@ import (
 )
 
 var _ = Describe("resourcereservation", func() {
-
 	Describe("#Register", func() {
 		It("should register the plugin", func() {
 			plugins := admission.NewPlugins()
