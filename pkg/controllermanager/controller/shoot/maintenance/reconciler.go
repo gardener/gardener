@@ -880,6 +880,7 @@ func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, versio
 	)
 
 	for fg, enabled := range kubernetes.FeatureGates {
+		// err should never be non-nil, because the feature gates are part of the existing spec and are already validated by the GAPI server
 		if supported, err := IsFeatureGateSupported(fg, version); err == nil && supported {
 			validFeatureGates[fg] = enabled
 		} else {
@@ -889,8 +890,10 @@ func maintainFeatureGates(kubernetes *gardencorev1beta1.KubernetesConfig, versio
 
 	kubernetes.FeatureGates = validFeatureGates
 
-	slices.Sort(removedFeatureGates)
-	reasons = append(reasons, fmt.Sprintf("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", fieldPath, version, strings.Join(removedFeatureGates, ", ")))
+	if len(removedFeatureGates) > 0 {
+		slices.Sort(removedFeatureGates)
+		reasons = append(reasons, fmt.Sprintf("Removed feature gates from %q because they are not supported in Kubernetes version %q: %s", fieldPath, version, strings.Join(removedFeatureGates, ", ")))
+	}
 
 	return reasons
 }
@@ -907,6 +910,7 @@ func maintainAdmissionPluginsForShoot(shoot *gardencorev1beta1.Shoot) []string {
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins != nil {
 		validAdmissionPlugins := []gardencorev1beta1.AdmissionPlugin{}
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			// err should never be non-nil, because the admission plugins are part of the existing spec and are already validated by the GAPI server
 			if supported, err := IsAdmissionPluginSupported(plugin.Name, shoot.Spec.Kubernetes.Version); err == nil && supported {
 				validAdmissionPlugins = append(validAdmissionPlugins, plugin)
 			} else {
@@ -916,8 +920,10 @@ func maintainAdmissionPluginsForShoot(shoot *gardencorev1beta1.Shoot) []string {
 
 		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = validAdmissionPlugins
 
-		slices.Sort(removedAdmissionPlugins)
-		reasons = append(reasons, fmt.Sprintf("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version, strings.Join(removedAdmissionPlugins, ", ")))
+		if len(removedAdmissionPlugins) > 0 {
+			slices.Sort(removedAdmissionPlugins)
+			reasons = append(reasons, fmt.Sprintf("Removed admission plugins from %q because they are not supported in Kubernetes version %q: %s", "spec.kubernetes.kubeAPIServer.admissionPlugins", shoot.Spec.Kubernetes.Version, strings.Join(removedAdmissionPlugins, ", ")))
+		}
 	}
 
 	return reasons

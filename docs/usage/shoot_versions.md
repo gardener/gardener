@@ -46,7 +46,7 @@ This information is programmatically available in the `CloudProfiles` of the Gar
 Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
 A Shoot does not update (neither `auto-update` or `force-update`) to a `preview` version during the maintenance time.
 Also, `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
-Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine image version (e.g., suse-chost 15.4.20220818), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
+Typically, after a fresh release of a new Kubernetes (e.g., v1.25.0) or Machine image version (e.g., suse-chost 15.4.20220818), the operator tags it as `preview` until they have gained sufficient experience and regards this version to be reliable.
 After the operator has gained sufficient trust, the version can be manually promoted to `supported`.
 
 - **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. This is the version that new Shoot clusters should use and existing clusters should update to.
