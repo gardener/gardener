@@ -145,6 +145,7 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
+	machineTypeMap := buildMachineTypeMap(cloudProfile)
 
 	allErrs := field.ErrorList{}
 	workersPath := field.NewPath("spec", "provider", "workers")
@@ -153,7 +154,7 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		workerPath := workersPath.Index(i)
 		worker := &shoot.Spec.Provider.Workers[i]
 
-		allErrs = injectResourceReservations(worker, cloudProfile, *workerPath, allErrs)
+		allErrs = injectResourceReservations(worker, machineTypeMap, *workerPath, allErrs)
 	}
 
 	if len(allErrs) > 0 {
@@ -194,8 +195,8 @@ func setStaticResourceReservationDefaults(shoot *core.Shoot) {
 	}
 }
 
-func injectResourceReservations(worker *core.Worker, cloudProfile *gardencorev1beta1.CloudProfile, path field.Path, allErrs field.ErrorList) field.ErrorList {
-	reservation, err := calculateResourceReservationForMachineType(cloudProfile, worker.Machine.Type)
+func injectResourceReservations(worker *core.Worker, machineTypeMap map[string]gardencorev1beta1.MachineType, path field.Path, allErrs field.ErrorList) field.ErrorList {
+	reservation, err := calculateResourceReservationForMachineType(machineTypeMap, worker.Machine.Type)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(path.Child("machine", "type"), worker.Machine.Type, "worker machine type unknown"))
 		return allErrs
@@ -224,21 +225,30 @@ func injectResourceReservations(worker *core.Worker, cloudProfile *gardencorev1b
 	return allErrs
 }
 
-func calculateResourceReservationForMachineType(cloudProfile *gardencorev1beta1.CloudProfile, machineType string) (*core.KubeletConfigReserved, error) {
-	kubeReservedPID := resource.MustParse("20k")
-	for _, machine := range cloudProfile.Spec.MachineTypes {
-		if machine.Name == machineType {
-			cpuReserved := calculateCPUReservation(machine.CPU.MilliValue())
-			memoryReserved := calculateMemoryReservation(machine.Memory.Value())
+func buildMachineTypeMap(cloudProfile *gardencorev1beta1.CloudProfile) map[string]gardencorev1beta1.MachineType {
+	types := map[string]gardencorev1beta1.MachineType{}
 
-			return &core.KubeletConfigReserved{
-				CPU:    resource.NewMilliQuantity(cpuReserved, resource.BinarySI),
-				Memory: resource.NewQuantity(memoryReserved, resource.BinarySI),
-				PID:    &kubeReservedPID,
-			}, nil
-		}
+	for _, machine := range cloudProfile.Spec.MachineTypes {
+		types[machine.Name] = machine
 	}
-	return nil, fmt.Errorf("unknown machine type %v", machineType)
+	return types
+}
+
+func calculateResourceReservationForMachineType(machineTypeMap map[string]gardencorev1beta1.MachineType, machineType string) (*core.KubeletConfigReserved, error) {
+	kubeReservedPID := resource.MustParse("20k")
+	machine, ok := machineTypeMap[machineType]
+	if !ok {
+		return nil, fmt.Errorf("unknown machine type %v", machineType)
+	}
+
+	cpuReserved := calculateCPUReservation(machine.CPU.MilliValue())
+	memoryReserved := calculateMemoryReservation(machine.Memory.Value())
+
+	return &core.KubeletConfigReserved{
+		CPU:    resource.NewMilliQuantity(cpuReserved, resource.BinarySI),
+		Memory: resource.NewQuantity(memoryReserved, resource.BinarySI),
+		PID:    &kubeReservedPID,
+	}, nil
 }
 
 func calculateCPUReservation(cpuMilli int64) int64 {
