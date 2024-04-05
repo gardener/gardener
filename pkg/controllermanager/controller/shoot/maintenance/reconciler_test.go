@@ -1369,7 +1369,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								},
 							},
 							{
-								Name: "cpu-worker-2",
+								Name: "cpu-worker-3",
 								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 									Kubelet: &gardencorev1beta1.KubeletConfig{
 										KubernetesConfig: gardencorev1beta1.KubernetesConfig{
