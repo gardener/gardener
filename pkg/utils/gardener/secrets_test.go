@@ -55,6 +55,7 @@ var _ = Describe("Secrets", func() {
 
 		It("should replicate the secret", func() {
 			assertions := func(secret *corev1.Secret) {
+				Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/purpose", "global-monitoring-secret-replica"))
 				Expect(secret.Type).To(Equal(globalMonitoringSecret.Type))
 				Expect(secret.Immutable).To(Equal(globalMonitoringSecret.Immutable))
 				for k, v := range globalMonitoringSecret.Data {

@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -33,7 +33,7 @@ import (
 
 var (
 	// NoControlPlaneSecretsReq is a label selector requirement to select non-control plane secrets.
-	NoControlPlaneSecretsReq = utils.MustNewRequirement(constants.GardenRole, selection.NotIn, constants.ControlPlaneSecretRoles...)
+	NoControlPlaneSecretsReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.NotIn, v1beta1constants.ControlPlaneSecretRoles...)
 	// UncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created by
 	// Gardener controllers.
 	UncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(NoControlPlaneSecretsReq)}
@@ -54,11 +54,17 @@ func FetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 	return kubeconfig, nil
 }
 
+// LabelPurposeGlobalMonitoringSecret is a constant for the value of the purpose label for replicated global monitoring
+// secrets.
+const LabelPurposeGlobalMonitoringSecret = "global-monitoring-secret-replica"
+
 // ReplicateGlobalMonitoringSecret replicates the global monitoring secret into the given namespace and prefixes it with
 // the given prefix.
 func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, prefix, namespace string, globalMonitoringSecret *corev1.Secret) (*corev1.Secret, error) {
 	globalMonitoringSecretReplica := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: prefix + globalMonitoringSecret.Name, Namespace: namespace}}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, globalMonitoringSecretReplica, func() error {
+		metav1.SetMetaDataLabel(&globalMonitoringSecretReplica.ObjectMeta, v1beta1constants.GardenerPurpose, LabelPurposeGlobalMonitoringSecret)
+
 		globalMonitoringSecretReplica.Type = globalMonitoringSecret.Type
 		globalMonitoringSecretReplica.Data = globalMonitoringSecret.Data
 		globalMonitoringSecretReplica.Immutable = globalMonitoringSecret.Immutable
