@@ -58,7 +58,6 @@ spec:
         - name: envoy.filters.listener.tls_inspector
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-        per_connection_buffer_limit_bytes: 32768
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
