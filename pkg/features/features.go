@@ -74,7 +74,7 @@ const (
 	// ShootManagedIssuer enables the shoot managed issuer functionality described in GEP 24.
 	// If enabled it will force gardenlet to fail if shoot service account hostname is not configured.
 	// owner: @dimityrmirchev
-	// alpha: v1.92.0
+	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 )
 

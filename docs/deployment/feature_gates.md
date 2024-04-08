@@ -29,7 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
-| ShootManagedIssuer                 | `false` | `Alpha` | `1.92` |        |
+| ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
