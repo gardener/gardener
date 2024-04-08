@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
-	github.com/containerd/containerd v1.7.14
+	github.com/containerd/containerd v1.7.15
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/fluent/fluent-operator/v2 v2.7.0
 	github.com/gardener/cert-management v0.13.0
