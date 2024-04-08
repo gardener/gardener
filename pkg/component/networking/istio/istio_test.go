@@ -232,18 +232,18 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilter8443 = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_8443.yaml")
+		istioProxyProtocolEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter.yaml")
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilter9443 = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_9443.yaml")
+		istioProxyProtocolEnvoyFilterSNI = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_sni.yaml")
 			return string(data)
 		}
 
-		istioProxyProtocolEnvoyFilter8132 = func() string {
-			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_8132.yaml")
+		istioProxyProtocolEnvoyFilterVPN = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn.yaml")
 			return string(data)
 		}
 
@@ -400,9 +400,9 @@ var _ = Describe("istiod", func() {
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["servicemonitor__istio-system__aggregate-istio-ingressgateway.yaml"]), istioIngressServiceMonitor())).To(BeEmpty())
 
 			By("Verify istio-proxy-protocol resources")
-			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol.yaml"]), istioProxyProtocolEnvoyFilter8443())).To(BeEmpty())
-			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-9443.yaml"]), istioProxyProtocolEnvoyFilter9443())).To(BeEmpty())
-			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-8132.yaml"]), istioProxyProtocolEnvoyFilter8132())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol.yaml"]), istioProxyProtocolEnvoyFilter())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-sni.yaml"]), istioProxyProtocolEnvoyFilterSNI())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-vpn.yaml"]), istioProxyProtocolEnvoyFilterVPN())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"]), istioProxyProtocolGateway())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"]), istioProxyProtocolVirtualService())).To(BeEmpty())
 

@@ -25,17 +25,17 @@ spec:
         - name: proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+            allow_requests_without_proxy_protocol: true
         - name: inner_proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
-            allow_requests_without_proxy_protocol: true
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
-  name: proxy-protocol-9443
+  name: proxy-protocol-sni
   namespace: {{ .Release.Namespace }}
 spec:
   workloadSelector:
@@ -65,7 +65,7 @@ kind: EnvoyFilter
 metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
-  name: proxy-protocol-8132
+  name: proxy-protocol-vpn
   namespace: {{ .Release.Namespace }}
 spec:
   workloadSelector:

@@ -4,7 +4,7 @@ metadata:
   labels:
     app: istio-ingressgateway
     foo: bar
-  name: proxy-protocol-9443
+  name: proxy-protocol-sni
   namespace: test-ingress
 spec:
   workloadSelector:
