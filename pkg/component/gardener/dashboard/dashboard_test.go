@@ -16,6 +16,7 @@ package dashboard_test
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -66,6 +67,7 @@ var _ = Describe("GardenerDashboard", func() {
 		logLevel         = "debug"
 		enableTokenLogin bool
 		terminal         *TerminalValues
+		oidc             *OIDCValues
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -82,7 +84,6 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
-		newConfigMap              func(enableTokenLogin bool, terminal *TerminalValues) *corev1.ConfigMap
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
@@ -99,6 +100,7 @@ var _ = Describe("GardenerDashboard", func() {
 	BeforeEach(func() {
 		enableTokenLogin = true
 		terminal = nil
+		oidc = nil
 
 		ctx = context.Background()
 
@@ -176,7 +178,7 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
-		newConfigMap = func(enableTokenLogin bool, terminal *TerminalValues) *corev1.ConfigMap {
+		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues) *corev1.ConfigMap {
 			obj := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard-config",
@@ -230,206 +232,247 @@ terminal:
 `
 			}
 
+			if oidc != nil {
+				configRaw += `oidc:
+    issuer: ` + oidc.IssuerURL + `
+    sessionLifetime: 43200
+    redirect_uris:`
+
+				for _, domain := range oidc.IngressDomains {
+					configRaw += `
+        - https://dashboard.` + domain + `/auth/callback`
+				}
+
+				configRaw += `
+    scope: ` + strings.Join(append([]string{"openid", "email"}, oidc.AdditionalScopes...), " ") + `
+    rejectUnauthorized: true
+    public:
+        clientId: ` + oidc.ClientIDPublic + `
+        usePKCE: true
+`
+			}
+
 			obj.Data["config.yaml"] = configRaw
 
-			if enableTokenLogin {
+			if enableTokenLogin && oidc == nil {
 				obj.Data["login-config.json"] = `{"loginTypes":["token"]}`
+			} else if enableTokenLogin && oidc != nil {
+				obj.Data["login-config.json"] = `{"loginTypes":["oidc","token"]}`
+			} else if !enableTokenLogin && oidc != nil {
+				obj.Data["login-config.json"] = `{"loginTypes":["oidc"]}`
 			} else {
 				obj.Data["login-config.json"] = `{"loginTypes":null}`
 			}
 
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
-		}
-		configMap = newConfigMap(enableTokenLogin, terminal)
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-dashboard",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "dashboard",
-					"high-availability-config.resources.gardener.cloud/type": "server",
-				},
-				Annotations: map[string]string{
-					references.AnnotationKey("configmap", configMap.Name): configMap.Name,
-					"reference.resources.gardener.cloud/secret-867d23cd":  "generic-token-kubeconfig",
-					"reference.resources.gardener.cloud/secret-da1c7d68":  virtualGardenAccessSecret.Name,
-					"reference.resources.gardener.cloud/secret-73330522":  sessionSecret.Name,
-				},
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
+		}(enableTokenLogin, terminal, oidc)
+		deployment = func(oidc *OIDCValues) *appsv1.Deployment {
+			obj := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-dashboard",
+					Namespace: namespace,
+					Labels: map[string]string{
 						"app":  "gardener",
 						"role": "dashboard",
+						"high-availability-config.resources.gardener.cloud/type": "server",
 					},
 				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"app":                              "gardener",
-							"role":                             "dashboard",
-							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-public-networks":                                 "allowed",
-							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
-						},
-						Annotations: map[string]string{
-							references.AnnotationKey("configmap", configMap.Name): configMap.Name,
-							"reference.resources.gardener.cloud/secret-867d23cd":  "generic-token-kubeconfig",
-							"reference.resources.gardener.cloud/secret-da1c7d68":  virtualGardenAccessSecret.Name,
-							"reference.resources.gardener.cloud/secret-73330522":  sessionSecret.Name,
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             ptr.To[int32](1),
+					RevisionHistoryLimit: ptr.To[int32](2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app":  "gardener",
+							"role": "dashboard",
 						},
 					},
-					Spec: corev1.PodSpec{
-						PriorityClassName:            "gardener-garden-system-200",
-						AutomountServiceAccountToken: ptr.To(false),
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app":                              "gardener",
+								"role":                             "dashboard",
+								"networking.gardener.cloud/to-dns": "allowed",
+								"networking.gardener.cloud/to-public-networks":                                 "allowed",
+								"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
+							},
 						},
-						Containers: []corev1.Container{
-							{
-								Name:            "gardener-dashboard",
-								Image:           image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args: []string{
-									"--optimize-for-size",
-									"server.js",
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name: "SESSION_SECRET",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: sessionSecret.Name},
-												Key:                  "password",
+						Spec: corev1.PodSpec{
+							PriorityClassName:            "gardener-garden-system-200",
+							AutomountServiceAccountToken: ptr.To(false),
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: ptr.To(true),
+								RunAsUser:    ptr.To[int64](65532),
+								RunAsGroup:   ptr.To[int64](65532),
+								FSGroup:      ptr.To[int64](65532),
+							},
+							Containers: []corev1.Container{
+								{
+									Name:            "gardener-dashboard",
+									Image:           image,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Args: []string{
+										"--optimize-for-size",
+										"server.js",
+									},
+									Env: []corev1.EnvVar{
+										{
+											Name: "SESSION_SECRET",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													LocalObjectReference: corev1.LocalObjectReference{Name: sessionSecret.Name},
+													Key:                  "password",
+												},
+											},
+										},
+										{
+											Name:  "GARDENER_CONFIG",
+											Value: "/etc/gardener-dashboard/config/config.yaml",
+										},
+										{
+											Name:  "KUBECONFIG",
+											Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+										},
+										{
+											Name:  "METRICS_PORT",
+											Value: "9050",
+										},
+										{
+											Name: "POD_NAME",
+											ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1",
+													FieldPath:  "metadata.name",
+												},
+											},
+										},
+										{
+											Name: "POD_NAMESPACE",
+											ValueFrom: &corev1.EnvVarSource{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1",
+													FieldPath:  "metadata.namespace",
+												},
 											},
 										},
 									},
-									{
-										Name:  "GARDENER_CONFIG",
-										Value: "/etc/gardener-dashboard/config/config.yaml",
+									Resources: corev1.ResourceRequirements{
+										Requests: map[corev1.ResourceName]resource.Quantity{
+											corev1.ResourceCPU:    resource.MustParse("50m"),
+											corev1.ResourceMemory: resource.MustParse("128Mi"),
+										},
 									},
-									{
-										Name:  "KUBECONFIG",
-										Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+									Ports: []corev1.ContainerPort{
+										{
+											Name:          "http",
+											ContainerPort: 8080,
+											Protocol:      corev1.ProtocolTCP,
+										},
+										{
+											Name:          "metrics",
+											ContainerPort: 9050,
+											Protocol:      corev1.ProtocolTCP,
+										},
 									},
-									{
-										Name:  "METRICS_PORT",
-										Value: "9050",
-									},
-									{
-										Name: "POD_NAME",
-										ValueFrom: &corev1.EnvVarSource{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.name",
+									LivenessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											TCPSocket: &corev1.TCPSocketAction{
+												Port: intstr.FromString("http"),
 											},
 										},
+										InitialDelaySeconds: 15,
+										TimeoutSeconds:      5,
+										FailureThreshold:    6,
+										SuccessThreshold:    1,
+										PeriodSeconds:       20,
 									},
-									{
-										Name: "POD_NAMESPACE",
-										ValueFrom: &corev1.EnvVarSource{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
+									ReadinessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/healthz",
+												Port:   intstr.FromString("http"),
+												Scheme: "HTTP",
 											},
 										},
+										InitialDelaySeconds: 5,
+										TimeoutSeconds:      5,
+										FailureThreshold:    6,
+										SuccessThreshold:    1,
+										PeriodSeconds:       10,
 									},
-								},
-								Resources: corev1.ResourceRequirements{
-									Requests: map[corev1.ResourceName]resource.Quantity{
-										corev1.ResourceCPU:    resource.MustParse("50m"),
-										corev1.ResourceMemory: resource.MustParse("128Mi"),
-									},
-								},
-								Ports: []corev1.ContainerPort{
-									{
-										Name:          "http",
-										ContainerPort: 8080,
-										Protocol:      corev1.ProtocolTCP,
-									},
-									{
-										Name:          "metrics",
-										ContainerPort: 9050,
-										Protocol:      corev1.ProtocolTCP,
-									},
-								},
-								LivenessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										TCPSocket: &corev1.TCPSocketAction{
-											Port: intstr.FromString("http"),
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "gardener-dashboard-config",
+											MountPath: "/etc/gardener-dashboard/config",
 										},
-									},
-									InitialDelaySeconds: 15,
-									TimeoutSeconds:      5,
-									FailureThreshold:    6,
-									SuccessThreshold:    1,
-									PeriodSeconds:       20,
-								},
-								ReadinessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path:   "/healthz",
-											Port:   intstr.FromString("http"),
-											Scheme: "HTTP",
+										{
+											Name:      "gardener-dashboard-login-config",
+											MountPath: "/app/public/login-config.json",
+											SubPath:   "login-config.json",
 										},
-									},
-									InitialDelaySeconds: 5,
-									TimeoutSeconds:      5,
-									FailureThreshold:    6,
-									SuccessThreshold:    1,
-									PeriodSeconds:       10,
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      "gardener-dashboard-config",
-										MountPath: "/etc/gardener-dashboard/config",
-									},
-									{
-										Name:      "gardener-dashboard-login-config",
-										MountPath: "/app/public/login-config.json",
-										SubPath:   "login-config.json",
 									},
 								},
 							},
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: "gardener-dashboard-config",
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
-										Items: []corev1.KeyToPath{{
-											Key:  "config.yaml",
-											Path: "config.yaml",
-										}},
+							Volumes: []corev1.Volume{
+								{
+									Name: "gardener-dashboard-config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+											Items: []corev1.KeyToPath{{
+												Key:  "config.yaml",
+												Path: "config.yaml",
+											}},
+										},
 									},
 								},
-							},
-							{
-								Name: "gardener-dashboard-login-config",
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
-										Items: []corev1.KeyToPath{{
-											Key:  "login-config.json",
-											Path: "login-config.json",
-										}},
+								{
+									Name: "gardener-dashboard-login-config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+											Items: []corev1.KeyToPath{{
+												Key:  "login-config.json",
+												Path: "login-config.json",
+											}},
+										},
 									},
 								},
 							},
 						},
 					},
 				},
-			},
-		}
-		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
+			}
+
+			if oidc != nil {
+				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+oidc.SecretRef.Name, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name: "OIDC_CLIENT_ID",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: oidc.SecretRef.Name},
+								Key:                  "client_id",
+							},
+						},
+					},
+					corev1.EnvVar{
+						Name: "OIDC_CLIENT_SECRET",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: oidc.SecretRef.Name},
+								Key:                  "client_secret",
+							},
+						},
+					},
+				)
+
+			}
+
+			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
+			utilruntime.Must(references.InjectAnnotations(obj))
+			return obj
+		}(oidc)
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -614,6 +657,7 @@ terminal:
 			APIServerURL:     apiServerURL,
 			EnableTokenLogin: enableTokenLogin,
 			Terminal:         terminal,
+			OIDC:             oidc,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -740,24 +784,37 @@ terminal:
 			})
 
 			When("terminal is configured", func() {
-				var (
-					terminalContainerImage            = "some-image:latest"
-					terminalContainerImageDescription = "cool image"
-					allowedHostSourceList             = []string{"first", "second"}
-					gardenTerminalSeedHost            = "terminal-host"
-				)
-
 				BeforeEach(func() {
 					terminal = &TerminalValues{
 						DashboardTerminal: operatorv1alpha1.DashboardTerminal{
 							Container: operatorv1alpha1.DashboardTerminalContainer{
-								Image:       terminalContainerImage,
-								Description: &terminalContainerImageDescription,
+								Image:       "some-image:latest",
+								Description: ptr.To("cool image"),
 							},
-							AllowedHostSourceList: allowedHostSourceList,
+							AllowedHostSourceList: []string{"first", "second"},
 						},
-						GardenTerminalSeedHost: gardenTerminalSeedHost,
+						GardenTerminalSeedHost: "terminal-host",
 					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+				})
+			})
+
+			When("oidc is configured", func() {
+				BeforeEach(func() {
+					oidc = &OIDCValues{
+						DashboardOIDC: operatorv1alpha1.DashboardOIDC{
+							AdditionalScopes: []string{"first", "second"},
+							SecretRef:        corev1.LocalObjectReference{Name: "some-secret"},
+						},
+						IssuerURL:      "http://issuer",
+						ClientIDPublic: "public-client",
+						IngressDomains: []string{"first", "second"},
+					}
+
+					Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oidc.DashboardOIDC.SecretRef.Name, Namespace: namespace}})).To(Succeed())
 				})
 
 				It("should successfully deploy all resources", func() {

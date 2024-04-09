@@ -15,6 +15,7 @@
 package dashboard
 
 import (
+	"context"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -47,14 +49,21 @@ const (
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
 	volumeNameConfig           = "gardener-dashboard-config"
 	volumeNameLoginConfig      = "gardener-dashboard-login-config"
+
+	dataKeyOIDCClientID     = "client_id"
+	dataKeyOIDCClientSecret = "client_secret"
 )
 
 func (g *gardenerDashboard) deployment(
+	ctx context.Context,
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
 	configMapName string,
-) *appsv1.Deployment {
+) (
+	*appsv1.Deployment,
+	error,
+) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -224,8 +233,37 @@ func (g *gardenerDashboard) deployment(
 		},
 	}
 
+	if g.values.OIDC != nil {
+		secret := &corev1.Secret{}
+		if err := g.client.Get(ctx, client.ObjectKey{Name: g.values.OIDC.SecretRef.Name, Namespace: g.namespace}, secret); err != nil {
+			return nil, err
+		}
+
+		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum-secret-"+g.values.OIDC.SecretRef.Name, utils.ComputeSecretChecksum(secret.Data))
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{
+				Name: "OIDC_CLIENT_ID",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: g.values.OIDC.SecretRef.Name},
+						Key:                  dataKeyOIDCClientID,
+					},
+				},
+			},
+			corev1.EnvVar{
+				Name: "OIDC_CLIENT_SECRET",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: g.values.OIDC.SecretRef.Name},
+						Key:                  dataKeyOIDCClientSecret,
+					},
+				},
+			},
+		)
+	}
+
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return deployment
+	return deployment, nil
 }

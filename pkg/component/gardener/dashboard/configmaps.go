@@ -16,6 +16,8 @@ package dashboard
 
 import (
 	"encoding/json"
+	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -75,6 +77,27 @@ func (g *gardenerDashboard) configMap() (*corev1.ConfigMap, error) {
 				Namespace: metav1.NamespaceSystem,
 			}}},
 		}
+	}
+
+	if g.values.OIDC != nil {
+		redirectURIs := make([]string, 0, len(g.values.OIDC.IngressDomains))
+		for _, domain := range g.values.OIDC.IngressDomains {
+			redirectURIs = append(redirectURIs, "https://dashboard."+domain+"/auth/callback")
+		}
+
+		cfg.OIDC = &config.OIDC{
+			Issuer:             g.values.OIDC.IssuerURL,
+			SessionLifetime:    int64(ptr.Deref(g.values.OIDC.DashboardOIDC.SessionLifetime, metav1.Duration{Duration: 12 * time.Hour}).Duration.Seconds()),
+			RedirectURIs:       redirectURIs,
+			Scope:              strings.Join(append([]string{"openid", "email"}, g.values.OIDC.DashboardOIDC.AdditionalScopes...), " "),
+			RejectUnauthorized: true,
+			Public: config.OIDCPublic{
+				ClientID: g.values.OIDC.ClientIDPublic,
+				UsePKCE:  true,
+			},
+		}
+
+		loginCfg.LoginTypes = append([]string{"oidc"}, loginCfg.LoginTypes...)
 	}
 
 	rawConfig, err := yaml.Marshal(cfg)

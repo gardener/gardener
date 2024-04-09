@@ -50,16 +50,18 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of gardener-dashboard.
 	Image string
-	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
-	LogLevel string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string
 	// APIServerURL is the URL of the API server of the virtual garden cluster.
 	APIServerURL string
 	// EnableTokenLogin specifies whether token-based login is enabled.
 	EnableTokenLogin bool
 	// Terminal contains the terminal configuration.
 	Terminal *TerminalValues
+	// OIDC is the configuration for the OIDC settings.
+	OIDC *OIDCValues
 }
 
 // TerminalValues contains the terminal configuration.
@@ -67,6 +69,17 @@ type TerminalValues struct {
 	operatorv1alpha1.DashboardTerminal
 	// GardenTerminalSeedHost is the name of a seed hosting the garden terminals.
 	GardenTerminalSeedHost string
+}
+
+// OIDCValues contains the OIDC configuration.
+type OIDCValues struct {
+	operatorv1alpha1.DashboardOIDC
+	// IssuerURL is the issuer URL.
+	IssuerURL string
+	// ClientIDPublic is the public client ID.
+	ClientIDPublic string
+	// IngressDomains is the list of ingress domains.
+	IngressDomains []string
 }
 
 // Interface contains function for deploying the gardener-dashboard.
@@ -119,9 +132,14 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name)
+	if err != nil {
+		return err
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		configMap,
-		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name),
+		deployment,
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),

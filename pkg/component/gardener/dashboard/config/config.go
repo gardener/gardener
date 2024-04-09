@@ -30,6 +30,7 @@ type Config struct {
 	UnreachableSeeds                       UnreachableSeeds       `yaml:"unreachableSeeds"`
 	ContentSecurityPolicy                  *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
 	Terminal                               *Terminal              `yaml:"terminal,omitempty"`
+	OIDC                                   *OIDC                  `yaml:"oidc,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.
@@ -79,4 +80,20 @@ type TerminalGarden struct {
 // TerminalOperatorCredentials is the configuration for the operator credentials for terminals.
 type TerminalOperatorCredentials struct {
 	ServiceAccountRef corev1.SecretReference `yaml:"serviceAccountRef"`
+}
+
+// OIDC is the OIDC configuration.
+type OIDC struct {
+	Issuer             string     `yaml:"issuer"`
+	SessionLifetime    int64      `yaml:"sessionLifetime"`
+	RedirectURIs       []string   `yaml:"redirect_uris"`
+	Scope              string     `yaml:"scope"`
+	RejectUnauthorized bool       `yaml:"rejectUnauthorized"`
+	Public             OIDCPublic `yaml:"public"`
+}
+
+// OIDCPublic is the public OIDC configuration.
+type OIDCPublic struct {
+	ClientID string `yaml:"clientId"`
+	UsePKCE  bool   `yaml:"usePKCE"`
 }

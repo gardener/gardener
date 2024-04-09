@@ -1047,6 +1047,15 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		if config.Terminal != nil {
 			values.Terminal = &gardenerdashboard.TerminalValues{DashboardTerminal: *config.Terminal}
 		}
+
+		if config.OIDC != nil {
+			values.OIDC = &gardenerdashboard.OIDCValues{
+				DashboardOIDC:  *config.OIDC,
+				IssuerURL:      *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL,
+				ClientIDPublic: *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID,
+				IngressDomains: garden.Spec.RuntimeCluster.Ingress.Domains,
+			}
+		}
 	}
 
 	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
