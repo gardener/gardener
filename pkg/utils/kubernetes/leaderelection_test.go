@@ -16,20 +16,21 @@ package kubernetes_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("LeaderElection", func() {
@@ -38,7 +39,7 @@ var _ = Describe("LeaderElection", func() {
 		c    *mockclient.MockClient
 
 		ctx       = context.TODO()
-		fakeErr   = fmt.Errorf("fake err")
+		fakeErr   = errors.New("fake err")
 		namespace = "namespace"
 		name      = "name"
 		lock      string

@@ -11,11 +11,12 @@ stringData:
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:
-  name: garden
+  name: local
 spec:
   runtimeCluster:
     ingress:
-      domain: ingress.dev.garden.example.com
+      domains:
+      - ingress.runtime-garden.local.gardener.cloud
       controller:
         kind: nginx
       # providerConfig:
@@ -39,6 +40,8 @@ spec:
         enabled: true
       topologyAwareRouting:
         enabled: false
+  # volume:
+  #   minimumSize: 20Gi
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}
@@ -52,7 +55,6 @@ spec:
           bucketName: gardener-operator
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-            namespace: garden
         storage:
           capacity: 25Gi
         # className: default
@@ -97,12 +99,6 @@ spec:
     #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authentication-webhook
     #       cacheTTL: 30m
     #       version: v1beta1
-    #   authorization:
-    #     webhook:
-    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authorization-webhook
-    #       cacheAuthorizedTTL: 31m
-    #       cacheUnauthorizedTTL: 32m
-    #       version: v1beta1
     #   auditConfig:
     #     auditPolicy:
     #       configMapRef:
@@ -135,6 +131,10 @@ spec:
     #     httpAccessVerbosity: 3
     #   defaultNotReadyTolerationSeconds: 300
     #   defaultUnreachableTolerationSeconds: 300
+    #   encryptionConfig: # See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config
+    #     resources: # secrets are always encrypted
+    #     - configmaps
+    #     - customresource.fancyoperator.io # requires Kubernetes version >= 1.26
     #   sni:
     #     secretName: name-of-secret-containing-tls-cert-and-key
     #     domainPatterns:
@@ -146,6 +146,75 @@ spec:
     #   featureGates:
     #     SomeKubernetesFeature: true
     #   certificateSigningDuration: 48h
+    gardener:
+      clusterIdentity: local
+    # gardenerAPIServer:
+    #   admissionPlugins:
+    #   - name: ShootDNSRewriting
+    #     disabled: false
+    #     config:
+    #       apiVersion: shootdnsrewriting.admission.gardener.cloud
+    #       kind: Configuration
+    #       commonSuffixes:
+    #       - foo
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-admission-plugin
+    #   auditConfig:
+    #     auditPolicy:
+    #       configMapRef:
+    #         name: auditpolicy
+    #   auditWebhook:
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-audit-webhook
+    #     batchMaxSize: 1337
+    #     version: audit.k8s.io/v1
+    #   featureGates:
+    #     SomeGardenerFeature: true
+    #   logging:
+    #     verbosity: 2
+    #     httpAccessVerbosity: 3
+    #   encryptionConfig: # See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config
+    #     resources:
+    #     - shoots.core.gardener.cloud
+    #     - managedseeds.seedmanagement.gardener.cloud
+    #   requests:
+    #     maxNonMutatingInflight: 400
+    #     maxMutatingInflight: 200
+    #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+    #     default: 100
+    #     resources:
+    #     - apiGroup: core.gardener.cloud
+    #       resource: shoots
+    #       size: 500
+    # gardenerAdmissionController:
+    #   logLevel: info # either {debug,info,error}
+    #   resourceAdmissionConfiguration:
+    #    operationMode: block # either {block,log}
+    #    limits:
+    #    - apiGroups: ["core.gardener.cloud"]
+    #      apiVersions: ["*"]
+    #      resources: ["shoots"]
+    #      size: 100k
+    #    unrestrictedSubjects:
+    #    - kind: Group
+    #      name: gardener.cloud:system:seeds
+    #      apiGroup: rbac.authorization.k8s.io
+    # gardenerControllerManager:
+    #   defaultProjectQuotas:
+    #   - config:
+    #       apiVersion: v1
+    #       kind: ResourceQuota
+    #       spec:
+    #         hard:
+    #           count/shoots.core.gardener.cloud: "100"
+    #           count/secretbindings.core.gardener.cloud: "10"
+    #           count/secrets: "400"
+    #     projectSelector: {}
+    #   featureGates:
+    #     SomeGardenerFeature: true
+    #   logLevel: info # either {debug,info,error}
+    # gardenerScheduler:
+    #   featureGates:
+    #     SomeGardenerFeature: true
+    #   logLevel: info # either {debug,info,error}
     maintenance:
       timeWindow:
         begin: 220000+0100

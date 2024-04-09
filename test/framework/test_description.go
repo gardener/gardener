@@ -111,8 +111,11 @@ func (t TestDescription) FCIt(text string, body func(context.Context), timeout t
 
 // String returns the test description labels
 func (t TestDescription) String() string {
-	labelsList := sets.List(t.labels)
-	testText := fmt.Sprintf("[%s]", labelsList[0])
+	var (
+		labelsList = sets.List(t.labels)
+		testText   = fmt.Sprintf("[%s]", labelsList[0])
+	)
+
 	for i := 1; i < len(labelsList); i++ {
 		testText = fmt.Sprintf("%s [%s]", testText, labelsList[i])
 	}

@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -37,7 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -45,7 +44,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Handler handles admission requests and sets the following fields based on the failure tolerance type and the
@@ -54,18 +52,10 @@ import (
 // - `.spec.template.spec.affinity`
 // - `.spec.template.spec.topologySpreadConstraints`
 type Handler struct {
-	Logger        logr.Logger
-	TargetClient  client.Reader
-	TargetVersion *semver.Version
-	Config        config.HighAvailabilityConfigWebhookConfig
-
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Logger       logr.Logger
+	TargetClient client.Reader
+	Config       config.HighAvailabilityConfigWebhookConfig
+	Decoder      *admission.Decoder
 }
 
 // Handle defaults the high availability settings of the provided resource.
@@ -146,7 +136,7 @@ func (h *Handler) handleDeployment(
 	error,
 ) {
 	deployment := &appsv1.Deployment{}
-	if err := h.decoder.Decode(req, deployment); err != nil {
+	if err := h.Decoder.Decode(req, deployment); err != nil {
 		return nil, err
 	}
 
@@ -178,6 +168,7 @@ func (h *Handler) handleDeployment(
 		deployment.Spec.Replicas,
 		maxReplicas,
 		&deployment.Spec.Template,
+		deployment.Annotations,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -199,7 +190,7 @@ func (h *Handler) handleStatefulSet(
 	error,
 ) {
 	statefulSet := &appsv1.StatefulSet{}
-	if err := h.decoder.Decode(req, statefulSet); err != nil {
+	if err := h.Decoder.Decode(req, statefulSet); err != nil {
 		return nil, err
 	}
 
@@ -231,6 +222,7 @@ func (h *Handler) handleStatefulSet(
 		statefulSet.Spec.Replicas,
 		maxReplicas,
 		&statefulSet.Spec.Template,
+		statefulSet.Annotations,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -242,7 +234,7 @@ func (h *Handler) handleStatefulSet(
 
 func (h *Handler) handleHvpa(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
 	hvpa := &hvpav1alpha1.Hvpa{}
-	if err := h.decoder.Decode(req, hvpa); err != nil {
+	if err := h.Decoder.Decode(req, hvpa); err != nil {
 		return nil, err
 	}
 
@@ -267,7 +259,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 	switch req.Kind.Version {
 	case autoscalingv2beta1.SchemeGroupVersion.Version:
 		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{}
-		if err := h.decoder.Decode(req, hpa); err != nil {
+		if err := h.Decoder.Decode(req, hpa); err != nil {
 			return nil, err
 		}
 
@@ -288,7 +280,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 		return hpa, nil
 	case autoscalingv2.SchemeGroupVersion.Version:
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{}
-		if err := h.decoder.Decode(req, hpa); err != nil {
+		if err := h.Decoder.Decode(req, hpa); err != nil {
 			return nil, err
 		}
 
@@ -330,7 +322,7 @@ func mutateReplicas(
 
 	// only mutate replicas if object is not horizontally scaled or if current replica count is lower than what we have
 	// computed
-	if !isHorizontallyScaled || pointer.Int32Deref(currentReplicas, 0) < *replicas {
+	if !isHorizontallyScaled || ptr.Deref(currentReplicas, 0) < *replicas {
 		log.Info("Mutating replicas", "replicas", *replicas)
 		setReplicas(replicas)
 	}
@@ -340,7 +332,7 @@ func mutateReplicas(
 
 func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureToleranceType *gardencorev1beta1.FailureToleranceType) (*int32, error) {
 	// do not mutate replicas if they are set to 0 (hibernation case or HPA disabled)
-	if pointer.Int32Deref(currentOrMinReplicas, 0) == 0 {
+	if ptr.Deref(currentOrMinReplicas, 0) == 0 {
 		return nil, nil
 	}
 
@@ -355,35 +347,21 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 		if err != nil {
 			return nil, err
 		}
-		replicas = pointer.Int32(int32(v))
+		replicas = ptr.To(int32(v))
 	}
 	return replicas, nil
 }
 
 func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPIVersion, targetKind, targetName string) (bool, int32, error) {
-	if versionutils.ConstraintK8sGreaterEqual123.Check(h.TargetVersion) {
-		hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
-		if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
-			return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
-		}
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+	if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
+		return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
+	}
 
-		for _, hpa := range hpaList.Items {
-			if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
-				targetRef.Kind == targetKind && targetRef.Name == targetName {
-				return true, hpa.Spec.MaxReplicas, nil
-			}
-		}
-	} else {
-		hpaList := &autoscalingv2beta1.HorizontalPodAutoscalerList{}
-		if err := h.TargetClient.List(ctx, hpaList, client.InNamespace(namespace)); err != nil {
-			return false, 0, fmt.Errorf("failed to list all HPAs: %w", err)
-		}
-
-		for _, hpa := range hpaList.Items {
-			if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
-				targetRef.Kind == targetKind && targetRef.Name == targetName {
-				return true, hpa.Spec.MaxReplicas, nil
-			}
+	for _, hpa := range hpaList.Items {
+		if targetRef := hpa.Spec.ScaleTargetRef; targetRef.APIVersion == targetAPIVersion &&
+			targetRef.Kind == targetKind && targetRef.Name == targetName {
+			return true, hpa.Spec.MaxReplicas, nil
 		}
 	}
 
@@ -448,8 +426,9 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	currentReplicas *int32,
 	maxReplicas int32,
 	podTemplateSpec *corev1.PodTemplateSpec,
+	annotations map[string]string,
 ) {
-	replicas := pointer.Int32Deref(currentReplicas, 0)
+	replicas := ptr.Deref(currentReplicas, 0)
 
 	// Set maxReplicas to replicas if component is not scaled horizontally or of the replica count is higher than maxReplicas
 	// which can happen if the involved H(V)PA object is not mutated yet.
@@ -457,7 +436,12 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		maxReplicas = replicas
 	}
 
-	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType); constraints != nil {
+	enforceSpreadAcrossHosts := false
+	if b, err := strconv.ParseBool(annotations[resourcesv1alpha1.HighAvailabilityConfigHostSpread]); err == nil {
+		enforceSpreadAcrossHosts = b
+	}
+
+	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType, enforceSpreadAcrossHosts); constraints != nil {
 		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
 		// the same key multiple times.
 		var filteredConstraints []corev1.TopologySpreadConstraint
@@ -528,13 +512,12 @@ func mutateAutoscalingReplicas(
 	}
 
 	// For compatibility reasons, only overwrite minReplicas if the current count is lower than the calculated count.
-	// TODO(timuthy): Reconsider if this should be removed in a future version.
-	if pointer.Int32Deref(getMinReplicas(), 0) < *replicas {
+	if ptr.Deref(getMinReplicas(), 0) < *replicas {
 		log.Info("Mutating minReplicas", "minReplicas", replicas)
 		setMinReplicas(replicas)
 	}
 
-	if getMaxReplicas() < pointer.Int32Deref(getMinReplicas(), 0) {
+	if getMaxReplicas() < ptr.Deref(getMinReplicas(), 0) {
 		log.Info("Mutating maxReplicas", "maxReplicas", replicas)
 		setMaxReplicas(*replicas)
 	}

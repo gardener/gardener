@@ -41,6 +41,7 @@ func ValidateCloudProfileConfig(cloudProfile *api.CloudProfileConfig, fldPath *f
 		if len(machineImage.Versions) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for machine image %q", machineImage.Name)))
 		}
+
 		for j, version := range machineImage.Versions {
 			jdxPath := idxPath.Child("versions").Index(j)
 

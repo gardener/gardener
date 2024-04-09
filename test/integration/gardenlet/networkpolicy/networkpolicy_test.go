@@ -24,7 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -116,12 +116,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				Shoot: runtime.RawExtension{Object: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: &gardencorev1beta1.Networking{
-							Pods:     pointer.String("10.150.0.0/16"),
-							Services: pointer.String("192.168.1.0/17"),
-							Nodes:    pointer.String("172.16.2.0/18"),
+							Pods:     ptr.To("10.150.0.0/16"),
+							Services: ptr.To("192.168.1.0/17"),
+							Nodes:    ptr.To("172.16.2.0/18"),
 						},
 						Provider: gardencorev1beta1.Provider{
-							Workers: []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}},
+							Workers: []gardencorev1beta1.Worker{},
 						},
 					},
 				}},
@@ -204,9 +204,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		})
 	})
 
-	PContext("garden namespace", func() {
+	Context("garden namespace", func() {
 		It("should have the expected network policies", func() {
-			By("Verify that all expected NetworkPolicys get created")
+			By("Verify that all expected NetworkPolicies get created")
 			Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
@@ -217,18 +217,17 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-private-networks")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-blocked-cidrs")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-dns")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("deny-all")})}),
 			))
 
-			By("Verify that no unexpected NetworkPolicys get created")
+			By("Verify that no unexpected NetworkPolicies get created")
 			Consistently(func(g Gomega) []networkingv1.NetworkPolicy {
 				networkPolicyList := &networkingv1.NetworkPolicyList{}
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
 				return networkPolicyList.Items
-			}).Should(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("deny-all")})}),
+			}).ShouldNot(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-shoot-networks")})}),
 			))
-
 		})
 	})
 
@@ -374,8 +373,11 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
 
+			egressRules, err := networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...)
+			Expect(err).ToNot(HaveOccurred())
+
 			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
-				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
+				Egress:      egressRules,
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-runtime-apiserver": "allowed"}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
 			}
@@ -386,6 +388,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
 			inIstioSystemNamespace:    true,
+			inIstioIngressNamespace:   true,
 			inShootNamespaces:         true,
 			inExtensionNamespaces:     true,
 			inCustomNamespace:         true,
@@ -407,6 +410,14 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 								"192.168.0.0/16",
 								"100.64.0.0/10",
 								blockedCIDR,
+							},
+						},
+					}, {
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: "::/0",
+							Except: []string{
+								"fe80::/10",
+								"fc00::/7",
 							},
 						},
 					}},
@@ -438,8 +449,13 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
-						}},
-					},
+						},
+					}, {
+						To: []networkingv1.NetworkPolicyPeer{
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fe80::/10"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fc00::/7"}},
+						},
+					}},
 				}
 
 				if strings.HasPrefix(namespaceName, "shoot--") {
@@ -548,10 +564,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							},
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(53)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(53)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(8053)},
-							{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(8053)},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(53)},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(53)},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(8053)},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(8053)},
 						},
 					}},
 				}
@@ -626,8 +642,8 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
 						},
-						Ingress: gardencorev1beta1.Ingress{
-							Domain: "ingress.dev.seed.example.com",
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.dev.seed.example.com"},
 							Controller: gardencorev1beta1.IngressController{
 								Kind: "nginx",
 							},
@@ -636,6 +652,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
 							Domains: []string{"virtual-garden.local.gardener.cloud"},
+						},
+						Gardener: operatorv1alpha1.Gardener{
+							ClusterIdentity: "test",
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",

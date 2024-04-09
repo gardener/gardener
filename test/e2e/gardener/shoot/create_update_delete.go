@@ -22,14 +22,17 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
@@ -40,10 +43,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	test := func(shoot *gardencorev1beta1.Shoot) {
 		f := defaultShootCreationFramework()
 		f.Shoot = shoot
+		f.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+			Resources: []string{"services", "endpointslices.discovery.k8s.io"},
+		}
 
 		// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 		// performed
-		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
+		f.Shoot.Spec.Kubernetes.Version = "1.28.2"
 
 		if !v1beta1helper.IsWorkerless(f.Shoot) {
 			// create two additional worker pools which explicitly specify the kubernetes version
@@ -52,7 +58,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			pool2.Name += "2"
 			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
 			pool3.Name += "3"
-			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.25.4")}
+			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("1.27.1")}
 			f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 		}
 
@@ -67,12 +73,28 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				shootClient kubernetes.Interface
 				err         error
 			)
+
 			By("Verify shoot access using admin kubeconfig")
 			Eventually(func(g Gomega) {
 				shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 				g.Expect(err).NotTo(HaveOccurred())
 
 				g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+			}).Should(Succeed())
+
+			By("Verify shoot access using viewer kubeconfig")
+			Eventually(func(g Gomega) {
+				readOnlyShootClient, err := access.CreateShootClientFromViewerKubeconfig(ctx, f.GardenClient, f.Shoot)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ConfigMapList{})).To(Succeed())
+				g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.SecretList{})).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ServiceList{})).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().List(ctx, &discoveryv1.EndpointSliceList{})).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().Update(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().Patch(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}}, client.RawPatch(types.MergePatchType, []byte("{}")))).To(BeForbiddenError())
+				g.Expect(readOnlyShootClient.Client().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
 			}).Should(Succeed())
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
@@ -148,7 +170,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 	}
 
-	Context("Shoot with workers", func() {
+	Context("Shoot with workers", Label("basic"), func() {
 		test(e2e.DefaultShoot("e2e-default"))
 	})
 

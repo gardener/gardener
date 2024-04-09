@@ -18,9 +18,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
@@ -30,9 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockdiscovery "github.com/gardener/gardener/third_party/mock/client-go/discovery"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Fake ClientSet", func() {

@@ -7,7 +7,6 @@ metadata:
     shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds: "0"
     shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
 spec:
-  seedName: local
   cloudProfileName: local
   secretBindingName: local
   region: local
@@ -26,7 +25,6 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    version: 1.24.8
     kubelet:
       serializeImagePulls: false
       registryPullQPS: 10

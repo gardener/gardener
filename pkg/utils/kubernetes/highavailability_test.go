@@ -20,7 +20,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,12 +33,12 @@ var _ = Describe("HighAvailability", func() {
 		},
 
 		Entry("component type is empty", nil, "", BeNil()),
-		Entry("component type 'server', failure-tolerance-type nil", nil, "server", Equal(pointer.Int32(2))),
-		Entry("component type 'server', failure-tolerance-type empty", failureToleranceTypePtr(""), "server", Equal(pointer.Int32(2))),
-		Entry("component type 'server', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "server", Equal(pointer.Int32(2))),
-		Entry("component type 'controller', failure-tolerance-type nil", nil, "controller", Equal(pointer.Int32(2))),
-		Entry("component type 'controller', failure-tolerance-type empty", failureToleranceTypePtr(""), "controller", Equal(pointer.Int32(1))),
-		Entry("component type 'controller', failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), "controller", Equal(pointer.Int32(2))),
+		Entry("component type 'server', failure-tolerance-type nil", nil, "server", Equal(ptr.To[int32](2))),
+		Entry("component type 'server', failure-tolerance-type empty", ptr.To(gardencorev1beta1.FailureToleranceType("")), "server", Equal(ptr.To[int32](2))),
+		Entry("component type 'server', failure-tolerance-type non-empty", ptr.To(gardencorev1beta1.FailureToleranceType("foo")), "server", Equal(ptr.To[int32](2))),
+		Entry("component type 'controller', failure-tolerance-type nil", nil, "controller", Equal(ptr.To[int32](2))),
+		Entry("component type 'controller', failure-tolerance-type empty", ptr.To(gardencorev1beta1.FailureToleranceType("")), "controller", Equal(ptr.To[int32](1))),
+		Entry("component type 'controller', failure-tolerance-type non-empty", ptr.To(gardencorev1beta1.FailureToleranceType("foo")), "controller", Equal(ptr.To[int32](2))),
 	)
 
 	zones := []string{"a", "b", "c"}
@@ -64,25 +64,25 @@ var _ = Describe("HighAvailability", func() {
 			maxReplicas int,
 			numberOfZones int,
 			labelSelector metav1.LabelSelector,
+			enforceSpreadAcrossHosts bool,
 			matcher gomegatypes.GomegaMatcher,
 		) {
-			Expect(GetTopologySpreadConstraints(int32(replicas), int32(maxReplicas), labelSelector, int32(numberOfZones), failureToleranceType)).To(matcher)
+			Expect(GetTopologySpreadConstraints(int32(replicas), int32(maxReplicas), labelSelector, int32(numberOfZones), failureToleranceType, enforceSpreadAcrossHosts)).To(matcher)
 		},
 
-		Entry("less than 2 replicas", nil, 1, 1, 1, labelSelector, BeNil()),
-		Entry("1 zone, failure-tolerance-type nil", nil, 2, 2, 1, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
-		Entry("1 zone, failure-tolerance-type empty", failureToleranceTypePtr(""), 2, 2, 1, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
-		Entry("1 zone, failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), 2, 2, 1, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("2 zones, maxReplicas less twice the number of zones", nil, 2, 2, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: pointer.Int32(2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("2 zones, failure-tolerance-type nil", nil, 2, 2, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: pointer.Int32(2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("2 zones, failure-tolerance-type empty", failureToleranceTypePtr(""), 2, 2, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
-		Entry("2 zones, failure-tolerance-type non-empty", failureToleranceTypePtr("foo"), 2, 2, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("2 zones, failure-tolerance-type 'zone'", failureToleranceTypePtr("zone"), 2, 2, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: pointer.Int32(2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("2 zones, maxReplicas at least twice the number of zones", nil, 2, 4, 2, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 2, MinDomains: pointer.Int32(2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
-		Entry("3 zones, maxReplicas less than zones", nil, 2, 2, 3, labelSelector, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: pointer.Int32(2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("less than 2 replicas", nil, 1, 1, 1, labelSelector, false, BeNil()),
+		Entry("1 zone, failure-tolerance-type nil", nil, 2, 2, 1, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
+		Entry("1 zone, failure-tolerance-type nil, but host spread enforced", nil, 2, 2, 1, labelSelector, true, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("1 zone, failure-tolerance-type empty", ptr.To(gardencorev1beta1.FailureToleranceType("")), 2, 2, 1, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
+		Entry("1 zone, failure-tolerance-type non-empty", ptr.To(gardencorev1beta1.FailureToleranceType("foo")), 2, 2, 1, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, maxReplicas less twice the number of zones", nil, 2, 2, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, failure-tolerance-type nil", nil, 2, 2, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, failure-tolerance-type nil, but host spread enforced", nil, 2, 2, 2, labelSelector, true, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, failure-tolerance-type empty", ptr.To(gardencorev1beta1.FailureToleranceType("")), 2, 2, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector})),
+		Entry("2 zones, failure-tolerance-type non-empty", ptr.To(gardencorev1beta1.FailureToleranceType("foo")), 2, 2, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, failure-tolerance-type 'zone'", ptr.To(gardencorev1beta1.FailureToleranceType("zone")), 2, 2, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("2 zones, maxReplicas at least twice the number of zones", nil, 2, 4, 2, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 2, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("3 zones, maxReplicas less than zones", nil, 2, 2, 3, labelSelector, false, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.ScheduleAnyway, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
+		Entry("3 zones, maxReplicas less than zones, but host spread enforced", nil, 2, 2, 3, labelSelector, true, ConsistOf(corev1.TopologySpreadConstraint{TopologyKey: "kubernetes.io/hostname", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector}, corev1.TopologySpreadConstraint{TopologyKey: "topology.kubernetes.io/zone", MaxSkew: 1, MinDomains: ptr.To[int32](2), WhenUnsatisfiable: corev1.DoNotSchedule, LabelSelector: &labelSelector})),
 	)
 })
-
-func failureToleranceTypePtr(v gardencorev1beta1.FailureToleranceType) *gardencorev1beta1.FailureToleranceType {
-	return &v
-}

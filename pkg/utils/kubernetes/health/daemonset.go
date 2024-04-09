@@ -31,7 +31,7 @@ func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int32 {
 		return 0
 	}
 
-	maxUnavailable, err := intstr.GetValueFromIntOrPercent(rollingUpdate.MaxUnavailable, int(daemonSet.Status.DesiredNumberScheduled), false)
+	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(rollingUpdate.MaxUnavailable, int(daemonSet.Status.DesiredNumberScheduled), false)
 	if err != nil {
 		return 0
 	}

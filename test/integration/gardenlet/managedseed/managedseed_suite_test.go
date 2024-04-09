@@ -16,7 +16,6 @@ package managedseed_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -29,15 +28,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -46,14 +45,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
@@ -150,7 +148,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 			},
 		},
 	}
@@ -179,15 +177,15 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             testScheme,
-		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Scheme:  testScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&seedmanagementv1alpha1.ManagedSeed{}: {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 				&gardencorev1beta1.Shoot{}:            {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 				&gardencorev1beta1.SecretBinding{}:    {Label: labels.SelectorFromSet(labels.Set{testID: testRunID})},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -206,10 +204,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-	Expect(err).NotTo(HaveOccurred())
-
 	shootName = "shoot-" + testRunID
 	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: gardenNamespaceGarden.Name}}), testClientSet).Build()
 
@@ -217,7 +211,7 @@ var _ = BeforeSuite(func() {
 		Controllers: &config.GardenletControllerConfiguration{
 			ManagedSeed: &config.ManagedSeedControllerConfiguration{
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
-				ConcurrentSyncs:  pointer.Int(5),
+				ConcurrentSyncs:  ptr.To(5),
 				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
 				// This controller is pretty heavy-weight, so use a higher duration.
 				SyncPeriod: &metav1.Duration{Duration: time.Minute},
@@ -235,10 +229,8 @@ var _ = BeforeSuite(func() {
 	gardenNamespaceShoot = "garden-shoot-" + testRunID
 	Expect((&managedseed.Reconciler{
 		Config:                cfg,
-		ChartsPath:            chartsPath,
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
-		ImageVector:           imageVector,
 		ShootClientMap:        shootClientMap,
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 

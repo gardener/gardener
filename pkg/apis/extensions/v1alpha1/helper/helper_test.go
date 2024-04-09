@@ -15,9 +15,12 @@
 package helper_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -56,7 +59,7 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("nil value", nil, int64(120)),
-		Entry("non-nil value", pointer.Int64(300), int64(300)),
+		Entry("non-nil value", ptr.To[int64](300), int64(300)),
 	)
 
 	Describe("#DeterminePrimaryIPFamily", func() {
@@ -75,23 +78,71 @@ var _ = Describe("helper", func() {
 			Expect(DeterminePrimaryIPFamily([]extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6, extensionsv1alpha1.IPFamilyIPv4})).To(Equal(extensionsv1alpha1.IPFamilyIPv6))
 		})
 	})
+
+	Describe("#FilePathsFrom", func() {
+		It("should return the expected list", func() {
+			file1 := extensionsv1alpha1.File{Path: "foo"}
+			file2 := extensionsv1alpha1.File{Path: "bar"}
+
+			Expect(FilePathsFrom([]extensionsv1alpha1.File{file1, file2})).To(ConsistOf("foo", "bar"))
+		})
+	})
+
+	Describe("#GetMachineDeploymentClusterAutoscalerAnnotations", func() {
+		It("should return nil when options passed is nil", func() {
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(nil)).To(BeNil())
+		})
+
+		It("should return empty map when an empty map is passed", func() {
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(ptr.To(extensionsv1alpha1.ClusterAutoscalerOptions{}))).To(Equal(map[string]string{}))
+		})
+
+		It("should return correctly populated map when all options are passed", func() {
+			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			expectedValues := map[string]string{
+				extensionsv1alpha1.ScaleDownUtilizationThresholdAnnotation:    "0.5",
+				extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "1m0s",
+				extensionsv1alpha1.ScaleDownUnreadyTimeAnnotation:             "2m0s",
+				extensionsv1alpha1.MaxNodeProvisionTimeAnnotation:             "3m0s",
+			}
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(caOptions)).To(Equal(expectedValues))
+		})
+
+		It("should return correctly populated map when partial options are passed", func() {
+			caOptions := &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.6"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: time.Minute}),
+			}
+			expectedValues := map[string]string{
+				extensionsv1alpha1.ScaleDownGpuUtilizationThresholdAnnotation: "0.6",
+				extensionsv1alpha1.ScaleDownUnneededTimeAnnotation:            "1m0s",
+			}
+			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(caOptions)).To(Equal(expectedValues))
+		})
+	})
 })
 
 var _ = Describe("filecodec", func() {
 	DescribeTable("#EncodeDecode",
 		func(input extensionsv1alpha1.FileContentInline) {
 			codeID, err := ParseFileCodecID(input.Encoding)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			encoded, err := FileCodecForID(codeID).Encode([]byte(input.Data))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 
 			decoded, err := Decode(input.Encoding, encoded)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(input.Data).To(Equal(string(decoded)))
 		},
 
 		Entry("plain", extensionsv1alpha1.FileContentInline{Encoding: "", Data: "plain data input"}),
 		Entry("base64", extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: "base64 data input"}),
-		Entry("gzip", extensionsv1alpha1.FileContentInline{Encoding: "gzip", Data: "gzip data input"}),
 	)
 })

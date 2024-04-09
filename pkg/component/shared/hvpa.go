@@ -15,28 +15,26 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 )
 
 // NewHVPA instantiates a new `hvpa-controller` component.
 func NewHVPA(
 	c client.Client,
 	gardenNamespaceName string,
-	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	enabled bool,
+	kubernetesVersion *semver.Version,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameHvpaController)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHvpaController)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +42,7 @@ func NewHVPA(
 	deployer = hvpa.New(c, gardenNamespaceName, hvpa.Values{
 		Image:             image.String(),
 		PriorityClassName: priorityClassName,
+		KubernetesVersion: kubernetesVersion,
 	})
 
 	if !enabled {

@@ -20,19 +20,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups: # TODO (istvanballok,rickardsjp): remove in release v1.77. Patching persistent volumes is needed for the Loki -> Vali migration.
-  - ""
-  resources:
-  - persistentvolumes
-  verbs:
-  - delete
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  - create
 - apiGroups:
   - ""
   resources:
@@ -42,6 +29,7 @@ rules:
   - get
   - list
   - watch
+  - patch # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
 - apiGroups:
   - ""
   resources:
@@ -97,15 +85,17 @@ rules:
   - watch
   - patch
   - update
+  - create # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
 - apiGroups:
   - ""
   resources:
   - persistentvolumeclaims
   resourceNames:
-  - alertmanager-db-alertmanager-0
+  - alertmanager-db-alertmanager-0 # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
   - vali-vali-0
-  - loki-loki-0
-  - prometheus-db-prometheus-0
+  - prometheus-db-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
+  - prometheus-db-seed-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
+  - prometheus-db-aggregate-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
   verbs:
   - delete
 - apiGroups:
@@ -121,16 +111,6 @@ rules:
   - list
   - watch
   - patch
-  - update
-- apiGroups:
-  - admissionregistration.k8s.io
-  resources:
-  - mutatingwebhookconfigurations
-  resourceNames:
-  - vpa-webhook-config-seed
-  verbs:
-  - get
-  - delete
   - update
 - apiGroups:
   - apiextensions.k8s.io
@@ -229,7 +209,6 @@ rules:
   - aggregate-prometheus
   - prometheus
   - vali
-  - loki
   verbs:
   - delete
   - patch
@@ -437,9 +416,26 @@ rules:
 - apiGroups:
   - machine.sapcloud.io
   resources:
+  - machineclasses
   - machinedeployments
+  - machinesets
   - machines
   verbs:
   - list
   - watch
   - get
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - list
+  - watch
+  - get
+  - create
+  - patch
+  - update
+  - delete

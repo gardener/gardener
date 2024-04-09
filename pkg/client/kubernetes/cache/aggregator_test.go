@@ -16,13 +16,12 @@ package cache_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,8 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("Aggregator", func() {
@@ -96,21 +94,12 @@ var _ = Describe("Aggregator", func() {
 			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 		})
 
-		It("should return a non-cache error", func() {
+		It("should return an error", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: objectMeta,
 			}
-			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(apierrors.NewNotFound(gardencorev1beta1.Resource("shoots"), ""))
-			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(BeNotFoundError())
-		})
-
-		It("should return a cache error for non API errors", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: objectMeta,
-			}
-			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(fmt.Errorf("foo"))
-			err := aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
-			Expect(err).To(BeCacheError())
+			fallback.EXPECT().Get(ctx, client.ObjectKeyFromObject(shoot), shoot).Return(errors.New("some error"))
+			Expect(aggregator.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(MatchError("some error"))
 		})
 	})
 
@@ -173,11 +162,11 @@ var _ = Describe("Aggregator", func() {
 			ctx, cancel := context.WithCancel(ctx)
 			testChan := make(chan struct{})
 
-			fallback.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			fallback.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})
-			secretCache.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
+			secretCache.EXPECT().Start(ctx).DoAndReturn(func(_ context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})

@@ -18,9 +18,9 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -33,7 +33,8 @@ import (
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 const (
@@ -46,10 +47,28 @@ const (
 
 var _ = Describe("Actuator", func() {
 	var (
+		ctx = context.Background()
+		log = logf.Log.WithName("test")
+
 		ctrl *gomock.Controller
 		mgr  *mockmanager.MockManager
 
-		be = &extensionsv1alpha1.BackupEntry{
+		backupEntry              *extensionsv1alpha1.BackupEntry
+		backupProviderSecretData map[string][]byte
+		backupEntrySecret        *corev1.Secret
+		etcdBackupSecretData     map[string][]byte
+		etcdBackupSecretKey      client.ObjectKey
+		etcdBackupSecret         *corev1.Secret
+		seedNamespace            *corev1.Namespace
+
+		fakeClient client.Client
+		a          backupentry.Actuator
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+
+		backupEntry = &extensionsv1alpha1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: shootTechnicalID + "--" + shootUID,
 			},
@@ -61,13 +80,11 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 		}
-
 		backupProviderSecretData = map[string][]byte{
 			"foo":        []byte("bar"),
 			"bucketName": []byte(bucketName),
 		}
-
-		beSecret = &corev1.Secret{
+		backupEntrySecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      providerSecretName,
 				Namespace: providerSecretNamespace,
@@ -76,36 +93,24 @@ var _ = Describe("Actuator", func() {
 				"foo": []byte("bar"),
 			},
 		}
-
 		etcdBackupSecretData = map[string][]byte{
 			"bucketName": []byte(bucketName),
 			"foo":        []byte("bar"),
 		}
-
 		etcdBackupSecretKey = client.ObjectKey{Namespace: shootTechnicalID, Name: v1beta1constants.BackupSecretName}
-		etcdBackupSecret    = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+		etcdBackupSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            v1beta1constants.BackupSecretName,
-				Namespace:       shootTechnicalID,
-				ResourceVersion: "1",
+				Name:      v1beta1constants.BackupSecretName,
+				Namespace: shootTechnicalID,
 			},
 			Data: etcdBackupSecretData,
 		}
-
 		seedNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: shootTechnicalID,
 			},
 		}
 
-		log = logf.Log.WithName("test")
-	)
-
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
-		// Create fake manager
 		mgr = mockmanager.NewMockManager(ctrl)
 	})
 
@@ -113,63 +118,90 @@ var _ = Describe("Actuator", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#Reconcile", func() {
-		var (
-			client client.Client
-			a      backupentry.Actuator
-		)
+	Context("#Reconcile", func() {
+		var backupEntryDelegate *extensionsmockgenericactuator.MockBackupEntryDelegate
+
+		BeforeEach(func() {
+			backupEntryDelegate = extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
+		})
 
 		Context("seed namespace exist", func() {
-
-			BeforeEach(func() {
-				// Create fake client
-				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
-					WithObjects(seedNamespace, beSecret).Build()
-				mgr.EXPECT().GetClient().Return(client)
-			})
-
 			It("should create secrets", func() {
-				// Create mock values provider
-				backupEntryDelegate := extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
-				backupEntryDelegate.EXPECT().GetETCDSecretData(context.TODO(), gomock.AssignableToTypeOf(logr.Logger{}), be, backupProviderSecretData).Return(etcdBackupSecretData, nil)
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret).Build()
+				mgr.EXPECT().GetClient().Return(fakeClient)
+				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
-				// Create actuator
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+				Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
 
-				// Call Reconcile method and check the result
-				err := a.Reconcile(context.TODO(), log, be)
-				Expect(err).NotTo(HaveOccurred())
-
-				deployedSecret := &corev1.Secret{}
-				err = client.Get(context.TODO(), etcdBackupSecretKey, deployedSecret)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(deployedSecret).To(Equal(etcdBackupSecret))
+				actual := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+				etcdBackupSecret.Annotations = map[string]string{
+					genericactuator.AnnotationKeyCreatedByBackupEntry: backupEntry.Name,
+				}
+				etcdBackupSecret.ResourceVersion = "1"
+				Expect(actual).To(Equal(etcdBackupSecret))
 			})
 		})
 
 		Context("seed namespace does not exist", func() {
-			BeforeEach(func() {
-				// Create fake client
-				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
-					WithObjects(beSecret).Build()
-				mgr.EXPECT().GetClient().Return(client)
-			})
-
 			It("should not create secrets", func() {
-				// Create mock values provider
-				backupEntryDelegate := extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(backupEntrySecret).Build()
+				mgr.EXPECT().GetClient().Return(fakeClient)
 
-				// Create actuator
 				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+				Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
 
-				// Call Reconcile method and check the result
-				err := a.Reconcile(context.TODO(), log, be)
-				Expect(err).NotTo(HaveOccurred())
-
-				deployedSecret := &corev1.Secret{}
-				err = client.Get(context.TODO(), etcdBackupSecretKey, deployedSecret)
-				Expect(err).To(HaveOccurred())
+				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, &corev1.Secret{})).To(BeNotFoundError())
 			})
+		})
+	})
+
+	Context("#Delete", func() {
+		var backupEntryDelegate *extensionsmockgenericactuator.MockBackupEntryDelegate
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret).Build()
+			mgr.EXPECT().GetClient().Return(fakeClient)
+
+			backupEntryDelegate = extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
+			backupEntryDelegate.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry).Return(nil)
+		})
+
+		It("should not delete secret if has annotation with different BackupEntry name", func() {
+			etcdBackupSecret.Annotations = map[string]string{
+				genericactuator.AnnotationKeyCreatedByBackupEntry: "foo",
+			}
+			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
+
+			a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+			Expect(a.Delete(ctx, log, backupEntry)).To(Succeed())
+
+			actual := &corev1.Secret{}
+			Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+			etcdBackupSecret.ResourceVersion = "1"
+			Expect(actual).To(Equal(etcdBackupSecret))
+		})
+
+		It("should delete secret if it has annotation with same BackupEntry name", func() {
+			etcdBackupSecret.Annotations = map[string]string{
+				genericactuator.AnnotationKeyCreatedByBackupEntry: backupEntry.Name,
+			}
+			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
+
+			a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+			Expect(a.Delete(ctx, log, backupEntry)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, etcdBackupSecretKey, &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should delete secret if it has no annotations", func() {
+			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
+
+			a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+			Expect(a.Delete(ctx, log, backupEntry)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, etcdBackupSecretKey, &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 })

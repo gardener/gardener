@@ -41,7 +41,7 @@ var _ = Describe("Shoot", func() {
 				expectedVersion = fmt.Sprintf("%d.%d", major, minor)
 			)
 
-			v, err := util.VersionMajorMinor(fmt.Sprintf("%s.88", expectedVersion))
+			v, err := util.VersionMajorMinor(expectedVersion + ".88")
 
 			Expect(v).To(Equal(expectedVersion))
 			Expect(err).NotTo(HaveOccurred())

@@ -71,6 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
@@ -171,7 +172,7 @@ func (r *Reconciler) reconcileBackupBucket(
 	}
 
 	if mustReconcileExtensionSecret {
-		if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret, backupBucket); err != nil {
+		if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -198,6 +199,9 @@ func (r *Reconciler) reconcileBackupBucket(
 	} else if extensionBackupBucket.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupbucket status
 		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+		if !metav1.HasAnnotation(extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation) {
+			mustReconcileExtensionBackupBucket = true
+		}
 	} else {
 		// check for errors, and if none are present, sync generated Secret to garden
 		lastOperationState := extensionBackupBucket.Status.LastOperation.State
@@ -284,7 +288,7 @@ func (r *Reconciler) deleteBackupBucket(
 	}
 
 	extensionSecret := r.emptyExtensionSecret(backupBucket.Name)
-	if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret, backupBucket); err != nil {
+	if err := r.reconcileBackupBucketExtensionSecret(seedCtx, extensionSecret, gardenSecret); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -296,7 +300,7 @@ func (r *Reconciler) deleteBackupBucket(
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, err
 		}
-	} else {
+	} else if err == nil {
 		if lastError := extensionBackupBucket.Status.LastError; lastError != nil {
 			r.Recorder.Event(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 
@@ -351,7 +355,7 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 	}
 }
 
-func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret, backupBucket *gardencorev1beta1.BackupBucket) error {
+func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
 		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
 		extensionSecret.Data = gardenSecret.Data
@@ -435,6 +439,7 @@ func (r *Reconciler) deleteGeneratedBackupBucketSecretInGarden(ctx context.Conte
 
 func (r *Reconciler) updateBackupBucketStatusOperationStart(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of BackupBucket state initialized."

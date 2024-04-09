@@ -23,6 +23,8 @@ reviewers:
   - [Proposal](#proposal)
   - [Alternatives](#alternatives)
   - [Future Improvements](#future-improvements)
+    - [Eliminating the `Worker` State Reconciler](#eliminating-the-worker-state-reconciler)
+    - [Compressing the `ShootState` Data](#compressing-the-shootstate-data)
 <!-- TOC -->
 
 ## Summary
@@ -165,7 +167,7 @@ We have implemented a [PoC](https://github.com/rfranzke/gardener/commits/hackath
   ```
   </details>
 
-Similar to all other resources in the `extensions.gardener.cloud/v1alpha1` API, we could provide respective controllers in the [extensions library](https://github.com/gardener/gardener/tree/master/extensions) such that provider extensions only need to implement their specific business logic (i.e., uploading/downloading to/from their infrastructure-specific object storage).
+Similar to all other resources in the `extensions.gardener.cloud/v1alpha1` API, we could provide respective controllers in the [extensions library](../../extensions) such that provider extensions only need to implement their specific business logic (i.e., uploading/downloading to/from their infrastructure-specific object storage).
 
 However, this approach is significantly more expensive in terms of development costs and complexity since the following additional adaptations would be required:
 
@@ -188,7 +190,7 @@ Hence, implementing this alternative approach is considered unnecessary.
 
 With [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594), `gardenlet` will become aware of the `machine.sapcloud.io/v1alpha1` API used for managing the worker machines of shoot clusters.
 
-This allows to drop the [`Worker` state reconciler](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/worker/state_reconciler.go) which currently watches all `MachineDeployment`s, `MachineSet`s, and `Machine`s, and replicates their specifications into the `.status.state` of the related `extensions.gardener.cloud/v1alpha1.Worker` resource.
+This allows to drop the [`Worker` state reconciler](../../extensions/pkg/controller/worker/reconciler.go) which currently watches all `MachineDeployment`s, `MachineSet`s, and `Machine`s, and replicates their specifications into the `.status.state` of the related `extensions.gardener.cloud/v1alpha1.Worker` resource.
 Instead, `gardenlet` could then collect these resources during the `Migrate` phase itself, effectively compute the necessary `Worker` state, and also restore it during the `Restore` phase.
 
 With this approach, we could also reduce the load on the seed clusters' API servers since it would no longer be necessary to continuously duplicate the machine-related resources into the `Worker` status.

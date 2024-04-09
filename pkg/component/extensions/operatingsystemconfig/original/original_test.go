@@ -15,11 +15,11 @@
 package original_test
 
 import (
-	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original"
@@ -47,13 +47,13 @@ var _ = Describe("Original", func() {
 
 	Describe("#Config", func() {
 		var (
-			caBundle                = pointer.String("cabundle")
+			caBundle                = ptr.To("cabundle")
 			criName                 = extensionsv1alpha1.CRIName("foo")
 			images                  = map[string]*imagevector.Image{}
 			kubeletCABundle         = []byte("kubelet-ca-bundle")
 			kubeletCLIFlags         = components.ConfigurableKubeletCLIFlags{}
 			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
-			kubeletDataVolumeName   = pointer.String("datavolname")
+			kubeletDataVolumeName   = ptr.To("datavolname")
 			kubernetesVersion       = semver.MustParse("1.2.3")
 			sshPublicKeys           = []string{"ssh-public-key-a", "ssh-public-key-b"}
 
@@ -80,7 +80,7 @@ var _ = Describe("Original", func() {
 		It("should call the Config() functions of all components and return the units", func() {
 			oldComponentsFn := ComponentsFn
 			defer func() { ComponentsFn = oldComponentsFn }()
-			ComponentsFn = func(extensionsv1alpha1.CRIName, bool) []components.Component {
+			ComponentsFn = func(bool) []components.Component {
 				return []components.Component{component1, component2}
 			}
 
@@ -106,29 +106,9 @@ var _ = Describe("Original", func() {
 	})
 
 	Describe("#Components", func() {
-
-		It("should compute the units and files w/ docker", func() {
+		It("should compute the units and files", func() {
 			var order []string
-			for _, component := range Components(extensionsv1alpha1.CRINameDocker, true) {
-				order = append(order, component.Name())
-			}
-
-			Expect(order).To(Equal([]string{
-				"valitail",
-				"var-lib-mount",
-				"root-certificates",
-				"docker",
-				"journald",
-				"kernel-config",
-				"kubelet",
-				"sshd-ensurer",
-				"gardener-user",
-			}))
-		})
-
-		It("should compute the units and files w/ docker", func() {
-			var order []string
-			for _, component := range Components(extensionsv1alpha1.CRINameContainerD, true) {
+			for _, component := range Components(true) {
 				order = append(order, component.Name())
 			}
 
@@ -137,18 +117,19 @@ var _ = Describe("Original", func() {
 				"var-lib-mount",
 				"root-certificates",
 				"containerd",
+				"containerd-initializer",
 				"journald",
 				"kernel-config",
 				"kubelet",
 				"sshd-ensurer",
+				"gardener-node-agent",
 				"gardener-user",
-				"containerd-initializer",
 			}))
 		})
 
 		It("should compute the units and files without gardener-user because SSH is disabled", func() {
 			var order []string
-			for _, component := range Components(extensionsv1alpha1.CRINameContainerD, false) {
+			for _, component := range Components(false) {
 				order = append(order, component.Name())
 			}
 
@@ -157,11 +138,12 @@ var _ = Describe("Original", func() {
 				"var-lib-mount",
 				"root-certificates",
 				"containerd",
+				"containerd-initializer",
 				"journald",
 				"kernel-config",
 				"kubelet",
 				"sshd-ensurer",
-				"containerd-initializer",
+				"gardener-node-agent",
 			}))
 		})
 	})

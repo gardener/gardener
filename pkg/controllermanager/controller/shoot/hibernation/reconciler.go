@@ -17,7 +17,7 @@ package hibernation
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/robfig/cron"
@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -115,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	parsedSchedules, err := parseHibernationSchedules(schedules)
 	if err != nil {
-		log.Info("Invalid hibernation schedules, stopping reconciliation")
+		log.Error(err, "Invalid hibernation schedules, stopping reconciliation")
 		return reconcile.Result{}, nil
 	}
 
@@ -146,10 +146,10 @@ func (r *Reconciler) hibernateOrWakeUpShootBasedOnSchedule(ctx context.Context, 
 	patch := client.MergeFrom(shoot.DeepCopy())
 	switch schedule.operation {
 	case hibernate:
-		shoot.Spec.Hibernation.Enabled = pointer.Bool(true)
+		shoot.Spec.Hibernation.Enabled = ptr.To(true)
 		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "Hibernating cluster due to schedule")
 	case wakeUp:
-		shoot.Spec.Hibernation.Enabled = pointer.Bool(false)
+		shoot.Spec.Hibernation.Enabled = ptr.To(false)
 		r.Recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "Waking up cluster due to schedule")
 	}
 	if err := r.Client.Patch(ctx, shoot, patch); err != nil {
@@ -206,13 +206,13 @@ func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule
 // If the time drifts are adjusted which in most realistic cases would be around 100ms, scheduled hibernation
 // will still be executed without missing the schedule.
 func nextHibernationTimeDuration(schedules []parsedHibernationSchedule, now time.Time) time.Duration {
-	var timeStamps []time.Time
+	timeStamps := make([]time.Time, 0, len(schedules))
 	for _, schedule := range schedules {
 		timeStamps = append(timeStamps, schedule.next(now))
 	}
 
-	sort.Slice(timeStamps, func(i, j int) bool {
-		return timeStamps[i].Before(timeStamps[j])
+	slices.SortFunc(timeStamps, func(a, b time.Time) int {
+		return a.Compare(b)
 	})
 
 	return timeStamps[0].Add(nextScheduleDelta).Sub(now)

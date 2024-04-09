@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -58,7 +58,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		},
 	)
 	if err != nil {
@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Shoot{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
@@ -75,7 +75,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.BackupEntry{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
@@ -84,7 +84,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Quota{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Quota{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),
@@ -93,7 +93,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),

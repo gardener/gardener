@@ -5,7 +5,7 @@ resources:
 - ssh_deployment.yaml
 
 configMapGenerator:
-- name: gardener-apiserver-ssh
-  files:
+- files:
   - files/ssh_config
   - files/entrypoint.sh
+  name: gardener-apiserver-ssh

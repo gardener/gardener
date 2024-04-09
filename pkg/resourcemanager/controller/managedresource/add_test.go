@@ -16,25 +16,25 @@ package managedresource_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("#MapSecretToManagedResources", func() {
@@ -79,7 +79,7 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 	It("should do nothing, if list fails", func() {
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			Return(fmt.Errorf("fake"))
+			Return(errors.New("fake"))
 
 		requests := m.Map(ctx, logr.Discard(), c, secret)
 		Expect(requests).To(BeEmpty())
@@ -94,11 +94,11 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 
 	It("should do nothing, if there are no ManagedResources we are responsible for", func() {
 		mr := resourcesv1alpha1.ManagedResource{
-			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: pointer.String("other")},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("other")},
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})
@@ -114,13 +114,13 @@ var _ = Describe("#MapSecretToManagedResources", func() {
 				Namespace: secret.Namespace,
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:      pointer.String(filter.ResourceClass()),
+				Class:      ptr.To(filter.ResourceClass()),
 				SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 			},
 		}
 
 		c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-			DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
 				list.(*resourcesv1alpha1.ManagedResourceList).Items = []resourcesv1alpha1.ManagedResource{mr}
 				return nil
 			})

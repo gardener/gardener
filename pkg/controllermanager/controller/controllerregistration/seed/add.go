@@ -21,7 +21,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Named(ControllerName).
 		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(r.SeedPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(r)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerRegistration{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.ControllerRegistration{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
@@ -70,7 +70,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.BackupBucket{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.BackupBucketPredicate(),
 	); err != nil {
@@ -78,7 +78,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.BackupEntry{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.BackupEntryPredicate(),
 	); err != nil {
@@ -86,7 +86,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.ControllerInstallation{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.ControllerInstallationPredicate(),
 	); err != nil {
@@ -94,7 +94,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.ControllerDeployment{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.ControllerDeployment{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
@@ -102,14 +102,14 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Shoot{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.ShootPredicate(),
 	)
 }
 
-// SeedPredicate returns true for all Seed events except for updates. Here, it only returns true when there is a change
-// in the .spec.dns.provider field or when the deletion timestamp is set.
+// SeedPredicate returns true for all Seed events except for updates. Here, it returns true when there is a change
+// in the spec or labels or annotations or when the deletion timestamp is set.
 func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -251,7 +251,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 // returns true when the Required condition's status has changed. For other events, false is returned.
 func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return true },
+		CreateFunc: func(_ event.CreateEvent) bool { return true },
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			controllerInstallation, ok := e.ObjectNew.(*gardencorev1beta1.ControllerInstallation)
 			if !ok {
@@ -265,8 +265,8 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 
 			return v1beta1helper.IsControllerInstallationRequired(*oldControllerInstallation) != v1beta1helper.IsControllerInstallationRequired(*controllerInstallation)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 
@@ -375,5 +375,5 @@ func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool 
 		// if old was non-nil and had a type set, return true
 		return old.Type != nil
 	}
-	return !pointer.StringEqual(old.Type, new.Type)
+	return !ptr.Equal(old.Type, new.Type)
 }

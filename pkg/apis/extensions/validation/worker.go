@@ -15,17 +15,17 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/strings/slices"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateWorker validates a Worker object.
@@ -99,10 +99,9 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 
 		if pool.NodeTemplate != nil {
 			for resourceName, value := range pool.NodeTemplate.Capacity {
-				allErrs = append(allErrs, gardencorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
 			}
 		}
-
 	}
 
 	return allErrs
@@ -131,20 +130,6 @@ func ValidateWorkerSpecUpdate(new, old *extensionsv1alpha1.WorkerSpec, deletionT
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Region, old.Region, fldPath.Child("region"))...)
-
-	return allErrs
-}
-
-// ValidateWorkerStatus validates the status of a Worker object.
-func ValidateWorkerStatus(status *extensionsv1alpha1.WorkerStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateWorkerStatusUpdate validates the status field of a Worker object before an update.
-func ValidateWorkerStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.WorkerStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
 
 	return allErrs
 }

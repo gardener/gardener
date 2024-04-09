@@ -14,7 +14,9 @@
 
 package time
 
-import "time"
+import (
+	"time"
+)
 
 // Ops are time related operations.
 type Ops interface {

@@ -22,11 +22,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 )
@@ -37,7 +38,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			admissionHandler        *ClusterOpenIDConnectPreset
 			settingsInformerFactory settingsinformers.SharedInformerFactory
 			shoot                   *core.Shoot
-			project                 *core.Project
+			project                 *gardencorev1beta1.Project
 			preset                  *settingsv1alpha1.ClusterOpenIDConnectPreset
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
 		)
@@ -59,15 +60,15 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				},
 			}
 
-			project = &core.Project{
+			project = &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
-				Spec: core.ProjectSpec{
-					Namespace: pointer.String(namespace),
+				Spec: gardencorev1beta1.ProjectSpec{
+					Namespace: ptr.To(namespace),
 				},
-				Status: core.ProjectStatus{
-					Phase: core.ProjectReady,
+				Status: gardencorev1beta1.ProjectStatus{
+					Phase: gardencorev1beta1.ProjectReady,
 				},
 			}
 
@@ -83,21 +84,21 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 						ShootSelector: &metav1.LabelSelector{},
 						Weight:        0,
 						Server: settingsv1alpha1.KubeAPIServerOpenIDConnect{
-							CABundle:     pointer.String("cert"),
+							CABundle:     ptr.To("cert"),
 							ClientID:     "client-id",
 							IssuerURL:    "https://foo.bar",
-							GroupsClaim:  pointer.String("groupz"),
-							GroupsPrefix: pointer.String("group-prefix"),
+							GroupsClaim:  ptr.To("groupz"),
+							GroupsPrefix: ptr.To("group-prefix"),
 							RequiredClaims: map[string]string{
 								"claim-1": "value-1",
 								"claim-2": "value-2",
 							},
 							SigningAlgs:    []string{"alg-1", "alg-2"},
-							UsernameClaim:  pointer.String("user"),
-							UsernamePrefix: pointer.String("user-prefix"),
+							UsernameClaim:  ptr.To("user"),
+							UsernamePrefix: ptr.To("user-prefix"),
 						},
 						Client: &settingsv1alpha1.OpenIDConnectClientAuthentication{
-							Secret:      pointer.String("secret"),
+							Secret:      ptr.To("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
 					},
@@ -108,7 +109,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			settingsInformerFactory = settingsinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSettingsInformerFactory(settingsInformerFactory)
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 		})
 
@@ -145,13 +146,13 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("preset shoot label selector doesn't match", func() {
 				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
 			It("preset preset label selector doesn't match", func() {
 				preset.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 			})
 
 			It("oidc settings already exist", func() {
@@ -209,21 +210,21 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				expected = shoot.DeepCopy()
 				expected.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
 					OIDCConfig: &core.OIDCConfig{
-						CABundle:     pointer.String("cert"),
-						ClientID:     pointer.String("client-id"),
-						IssuerURL:    pointer.String("https://foo.bar"),
-						GroupsClaim:  pointer.String("groupz"),
-						GroupsPrefix: pointer.String("group-prefix"),
+						CABundle:     ptr.To("cert"),
+						ClientID:     ptr.To("client-id"),
+						IssuerURL:    ptr.To("https://foo.bar"),
+						GroupsClaim:  ptr.To("groupz"),
+						GroupsPrefix: ptr.To("group-prefix"),
 						RequiredClaims: map[string]string{
 							"claim-1": "value-1",
 							"claim-2": "value-2",
 						},
 						SigningAlgs:    []string{"alg-1", "alg-2"},
-						UsernameClaim:  pointer.String("user"),
-						UsernamePrefix: pointer.String("user-prefix"),
+						UsernameClaim:  ptr.To("user"),
+						UsernamePrefix: ptr.To("user-prefix"),
 
 						ClientAuthentication: &core.OpenIDConnectClientAuthentication{
-							Secret:      pointer.String("secret"),
+							Secret:      ptr.To("secret"),
 							ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 						},
 					},
@@ -232,7 +233,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			AfterEach(func() {
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1alpha1"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -260,7 +261,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.ObjectMeta.Name = "preset-2"
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
@@ -271,7 +272,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
@@ -282,7 +283,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.ObjectMeta.Name = "02preset"
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("client-id-2")
+				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})
@@ -323,7 +324,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 		It("should return nil error when everything is set", func() {
 			plugin.SetSettingsInformerFactory(settingsinformers.NewSharedInformerFactory(nil, 0))
-			plugin.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			plugin.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			Expect(plugin.ValidateInitialization()).ToNot(HaveOccurred())
 		})
 	})

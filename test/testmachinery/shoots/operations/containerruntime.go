@@ -53,7 +53,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		id, err := utils.GenerateRandomStringFromCharset(3, allowedCharacters)
 		framework.ExpectNoError(err)
 
-		containerdWorker.Name = fmt.Sprintf("test-%s", id)
+		containerdWorker.Name = "test-" + id
 		containerdWorker.Maximum = 1
 		containerdWorker.Minimum = 1
 		containerdWorker.CRI = &gardencorev1beta1.CRI{
@@ -90,7 +90,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		// check the node labels of the worker pool to contain containerd label
 		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &containerdWorker.Name)
 		framework.ExpectNoError(err)
-		Expect(len(nodeList.Items)).To(Equal(int(containerdWorker.Minimum)))
+		Expect(nodeList.Items).To(HaveLen(int(containerdWorker.Minimum)))
 
 		for _, node := range nodeList.Items {
 			value, found := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]
@@ -132,7 +132,8 @@ func supportsContainerD(cloudProfileImages []gardencorev1beta1.MachineImage, wor
 		machineVersion    *gardencorev1beta1.MachineImageVersion
 	)
 
-	for _, current := range cloudProfileImages {
+	for _, c := range cloudProfileImages {
+		current := c
 		if current.Name == workerImage.Name {
 			cloudProfileImage = &current
 			break
@@ -142,7 +143,8 @@ func supportsContainerD(cloudProfileImages []gardencorev1beta1.MachineImage, wor
 		return false
 	}
 
-	for _, version := range cloudProfileImage.Versions {
+	for _, v := range cloudProfileImage.Versions {
+		version := v
 		if version.Version == *workerImage.Version {
 			machineVersion = &version
 			break

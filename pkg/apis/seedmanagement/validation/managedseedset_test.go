@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -57,8 +57,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Version: "1.18.14",
 				},
 				Networking: &core.Networking{
-					Type:  pointer.String("foo"),
-					Nodes: pointer.String("10.181.0.0/18"),
+					Type:  ptr.To("foo"),
+					Nodes: ptr.To("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -67,7 +67,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 							Name: "some-worker",
 							Machine: core.Machine{
 								Type:         "some-machine-type",
-								Architecture: pointer.String("amd64"),
+								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -75,7 +75,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: pointer.String("shoot-operator-foo"),
+				SecretBindingName: ptr.To("shoot-operator-foo"),
 			},
 		}
 
@@ -90,7 +90,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSetSpec{
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To[int32](1),
 				Selector: *metav1.SetAsLabelSelector(labels.Set{
 					"foo": "bar",
 				}),
@@ -103,12 +103,12 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					Spec:       shoot.Spec,
 				},
 				UpdateStrategy: &seedmanagement.UpdateStrategy{
-					Type: updateStrategyTypePtr(seedmanagement.RollingUpdateStrategyType),
+					Type: ptr.To(seedmanagement.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagement.RollingUpdateStrategy{
-						Partition: pointer.Int32(0),
+						Partition: ptr.To[int32](0),
 					},
 				},
-				RevisionHistoryLimit: pointer.Int32(10),
+				RevisionHistoryLimit: ptr.To[int32](10),
 			},
 			Status: seedmanagement.ManagedSeedSetStatus{
 				ObservedGeneration: 1,
@@ -117,7 +117,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				NextReplicaNumber:  2,
 				CurrentReplicas:    0,
 				UpdatedReplicas:    1,
-				CollisionCount:     pointer.Int32(1),
+				CollisionCount:     ptr.To[int32](1),
 			},
 		}
 	})
@@ -126,7 +126,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid resources", func() {
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("ManagedSeedSet metadata",
@@ -183,9 +183,9 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		)
 
 		It("should forbid negative replicas, updateStrategy.rollingUpdate.partition, and revisionHistoryLimit", func() {
-			managedSeedSet.Spec.Replicas = pointer.Int32(-1)
-			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = pointer.Int32(-1)
-			managedSeedSet.Spec.RevisionHistoryLimit = pointer.Int32(-1)
+			managedSeedSet.Spec.Replicas = ptr.To(int32(-1))
+			managedSeedSet.Spec.UpdateStrategy.RollingUpdate.Partition = ptr.To(int32(-1))
+			managedSeedSet.Spec.RevisionHistoryLimit = ptr.To(int32(-1))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -219,7 +219,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid empty updateStrategy.type", func() {
-			managedSeedSet.Spec.UpdateStrategy.Type = updateStrategyTypePtr("")
+			managedSeedSet.Spec.UpdateStrategy.Type = ptr.To(seedmanagement.UpdateStrategyType(""))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -232,7 +232,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid unsupported updateStrategy.type", func() {
-			managedSeedSet.Spec.UpdateStrategy.Type = updateStrategyTypePtr("OnDelete")
+			managedSeedSet.Spec.UpdateStrategy.Type = ptr.To(seedmanagement.UpdateStrategyType("OnDelete"))
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -350,7 +350,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid updates", func() {
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable metadata fields", func() {
@@ -371,7 +371,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Spec.Selector = *metav1.SetAsLabelSelector(labels.Set{
 				"bar": "baz",
 			})
-			newManagedSeedSet.Spec.RevisionHistoryLimit = pointer.Int32(20)
+			newManagedSeedSet.Spec.RevisionHistoryLimit = ptr.To[int32](20)
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
 
@@ -401,7 +401,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
-			shootCopy.Spec.Networking.Nodes = pointer.String("10.181.0.0/16")
+			shootCopy.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")
 			newManagedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)
@@ -434,7 +434,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		It("should allow valid status updates", func() {
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid negative integer fields", func() {
@@ -495,7 +495,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 
 		It("should forbid decrementing the next replica number or the collision count", func() {
 			newManagedSeedSet.Status.NextReplicaNumber = 1
-			newManagedSeedSet.Status.CollisionCount = pointer.Int32(0)
+			newManagedSeedSet.Status.CollisionCount = ptr.To[int32](0)
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
 
@@ -515,7 +515,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			newManagedSeedSet.Status.PendingReplica = &seedmanagement.PendingReplica{
 				Name:    "foo",
 				Reason:  "unknown",
-				Retries: pointer.Int32(-1),
+				Retries: ptr.To(int32(-1)),
 			}
 
 			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
@@ -537,7 +537,3 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 	})
 })
-
-func updateStrategyTypePtr(v seedmanagement.UpdateStrategyType) *seedmanagement.UpdateStrategyType {
-	return &v
-}

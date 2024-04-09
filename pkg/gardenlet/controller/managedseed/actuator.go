@@ -16,8 +16,8 @@ package managedseed
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,15 +29,14 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -45,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -67,7 +67,6 @@ type actuator struct {
 	clock                clock.Clock
 	vp                   ValuesHelper
 	recorder             record.EventRecorder
-	chartsPath           string
 	gardenNamespaceShoot string
 }
 
@@ -80,7 +79,6 @@ func newActuator(
 	clock clock.Clock,
 	vp ValuesHelper,
 	recorder record.EventRecorder,
-	chartsPath string,
 	gardenNamespaceShoot string,
 ) Actuator {
 	return &actuator{
@@ -92,7 +90,6 @@ func newActuator(
 		clock:                clock,
 		vp:                   vp,
 		recorder:             recorder,
-		chartsPath:           chartsPath,
 		gardenNamespaceShoot: gardenNamespaceShoot,
 	}
 }
@@ -167,7 +164,7 @@ func (a *actuator) Reconcile(
 	// Create or update seed secrets
 	log.Info("Reconciling seed secrets")
 	a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-	if err := a.reconcileSeedSecrets(ctx, log, &seedTemplate.Spec, ms, shoot); err != nil {
+	if err := a.reconcileSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
 		return status, false, fmt.Errorf("could not reconcile seed %s secrets: %w", ms.Name, err)
 	}
 
@@ -214,7 +211,7 @@ func (a *actuator) Delete(
 
 	// Update SeedRegistered condition
 	updateCondition(a.clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
-		fmt.Sprintf("Unregistering seed %s", ms.Name))
+		"Unregistering seed "+ms.Name)
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
@@ -282,17 +279,17 @@ func (a *actuator) Delete(
 		}
 	}
 
-	// Delete seed secrets if any of them still exists and is not already deleting
-	secret, backupSecret, err := a.getSeedSecrets(ctx, &seedTemplate.Spec, ms)
+	// Delete seed backup secrets if any of them still exists and is not already deleting
+	backupSecret, err := a.getBackupSecret(ctx, &seedTemplate.Spec, ms)
 	if err != nil {
 		return status, false, false, fmt.Errorf("could not get seed %s secrets: %w", ms.Name, err)
 	}
 
-	if secret != nil || backupSecret != nil {
-		if (secret != nil && secret.DeletionTimestamp == nil) || (backupSecret != nil && backupSecret.DeletionTimestamp == nil) {
+	if backupSecret != nil {
+		if backupSecret.DeletionTimestamp == nil {
 			log.Info("Deleting seed secrets")
 			a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
-			if err := a.deleteSeedSecrets(ctx, &seedTemplate.Spec, ms); err != nil {
+			if err := a.deleteBackupSecret(ctx, &seedTemplate.Spec, ms); err != nil {
 				return status, false, false, fmt.Errorf("could not delete seed %s secrets: %w", ms.Name, err)
 			}
 		} else {
@@ -402,7 +399,7 @@ func (a *actuator) deployGardenlet(
 		seed,
 		gardenletConfig,
 		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
+		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {
@@ -410,7 +407,7 @@ func (a *actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := shootClient.ChartApplier().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
 		return err
 	}
 
@@ -444,7 +441,7 @@ func (a *actuator) deleteGardenlet(
 		seed,
 		gardenletConfig,
 		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
+		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {
@@ -452,7 +449,7 @@ func (a *actuator) deleteGardenlet(
 	}
 
 	// Delete gardenlet chart
-	return shootClient.ChartApplier().Delete(ctx, filepath.Join(a.chartsPath, "gardener", "gardenlet"), a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
+	return shootClient.ChartApplier().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.gardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 }
 
 func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kubernetes.Interface) (*appsv1.Deployment, error) {
@@ -474,14 +471,14 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 			return err
 		}
 		if seedVPAAdmissionControllerExists {
-			return fmt.Errorf("seed VPA is enabled but shoot already has a VPA")
+			return errors.New("seed VPA is enabled but shoot already has a VPA")
 		}
 	}
 
 	return nil
 }
 
-func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
+func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
@@ -490,9 +487,13 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
 	if spec.Backup != nil {
+		var checksum string
+
 		// Get backup secret
 		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
-		if client.IgnoreNotFound(err) != nil {
+		if err == nil {
+			checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
+		} else if client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
@@ -511,77 +512,20 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 			}); err != nil {
 				return err
 			}
-		}
-	}
 
-	// If secret reference is specified and the static token kubeconfig is enabled,
-	// create or update the corresponding secret with the kubeconfig from the static token kubeconfig secret.
-	if spec.SecretRef != nil && pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-		// Get shoot kubeconfig secret
-		shootKubeconfigSecret, err := a.getShootKubeconfigSecret(ctx, shoot)
-		if err != nil {
-			return err
+			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
 		}
 
-		// Create or update seed secret
-		secret := &corev1.Secret{
-			ObjectMeta: kubernetesutils.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
-		}
-		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, secret, func() error {
-			secret.OwnerReferences = []metav1.OwnerReference{
-				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-			}
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = map[string][]byte{
-				kubernetes.KubeConfig: shootKubeconfigSecret.Data[kubernetes.KubeConfig],
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
-	// When the secretRef is unset, cleanup the secret if the reference annotations are present in the managedseed.
-	if spec.SecretRef == nil &&
-		metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName) &&
-		metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace) {
-		secret, err := kubernetesutils.GetSecretByReference(ctx,
-			a.gardenClient,
-			&corev1.SecretReference{
-				Name:      managedSeed.Annotations[seedmanagementv1alpha1constants.AnnotationSeedSecretName],
-				Namespace: managedSeed.Annotations[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace],
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("failed getting secret in the managedseed annotations: %w", err)
-		}
-
-		if metav1.IsControlledBy(secret, managedSeed) {
-			// This finalizer is added by the seed controller, but it cannot remove it when the secretRef is unset.
-			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-				if err := controllerutils.RemoveFinalizers(ctx, a.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-					return fmt.Errorf("failed to remove finalizer from secret referred by managedseed: %w", err)
-				}
-			}
-
-			if err := a.gardenClient.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("error deleting seed secret referred by managedseed: %w", err)
-			}
-			log.Info("Deleted seed secret referred by managedseed", "secretName", secret.Name, "secretNamespace", secret.Namespace)
-
-			patch := client.MergeFrom(managedSeed.DeepCopy())
-			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretName)
-			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace)
-			if err := a.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
-				return fmt.Errorf("error removing seed secret reference annotations: %w", err)
-			}
-		}
+		// Inject backup-secret hash into the pod annotations
+		managedSeed.Spec.Gardenlet.Deployment.PodAnnotations = utils.MergeStringMaps[string](managedSeed.Spec.Gardenlet.Deployment.PodAnnotations, map[string]string{
+			"checksum/seed-backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
+		})
 	}
 
 	return nil
 }
 
-func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+func (a *actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
 		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
@@ -595,40 +539,27 @@ func (a *actuator) deleteSeedSecrets(ctx context.Context, spec *gardencorev1beta
 		}
 	}
 
-	// If secret reference is specified, delete the corresponding secret
-	if spec.SecretRef != nil {
-		if err := kubernetesutils.DeleteSecretByReference(ctx, a.gardenClient, spec.SecretRef); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*corev1.Secret, *corev1.Secret, error) {
-	var secret, backupSecret *corev1.Secret
-	var err error
+func (a *actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*corev1.Secret, error) {
+	var (
+		backupSecret *corev1.Secret
+		err          error
+	)
 
 	// If backup is specified, get the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
 		backupSecret, err = kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if backupSecret != nil && !metav1.IsControlledBy(backupSecret, managedSeed) {
 			backupSecret = nil
 		}
 	}
 
-	// If secret reference is specified, get the corresponding secret if it exists
-	if spec.SecretRef != nil {
-		secret, err = kubernetesutils.GetSecretByReference(ctx, a.gardenClient, spec.SecretRef)
-		if client.IgnoreNotFound(err) != nil {
-			return nil, nil, err
-		}
-	}
-
-	return secret, backupSecret, nil
+	return backupSecret, nil
 }
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
@@ -640,14 +571,6 @@ func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.
 		return nil, err
 	}
 	return kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)
-}
-
-func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
-	shootKubeconfigSecret := &corev1.Secret{}
-	if err := a.gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixKubeconfig)), shootKubeconfigSecret); err != nil {
-		return nil, err
-	}
-	return shootKubeconfigSecret, nil
 }
 
 func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {

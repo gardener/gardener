@@ -68,7 +68,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -125,7 +125,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -186,7 +186,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -269,7 +269,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -331,7 +331,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -452,7 +452,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -555,7 +555,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -674,7 +674,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -760,7 +760,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -821,7 +821,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -866,7 +866,7 @@ DefaultSpec
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1000,7 +1000,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1094,7 +1094,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1151,7 +1151,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1224,7 +1224,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1355,7 +1355,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1423,7 +1423,7 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.
+gardener-node-agent already running on a bootstrapped VM.
 This field is immutable.</p>
 </td>
 </tr>
@@ -1439,7 +1439,9 @@ string
 <p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -1522,7 +1524,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1594,7 +1596,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1694,7 +1696,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1742,7 +1744,7 @@ DefaultStatus
 <td>
 <code>generatedSecretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1829,7 +1831,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1896,7 +1898,7 @@ DefaultStatus
 <td>
 <code>ipBlock</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#ipblock-v1-networking">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#ipblock-v1-networking">
 Kubernetes networking/v1.IPBlock
 </a>
 </em>
@@ -2005,7 +2007,7 @@ DefaultStatus
 <td>
 <code>ingress</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#loadbalanceringress-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#loadbalanceringress-v1-core">
 Kubernetes core/v1.LoadBalancerIngress
 </a>
 </em>
@@ -2044,7 +2046,7 @@ CRIName
 </em>
 </td>
 <td>
-<p>Name is a mandatory string containing the name of the CRI library. Supported values are <code>docker</code> and <code>containerd</code>.</p>
+<p>Name is a mandatory string containing the name of the CRI library. Supported values are <code>containerd</code>.</p>
 </td>
 </tr>
 </tbody>
@@ -2080,13 +2082,98 @@ config spec. It contains a reference to a secret as the result may contain confi
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
 </td>
 <td>
 <p>SecretRef is a reference to a secret that contains the actual result of the generated cloud config.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ClusterAutoscalerOptions">ClusterAutoscalerOptions
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>scaleDownUtilizationThreshold</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownGpuUtilizationThreshold</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnneededTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnreadyTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long cluster autoscaler should wait for a node to be provisioned.</p>
 </td>
 </tr>
 </tbody>
@@ -2279,7 +2366,7 @@ This field is immutable.</p>
 <td>
 <code>selector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -2368,7 +2455,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -2451,7 +2538,7 @@ DefaultSpec
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -2949,7 +3036,8 @@ DefaultStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
 <p>File is a file that should get written to the host&rsquo;s file system. The content can either be inlined or
@@ -3063,6 +3151,61 @@ bool
 <em>(Optional)</em>
 <p>TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
 This for example can be used to manipulate the clear-text content before it reaches the node.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageRef</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContentImageRef">
+FileContentImageRef
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageRef describes a container image which contains a file.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileContentImageRef">FileContentImageRef
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.FileContent">FileContent</a>)
+</p>
+<p>
+<p>FileContentImageRef describes a container image which contains a file</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image contains the container image repository with tag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filePathInImage</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>FilePathInImage contains the path in the image to the file that should be extracted.</p>
 </td>
 </tr>
 </tbody>
@@ -3206,7 +3349,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -3274,6 +3417,19 @@ string
 <p>NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.
 This might be needed in environments in which the CIDR for the network for the shoot worker node cannot
 be statically defined in the Shoot resource but must be computed dynamically.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>egressCIDRs</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic. For certain environments the egress
+IPs may not be stable in which case the extension controller may opt to not populate this field.</p>
 </td>
 </tr>
 </tbody>
@@ -3501,7 +3657,7 @@ DefaultStatus
 <td>
 <code>capacity</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
 </a>
 </em>
@@ -3585,7 +3741,7 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.
+gardener-node-agent already running on a bootstrapped VM.
 This field is immutable.</p>
 </td>
 </tr>
@@ -3601,7 +3757,9 @@ string
 <p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
 are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.</p>
+&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3669,6 +3827,34 @@ DefaultStatus
 </tr>
 <tr>
 <td>
+<code>extensionUnits</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">
+[]Unit
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtensionUnits is a list of additional systemd units provided by the extension.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensionFiles</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.File">
+[]File
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtensionFiles is a list of additional files provided by the extension.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>cloudConfig</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.CloudConfig">
@@ -3693,7 +3879,9 @@ string
 <em>(Optional)</em>
 <p>Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 &ldquo;/usr/bin/reload-cloud-config -from-file=<path>&rdquo;. The <path> is optionally provided by Gardener
-in the .spec.reloadConfigFilePath field.</p>
+in the .spec.reloadConfigFilePath field.
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 <tr>
@@ -3706,7 +3894,24 @@ in the .spec.reloadConfigFilePath field.</p>
 <td>
 <em>(Optional)</em>
 <p>Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
-restarted when a new version has been downloaded.</p>
+restarted when a new version has been downloaded.
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>files</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Files is a list of file paths that are part of the generated Cloud Config and shall be
+written to the host&rsquo;s file system.
+Deprecated: This field is deprecated and has no further usage.
+TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 </tbody>
@@ -3734,7 +3939,8 @@ restarted when a new version has been downloaded.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
 <p>Unit is a unit for the operating system configuration (usually, a systemd unit).</p>
@@ -3762,7 +3968,9 @@ string
 <td>
 <code>command</code></br>
 <em>
-string
+<a href="#extensions.gardener.cloud/v1alpha1.UnitCommand">
+UnitCommand
+</a>
 </em>
 </td>
 <td>
@@ -3808,8 +4016,29 @@ string
 <p>DropIns is a list of drop-ins for this unit.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>filePaths</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.UnitCommand">UnitCommand
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Unit">Unit</a>)
+</p>
+<p>
+<p>UnitCommand is a string alias.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.Volume">Volume
 </h3>
 <p>
@@ -3969,7 +4198,7 @@ map[string]string
 <td>
 <code>taints</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core">
 []Kubernetes core/v1.Taint
 </a>
 </em>
@@ -4146,6 +4375,20 @@ string
 <p>Architecture is the CPU architecture of the worker pool machines and machine image.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>clusterAutoscaler</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ClusterAutoscalerOptions">
+ClusterAutoscalerOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec
@@ -4211,7 +4454,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -4298,7 +4541,7 @@ the cluster-autoscaler properly.</p>
 <td>
 <code>machineDeploymentsLastUpdateTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>

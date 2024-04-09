@@ -122,6 +122,7 @@ func Convert_v1beta1_InternalSecret_To_core_InternalSecret(in *InternalSecret, o
 		if out.Data == nil {
 			out.Data = make(map[string][]byte, len(in.StringData))
 		}
+
 		for k, v := range in.StringData {
 			out.Data[k] = []byte(v)
 		}
@@ -241,6 +242,7 @@ func Convert_core_ProjectMember_To_v1beta1_ProjectMember(in *core.ProjectMember,
 
 func removeRoleFromRoles(roles []string, role string) []string {
 	var newRoles []string
+
 	for _, r := range roles {
 		if r != role {
 			newRoles = append(newRoles, r)

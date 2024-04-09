@@ -102,18 +102,32 @@ In order to allow extensions to get information about the garden and the seed cl
 
 ```yaml
 gardener:
+  version: <gardener-version>
   garden:
-    identifier: <uuid-of-gardener-installation>
+    clusterIdentity: <uuid-of-gardener-installation>
+    genericKubeconfigSecretName: <generic-garden-kubeconfig-secret-name>
   seed:
-    identifier: <seed-name>
-    region: europe
-    spec: <complete-seed-spec>
+    name:             <seed-name>
+    clusterIdentity:  <seed-cluster-identity>
+    annotations:      <seed-annotations>
+    labels:           <seed-labels>
+    provider:         <seed-provider-type>
+    region:           <seed-region>
+    volumeProvider:   <seed-first-volume-provider>
+    volumeProviders:  <seed-volume-providers>
+    ingressDomain:    <seed-ingress-domain>
+    protected:        <seed-protected-taint>
+    visible:          <seed-visible-setting>
+    taints:           <seed-taints>
+    networks:         <seed-networks>
+    blockCIDRs:       <seed-networks-blockCIDRs>
+    spec:             <seed-spec>
+  gardenlet:
+    featureGates: <gardenlet-feature-gates>
 ```
 
 Extensions can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.
-
-:information_source: Gardener uses the UUID of the `garden` `Namespace` object in the `.gardener.garden.identifier` property.
 
 ### Scenario 2: Deployed by a (Non-Human) Kubernetes Operator
 
@@ -212,7 +226,7 @@ The `globallyEnabled=true` option specifies that the `Extension/foo` object shal
 The `reconcileTimeout` tells Gardener how long it should wait during its shoot reconciliation flow for the `Extension/foo`'s reconciliation to finish.
 
 #### `Extension` Lifecycle
-The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer` and `BeforeKubeAPIServer`. Let's take the following configuration and explain it.
+The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer`, `BeforeKubeAPIServer`, and `AfterWorker`. Let's take the following configuration and explain it.
 
 ```yaml
     ...
@@ -225,6 +239,8 @@ The `lifecycle` field tells Gardener when to perform a certain action on the `Ex
  - `reconcile: AfterKubeAPIServer` means that the extension resource will be reconciled after the successful reconciliation of the `kube-apiserver` during shoot reconciliation. This is also the default behaviour if this value is not specified. During shoot hibernation, the opposite rule is applied, meaning that in this case the reconciliation of the extension will happen before the `kube-apiserver` is scaled to 0 replicas. On the other hand, if the extension needs to be reconciled before the `kube-apiserver` and scaled down after it, then the value `BeforeKubeAPIServer` should be used.
 - `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
 - `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../operations/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
+
+The lifecycle value `AfterWorker` is only available during `reconcile`. When specified, the extension resource will be reconciled after the workers are deployed. This is useful for extensions that want to deploy a workload in the shoot control plane and want to wait for the workload to run and get ready on a node. During shoot creation the extension will start its reconciliation before the first workers have joined the cluster, they will become available at some later point.
 
 ### Deployment Configuration Options
 

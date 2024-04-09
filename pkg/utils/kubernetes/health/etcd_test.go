@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -31,8 +31,8 @@ var _ = Describe("Etcd", func() {
 			Expect(health.CheckEtcd(etcd)).To(matcher)
 		},
 		Entry("nil", &druidv1alpha1.Etcd{}, MatchError(ContainSubstring("is not ready yet"))),
-		Entry("false", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: pointer.Bool(false)}}, MatchError(ContainSubstring("is not ready yet"))),
-		Entry("true", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: pointer.Bool(true)}}, BeNil()),
+		Entry("false", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: ptr.To(false)}}, MatchError(ContainSubstring("is not ready yet"))),
+		Entry("true", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: ptr.To(true)}}, BeNil()),
 	)
 
 	DescribeTable("Backup condition",
@@ -42,7 +42,7 @@ var _ = Describe("Etcd", func() {
 					Name: "etcd-foo",
 				},
 				Status: druidv1alpha1.EtcdStatus{
-					Ready: pointer.Bool(true),
+					Ready: ptr.To(true),
 				},
 			}
 
@@ -68,7 +68,7 @@ var _ = Describe("Etcd", func() {
 			Expect(health.CheckEtcd(etcd)).To(matcher)
 		},
 		Entry("no condition", nil, BeNil()),
-		Entry("backup not ready", pointer.Bool(false), MatchError(ContainSubstring("backup for etcd \"etcd-foo\" is reported as unready"))),
-		Entry("backup ready", pointer.Bool(true), BeNil()),
+		Entry("backup not ready", ptr.To(false), MatchError(ContainSubstring("backup for etcd \"etcd-foo\" is reported as unready"))),
+		Entry("backup ready", ptr.To(true), BeNil()),
 	)
 })

@@ -110,7 +110,7 @@ func (rg *replicaGetter) GetReplicas(ctx context.Context, managedSeedSet *seedma
 
 func (rg *replicaGetter) hasScheduledShoots(ctx context.Context, seed *gardencorev1beta1.Seed) (bool, error) {
 	if seed != nil {
-		return kubernetesutils.ResourcesExist(ctx, rg.apiReader, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.MatchingFields{
+		return kubernetesutils.ResourcesExist(ctx, rg.apiReader, &gardencorev1beta1.ShootList{}, rg.client.Scheme(), client.MatchingFields{
 			gardencore.ShootSeedName: seed.Name,
 		})
 	}

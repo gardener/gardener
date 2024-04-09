@@ -1,0 +1,37 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istiod
+  labels:
+    # The istio revision is required so that the web hook is found at runtime for the caBundle update
+    istio.io/rev: default
+    app: istiod
+    istio: pilot
+webhooks:
+  - name: rev.validation.istio.io
+    timeoutSeconds: 10
+    clientConfig:
+      service:
+        name: istiod
+        namespace: test
+        path: "/validate"
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - security.istio.io
+          - networking.istio.io
+          - telemetry.istio.io
+          - extensions.istio.io
+        apiVersions:
+          - "*"
+        resources:
+          - "*"
+    # Fail open until the validation webhook is ready. The webhook controller
+    # will update this to `Fail` and patch in the `caBundle` when the webhook
+    # endpoint is ready.
+    failurePolicy: Ignore
+    matchPolicy: Exact
+    sideEffects: None
+    admissionReviewVersions: ["v1beta1", "v1"]

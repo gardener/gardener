@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -88,10 +88,10 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true if service cidr is changed for workerless shoot", func() {
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: pointer.String("foo")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: ptr.To("foo")}
 			cluster.Spec.Shoot.Raw = encode(shoot)
 			newCluster := cluster.DeepCopy()
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: pointer.String("bar")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: ptr.To("bar")}
 			newCluster.Spec.Shoot.Raw = encode(shoot)
 
 			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())
@@ -101,7 +101,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return false if no change in networking for shoot with workers", func() {
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: pointer.String("foo")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: ptr.To("foo")}
 			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
 			cluster.Spec.Shoot.Raw = encode(shoot)
 			newCluster := cluster.DeepCopy()
@@ -113,11 +113,11 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true if pods cidr is changed for shoot with workers", func() {
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: pointer.String("foo")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: ptr.To("foo")}
 			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
 			cluster.Spec.Shoot.Raw = encode(shoot)
 			newCluster := cluster.DeepCopy()
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: pointer.String("bar")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Pods: ptr.To("bar")}
 			newCluster.Spec.Shoot.Raw = encode(shoot)
 
 			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())
@@ -127,11 +127,11 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true if services cidr is changed for shoot with workers", func() {
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: pointer.String("foo")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: ptr.To("foo")}
 			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
 			cluster.Spec.Shoot.Raw = encode(shoot)
 			newCluster := cluster.DeepCopy()
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: pointer.String("bar")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Services: ptr.To("bar")}
 			newCluster.Spec.Shoot.Raw = encode(shoot)
 
 			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())
@@ -141,11 +141,11 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true if nodes cidr is changed for shoot with workers", func() {
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Nodes: pointer.String("foo")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Nodes: ptr.To("foo")}
 			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
 			cluster.Spec.Shoot.Raw = encode(shoot)
 			newCluster := cluster.DeepCopy()
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{Nodes: pointer.String("bar")}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{Nodes: ptr.To("bar")}
 			newCluster.Spec.Shoot.Raw = encode(shoot)
 
 			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())

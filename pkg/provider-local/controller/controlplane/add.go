@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -48,15 +47,16 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
-	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	genericActuator, err := genericactuator.NewActuator(mgr, local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
+		nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+		imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace)
+
 	if err != nil {
 		return err
 	}
 
 	return controlplane.Add(ctx, mgr, controlplane.AddArgs{
-		Actuator: genericactuator.NewActuator(mgr, local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
-			nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, mgr.GetWebhookServer().Port, gardenerClientset),
+		Actuator:          genericActuator,
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

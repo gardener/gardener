@@ -20,14 +20,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	"github.com/gardener/gardener/test/utils/access"
@@ -44,7 +46,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
 
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
-		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 		It("Create Shoot, Rotate Credentials and Delete Shoot", Offset(1), Label("credentials-rotation"), func() {
 			ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
@@ -58,7 +60,18 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				// basic verifiers checking secrets
 				&rotation.CAVerifier{ShootCreationFramework: f},
 				&rotation.KubeconfigVerifier{ShootCreationFramework: f},
-				&rotation.ObservabilityVerifier{ShootCreationFramework: f},
+				&rotationutils.ObservabilityVerifier{
+					GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
+						secret := &corev1.Secret{}
+						return secret, f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, "monitoring")}, secret)
+					},
+					GetObservabilityEndpoint: func(secret *corev1.Secret) string {
+						return secret.Annotations["url"]
+					},
+					GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
+						return f.Shoot.Status.Credentials.Rotation.Observability
+					},
+				},
 				&rotationutils.ETCDEncryptionKeyVerifier{
 					RuntimeClient:               f.ShootFramework.SeedClient.Client(),
 					Namespace:                   f.Shoot.Status.TechnicalID,
@@ -66,6 +79,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 						return f.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 					},
+					EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 				},
 				&rotationutils.ServiceAccountKeyVerifier{
 					RuntimeClient:               f.ShootFramework.SeedClient.Client(),
@@ -77,9 +92,22 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 
 				// advanced verifiers testing things from the user's perspective
-				&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
-					return access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
-				}},
+				&rotationutils.EncryptedDataVerifier{
+					NewTargetClientFunc: func() (kubernetes.Interface, error) {
+						return access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+					},
+					Resources: []rotationutils.EncryptedResource{
+						{
+							NewObject: func() client.Object {
+								return &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
+									StringData: map[string]string{"content": "foo"},
+								}
+							},
+							NewEmptyList: func() client.ObjectList { return &corev1.SecretList{} },
+						},
+					},
+				},
 				&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 			}
 
@@ -151,7 +179,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 	}
 
-	Context("Shoot with workers", func() {
+	Context("Shoot with workers", Label("basic"), func() {
 		test(e2e.DefaultShoot("e2e-rotate"))
 	})
 

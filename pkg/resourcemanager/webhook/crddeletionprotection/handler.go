@@ -45,14 +45,7 @@ var ObjectSelector = map[string]string{gardenerutils.DeletionProtected: "true"}
 type Handler struct {
 	Logger       logr.Logger
 	SourceReader client.Reader
-
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Decoder      *admission.Decoder
 }
 
 // Handle validates the DELETE request.
@@ -92,7 +85,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := ExtractRequestObject(ctx, h.SourceReader, h.decoder, request, listOp)
+	obj, err := ExtractRequestObject(ctx, h.SourceReader, h.Decoder, request, listOp)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}

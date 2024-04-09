@@ -1,0 +1,3657 @@
+// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package apiserver_test
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Masterminds/semver/v3"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/apiserver"
+	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+)
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
+	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
+})
+
+var _ = Describe("KubeAPIServer", func() {
+	var (
+		ctx = context.TODO()
+
+		namespace         = "some-namespace"
+		vpaUpdateMode     = vpaautoscalingv1.UpdateModeOff
+		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		priorityClassName = "some-priority-class"
+
+		kubernetesInterface kubernetes.Interface
+		c                   client.Client
+		sm                  secretsmanager.Interface
+		kapi                Interface
+		version             *semver.Version
+		runtimeVersion      *semver.Version
+		autoscalingConfig   apiserver.AutoscalingConfig
+
+		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
+		secretNameCA                      = "ca"
+		secretNameCAClient                = "ca-client"
+		secretNameCAEtcd                  = "ca-etcd"
+		secretNameCAFrontProxy            = "ca-front-proxy"
+		secretNameCAKubelet               = "ca-kubelet"
+		secretNameCAVPN                   = "ca-vpn"
+		secretNameEtcd                    = "etcd-client"
+		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
+		secretNameKubeAggregator          = "kube-aggregator"
+		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
+		secretNameServer                  = "kube-apiserver"
+		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
+		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
+		secretNameVPNSeedClient           = "vpn-seed-client"
+		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
+
+		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
+		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
+		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-97e14df3"
+		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
+
+		deployment                 *appsv1.Deployment
+		horizontalPodAutoscaler    *autoscalingv2.HorizontalPodAutoscaler
+		verticalPodAutoscaler      *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                       *hvpav1alpha1.Hvpa
+		podDisruptionBudget        *policyv1.PodDisruptionBudget
+		configMapAdmission         *corev1.ConfigMap
+		secretAdmissionKubeconfigs *corev1.Secret
+		configMapAuditPolicy       *corev1.ConfigMap
+		configMapEgressSelector    *corev1.ConfigMap
+		managedResource            *resourcesv1alpha1.ManagedResource
+		managedResourceSecret      *corev1.Secret
+
+		values Values
+	)
+
+	BeforeEach(func() {
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(c, namespace)
+
+		version = semver.MustParse("1.25.1")
+		runtimeVersion = semver.MustParse("1.25.1")
+	})
+
+	JustBeforeEach(func() {
+		values = Values{
+			Values: apiserver.Values{
+				Autoscaling:    autoscalingConfig,
+				ETCDEncryption: apiserver.ETCDEncryptionConfig{ResourcesToEncrypt: []string{"secrets"}},
+				RuntimeVersion: runtimeVersion},
+			PriorityClassName: priorityClassName,
+			Version:           version,
+			VPN:               VPNConfig{Enabled: true},
+		}
+		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+		kapi = New(kubernetesInterface, namespace, sm, values)
+
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-bundle", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: vpnseedserver.SecretNameTLSAuth, Namespace: namespace}})).To(Succeed())
+
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		horizontalPodAutoscaler = &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		verticalPodAutoscaler = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver-vpa",
+				Namespace: namespace,
+			},
+		}
+		hvpa = &hvpav1alpha1.Hvpa{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-core-kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-shoot-core-kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+	})
+
+	Describe("#Deploy", func() {
+		Describe("HorizontalPodAutoscaler", func() {
+			DescribeTable("should delete the HPA resource",
+				func(autoscalingConfig apiserver.AutoscalingConfig) {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Autoscaling:    autoscalingConfig,
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version},
+					)
+
+					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
+				},
+
+				Entry("HVPA is enabled", apiserver.AutoscalingConfig{HVPAEnabled: true}),
+				Entry("replicas is nil", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
+				Entry("replicas is 0", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: ptr.To[int32](0)}),
+			)
+
+			BeforeEach(func() {
+				autoscalingConfig = apiserver.AutoscalingConfig{
+					HVPAEnabled: false,
+					Replicas:    ptr.To[int32](2),
+					MinReplicas: 4,
+					MaxReplicas: 6,
+				}
+
+				runtimeVersion = semver.MustParse("1.25.0")
+			})
+
+			It("should successfully deploy the HPA resource", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+				Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            horizontalPodAutoscaler.Name,
+						Namespace:       horizontalPodAutoscaler.Namespace,
+						ResourceVersion: "1",
+					},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						MinReplicas: &autoscalingConfig.MinReplicas,
+						MaxReplicas: autoscalingConfig.MaxReplicas,
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "kube-apiserver",
+						},
+						Metrics: []autoscalingv2.MetricSpec{
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2.ResourceMetricSource{
+									Name: "cpu",
+									Target: autoscalingv2.MetricTarget{
+										Type:               autoscalingv2.UtilizationMetricType,
+										AverageUtilization: ptr.To[int32](80),
+									},
+								},
+							},
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2.ResourceMetricSource{
+									Name: "memory",
+									Target: autoscalingv2.MetricTarget{
+										Type:               autoscalingv2.UtilizationMetricType,
+										AverageUtilization: ptr.To[int32](80),
+									},
+								},
+							},
+						},
+					},
+				}))
+			})
+		})
+
+		Describe("VerticalPodAutoscaler", func() {
+			Context("HVPAEnabled = true", func() {
+				BeforeEach(func() {
+					autoscalingConfig = apiserver.AutoscalingConfig{HVPAEnabled: true}
+				})
+
+				It("should delete the VPA resource", func() {
+					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
+				})
+			})
+
+			Context("HVPAEnabled = false", func() {
+				BeforeEach(func() {
+					autoscalingConfig = apiserver.AutoscalingConfig{HVPAEnabled: false}
+				})
+
+				It("should successfully deploy the VPA resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+					Expect(verticalPodAutoscaler).To(DeepEqual(&vpaautoscalingv1.VerticalPodAutoscaler{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            verticalPodAutoscaler.Name,
+							Namespace:       verticalPodAutoscaler.Namespace,
+							ResourceVersion: "1",
+						},
+						Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+							TargetRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "kube-apiserver",
+							},
+							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+								UpdateMode: &vpaUpdateMode,
+							},
+							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+								ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+									ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+									ControlledValues: &controlledValues,
+								}},
+							},
+						},
+					}))
+				})
+			})
+		})
+
+		Describe("HVPA", func() {
+			DescribeTable("should delete the HVPA resource",
+				func(autoscalingConfig apiserver.AutoscalingConfig) {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Autoscaling:    autoscalingConfig,
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+
+					Expect(c.Create(ctx, hvpa)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
+				},
+
+				Entry("HVPA disabled", apiserver.AutoscalingConfig{HVPAEnabled: false}),
+				Entry("HVPA enabled but replicas nil", apiserver.AutoscalingConfig{HVPAEnabled: true}),
+				Entry("HVPA enabled but replicas zero", apiserver.AutoscalingConfig{HVPAEnabled: true, Replicas: ptr.To[int32](0)}),
+			)
+
+			var (
+				defaultExpectedScaleDownUpdateMode = "Auto"
+				defaultExpectedHPAMetrics          = []autoscalingv2beta1.MetricSpec{
+					{
+						Type: "Resource",
+						Resource: &autoscalingv2beta1.ResourceMetricSource{
+							Name:                     "cpu",
+							TargetAverageUtilization: ptr.To[int32](80),
+						},
+					},
+				}
+				defaultExpectedVPAContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: "kube-apiserver",
+						MinAllowed: corev1.ResourceList{
+							"memory": resource.MustParse("400M"),
+						},
+						MaxAllowed: corev1.ResourceList{
+							"cpu":    resource.MustParse("8"),
+							"memory": resource.MustParse("25G"),
+						},
+						ControlledValues: &controlledValues,
+					},
+				}
+				defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
+					{
+						VpaWeight:         100,
+						StartReplicaCount: 5,
+						LastReplicaCount:  5,
+					},
+				}
+			)
+
+			DescribeTable("should successfully deploy the HVPA resource",
+				func(
+					autoscalingConfig apiserver.AutoscalingConfig,
+					sniConfig SNIConfig,
+					expectedScaleDownUpdateMode string,
+					expectedHPAMetrics []autoscalingv2beta1.MetricSpec,
+					expectedVPAContainerResourcePolicies []vpaautoscalingv1.ContainerResourcePolicy,
+					expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
+				) {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Autoscaling:    autoscalingConfig,
+							RuntimeVersion: runtimeVersion,
+						},
+						SNI:     sniConfig,
+						Version: version,
+					})
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
+					Expect(hvpa).To(DeepEqual(&hvpav1alpha1.Hvpa{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            hvpa.Name,
+							Namespace:       hvpa.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"high-availability-config.resources.gardener.cloud/type": "server",
+							},
+						},
+						Spec: hvpav1alpha1.HvpaSpec{
+							Replicas: ptr.To[int32](1),
+							Hpa: hvpav1alpha1.HpaSpec{
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"role": "apiserver-hpa"},
+								},
+								Deploy: true,
+								ScaleUp: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: ptr.To("Auto"),
+									},
+								},
+								ScaleDown: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: ptr.To("Auto"),
+									},
+								},
+								Template: hvpav1alpha1.HpaTemplate{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{"role": "apiserver-hpa"},
+									},
+									Spec: hvpav1alpha1.HpaTemplateSpec{
+										MinReplicas: &autoscalingConfig.MinReplicas,
+										MaxReplicas: autoscalingConfig.MaxReplicas,
+										Metrics:     expectedHPAMetrics,
+									},
+								},
+							},
+							Vpa: hvpav1alpha1.VpaSpec{
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"role": "apiserver-vpa"},
+								},
+								Deploy: true,
+								ScaleUp: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: ptr.To("Auto"),
+									},
+									StabilizationDuration: ptr.To("3m"),
+									MinChange: hvpav1alpha1.ScaleParams{
+										CPU: hvpav1alpha1.ChangeParams{
+											Value:      ptr.To("300m"),
+											Percentage: ptr.To[int32](80),
+										},
+										Memory: hvpav1alpha1.ChangeParams{
+											Value:      ptr.To("200M"),
+											Percentage: ptr.To[int32](80),
+										},
+									},
+								},
+								ScaleDown: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: &expectedScaleDownUpdateMode,
+									},
+									StabilizationDuration: ptr.To("15m"),
+									MinChange: hvpav1alpha1.ScaleParams{
+										CPU: hvpav1alpha1.ChangeParams{
+											Value:      ptr.To("300m"),
+											Percentage: ptr.To[int32](80),
+										},
+										Memory: hvpav1alpha1.ChangeParams{
+											Value:      ptr.To("200M"),
+											Percentage: ptr.To[int32](80),
+										},
+									},
+								},
+								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
+									CPU: hvpav1alpha1.ChangeParams{
+										Value:      ptr.To("1"),
+										Percentage: ptr.To[int32](70),
+									},
+									Memory: hvpav1alpha1.ChangeParams{
+										Value:      ptr.To("1G"),
+										Percentage: ptr.To[int32](70),
+									},
+								},
+								Template: hvpav1alpha1.VpaTemplate{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{"role": "apiserver-vpa"},
+									},
+									Spec: hvpav1alpha1.VpaTemplateSpec{
+										ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+											ContainerPolicies: expectedVPAContainerResourcePolicies,
+										},
+									},
+								},
+							},
+							WeightBasedScalingIntervals: expectedWeightBasedScalingIntervals,
+							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "kube-apiserver",
+							},
+						},
+					}))
+				},
+
+				Entry("default behaviour",
+					apiserver.AutoscalingConfig{
+						HVPAEnabled: true,
+						Replicas:    ptr.To[int32](2),
+						MinReplicas: 5,
+						MaxReplicas: 5,
+					},
+					SNIConfig{},
+					defaultExpectedScaleDownUpdateMode,
+					defaultExpectedHPAMetrics,
+					defaultExpectedVPAContainerResourcePolicies,
+					defaultExpectedWeightBasedScalingIntervals,
+				),
+				Entry("UseMemoryMetricForHvpaHPA is true",
+					apiserver.AutoscalingConfig{
+						HVPAEnabled:               true,
+						Replicas:                  ptr.To[int32](2),
+						UseMemoryMetricForHvpaHPA: true,
+						MinReplicas:               5,
+						MaxReplicas:               5,
+					},
+					SNIConfig{},
+					defaultExpectedScaleDownUpdateMode,
+					[]autoscalingv2beta1.MetricSpec{
+						{
+							Type: "Resource",
+							Resource: &autoscalingv2beta1.ResourceMetricSource{
+								Name:                     "cpu",
+								TargetAverageUtilization: ptr.To[int32](80),
+							},
+						},
+						{
+							Type: "Resource",
+							Resource: &autoscalingv2beta1.ResourceMetricSource{
+								Name:                     "memory",
+								TargetAverageUtilization: ptr.To[int32](80),
+							},
+						},
+					},
+					defaultExpectedVPAContainerResourcePolicies,
+					defaultExpectedWeightBasedScalingIntervals,
+				),
+				Entry("scale down is disabled",
+					apiserver.AutoscalingConfig{
+						HVPAEnabled:              true,
+						Replicas:                 ptr.To[int32](2),
+						MinReplicas:              5,
+						MaxReplicas:              5,
+						ScaleDownDisabledForHvpa: true,
+					},
+					SNIConfig{},
+					"Off",
+					defaultExpectedHPAMetrics,
+					defaultExpectedVPAContainerResourcePolicies,
+					defaultExpectedWeightBasedScalingIntervals,
+				),
+				Entry("max replicas > min replicas",
+					apiserver.AutoscalingConfig{
+						HVPAEnabled: true,
+						Replicas:    ptr.To[int32](2),
+						MinReplicas: 3,
+						MaxReplicas: 5,
+					},
+					SNIConfig{},
+					defaultExpectedScaleDownUpdateMode,
+					defaultExpectedHPAMetrics,
+					defaultExpectedVPAContainerResourcePolicies,
+					[]hvpav1alpha1.WeightBasedScalingInterval{
+						{
+							VpaWeight:         100,
+							StartReplicaCount: 5,
+							LastReplicaCount:  5,
+						},
+						{
+							VpaWeight:         0,
+							StartReplicaCount: 3,
+							LastReplicaCount:  4,
+						},
+					},
+				),
+			)
+		})
+
+		Describe("PodDisruptionBudget", func() {
+			Context("Kubernetes version < 1.26", func() {
+				It("should successfully deploy the PDB resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            podDisruptionBudget.Name,
+							Namespace:       podDisruptionBudget.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"app":  "kubernetes",
+								"role": "apiserver",
+							},
+						},
+						Spec: policyv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
+								},
+							},
+						},
+					}))
+				})
+			})
+
+			Context("Kubernetes version >= 1.26", func() {
+				BeforeEach(func() {
+					runtimeVersion = semver.MustParse("1.26.4")
+				})
+
+				It("should successfully deploy the PDB resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+
+					unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
+					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            podDisruptionBudget.Name,
+							Namespace:       podDisruptionBudget.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"app":  "kubernetes",
+								"role": "apiserver",
+							},
+						},
+						Spec: policyv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
+								},
+							},
+							UnhealthyPodEvictionPolicy: &unhealthyPodEvictionPolicyAlwaysAllow,
+						},
+					}))
+				})
+			})
+		})
+
+		Describe("Shoot Resources", func() {
+			It("should successfully deploy the managed resource and its secret", func() {
+				var (
+					clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: system:apiserver:kubelet
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes/proxy
+  - nodes/stats
+  - nodes/log
+  - nodes/spec
+  - nodes/metrics
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+`
+					clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: system:apiserver:kubelet
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:apiserver:kubelet
+subjects:
+- kind: User
+  name: system:kube-apiserver:kubelet
+`
+				)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin": "gardener",
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						KeepObjects:  ptr.To(false),
+						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceSecret.Name,
+						Namespace:       managedResourceSecret.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						},
+					},
+					Type:      corev1.SecretTypeOpaque,
+					Immutable: ptr.To(true),
+					Data: map[string][]byte{
+						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
+						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
+					},
+				}))
+			})
+		})
+
+		Describe("Secrets", func() {
+			Context("admission kubeconfigs", func() {
+				It("should successfully deploy the secret resource w/o admission plugin kubeconfigs", func() {
+					secretAdmissionKubeconfigs = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-kubeconfigs", Namespace: namespace},
+						Data:       map[string][]byte{},
+					}
+					Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretAdmissionKubeconfigs.Name,
+							Namespace:       secretAdmissionKubeconfigs.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      secretAdmissionKubeconfigs.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins", func() {
+					admissionPlugins := []apiserver.AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz"}, Kubeconfig: []byte("foo")},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							EnabledAdmissionPlugins: admissionPlugins,
+							RuntimeVersion:          runtimeVersion,
+						},
+						Version: version,
+					})
+
+					secretAdmissionKubeconfigs = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-kubeconfigs", Namespace: namespace},
+						Data: map[string][]byte{
+							"baz-kubeconfig.yaml": []byte("foo"),
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretAdmissionKubeconfigs.Name,
+							Namespace:       secretAdmissionKubeconfigs.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      secretAdmissionKubeconfigs.Data,
+					}))
+				})
+			})
+
+			It("should successfully deploy the OIDCCABundle secret resource", func() {
+				var (
+					caBundle   = "some-ca-bundle"
+					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					OIDC:    oidcConfig,
+					Version: version,
+				})
+
+				expectedSecretOIDCCABundle := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
+
+				actualSecretOIDCCABundle := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(Succeed())
+				Expect(actualSecretOIDCCABundle).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecretOIDCCABundle.Name,
+						Namespace:       expectedSecretOIDCCABundle.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecretOIDCCABundle.Data,
+				}))
+			})
+
+			It("should successfully deploy the ETCD encryption configuration secret resource", func() {
+				etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: key-62135596800
+        secret: ________________________________
+  - identity: {}
+  resources:
+  - secrets
+`
+
+				By("Verify encryption config secret")
+				expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
+					Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+				actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+				Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      expectedSecretETCDEncryptionConfiguration.Name,
+						Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+							"role": "kube-apiserver-etcd-encryption-configuration",
+						},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecretETCDEncryptionConfiguration.Data,
+				}))
+
+				By("Deploy again and ensure that labels are still present")
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+				Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+					"role": "kube-apiserver-etcd-encryption-configuration",
+				}))
+
+				By("Verify encryption key secret")
+				secretList := &corev1.SecretList{}
+				Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+					"name":       "kube-apiserver-etcd-encryption-key",
+					"managed-by": "secrets-manager",
+				})).To(Succeed())
+				Expect(secretList.Items).To(HaveLen(1))
+				Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+			})
+
+			DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
+				func(encryptWithCurrentKey bool) {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"secrets"}},
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+
+					oldKeyName, oldKeySecret := "key-old", "old-secret"
+					Expect(c.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver-etcd-encryption-key-old",
+							Namespace: namespace,
+						},
+						Data: map[string][]byte{
+							"key":    []byte(oldKeyName),
+							"secret": []byte(oldKeySecret),
+						},
+					})).To(Succeed())
+
+					etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:`
+
+					if encryptWithCurrentKey {
+						etcdEncryptionConfiguration += `
+      - name: key-62135596800
+        secret: ________________________________
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret
+					} else {
+						etcdEncryptionConfiguration += `
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret + `
+      - name: key-62135596800
+        secret: ________________________________`
+					}
+
+					etcdEncryptionConfiguration += `
+  - identity: {}
+  resources:
+  - secrets
+`
+
+					expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
+						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      expectedSecretETCDEncryptionConfiguration.Name,
+							Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+							Labels: map[string]string{
+								"resources.gardener.cloud/garbage-collectable-reference": "true",
+								"role": "kube-apiserver-etcd-encryption-configuration",
+							},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      expectedSecretETCDEncryptionConfiguration.Data,
+					}))
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name":       "kube-apiserver-etcd-encryption-key",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+				},
+
+				Entry("encrypting with current", true),
+				Entry("encrypting with old", false),
+			)
+
+			Context("TLS SNI", func() {
+				It("should successfully deploy the needed secret resources", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+						SNI: SNIConfig{TLS: []TLSSNIConfig{
+							{SecretName: ptr.To("foo")},
+							{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+							{SecretName: ptr.To("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+						}},
+					})
+
+					expectedSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-tls-sni-1", Namespace: namespace},
+						Data:       map[string][]byte{"tls.crt": []byte("foo"), "tls.key": []byte("bar")},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+					actualSecret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecret.Name,
+							Namespace:       expectedSecret.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      expectedSecret.Data,
+					}))
+				})
+
+				It("should return an error for invalid configuration", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+						SNI:     SNIConfig{TLS: []TLSSNIConfig{{}}},
+					})
+
+					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("either the name of an existing secret or both certificate and private key must be provided for TLS SNI config")))
+				})
+			})
+
+			It("should successfully deploy the audit webhook kubeconfig secret resource", func() {
+				var (
+					kubeconfig  = []byte("some-kubeconfig")
+					auditConfig = &apiserver.AuditConfig{Webhook: &apiserver.AuditWebhook{Kubeconfig: kubeconfig}}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						Audit:          auditConfig,
+						RuntimeVersion: runtimeVersion,
+					},
+					Version: version,
+				})
+
+				expectedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-audit-webhook-kubeconfig", Namespace: namespace},
+					Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+				actualSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecret.Name,
+						Namespace:       expectedSecret.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecret.Data,
+				}))
+			})
+
+			It("should successfully deploy the authentication webhook kubeconfig secret resource", func() {
+				var (
+					kubeconfig        = []byte("some-kubeconfig")
+					authWebhookConfig = &AuthenticationWebhook{Kubeconfig: kubeconfig}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					AuthenticationWebhook: authWebhookConfig,
+					Version:               version,
+				})
+
+				expectedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-webhook-kubeconfig", Namespace: namespace},
+					Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+				actualSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecret.Name,
+						Namespace:       expectedSecret.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecret.Data,
+				}))
+			})
+
+			It("should successfully deploy the authorization webhook kubeconfig secret resource", func() {
+				var (
+					kubeconfig        = []byte("some-kubeconfig")
+					authWebhookConfig = &AuthorizationWebhook{Kubeconfig: kubeconfig}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					AuthorizationWebhook: authWebhookConfig,
+					Version:              version,
+				})
+
+				expectedSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-webhook-kubeconfig", Namespace: namespace},
+					Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+				actualSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecret.Name,
+						Namespace:       expectedSecret.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecret.Data,
+				}))
+			})
+		})
+
+		Describe("ConfigMaps", func() {
+			Context("admission", func() {
+				It("should successfully deploy the configmap resource w/o admission plugins", func() {
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins: null
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins", func() {
+					admissionPlugins := []apiserver.AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}}},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+							Kubeconfig: []byte("foo"),
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							EnabledAdmissionPlugins: admissionPlugins,
+							RuntimeVersion:          runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: Baz
+  path: /etc/kubernetes/admission/baz.yaml
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
+`,
+							"baz.yaml": "some-config-for-baz",
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/imagepolicywebhook-kubeconfig.yaml
+`,
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins w/ config but w/o kubeconfigs", func() {
+					admissionPlugins := []apiserver.AdmissionPluginConfig{
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+								Config: &runtime.RawExtension{Raw: []byte(`imagePolicy:
+  foo: bar
+  kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+							},
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							EnabledAdmissionPlugins: admissionPlugins,
+							RuntimeVersion:          runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
+`,
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: ""
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: ""
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  foo: bar
+  kubeConfigFile: ""
+`,
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins w/o configs but w/ kubeconfig", func() {
+					admissionPlugins := []apiserver.AdmissionPluginConfig{
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "MutatingAdmissionWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ValidatingAdmissionWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+						{
+							AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+								Name: "ImagePolicyWebhook",
+							},
+							Kubeconfig: []byte("foo"),
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							EnabledAdmissionPlugins: admissionPlugins,
+							RuntimeVersion:          runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+- configuration: null
+  name: ImagePolicyWebhook
+  path: /etc/kubernetes/admission/imagepolicywebhook.yaml
+`,
+							"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+							"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							"imagepolicywebhook.yaml": `imagePolicy:
+  kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/imagepolicywebhook-kubeconfig.yaml
+`,
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+			})
+
+			Context("audit policy", func() {
+				It("should successfully deploy the configmap resource w/ default policy", func() {
+					configMapAuditPolicy = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  creationTimestamp: null
+rules:
+- level: None
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/o default policy", func() {
+					var (
+						policy      = "some-audit-policy"
+						auditConfig = &apiserver.AuditConfig{Policy: &policy}
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Audit:          auditConfig,
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAuditPolicy = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+						Data:       map[string]string{"audit-policy.yaml": policy},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
+			})
+
+			Context("egress selector", func() {
+				It("should successfully deploy the configmap resource", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+						VPN:     VPNConfig{Enabled: true},
+					})
+
+					configMapEgressSelector = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
+						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("controlplane")},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapEgressSelector)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
+					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapEgressSelector.Name,
+							Namespace:       configMapEgressSelector.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapEgressSelector.Data,
+					}))
+				})
+
+				DescribeTable("do nothing",
+					func(vpnConfig VPNConfig) {
+						kapi = New(kubernetesInterface, namespace, sm, Values{
+							Version: version,
+							VPN:     vpnConfig,
+						})
+
+						var found bool
+
+						configMapList := &corev1.ConfigMapList{}
+						Expect(c.List(ctx, configMapList, client.InNamespace(namespace))).To(Succeed())
+						for _, configMap := range configMapList.Items {
+							if strings.HasPrefix(configMap.Name, "kube-apiserver-egress-selector-config") {
+								found = true
+								break
+							}
+						}
+
+						Expect(found).To(BeFalse())
+					},
+
+					Entry("VPN is disabled", VPNConfig{Enabled: false}),
+					Entry("VPN is enabled but HA is disabled", VPNConfig{Enabled: true, HighAvailabilityEnabled: false}),
+				)
+			})
+		})
+
+		Describe("Deployment", func() {
+			deployAndRead := func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			}
+
+			It("should have the expected labels w/o SNI", func() {
+				deployAndRead()
+
+				Expect(deployment.Labels).To(Equal(map[string]string{
+					"gardener.cloud/role": "controlplane",
+					"app":                 "kubernetes",
+					"role":                "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				}))
+			})
+
+			It("should have the expected labels w/ SNI", func() {
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					SNI:     SNIConfig{Enabled: true},
+					Version: version,
+				})
+				deployAndRead()
+
+				Expect(deployment.Labels).To(Equal(map[string]string{
+					"gardener.cloud/role": "controlplane",
+					"app":                 "kubernetes",
+					"role":                "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				}))
+			})
+
+			Context("expected annotations", func() {
+				var defaultAnnotations map[string]string
+
+				BeforeEach(func() {
+					defaultAnnotations = map[string]string{
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+						"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+					}
+				})
+
+				It("should have the expected annotations when there are no nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when there are nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: false,
+						Version:      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-77bc5458": secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2": secretNameKubeAPIServerToKubelet,
+					})))
+				})
+
+				It("should have the expected annotations when VPN is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					})))
+				})
+
+				It("should have the expected annotations when VPN and HA is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+					})))
+				})
+			})
+
+			It("should have the expected deployment settings", func() {
+				var (
+					intStr100Percent = intstr.FromString("100%")
+					intStrZero       = intstr.FromInt32(0)
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					Version: version,
+				})
+				deployAndRead()
+
+				Expect(deployment.Spec.Strategy).To(Equal(appsv1.DeploymentStrategy{
+					Type: appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxSurge:       &intStr100Percent,
+						MaxUnavailable: &intStrZero,
+					},
+				}))
+			})
+
+			Context("expected pod template labels", func() {
+				var defaultLabels map[string]string
+
+				BeforeEach(func() {
+					defaultLabels = map[string]string{
+						"gardener.cloud/role":              "controlplane",
+						"app":                              "kubernetes",
+						"role":                             "apiserver",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.gardener.cloud/to-private-networks":                         "allowed",
+						"networking.gardener.cloud/to-public-networks":                          "allowed",
+						"networking.resources.gardener.cloud/to-all-webhook-targets":            "allowed",
+						"networking.resources.gardener.cloud/to-extensions-all-webhook-targets": "allowed",
+						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":      "allowed",
+						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":    "allowed",
+					}
+				})
+
+				It("should have the expected pod template labels", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
+					})))
+				})
+
+				It("should have the expected pod template labels with vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.resources.gardener.cloud/to-vpn-seed-server-tcp-9443": "allowed",
+					})))
+				})
+
+				It("should have the expected pod template labels with ha vpn enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true, HighAvailabilityNumberOfSeedServers: 2},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
+						"networking.gardener.cloud/to-shoot-networks":                       "allowed",
+						"networking.gardener.cloud/to-runtime-apiserver":                    "allowed",
+						"networking.resources.gardener.cloud/to-vpn-seed-server-0-tcp-1194": "allowed",
+						"networking.resources.gardener.cloud/to-vpn-seed-server-1-tcp-1194": "allowed",
+					})))
+				})
+			})
+
+			Context("expected pod template annotations", func() {
+				var defaultAnnotations map[string]string
+
+				BeforeEach(func() {
+					defaultAnnotations = map[string]string{
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+						"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
+						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+					}
+				})
+
+				It("should have the expected annotations when there are no nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when there are nodes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: false,
+						Version:      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-77bc5458": secretNameCAKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2": secretNameKubeAPIServerToKubelet,
+					})))
+				})
+
+				It("should have the expected annotations when VPN is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(defaultAnnotations))
+				})
+
+				It("should have the expected annotations when VPN is enabled but HA is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: false},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					})))
+				})
+
+				It("should have the expected annotations when VPN and HA is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						IsWorkerless: true,
+						Version:      version,
+						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
+						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+					})))
+				})
+			})
+
+			It("should have the expected pod settings", func() {
+				deployAndRead()
+
+				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal(priorityClassName))
+				Expect(deployment.Spec.Template.Spec.AutomountServiceAccountToken).To(PointTo(BeFalse()))
+				Expect(deployment.Spec.Template.Spec.DNSPolicy).To(Equal(corev1.DNSClusterFirst))
+				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
+				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
+				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot).To(Equal(ptr.To(true)))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsUser).To(PointTo(Equal(int64(65532))))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.RunAsGroup).To(PointTo(Equal(int64(65532))))
+				Expect(deployment.Spec.Template.Spec.SecurityContext.FSGroup).To(PointTo(Equal(int64(65532))))
+			})
+
+			It("should have no init containers", func() {
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					Version: version,
+				})
+
+				deployAndRead()
+
+				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
+			})
+
+			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
+				values := Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+					ServiceNetworkCIDR: "4.5.6.0/24",
+					VPN: VPNConfig{
+						Enabled:                              true,
+						HighAvailabilityEnabled:              true,
+						HighAvailabilityNumberOfSeedServers:  2,
+						HighAvailabilityNumberOfShootClients: 3,
+						PodNetworkCIDR:                       "1.2.3.0/24",
+						NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+					},
+					Version: version,
+				}
+				kapi = New(kubernetesInterface, namespace, sm, values)
+				deployAndRead()
+
+				haVPNClientContainerFor := func(index int) corev1.Container {
+					return corev1.Container{
+						Name:            fmt.Sprintf("vpn-client-%d", index),
+						Image:           "vpn-client-image:really-latest",
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Env: []corev1.EnvVar{
+							{
+								Name:  "ENDPOINT",
+								Value: fmt.Sprintf("vpn-seed-server-%d", index),
+							},
+							{
+								Name:  "SERVICE_NETWORK",
+								Value: values.ServiceNetworkCIDR,
+							},
+							{
+								Name:  "POD_NETWORK",
+								Value: values.VPN.PodNetworkCIDR,
+							},
+							{
+								Name:  "NODE_NETWORK",
+								Value: *values.VPN.NodeNetworkCIDR,
+							},
+							{
+								Name:  "VPN_SERVER_INDEX",
+								Value: strconv.Itoa(index),
+							},
+							{
+								Name:  "HA_VPN_SERVERS",
+								Value: "2",
+							},
+							{
+								Name:  "HA_VPN_CLIENTS",
+								Value: "3",
+							},
+							{
+								Name:  "OPENVPN_PORT",
+								Value: "1194",
+							},
+							{
+								Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+								Value: "true",
+							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							RunAsNonRoot: ptr.To(false),
+							RunAsUser:    ptr.To[int64](0),
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"NET_ADMIN"},
+							},
+						},
+						TerminationMessagePath:   "/dev/termination-log",
+						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "vpn-seed-client",
+								MountPath: "/srv/secrets/vpn-client",
+							},
+							{
+								Name:      "vpn-seed-tlsauth",
+								MountPath: "/srv/secrets/tlsauth",
+							},
+							{
+								Name:      "dev-net-tun",
+								MountPath: "/dev/net/tun",
+							},
+						},
+					}
+				}
+
+				initContainer := haVPNClientContainerFor(0)
+				initContainer.Name = "vpn-client-init"
+				initContainer.LivenessProbe = nil
+				initContainer.Env = append(initContainer.Env, []corev1.EnvVar{
+					{
+						Name:  "CONFIGURE_BONDING",
+						Value: "true",
+					},
+					{
+						Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+						Value: "true",
+					},
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+					{
+						Name: "NAMESPACE",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.namespace",
+							},
+						},
+					},
+				}...)
+				initContainer.VolumeMounts = append(initContainer.VolumeMounts, corev1.VolumeMount{
+					Name:      "kube-api-access-gardener",
+					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					ReadOnly:  true,
+				})
+				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
+				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
+					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
+					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
+				}
+				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(corev1.Container{
+					Name:            "vpn-path-controller",
+					Image:           "vpn-client-image:really-latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/path-controller.sh"},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "SERVICE_NETWORK",
+							Value: values.ServiceNetworkCIDR,
+						},
+						{
+							Name:  "POD_NETWORK",
+							Value: values.VPN.PodNetworkCIDR,
+						},
+						{
+							Name:  "NODE_NETWORK",
+							Value: *values.VPN.NodeNetworkCIDR,
+						},
+						{
+							Name:  "HA_VPN_CLIENTS",
+							Value: "3",
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("20Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot: ptr.To(false),
+						RunAsUser:    ptr.To[int64](0),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN"},
+						},
+					},
+					TerminationMessagePath:   "/dev/termination-log",
+					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+				}))
+
+				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+
+				hostPathCharDev := corev1.HostPathCharDev
+				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+					corev1.Volume{
+						Name: "vpn-seed-client",
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: ptr.To[int32](400),
+								Sources: []corev1.VolumeProjection{
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameCAVPN,
+											},
+											Items: []corev1.KeyToPath{{
+												Key:  "bundle.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameVPNSeedClient,
+											},
+											Items: []corev1.KeyToPath{
+												{
+													Key:  "tls.crt",
+													Path: "tls.crt",
+												},
+												{
+													Key:  "tls.key",
+													Path: "tls.key",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					corev1.Volume{
+						Name: "vpn-seed-tlsauth",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedServerTLSAuth},
+						},
+					},
+					corev1.Volume{
+						Name: "dev-net-tun",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/dev/net/tun",
+								Type: &hostPathCharDev,
+							},
+						},
+					},
+				))
+			})
+
+			Context("kube-apiserver container", func() {
+				var (
+					acceptedIssuers  = []string{"issuer1", "issuer2"}
+					admissionPlugin1 = "foo"
+					admissionPlugin2 = "foo"
+					admissionPlugins = []apiserver.AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: admissionPlugin1}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: admissionPlugin2}},
+					}
+					apiServerResources = corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					}
+					eventTTL                            = 2 * time.Hour
+					externalHostname                    = "api.foo.bar.com"
+					images                              = Images{KubeAPIServer: "some-kapi-image:latest"}
+					serviceAccountIssuer                = "issuer"
+					serviceAccountMaxTokenExpiration    = time.Hour
+					serviceAccountExtendTokenExpiration = false
+					serviceNetworkCIDR                  = "1.2.3.4/5"
+				)
+
+				JustBeforeEach(func() {
+					values = Values{
+						Values: apiserver.Values{
+							EnabledAdmissionPlugins: admissionPlugins,
+							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
+							Logging: &gardencorev1beta1.APIServerLogging{
+								Verbosity:           ptr.To[int32](3),
+								HTTPAccessVerbosity: ptr.To[int32](3),
+							},
+							RuntimeVersion: runtimeVersion,
+						},
+						EventTTL:         &metav1.Duration{Duration: eventTTL},
+						ExternalHostname: externalHostname,
+						Images:           images,
+						IsWorkerless:     true,
+						ServiceAccount: ServiceAccountConfig{
+							Issuer:                serviceAccountIssuer,
+							AcceptedIssuers:       acceptedIssuers,
+							MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
+							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
+							JWKSURI:               ptr.To("https://foo.bar/jwks"),
+						},
+						ServiceNetworkCIDR: serviceNetworkCIDR,
+						Version:            version,
+						VPN:                VPNConfig{},
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+				})
+
+				It("should have the kube-apiserver container with the expected spec when VPN is disabled and when there are no nodes", func() {
+					values.VPN = VPNConfig{Enabled: false}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+serviceAccountIssuer)
+					issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[0])
+					issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[1])
+					tlscipherSuites := kubernetesutils.TLSCipherSuites
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
+					Expect(deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ConsistOf("/usr/local/bin/kube-apiserver"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ConsistOf(
+						"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
+						"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
+						"--anonymous-auth=false",
+						"--audit-log-path=/tmp/audit/audit.log",
+						"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
+						"--audit-log-maxsize=100",
+						"--audit-log-maxbackup=5",
+						"--authorization-mode=RBAC",
+						"--client-ca-file=/srv/kubernetes/ca-client/bundle.crt",
+						"--enable-aggregator-routing=true",
+						"--enable-bootstrap-token-auth=true",
+						"--http2-max-streams-per-connection=1000",
+						"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
+						"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
+						"--etcd-keyfile=/srv/kubernetes/etcd/client/tls.key",
+						"--etcd-servers=https://etcd-main-client:2379",
+						"--etcd-servers-overrides=/events#https://etcd-events-client:2379",
+						"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
+						"--event-ttl="+eventTTL.String(),
+						"--external-hostname="+externalHostname,
+						"--livez-grace-period=1m",
+						"--shutdown-delay-duration=15s",
+						"--profiling=false",
+						"--proxy-client-cert-file=/srv/kubernetes/aggregator/tls.crt",
+						"--proxy-client-key-file=/srv/kubernetes/aggregator/tls.key",
+						"--requestheader-client-ca-file=/srv/kubernetes/ca-front-proxy/bundle.crt",
+						"--requestheader-extra-headers-prefix=X-Remote-Extra-",
+						"--requestheader-group-headers=X-Remote-Group",
+						"--requestheader-username-headers=X-Remote-User",
+						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--secure-port=443",
+						"--service-cluster-ip-range="+serviceNetworkCIDR,
+						"--service-account-issuer="+serviceAccountIssuer,
+						"--service-account-issuer="+acceptedIssuers[0],
+						"--service-account-issuer="+acceptedIssuers[1],
+						"--service-account-jwks-uri=https://foo.bar/jwks",
+						"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
+						"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
+						"--service-account-key-file=/srv/kubernetes/service-account-key-bundle/bundle.key",
+						"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
+						"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",
+						"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
+						"--tls-private-key-file=/srv/kubernetes/apiserver/tls.key",
+						"--tls-cipher-suites="+strings.Join(tlscipherSuites, ","),
+						"--vmodule=httplog=3",
+						"--v=3",
+					))
+					Expect(issuerIdx).To(BeNumerically(">=", 0))
+					Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
+					Expect(issuerIdx).To(BeNumerically("<", issuerIdx2))
+					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{
+						Name:          "https",
+						ContainerPort: int32(443),
+						Protocol:      corev1.ProtocolTCP,
+					}))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
+						corev1.VolumeMount{
+							Name:      "audit-policy-config",
+							MountPath: "/etc/kubernetes/audit",
+						},
+						corev1.VolumeMount{
+							Name:      "admission-config",
+							MountPath: "/etc/kubernetes/admission",
+						},
+						corev1.VolumeMount{
+							Name:      "admission-kubeconfigs",
+							MountPath: "/etc/kubernetes/admission-kubeconfigs",
+						},
+						corev1.VolumeMount{
+							Name:      "ca",
+							MountPath: "/srv/kubernetes/ca",
+						},
+						corev1.VolumeMount{
+							Name:      "ca-etcd",
+							MountPath: "/srv/kubernetes/etcd/ca",
+						},
+						corev1.VolumeMount{
+							Name:      "ca-client",
+							MountPath: "/srv/kubernetes/ca-client",
+						},
+						corev1.VolumeMount{
+							Name:      "ca-front-proxy",
+							MountPath: "/srv/kubernetes/ca-front-proxy",
+						},
+						corev1.VolumeMount{
+							Name:      "etcd-client",
+							MountPath: "/srv/kubernetes/etcd/client",
+						},
+						corev1.VolumeMount{
+							Name:      "server",
+							MountPath: "/srv/kubernetes/apiserver",
+						},
+						corev1.VolumeMount{
+							Name:      "service-account-key",
+							MountPath: "/srv/kubernetes/service-account-key",
+						},
+						corev1.VolumeMount{
+							Name:      "service-account-key-bundle",
+							MountPath: "/srv/kubernetes/service-account-key-bundle",
+						},
+						corev1.VolumeMount{
+							Name:      "static-token",
+							MountPath: "/srv/kubernetes/token",
+						},
+						corev1.VolumeMount{
+							Name:      "kube-aggregator",
+							MountPath: "/srv/kubernetes/aggregator",
+						},
+						corev1.VolumeMount{
+							Name:      "etcd-encryption-secret",
+							MountPath: "/etc/kubernetes/etcd-encryption-secret",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ConsistOf(
+						corev1.Volume{
+							Name: "audit-policy-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapNameAuditPolicy,
+									},
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "admission-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapNameAdmissionConfigs,
+									},
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "admission-kubeconfigs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameAdmissionKubeconfigs,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "ca",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCA,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "ca-etcd",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAEtcd,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "ca-client",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAClient,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "ca-front-proxy",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAFrontProxy,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "etcd-client",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameEtcd,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "service-account-key",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameServiceAccountKey,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "service-account-key-bundle",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameServiceAccountKeyBundle,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "static-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameStaticToken,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "kube-aggregator",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameKubeAggregator,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "etcd-encryption-secret",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameETCDEncryptionConfig,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "server",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameServer,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+					))
+
+					secret := &corev1.Secret{}
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when there are nodes", func() {
+					values.IsWorkerless = false
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--allow-privileged=true",
+						"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
+						"--kubelet-certificate-authority=/srv/kubernetes/ca-kubelet/bundle.crt",
+						"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/tls.crt",
+						"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/tls.key",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "ca-kubelet",
+							MountPath: "/srv/kubernetes/ca-kubelet",
+						},
+						corev1.VolumeMount{
+							Name:      "kubelet-client",
+							MountPath: "/srv/kubernetes/apiserver-kubelet",
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "ca-kubelet",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAKubelet,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "kubelet-client",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameKubeAPIServerToKubelet,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+					))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when VPN is enabled but HA is disabled", func() {
+					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: false}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "ca-vpn",
+							MountPath: "/srv/kubernetes/ca-vpn",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "http-proxy",
+							MountPath: "/etc/srv/kubernetes/envoy",
+							ReadOnly:  false,
+						},
+						corev1.VolumeMount{
+							Name:      "egress-selection-config",
+							MountPath: "/etc/kubernetes/egress",
+							ReadOnly:  false,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("ca-vpn")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("egress-selection-config")}),
+					))
+				})
+
+				It("should have the kube-apiserver container with the expected spec when VPN and HA is enabled", func() {
+					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: true}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						// VPN-related secrets (will be asserted in detail later)
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-client")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("vpn-seed-tlsauth")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("dev-net-tun")}),
+						MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-api-access-gardener")}),
+					))
+				})
+
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
+					deployAndRead()
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name": "user-kubeconfig",
+					})).To(Succeed())
+
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
+
+					kubeconfig := &clientcmdv1.Config{}
+					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
+					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+				})
+
+				It("should not generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to false", func() {
+					deployAndRead()
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name": "user-kubeconfig",
+					})).To(Succeed())
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version:                      version,
+						StaticTokenKubeconfigEnabled: ptr.To(false),
+					})
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+					secretList = &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name": "user-kubeconfig",
+					})).To(Succeed())
+				})
+
+				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {
+					deployAndRead()
+
+					secret := &corev1.Secret{}
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "static-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameStaticToken,
+								},
+							},
+						},
+					))
+
+					newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version:                      version,
+						StaticTokenKubeconfigEnabled: ptr.To(false),
+					})
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+					Expect(deployment.Spec.Template.Spec.Volumes).ToNot(ContainElements(
+						corev1.Volume{
+							Name: "static-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameStaticToken,
+								},
+							},
+						},
+					))
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "static-token",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: newSecretNameStaticToken,
+								},
+							},
+						},
+					))
+
+					secret = &corev1.Secret{}
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, newSecretNameStaticToken), secret)).To(Succeed())
+					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
+				})
+
+				It("should properly set the anonymous auth flag if enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AnonymousAuthenticationEnabled: true,
+						Images:                         images,
+						Version:                        version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(ContainSubstring(
+						"--anonymous-auth=true",
+					)))
+				})
+
+				It("should configure the advertise address if SNI is enabled", func() {
+					advertiseAddress := "1.2.3.4"
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						SNI:     SNIConfig{Enabled: true, AdvertiseAddress: advertiseAddress},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--advertise-address=" + advertiseAddress,
+					))
+				})
+
+				It("should not configure the advertise address if SNI is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						SNI:     SNIConfig{Enabled: false, AdvertiseAddress: "foo"},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
+				})
+
+				It("should configure the correct etcd overrides for etcd-events", func() {
+					var (
+						resourcesToStoreInETCDEvents = []schema.GroupResource{
+							{Group: "networking.k8s.io", Resource: "networkpolicies"},
+							{Group: "", Resource: "events"},
+							{Group: "apps", Resource: "daemonsets"},
+						}
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						ResourcesToStoreInETCDEvents: resourcesToStoreInETCDEvents,
+						Images:                       images,
+						Version:                      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
+					))
+				})
+
+				It("should configure the api audiences if provided", func() {
+					var (
+						apiAudience1 = "foo"
+						apiAudience2 = "bar"
+						apiAudiences = []string{apiAudience1, apiAudience2}
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						APIAudiences: apiAudiences,
+						Images:       images,
+						Version:      version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--api-audiences=" + apiAudience1 + "," + apiAudience2,
+					))
+				})
+
+				It("should not configure the api audiences if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
+				})
+
+				It("should configure the feature gates if provided", func() {
+					featureGates := map[string]bool{"Foo": true, "Bar": false}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							FeatureGates:   featureGates,
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--feature-gates=Bar=false,Foo=true",
+					))
+				})
+
+				It("should not configure the feature gates if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--feature-gates=")))
+				})
+
+				It("should configure the request settings if provided", func() {
+					requests := &gardencorev1beta1.APIServerRequests{
+						MaxNonMutatingInflight: ptr.To[int32](123),
+						MaxMutatingInflight:    ptr.To[int32](456),
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Requests:       requests,
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--max-requests-inflight=123",
+						"--max-mutating-requests-inflight=456",
+					))
+				})
+
+				It("should not configure the request settings if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
+						ContainSubstring("--max-requests-inflight="),
+						ContainSubstring("--max-mutating-requests-inflight="),
+					))
+				})
+
+				It("should configure the runtime config if provided", func() {
+					runtimeConfig := map[string]bool{"foo": true, "bar": false}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						RuntimeConfig: runtimeConfig,
+						Images:        images,
+						Version:       version,
+						IsWorkerless:  false,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--runtime-config=bar=false,foo=true",
+					))
+				})
+
+				It("should not configure the runtime config if not provided when shoot has workers", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:       images,
+						Version:      version,
+						IsWorkerless: false,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
+				})
+
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot", func() {
+					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						RuntimeConfig: runtimeConfig,
+						Images:        images,
+						Version:       version,
+						IsWorkerless:  true,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+					))
+				})
+
+				It("should configure the watch cache settings if provided", func() {
+					watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
+						Default: ptr.To[int32](123),
+						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
+							{Resource: "foo", CacheSize: 456},
+							{Resource: "bar", CacheSize: 789, APIGroup: ptr.To("baz")},
+						},
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion:  runtimeVersion,
+							WatchCacheSizes: watchCacheSizes,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--default-watch-cache-size=123",
+						"--watch-cache-sizes=foo#456,bar.baz#789",
+					))
+				})
+
+				It("should not configure the watch cache settings if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
+						ContainSubstring("--default-watch-cache-size="),
+						ContainSubstring("--watch-cache-sizes="),
+					))
+				})
+
+				It("should configure the defaultNotReadyTolerationSeconds and defaultUnreachableTolerationSeconds settings if provided", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
+						DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
+						Images:                              images,
+						Version:                             version,
+					})
+
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--default-not-ready-toleration-seconds=120",
+						"--default-unreachable-toleration-seconds=130",
+					))
+				})
+
+				It("should configure the KubeAPISeverLogging settings if provided", func() {
+					logging := &gardencorev1beta1.APIServerLogging{
+						Verbosity:           ptr.To[int32](3),
+						HTTPAccessVerbosity: ptr.To[int32](3),
+					}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							Logging:        logging,
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--vmodule=httplog=3",
+						"--v=3",
+					))
+				})
+
+				It("should not configure the KubeAPISeverLogging settings if not provided", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
+						ContainSubstring("--vmodule=httplog"),
+						ContainSubstring("--v="),
+					))
+				})
+
+				It("should properly configure the settings related to reversed vpn if enabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:  images,
+						Version: version,
+						VPN:     VPNConfig{Enabled: true},
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
+					))
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "ca-vpn",
+							MountPath: "/srv/kubernetes/ca-vpn",
+						},
+						corev1.VolumeMount{
+							Name:      "http-proxy",
+							MountPath: "/etc/srv/kubernetes/envoy",
+						},
+						corev1.VolumeMount{
+							Name:      "egress-selection-config",
+							MountPath: "/etc/kubernetes/egress",
+						},
+					))
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "ca-vpn",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameCAVPN,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "http-proxy",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameHTTPProxy,
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "egress-selection-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "kube-apiserver-egress-selector-config-53d92abc",
+									},
+								},
+							},
+						},
+					))
+				})
+
+				It("should not configure the settings related to oidc if disabled", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
+					Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
+				})
+
+				It("should not configure the settings related to the service account signing key if not provided", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
+					Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("oidc-cabundle")})))
+				})
+
+				It("should have the proper probes", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:                       images,
+						Version:                      semver.MustParse("1.26.9"),
+						StaticTokenKubeconfigEnabled: ptr.To(true),
+					})
+					deployAndRead()
+
+					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {
+						Expect(probe.ProbeHandler.HTTPGet.Path).To(Equal(path))
+						Expect(probe.ProbeHandler.HTTPGet.Scheme).To(Equal(corev1.URISchemeHTTPS))
+						Expect(probe.ProbeHandler.HTTPGet.Port).To(Equal(intstr.FromInt32(443)))
+						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders).To(HaveLen(1))
+						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Name).To(Equal("Authorization"))
+						Expect(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Value).To(ContainSubstring("Bearer "))
+						Expect(len(probe.ProbeHandler.HTTPGet.HTTPHeaders[0].Value)).To(BeNumerically(">", 128))
+						Expect(probe.SuccessThreshold).To(Equal(int32(1)))
+						Expect(probe.FailureThreshold).To(Equal(int32(3)))
+						Expect(probe.InitialDelaySeconds).To(Equal(initialDelaySeconds))
+						Expect(probe.PeriodSeconds).To(Equal(int32(10)))
+						Expect(probe.TimeoutSeconds).To(Equal(int32(15)))
+					}
+
+					validateProbe(deployment.Spec.Template.Spec.Containers[0].LivenessProbe, "/livez", 15)
+					validateProbe(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe, "/readyz", 10)
+				})
+
+				It("should have no lifecycle settings", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
+				})
+
+				It("should properly set the TLS SNI flag if necessary", func() {
+					values.SNI.TLS = []TLSSNIConfig{
+						{SecretName: ptr.To("existing-secret")},
+						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/0/tls.crt,/srv/kubernetes/tls-sni/0/tls.key",
+						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/1/tls.crt,/srv/kubernetes/tls-sni/1/tls.key:foo1.com,*.foo2.com",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "tls-sni-0",
+							MountPath: "/srv/kubernetes/tls-sni/0",
+							ReadOnly:  true,
+						},
+						corev1.VolumeMount{
+							Name:      "tls-sni-1",
+							MountPath: "/srv/kubernetes/tls-sni/1",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "tls-sni-0",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "existing-secret",
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "tls-sni-1",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  "kube-apiserver-tls-sni-1-ec321de5",
+									DefaultMode: ptr.To[int32](0640),
+								},
+							},
+						},
+					))
+				})
+
+				It("should properly configure the audit settings with webhook", func() {
+					values.Audit = &apiserver.AuditConfig{
+						Webhook: &apiserver.AuditWebhook{
+							Kubeconfig:   []byte("foo"),
+							BatchMaxSize: ptr.To[int32](30),
+							Version:      ptr.To("audit.k8s.io/v1beta1"),
+						},
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--audit-webhook-config-file=/etc/kubernetes/webhook/audit/kubeconfig.yaml",
+						"--audit-webhook-batch-max-size=30",
+						"--audit-webhook-version=audit.k8s.io/v1beta1",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "audit-webhook-kubeconfig",
+							MountPath: "/etc/kubernetes/webhook/audit",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "audit-webhook-kubeconfig",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-audit-webhook-kubeconfig-50522102",
+								},
+							},
+						},
+					))
+				})
+
+				It("should properly configure the authentication settings with webhook", func() {
+					values.AuthenticationWebhook = &AuthenticationWebhook{
+						Kubeconfig: []byte("foo"),
+						CacheTTL:   ptr.To(30 * time.Second),
+						Version:    ptr.To("v1beta1"),
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--authentication-token-webhook-config-file=/etc/kubernetes/webhook/authentication/kubeconfig.yaml",
+						"--authentication-token-webhook-cache-ttl=30s",
+						"--authentication-token-webhook-version=v1beta1",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "authentication-webhook-kubeconfig",
+							MountPath: "/etc/kubernetes/webhook/authentication",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "authentication-webhook-kubeconfig",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-authentication-webhook-kubeconfig-50522102",
+								},
+							},
+						},
+					))
+				})
+
+				It("should properly configure the authorization settings with webhook", func() {
+					values.AuthorizationWebhook = &AuthorizationWebhook{
+						Kubeconfig:           []byte("foo"),
+						CacheAuthorizedTTL:   ptr.To(13 * time.Second),
+						CacheUnauthorizedTTL: ptr.To(37 * time.Second),
+						Version:              ptr.To("v1alpha1"),
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--authorization-webhook-config-file=/etc/kubernetes/webhook/authorization/kubeconfig.yaml",
+						"--authorization-webhook-cache-authorized-ttl=13s",
+						"--authorization-webhook-cache-unauthorized-ttl=37s",
+						"--authorization-webhook-version=v1alpha1",
+						"--authorization-mode=RBAC,Webhook",
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "authorization-webhook-kubeconfig",
+							MountPath: "/etc/kubernetes/webhook/authorization",
+							ReadOnly:  true,
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "authorization-webhook-kubeconfig",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-authorization-webhook-kubeconfig-50522102",
+								},
+							},
+						},
+					))
+				})
+			})
+		})
+
+		Describe("Role", func() {
+			var (
+				roleHAVPN = &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-vpn-client-init",
+						Namespace: namespace,
+					},
+				}
+				roleBindingHAVPN = &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver-vpn-client-init",
+						Namespace: namespace,
+					},
+				}
+				serviceAccountHAVPN = &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-apiserver",
+						Namespace: namespace,
+					},
+				}
+			)
+
+			objectsNotExisting := func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(roleHAVPN), roleHAVPN)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingHAVPN), roleBindingHAVPN)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountHAVPN), serviceAccountHAVPN)).To(BeNotFoundError())
+			}
+
+			deployAndRead := func() {
+				objectsNotExisting()
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+			}
+
+			Context("HA VPN role", func() {
+				It("should not deploy role, rolebinding and service account w/o HA VPN", func() {
+					values := Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDR: "4.5.6.0/24",
+						VPN: VPNConfig{
+							Enabled:                              true,
+							HighAvailabilityEnabled:              false,
+							HighAvailabilityNumberOfSeedServers:  2,
+							HighAvailabilityNumberOfShootClients: 3,
+							PodNetworkCIDR:                       "1.2.3.0/24",
+							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+						},
+						Version: version,
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+					objectsNotExisting()
+
+					By("Destroy")
+					Expect(kapi.Destroy(ctx)).To(Succeed())
+					objectsNotExisting()
+				})
+
+				It("should successfully deploy and destroy the role, rolebinding and service account w/ HA VPN", func() {
+					values := Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDR: "4.5.6.0/24",
+						VPN: VPNConfig{
+							Enabled:                              true,
+							HighAvailabilityEnabled:              true,
+							HighAvailabilityNumberOfSeedServers:  2,
+							HighAvailabilityNumberOfShootClients: 3,
+							PodNetworkCIDR:                       "1.2.3.0/24",
+							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+						},
+						Version: version,
+					}
+					kapi = New(kubernetesInterface, namespace, sm, values)
+					deployAndRead()
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(roleHAVPN), roleHAVPN)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(roleBindingHAVPN), roleBindingHAVPN)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountHAVPN), serviceAccountHAVPN)).To(Succeed())
+					Expect(roleHAVPN.Rules).To(DeepEqual([]rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods"},
+							Verbs:     []string{"get", "list", "watch", "patch", "update"},
+						},
+					}))
+					Expect(roleBindingHAVPN.RoleRef).To(DeepEqual(rbacv1.RoleRef{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     "Role",
+						Name:     roleHAVPN.Name,
+					}))
+					Expect(roleBindingHAVPN.Subjects).To(DeepEqual([]rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      serviceAccountHAVPN.Name,
+							Namespace: namespace,
+						},
+					}))
+
+					By("Destroy")
+					Expect(kapi.Destroy(ctx)).To(Succeed())
+					objectsNotExisting()
+				})
+			})
+		})
+	})
+
+	Describe("#Destroy", func() {
+		JustBeforeEach(func() {
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
+			Expect(c.Create(ctx, hvpa)).To(Succeed())
+			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, managedResource)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+		})
+
+		It("should delete all the resources successfully", func() {
+			Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
+			Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+
+			Expect(kapi.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#Wait", func() {
+		JustBeforeEach(func() {
+			deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: GetLabels()}
+		})
+
+		It("should successfully wait for the deployment to be updated", func() {
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			kapi = New(fakeKubernetesInterface, namespace, nil, Values{
+				Values: apiserver.Values{
+					RuntimeVersion: runtimeVersion,
+				},
+				Version: version,
+			})
+			deploy := deployment.DeepCopy()
+
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    GetLabels(),
+				},
+			})).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deploy.Generation = 24
+				deploy.Spec.Replicas = ptr.To[int32](0)
+				deploy.Status.Conditions = []appsv1.DeploymentCondition{
+					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+					{Type: appsv1.DeploymentAvailable, Status: "True"},
+				}
+				deploy.Status.ObservedGeneration = deploy.Generation
+				deploy.Status.Replicas = *deploy.Spec.Replicas
+				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
+				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
+				Expect(fakeClient.Status().Update(ctx, deploy)).To(Succeed())
+			})
+			defer timer.Stop()
+
+			Expect(kapi.Wait(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#WaitCleanup", func() {
+		It("should successfully wait for the deployment to be deleted", func() {
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
+			deploy := deployment.DeepCopy()
+
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				Expect(fakeClient.Delete(ctx, deploy)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(BeNotFoundError())
+			})
+			defer timer.Stop()
+
+			Expect(kapi.WaitCleanup(ctx)).To(Succeed())
+		})
+
+		It("should time out while waiting for the deployment to be deleted", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+
+			Expect(kapi.WaitCleanup(ctx)).To(MatchError(ContainSubstring("context deadline exceeded")))
+		})
+
+		It("should abort due to a severe error while waiting for the deployment to be deleted", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+
+			scheme := runtime.NewScheme()
+			clientWithoutScheme := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+			kubernetesInterface2 := kubernetesfake.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
+			kapi = New(kubernetesInterface2, namespace, nil, Values{})
+
+			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())
+		})
+	})
+
+	Describe("#SetAutoscalingAPIServerResources", func() {
+		It("should properly set the field", func() {
+			v := corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10Mi")}}
+			kapi.SetAutoscalingAPIServerResources(v)
+			Expect(kapi.GetValues().Autoscaling.APIServerResources).To(Equal(v))
+		})
+	})
+
+	Describe("#GetAutoscalingReplicas", func() {
+		It("should properly get the field", func() {
+			v := ptr.To[int32](2)
+			kapi.SetAutoscalingReplicas(v)
+			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
+		})
+	})
+
+	Describe("#SetExternalServer", func() {
+		It("should properly set the field", func() {
+			v := "bar"
+			kapi.SetExternalServer(v)
+			Expect(kapi.GetValues().ExternalServer).To(Equal(v))
+		})
+	})
+
+	Describe("#SetAutoscalingReplicas", func() {
+		It("should properly set the field", func() {
+			v := ptr.To[int32](2)
+			kapi.SetAutoscalingReplicas(v)
+			Expect(kapi.GetValues().Autoscaling.Replicas).To(Equal(v))
+		})
+	})
+
+	Describe("#SetServiceAccountConfig", func() {
+		It("should properly set the field", func() {
+			v := ServiceAccountConfig{Issuer: "foo"}
+			kapi.SetServiceAccountConfig(v)
+			Expect(kapi.GetValues().ServiceAccount).To(Equal(v))
+		})
+	})
+
+	Describe("#SetSNIConfig", func() {
+		It("should properly set the field", func() {
+			v := SNIConfig{AdvertiseAddress: "foo"}
+			kapi.SetSNIConfig(v)
+			Expect(kapi.GetValues().SNI).To(Equal(v))
+		})
+	})
+
+	Describe("#SetExternalHostname", func() {
+		It("should properly set the field", func() {
+			v := "bar"
+			kapi.SetExternalHostname(v)
+			Expect(kapi.GetValues().ExternalHostname).To(Equal(v))
+		})
+	})
+
+	Describe("#ComputeKubeAPIServerServiceAccountConfig", func() {
+		externalHostname := "foo.bar"
+		DescribeTable("should have the expected ServiceAccountConfig config", func(
+			config *gardencorev1beta1.ServiceAccountConfig,
+			rotationPhase gardencorev1beta1.CredentialsRotationPhase,
+			expected ServiceAccountConfig,
+		) {
+			actual := ComputeKubeAPIServerServiceAccountConfig(config, externalHostname, rotationPhase)
+			Expect(actual).To(Equal(expected))
+		},
+			Entry("ServiceAccountConfig is nil",
+				nil,
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer: "https://" + externalHostname,
+				},
+			),
+			Entry("ServiceAccountConfig is default",
+				&gardencorev1beta1.ServiceAccountConfig{},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer: "https://" + externalHostname,
+				},
+			),
+			Entry("Service account key rotation phase is set",
+				&gardencorev1beta1.ServiceAccountConfig{},
+				gardencorev1beta1.RotationCompleting,
+				ServiceAccountConfig{
+					Issuer:        "https://" + externalHostname,
+					RotationPhase: gardencorev1beta1.RotationCompleting,
+				},
+			),
+			Entry("ExtendTokenExpiration and MaxTokenExpiration are set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					ExtendTokenExpiration: ptr.To(true),
+					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:                "https://" + externalHostname,
+					ExtendTokenExpiration: ptr.To(true),
+					MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+				},
+			),
+			Entry("Issuer is set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer: ptr.To("issuer"),
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+			),
+			Entry("AcceptedIssuers is set and Issuer is not",
+				&gardencorev1beta1.ServiceAccountConfig{
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "https://" + externalHostname,
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+			),
+			Entry("AcceptedIssuers and Issuer are both set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer:          ptr.To("issuer"),
+					AcceptedIssuers: []string{"issuer1", "issuer2"},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"issuer1", "issuer2", "https://" + externalHostname},
+				},
+			),
+			Entry("Default Issuer is already part of AcceptedIssuers",
+				&gardencorev1beta1.ServiceAccountConfig{
+					Issuer:          ptr.To("issuer"),
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "issuer",
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+			),
+			Entry("Default Issuer is already part of AcceptedIssuers but Issuer is not set",
+				&gardencorev1beta1.ServiceAccountConfig{
+					AcceptedIssuers: []string{"https://" + externalHostname},
+				},
+				gardencorev1beta1.CredentialsRotationPhase(""),
+				ServiceAccountConfig{
+					Issuer:          "https://" + externalHostname,
+					AcceptedIssuers: []string{},
+				},
+			),
+		)
+	})
+})
+
+func egressSelectorConfigFor(controlPlaneName string) string {
+	return `apiVersion: apiserver.k8s.io/v1alpha1
+egressSelections:
+- connection:
+    proxyProtocol: HTTPConnect
+    transport:
+      tcp:
+        tlsConfig:
+          caBundle: /srv/kubernetes/ca-vpn/bundle.crt
+          clientCert: /etc/srv/kubernetes/envoy/tls.crt
+          clientKey: /etc/srv/kubernetes/envoy/tls.key
+        url: https://vpn-seed-server:9443
+  name: cluster
+- connection:
+    proxyProtocol: Direct
+  name: ` + controlPlaneName + `
+- connection:
+    proxyProtocol: Direct
+  name: etcd
+kind: EgressSelectorConfiguration
+`
+}
+
+func indexOfElement(elements []string, element string) int {
+	for i, e := range elements {
+		if e == element {
+			return i
+		}
+	}
+	return -1
+}

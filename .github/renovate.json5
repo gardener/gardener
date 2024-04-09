@@ -1,0 +1,160 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["kind/enhancement"],
+  "postUpdateOptions": ["gomodTidy"],
+  "customManagers": [
+    {
+      // Update `_VERSION` and `_version` variables in Makefiles and scripts.
+      // Inspired by `regexManagers:dockerfileVersions` preset.
+      "customType": "regex",
+      "fileMatch": ["Makefile$", "\\.mk$", "\\.sh$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *\"?(?<currentValue>.+?)\"?\\s"
+      ]
+    },
+    {
+      // Generic detection for pod-like image specifications.
+      "customType": "regex",
+      "fileMatch": ["^example\/.+\\.yaml$", "^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
+      "matchStrings": ["image: [\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection for install manifests from GitHub releases.
+      "customType": "regex",
+      "fileMatch": ["\/kustomization\\.yaml$"],
+      "matchStrings": [
+        "https:\/\/github\\.com\/(?<depName>[^/]*\/[^/]*?)\/releases\/download\/(?<currentValue>.*?)\/",
+        "https:\/\/raw\\.githubusercontent\\.com\/(?<depName>[^/]*\/[^/]*?)\/(?<currentValue>.*?)\/",
+      ],
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      // Generic detection for cli argument image specifications.
+      "customType": "regex",
+      "fileMatch": ["^hack\/.+\\.sh$"],
+      "matchStrings": ["--image[=| ][\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection of container images in images.yaml via container registry.
+      "customType": "regex",
+      "fileMatch": ["^imagevector\/images.yaml$"],
+      "matchStrings": ["\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      // Generic detection of container images in images.yaml via github releases.
+      "customType": "regex",
+      "fileMatch": ["^imagevector\/images.yaml$"],
+      "matchStrings": ["\\s+sourceRepository:\\s+github.com\/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "separateMinorPatch": true,
+  "packageRules": [
+    {
+      // Group golang updates in one PR.
+      "groupName": "golang",
+      "matchDatasources": ["docker", "go-version"],
+      "matchPackagePatterns": ["golang"],
+    },
+    {
+      // Group istio image updates in one PR.
+      "groupName": "istio images",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
+    },
+    {
+      // Only patch level updates for golang-test image. Minor and major versions are updated manually.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
+      "enabled": false
+    },
+    {
+      // Only patch level updates for kindest/node image. Minor and major versions are updated manually.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": ["kindest\/node"],
+      "enabled": false
+    },
+    {
+      // Go versions must be in sync with golangci-lint.
+      "matchDatasources": ["go"],
+      "matchFileNames": ["hack\/tools\/logcheck\/go\\.mod"],
+      "enabled": false
+    },
+    {
+      // Update only patchlevels of major dependencies like kubernetes, controller-runtime and istio.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["go"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "k8s\\.io\/.+",
+        "sigs\\.k8s\\.io\/controller-runtime",
+        "istio\\.io\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Update only patch levels container images of istio and cluster-autoscaler.
+      // Minor and major upgrades most likely require manual adaptations of the code.
+      "matchDatasources": ["docker", "github-releases"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["imagevector/**"],
+      "matchPackagePatterns": [
+        "gardener\/autoscaler",
+        "gcr\\.io\/istio-release\/.+",
+      ],
+      "enabled": false
+    },
+    {
+      // Do not use docker for images from gardener registry except those which do not work with github-releases.
+      "matchDatasources": ["docker"],
+      "matchFileNames": ["imagevector/**"],
+      "matchPackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/.+"
+      ],
+      "excludePackagePatterns": [
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+",
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubesphere\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Do not use github-releases for external dependencies except those we copy.
+      "matchDatasources": ["github-releases"],
+      "matchFileNames": ["imagevector/**"],
+      "excludePackagePatterns": [
+        "gardener\/.+",
+        "credativ\/.+",
+        "envoyproxy\/.+"
+      ],
+      "enabled": false
+    },
+    {
+      // Ignore dependency updates from k8s.io/kube-openapi because it depends on k8s.io/apiserver.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": ["k8s\\.io\/kube-openapi"],
+      "enabled": false
+    },
+    {
+      // Ignore paths which most likely create false positives.
+      "matchFileNames": [
+          "chart/**",
+          "cmd/**",
+          "extensions/**",
+          "pkg/**",
+          "plugin/**",
+          "test/**",
+          "third_party/**"
+      ],
+      "enabled": false
+    }
+  ]
+}

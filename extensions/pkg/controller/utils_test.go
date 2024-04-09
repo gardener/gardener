@@ -17,10 +17,9 @@ package controller_test
 import (
 	"context"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +30,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Utils", func() {
@@ -83,7 +82,7 @@ var _ = Describe("Utils", func() {
 			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation, types.MergePatchType)
 
 			Expect(RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
-			Expect(len(worker.Annotations)).To(Equal(1))
+			Expect(worker.Annotations).To(HaveLen(1))
 			notdeletedAnnotation, ok := worker.Annotations["test-no-delete-annotation-key"]
 			Expect(ok).To(BeTrue())
 			Expect(notdeletedAnnotation).To(BeEquivalentTo("test-no-delete-annotation-value"))
@@ -285,36 +284,4 @@ var _ = Describe("Utils", func() {
 			Expect(secret).To(Equal(refSecret))
 		})
 	})
-
-	DescribeTable("#UseTokenRequestor",
-		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
-			Expect(UseTokenRequestor(gardenerVersion)).To(matcher)
-		},
-
-		Entry("return true", "v1.36.0-dev", BeTrue()),
-		Entry("return true", "v1.36.0", BeTrue()),
-		Entry("return true", "v1.36.1", BeTrue()),
-		Entry("return true", "v1.37.0", BeTrue()),
-		Entry("return true", "v1.37.1", BeTrue()),
-		Entry("return true", "v1.38.0-dev", BeTrue()),
-		Entry("return false", "v1.35.0", BeTrue()),
-		Entry("return false", "v1.35.9", BeTrue()),
-		Entry("return false", "", BeTrue()),
-	)
-
-	DescribeTable("#UseServiceAccountTokenVolumeProjection",
-		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
-			Expect(UseServiceAccountTokenVolumeProjection(gardenerVersion)).To(matcher)
-		},
-
-		Entry("return true", "v1.37.0-dev", BeTrue()),
-		Entry("return true", "v1.37.0", BeTrue()),
-		Entry("return true", "v1.37.1", BeTrue()),
-		Entry("return true", "v1.38.0", BeTrue()),
-		Entry("return true", "v1.38.1", BeTrue()),
-		Entry("return true", "v1.39.0-dev", BeTrue()),
-		Entry("return false", "v1.36.0", BeTrue()),
-		Entry("return false", "v1.36.9", BeTrue()),
-		Entry("return false", "", BeTrue()),
-	)
 })

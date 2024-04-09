@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -28,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -54,17 +53,17 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 }
 
 func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
-	isLoggingEnabled, err := hasRequiredResources(ctx, k8sSeedClient)
-	if !isLoggingEnabled {
+	enabled, err := hasRequiredResources(ctx, k8sSeedClient)
+	if !enabled {
 		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error())
 		ginkgo.Fail(message)
 	}
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, valiLabels map[string]string, tenant, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
+func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetValiLogs(ctx, valiLabels, tenant, valiNamespace, key, value, c)
+		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -81,7 +80,7 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 			actual += current
 		}
 
-		log := f.Logger.WithValues("expected", expected, "actual", actual)
+		log := shootFramework.Logger.WithValues("expected", expected, "actual", actual)
 
 		if expected > actual {
 			log.Info("Waiting to receive all expected logs")
@@ -99,15 +98,17 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		dumpLogsCtx, dumpLogsCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer dumpLogsCancel()
 
-		f.Logger.Info("Dump Vali logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0", &corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
-			f.Logger.Error(dumpError, "Error dumping logs for pod")
+		shootFramework.Logger.Info("Dump Vali logs")
+		if dumpError := shootFramework.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0",
+			&corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
+			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 
-		f.Logger.Info("Dump Fluent-bit logs")
+		shootFramework.Logger.Info("Dump Fluent-bit logs")
 		labels := client.MatchingLabels{"app": "fluent-bit"}
-		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden", labels); dumpError != nil {
-			f.Logger.Error(dumpError, "Error dumping logs for pod")
+		if dumpError := shootFramework.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden",
+			labels); dumpError != nil {
+			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 	}
 
@@ -136,14 +137,14 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
 			Hibernation: &gardencorev1beta1.Hibernation{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			},
-			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.String("evaluation")),
+			Purpose: (*gardencorev1beta1.ShootPurpose)(ptr.To("evaluation")),
 		},
 		Status: gardencorev1beta1.ShootStatus{
 			LastOperation: &gardencorev1beta1.LastOperation{
 				Progress: 50,
-				// The logs are sent to central loki only if the operation is Create.
+				// The logs are sent to central vali only if the operation is Create.
 				Type: gardencorev1beta1.LastOperationTypeCreate,
 			},
 		},
@@ -178,28 +179,10 @@ func getLoggingShootService(number int) *corev1.Service {
 			Namespace: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:         corev1.ServiceType(corev1.ServiceTypeExternalName),
+			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: "logging-shoot.garden.svc.cluster.local",
 		},
 	}
-}
-
-func getXScopeOrgID(annotations map[string]string) string {
-	for key, value := range annotations {
-		if key == "nginx.ingress.kubernetes.io/configuration-snippet" {
-			configurations := strings.Split(value, ";")
-			for _, config := range configurations {
-				config = strings.TrimLeft(config, "\t \n")
-				if strings.HasPrefix(config, "proxy_set_header") {
-					proxySetHeaderFields := strings.Fields(config)
-					if len(proxySetHeaderFields) == 3 && proxySetHeaderFields[1] == "X-Scope-OrgID" {
-						return proxySetHeaderFields[2]
-					}
-				}
-			}
-		}
-	}
-	return "fake"
 }
 
 func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
@@ -237,12 +220,11 @@ func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) s
 }
 
 func newEmptyDirVolume(name, size string) corev1.Volume {
-	valiDataVolumeSize := resource.MustParse(size)
 	return corev1.Volume{
 		Name: name,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
-				SizeLimit: &valiDataVolumeSize,
+				SizeLimit: ptr.To(resource.MustParse(size)),
 			},
 		},
 	}
@@ -268,3 +250,45 @@ func newGardenNamespace(namespace string) *corev1.Namespace {
 		},
 	}
 }
+
+const valiYaml = `
+auth_enabled: false
+ingester:
+  chunk_target_size: 1536000
+  chunk_idle_period: 3m
+  chunk_block_size: 262144
+  chunk_retain_period: 3m
+  max_transfer_retries: 3
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+    min_ready_duration: 1s
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+schema_config:
+  configs:
+  - from: 2018-04-15
+    store: boltdb
+    object_store: filesystem
+    schema: v11
+    index:
+      prefix: index_
+      period: 24h
+server:
+  http_listen_port: 3100
+storage_config:
+  boltdb:
+    directory: /data/vali/index
+  filesystem:
+    directory: /data/vali/chunks
+chunk_store_config:
+  max_look_back_period: 360h
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 360h
+`

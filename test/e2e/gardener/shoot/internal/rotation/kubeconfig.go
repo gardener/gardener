@@ -42,7 +42,7 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 	By("Verify old kubeconfig secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(BeEmpty())),
 			HaveKeyWithValue("kubeconfig", Not(BeEmpty())),
@@ -73,7 +73,7 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify new kubeconfig secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(Equal(v.oldKubeconfigData["ca.crt"]))),
 			HaveKeyWithValue("kubeconfig", Not(Equal(v.oldKubeconfigData["kubeconfig"]))),
@@ -92,7 +92,7 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 }
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *KubeconfigVerifier) ExpectCompletingStatus(g Gomega) {
+func (v *KubeconfigVerifier) ExpectCompletingStatus(_ Gomega) {
 	// there is no second phase for the kubeconfig rotation
 }
 
@@ -104,7 +104,7 @@ func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify new kubeconfig secret with new CA")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("ca.crt", Not(Equal(v.newKubeconfigData["ca.crt"]))),
 			HaveKeyWithValue("kubeconfig", Not(Equal(v.newKubeconfigData["kubeconfig"]))),

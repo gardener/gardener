@@ -76,7 +76,7 @@ check-not-initial() {
   else
     local yqResult
     yqResult=$(yq "${yqArg}" "$file")
-    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]]; then
+    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]] || [[  $yqResult == "{}" ]]; then
       echo "\"$yqArg\" in file \"$file\" is empty or does not exist. Please check your config."
       exit 1
     fi
@@ -100,21 +100,47 @@ ensure-gardener-dns-annotations() {
 }
 
 echo "Ensuring config files"
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml
 
 echo "Check if essential config options are initialized"
-check-not-initial $seed_kubeconfig ""
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.provider"
+check-not-initial "$seed_kubeconfig" ""
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 1) | .metadata.name'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 1) | .metadata.labels["project.gardener.cloud/name"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 2) | .metadata.name'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/project.yaml 'select(document_index == 2) | .spec.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.metadata.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml '.data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.metadata.namespace'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.provider.type'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml '.secretRef.namespace'
+
+role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+
+if [[ $role1 != "default-domain" ]]; then
+  echo "first secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=default-domain"
+  exit 1
+fi
+if [[ $role2 != "internal-domain" ]]; then
+  echo "second secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=internal-domain"
+  exit 1
+fi
 
 registry_domain=
 relay_domain=
 
-internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
-dns_provider_type=$(yq -e '.global.internalDomain.provider' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml)
+internal_dns_secret=$(yq -e 'select(document_index == 1) | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+dns_provider_type=$(yq -e 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 
 if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"; then
   use_shoot_info="true"
@@ -195,10 +221,16 @@ fi
 
 echo "Create host and client keys for SSH reverse tunnel"
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/prepare-seed-dir.sh "$seed_name"
-"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$seed_name" "$relay_domain" 6222
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$seed_name" "$relay_domain" 443
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$seed_name" "$relay_domain"
 
 echo "Deploying kyverno, SSH reverse tunnel and container registry"
+echo "Checking if kyverno version older than v1.10.0 is deployed"
+if kubectl get deployments --kubeconfig "$seed_kubeconfig" -n kyverno kyverno; then
+  echo "Migrating from previous version of kyverno"
+  kubectl delete deployments --kubeconfig "$seed_kubeconfig" -n kyverno kyverno kyverno-cleanup-controller
+  until [ "$(kubectl --kubeconfig "$seed_kubeconfig" get pods -n kyverno | wc -l)" = "0" ] ; do date; sleep 1; echo ""; done
+fi
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies

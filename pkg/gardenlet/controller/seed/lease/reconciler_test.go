@@ -16,7 +16,7 @@ package lease_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -32,7 +32,7 @@ import (
 	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -88,13 +88,13 @@ var _ = Describe("LeaseReconciler", func() {
 				}},
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.String(seed.Name),
-				LeaseDurationSeconds: pointer.Int32(2),
+				HolderIdentity:       ptr.To(seed.Name),
+				LeaseDurationSeconds: ptr.To[int32](2),
 				RenewTime:            &renewTime,
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).WithStatusSubresource(&gardencorev1beta1.Seed{}).Build()
 		seedRESTClient = &fakerestclient.RESTClient{
 			NegotiatedSerializer: serializer.NewCodecFactory(kubernetes.GardenScheme).WithoutConversion(),
 			Resp: &http.Response{
@@ -104,8 +104,8 @@ var _ = Describe("LeaseReconciler", func() {
 		}
 
 		controllerConfig = config.SeedControllerConfiguration{
-			LeaseResyncSeconds:       pointer.Int32(2),
-			LeaseResyncMissThreshold: pointer.Int32(10),
+			LeaseResyncSeconds:       ptr.To[int32](2),
+			LeaseResyncMissThreshold: ptr.To[int32](10),
 		}
 	})
 
@@ -161,9 +161,9 @@ var _ = Describe("LeaseReconciler", func() {
 
 	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
 		expectedCondition = gardenletReadyCondition(clock)
-		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
+		expectedLease.Spec.LeaseDurationSeconds = ptr.To[int32](3)
 
-		reconciler.Config.LeaseResyncSeconds = pointer.Int32(3)
+		reconciler.Config.LeaseResyncSeconds = ptr.To[int32](3)
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 3 * time.Second}))
@@ -249,14 +249,14 @@ type failingLeaseClient struct {
 
 func (c failingLeaseClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 	if _, ok := obj.(*coordinationv1.Lease); ok {
-		return fmt.Errorf("fake")
+		return errors.New("fake")
 	}
 	return c.Client.Create(ctx, obj, opts...)
 }
 
 func (c failingLeaseClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	if _, ok := obj.(*coordinationv1.Lease); ok {
-		return fmt.Errorf("fake")
+		return errors.New("fake")
 	}
 	return c.Client.Update(ctx, obj, opts...)
 }

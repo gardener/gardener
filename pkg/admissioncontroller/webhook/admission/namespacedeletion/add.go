@@ -43,7 +43,7 @@ func (h *Handler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	webhook := admission.
-		WithCustomValidator(&corev1.Namespace{}, h).
+		WithCustomValidator(mgr.GetScheme(), &corev1.Namespace{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

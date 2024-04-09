@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -31,7 +31,7 @@ func ProjectNamespaceIndexerFunc(obj client.Object) []string {
 	if !ok {
 		return []string{""}
 	}
-	return []string{pointer.StringDeref(project.Spec.Namespace, "")}
+	return []string{ptr.Deref(project.Spec.Namespace, "")}
 }
 
 // BackupBucketSeedNameIndexerFunc extracts the .spec.seedName field of a BackupBucket.
@@ -40,7 +40,7 @@ func BackupBucketSeedNameIndexerFunc(obj client.Object) []string {
 	if !ok {
 		return []string{""}
 	}
-	return []string{pointer.StringDeref(backupBucket.Spec.SeedName, "")}
+	return []string{ptr.Deref(backupBucket.Spec.SeedName, "")}
 }
 
 // BackupEntryBucketNameIndexerFunc extracts the .spec.bucketName field of a BackupEntry.
@@ -59,6 +59,15 @@ func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 		return []string{""}
 	}
 	return []string{controllerInstallation.Spec.SeedRef.Name}
+}
+
+// ControllerInstallationRegistrationRefNameIndexerFunc extracts the .spec.registrationRef.name field of a ControllerInstallation.
+func ControllerInstallationRegistrationRefNameIndexerFunc(obj client.Object) []string {
+	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+	if !ok {
+		return []string{""}
+	}
+	return []string{controllerInstallation.Spec.RegistrationRef.Name}
 }
 
 // InternalSecretTypeIndexerFunc extracts the .type field of an InternalSecret.
@@ -85,7 +94,7 @@ func AddShootSeedName(ctx context.Context, indexer client.FieldIndexer) error {
 		if !ok {
 			return []string{""}
 		}
-		return []string{pointer.StringDeref(shoot.Spec.SeedName, "")}
+		return []string{ptr.Deref(shoot.Spec.SeedName, "")}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootSeedName, err)
 	}
@@ -99,7 +108,7 @@ func AddShootStatusSeedName(ctx context.Context, indexer client.FieldIndexer) er
 		if !ok {
 			return []string{""}
 		}
-		return []string{pointer.StringDeref(shoot.Status.SeedName, "")}
+		return []string{ptr.Deref(shoot.Status.SeedName, "")}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to Shoot Informer: %w", core.ShootStatusSeedName, err)
 	}
@@ -121,7 +130,7 @@ func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) er
 		if !ok {
 			return []string{""}
 		}
-		return []string{pointer.StringDeref(backupEntry.Spec.SeedName, "")}
+		return []string{ptr.Deref(backupEntry.Spec.SeedName, "")}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntrySeedName, err)
 	}
@@ -146,13 +155,7 @@ func AddControllerInstallationSeedRefName(ctx context.Context, indexer client.Fi
 
 // AddControllerInstallationRegistrationRefName adds an index for core.ControllerInstallationRegistrationRefName to the given indexer.
 func AddControllerInstallationRegistrationRefName(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, func(obj client.Object) []string {
-		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return []string{""}
-		}
-		return []string{controllerInstallation.Spec.RegistrationRef.Name}
-	}); err != nil {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, ControllerInstallationRegistrationRefNameIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.RegistrationRefName, err)
 	}
 	return nil

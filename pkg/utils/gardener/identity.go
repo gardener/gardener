@@ -22,8 +22,11 @@ import (
 	"strings"
 
 	"k8s.io/component-base/version"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -52,6 +55,7 @@ func DetermineIdentity() (*gardencorev1beta1.Gardener, error) {
 		reader := bufio.NewReader(cGroupFile)
 
 		var cgroupV1 string
+
 		for {
 			line, err := reader.ReadString('\n')
 			if err != nil {
@@ -107,4 +111,29 @@ func extractID(line string) string {
 	id = strings.TrimPrefix(id, "docker-")
 
 	return id
+}
+
+// MaintainSeedNameLabels maintains the seed.gardener.cloud/<name>=true labels on the given object.
+func MaintainSeedNameLabels(obj client.Object, names ...*string) {
+	labels := obj.GetLabels()
+
+	for k := range labels {
+		if strings.HasPrefix(k, v1beta1constants.LabelPrefixSeedName) {
+			delete(labels, k)
+		}
+	}
+
+	for _, name := range names {
+		if ptr.Deref(name, "") == "" {
+			continue
+		}
+
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+
+		labels[v1beta1constants.LabelPrefixSeedName+*name] = "true"
+	}
+
+	obj.SetLabels(labels)
 }

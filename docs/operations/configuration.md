@@ -5,8 +5,9 @@ Additionally, it has several extension points allowing external controllers to p
 As a consequence, there are several configuration options for the various custom resources that are partially required.
 
 This document describes the:
+
 1. [Configuration and usage of Gardener as operator/administrator](#configuration-and-usage-of-gardener-as-operatoradministrator).
-2. [Configuration and usage of Gardener as end-user/stakeholder/customer](#configuration-and-usage-of-gardener-as-end-userstakeholdercustomer).
+1. [Configuration and usage of Gardener as end-user/stakeholder/customer](#configuration-and-usage-of-gardener-as-end-userstakeholdercustomer).
 
 ## Configuration and Usage of Gardener as Operator/Administrator
 
@@ -15,9 +16,9 @@ Gardener consists of the following components:
 
 1. `gardener-apiserver`, a Kubernetes-native API extension that serves custom resources in the Kubernetes-style (like `Seed`s and `Shoot`s), and a component that contains multiple admission plugins.
 1. `gardener-admission-controller`, an HTTP(S) server with several handlers to be used in a [ValidatingWebhookConfiguration](../../charts/gardener/controlplane/charts/application/templates/validatingwebhook-admission-controller.yaml).
-2. `gardener-controller-manager`, a component consisting of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Project`s).
-3. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
-4. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
+1. `gardener-controller-manager`, a component consisting of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Project`s).
+1. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
+1. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
 
 Each of these components have various configuration options.
 The `gardener-apiserver` uses the standard API server library maintained by the Kubernetes community, and as such it mainly supports command line flags.
@@ -71,11 +72,11 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
     * This external AlertManager is not managed by Gardener and can be configured however the operator sees fit.
     * Supported authentication types are no authentication, basic, or mutual TLS.
 
-* **OpenVPN Diffie-Hellmann Key secret** (optional) - contains the self-generated Diffie-Hellmann key used by OpenVPN in your landscape, please see this [yaml file](../../example/10-secret-openvpn-diffie-hellman.yaml) for an example.
-  * If you don't specify a custom key, then a default key is used, but for productive landscapes it's recommend to create a landscape-specific key and define it.
-
 * **Global monitoring secrets** (optional) - contains basic authentication credentials for the Prometheus aggregating metrics for all clusters.
   * These secrets are synced to each seed cluster and used to gain access to the aggregate monitoring components.
+
+* **Shoot Service Account Issuer secret** (optional) - contains the configuration needed to centrally configure gardenlets in order to implement [GEP-24](../proposals/24-shoot-oidc-issuer.md). Please see [the example configuration](../../example/10-secret-shoot-service-account-issuer.yaml) for more details. In addition to that, the [`ShootManagedIssuer`](../deployment/feature_gates.md#list-of-feature-gates) gardenlet feature gate should be enabled in order for configurations to take effect.
+  * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured.
 
 Apart from this "static" configuration there are several custom resources extending the Kubernetes API and used by Gardener.
 As an operator/administrator, you have to configure some of them to make the system work.

@@ -22,7 +22,7 @@ function camelCase {
   sed -r 's/(.)-+(.)/\1\U\2/g;s/^[a-z]/\U&/' <<< "$1"
 }
 
-package_name="${1:-charts}"
+package_name="${1:-imagevector}"
 images_yaml="${2:-images.yaml}"
 
 out="
@@ -34,7 +34,7 @@ package $package_name
 
 const ("
 
-for image_name in $(yaml2json < "$images_yaml" | jq -r '[.images[].name] | unique | .[]'); do
+for image_name in $(yq -r '[.images[].name] | sort | unique | .[]' $images_yaml); do
   variable_name="$(camelCase "$image_name")"
 
   out="

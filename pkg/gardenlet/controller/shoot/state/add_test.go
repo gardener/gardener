@@ -17,7 +17,7 @@ package state_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -36,46 +36,6 @@ var _ = Describe("Add", func() {
 	BeforeEach(func() {
 		reconciler = &Reconciler{SeedName: seedName}
 		shoot = &gardencorev1beta1.Shoot{}
-	})
-
-	Describe("#SeedNamePredicate", func() {
-		var p predicate.Predicate
-
-		BeforeEach(func() {
-			p = reconciler.SeedNamePredicate()
-		})
-
-		It("should return false because new object is no shoot", func() {
-			Expect(p.Create(event.CreateEvent{})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false because seed name is not set", func() {
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeFalse())
-		})
-
-		It("should return false because seed name does not match", func() {
-			shoot.Spec.SeedName = pointer.String("some-seed")
-
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeFalse())
-		})
-
-		It("should return true because seed name matches", func() {
-			shoot.Spec.SeedName = &seedName
-
-			Expect(p.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: shoot})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{Object: shoot})).To(BeTrue())
-		})
 	})
 
 	Describe("#SeedNameChangedPredicate", func() {
@@ -106,7 +66,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because seed name changed", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = pointer.String("new-seed")
+				shoot.Spec.SeedName = ptr.To("new-seed")
 
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})

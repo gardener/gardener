@@ -17,18 +17,15 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -45,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -63,19 +59,6 @@ func AddToManager(
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
-	}
-
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
-	if err != nil {
-		return fmt.Errorf("failed reading image vector override: %w", err)
-	}
-
-	var componentImageVectors imagevector.ComponentImageVectors
-	if path := os.Getenv(imagevector.ComponentOverrideEnv); path != "" {
-		componentImageVectors, err = imagevector.ReadComponentOverwriteFile(path)
-		if err != nil {
-			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
-		}
 	}
 
 	configMap := &corev1.ConfigMap{}
@@ -123,7 +106,6 @@ func AddToManager(
 
 	if err := (&managedseed.Reconciler{
 		Config:         *cfg,
-		ImageVector:    imageVector,
 		ShootClientMap: shootClientMap,
 	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
@@ -133,19 +115,19 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
-	if err := seed.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
+	if err := seed.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
-	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, imageVector); err != nil {
+	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 
 	if err := (&tokenrequestor.Reconciler{
-		ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+		ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 		Clock:           clock.RealClock{},
 		JitterFunc:      wait.Jitter,
-		Class:           pointer.String(resourcesv1alpha1.ResourceManagerClassGarden),
+		Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassGarden),
 		TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
 	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding token requestor controller: %w", err)

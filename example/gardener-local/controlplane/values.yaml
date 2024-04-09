@@ -160,8 +160,10 @@ global:
     featureGates:
       IPv6SingleStack: true
       MutableShootSpecNetworkingNodes: true
-      WorkerlessShoots: true
+      ShootForceDeletion: true
     resources: {}
+    podLabels:
+      networking.resources.gardener.cloud/to-all-webhook-targets: allowed
 
   # Gardener admission controller configuration values
   admission:
@@ -263,13 +265,6 @@ global:
     resources: {}
 
   # General system configuration
-  internalDomain:
-    provider: local
-    domain: internal.local.gardener.cloud
-  defaultDomains:
-  - provider: local
-    domain: external.local.gardener.cloud
-
   rbac:
     seedAuthorizer:
       enabled: true

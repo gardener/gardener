@@ -24,7 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -89,9 +89,7 @@ var _ = Describe("Deployment", func() {
 	)
 
 	Describe("#IsDeploymentProgressing", func() {
-		var (
-			deployment *appsv1.Deployment
-		)
+		var deployment *appsv1.Deployment
 
 		BeforeEach(func() {
 			deployment = &appsv1.Deployment{
@@ -175,7 +173,7 @@ var _ = Describe("Deployment", func() {
 					Namespace: "namespace",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: labels},
 				},
 			}
@@ -183,7 +181,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should consider the deployment as updated", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 				{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -210,7 +208,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since there are still terminating pods", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 				{Type: appsv1.DeploymentAvailable, Status: "True"},
@@ -239,7 +237,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since it is not healthy", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
 			}
@@ -257,7 +255,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should not consider the deployment as updated since it is not progressing", func() {
 			deployment.Generation = 24
-			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Spec.Replicas = ptr.To[int32](1)
 			deployment.Status.Conditions = []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Status: "False", Message: "whatever message"},
 			}
@@ -270,6 +268,59 @@ var _ = Describe("Deployment", func() {
 
 			ok, err := health.IsDeploymentUpdated(fakeClient, deployment)(ctx)
 			Expect(err).To(MatchError(ContainSubstring("whatever message")))
+			Expect(ok).To(BeFalse())
+		})
+	})
+
+	Describe("#DeploymentHasExactNumberOfPods", func() {
+		var (
+			ctx        = context.TODO()
+			fakeClient client.Client
+
+			deployment *appsv1.Deployment
+			pod        *corev1.Pod
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			deployment = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deploy",
+					Namespace: "namespace",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: ptr.To[int32](1),
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+				},
+			}
+			pod = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "pod-",
+					Namespace:    deployment.Namespace,
+					Labels:       deployment.Spec.Selector.MatchLabels,
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+		})
+
+		It("should consider the deployment as updated", func() {
+			Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should not consider the deployment as updated since there are still terminating pods", func() {
+			for i := 0; i < 2; i++ {
+				p := pod.DeepCopy()
+				Expect(fakeClient.Create(ctx, p)).To(Succeed())
+			}
+
+			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeFalse())
 		})
 	})

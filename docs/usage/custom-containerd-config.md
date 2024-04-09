@@ -4,7 +4,7 @@ title: Custom containerd Configuration
 
 # Custom `containerd` Configuration
 
-In case a `Shoot` cluster uses `containerd` (see [Kubernetes dockershim Removal](docker-shim-removal.md)) for more information), it is possible to make the `containerd` process load custom configuration files.
+In case a `Shoot` cluster uses `containerd`, it is possible to make the `containerd` process load custom configuration files.
 Gardener initializes `containerd` with the following statement:
 
 ```toml

@@ -15,6 +15,8 @@
 package validation
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -27,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 var (
@@ -39,6 +42,8 @@ var (
 	)
 	availableSeedOperations = sets.New(
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+		v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.GardenerOperationRenewKubeconfig,
 	)
 )
 
@@ -58,6 +63,7 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
@@ -105,10 +111,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		zones.Insert(zone)
 	}
 
-	if seedSpec.SecretRef != nil {
-		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
-	}
-
 	allErrs = append(allErrs, validateSeedNetworks(seedSpec.Networks, fldPath.Child("networks"), inTemplate)...)
 
 	if seedSpec.Backup != nil {
@@ -141,7 +143,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Volume != nil {
 		if seedSpec.Volume.MinimumSize != nil {
-			allErrs = append(allErrs, ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
 		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))
@@ -161,6 +163,17 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	if seedSpec.Settings != nil {
+		if seedSpec.Settings.ExcessCapacityReservation != nil {
+			for i, config := range seedSpec.Settings.ExcessCapacityReservation.Configs {
+				if len(config.Resources) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources"), "cannot be empty"))
+				}
+				for resource, value := range config.Resources {
+					allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+				}
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings", "excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
+			}
+		}
 		if seedSpec.Settings.LoadBalancerServices != nil {
 			allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
 
@@ -267,11 +280,16 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(networks, string(primaryIPFamily))...)
+	// Don't check IP family in dualstack case.
+	if len(seedNetworks.IPFamilies) != 2 {
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(networks, string(primaryIPFamily))...)
+	}
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
 	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
 	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
+	vpnRangeV6 := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRangeV6, field.NewPath(""))
+	allErrs = append(allErrs, vpnRangeV6.ValidateNotOverlap(networks...)...)
 
 	return allErrs
 }
@@ -338,6 +356,20 @@ func validateSeedOperation(operation string, fldPath *field.Path) field.ErrorLis
 
 	if operation != "" && !availableSeedOperations.Has(operation) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableSeedOperations)))
+	}
+
+	return allErrs
+}
+
+func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newOperation == "" || oldOperation == "" {
+		return allErrs
+	}
+
+	if newOperation != oldOperation {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("must not overwrite operation %q with %q", oldOperation, newOperation)))
 	}
 
 	return allErrs

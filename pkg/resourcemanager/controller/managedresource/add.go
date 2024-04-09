@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -60,7 +60,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		r.TargetRESTMapper = targetCluster.GetRESTMapper()
 	}
 	if r.RequeueAfterOnDeletionPending == nil {
-		r.RequeueAfterOnDeletionPending = pointer.Duration(5 * time.Second)
+		r.RequeueAfterOnDeletionPending = ptr.To(5 * time.Second)
 	}
 
 	c, err := builder.
@@ -85,7 +85,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			),
 		)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(reconcilerutils.OperationAnnotationWrapper(
 			mgr,
@@ -97,7 +97,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapSecretToManagedResources(
 			r.ClassFilter,
 			predicate.Or(

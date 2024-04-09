@@ -107,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false)
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.Client, gardenerutils.ComputeGardenNamespace(seed.Name), false, false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -310,12 +310,14 @@ func computeWantedControllerRegistrationNames(
 	)
 
 	for name, controllerRegistration := range controllerRegistrations {
-		if controllerRegistration.deployAlways && seedObjectMeta.DeletionTimestamp == nil {
-			wantedControllerRegistrationNames.Insert(name)
-		}
+		if controllerRegistration.obj.DeletionTimestamp == nil {
+			if controllerRegistration.deployAlways && seedObjectMeta.DeletionTimestamp == nil {
+				wantedControllerRegistrationNames.Insert(name)
+			}
 
-		if controllerRegistration.deployAlwaysExceptNoShoots && numberOfShoots > 0 {
-			wantedControllerRegistrationNames.Insert(name)
+			if controllerRegistration.deployAlwaysExceptNoShoots && numberOfShoots > 0 {
+				wantedControllerRegistrationNames.Insert(name)
+			}
 		}
 
 		for _, resource := range controllerRegistration.obj.Spec.Resources {

@@ -33,6 +33,7 @@ func setCommonEncoderConfigOptions(encoderConfig *zapcore.EncoderConfig) {
 func MustNewZapLogger(level string, format string, additionalOpts ...logzap.Opts) logr.Logger {
 	logger, err := NewZapLogger(level, format, additionalOpts...)
 	utilruntime.Must(err)
+
 	return logger
 }
 
@@ -42,6 +43,7 @@ func NewZapLogger(level string, format string, additionalOpts ...logzap.Opts) (l
 
 	// map our log levels to zap levels
 	var zapLevel zapcore.LevelEnabler
+
 	switch level {
 	case DebugLevel:
 		zapLevel = zap.DebugLevel
@@ -52,6 +54,7 @@ func NewZapLogger(level string, format string, additionalOpts ...logzap.Opts) (l
 	default:
 		return logr.Logger{}, fmt.Errorf("invalid log level %q", level)
 	}
+
 	opts = append(opts, logzap.Level(zapLevel))
 
 	// map our log format to encoder

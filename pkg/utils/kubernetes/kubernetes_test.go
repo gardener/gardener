@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package kubernetes_test
 
 import (
 	"context"
@@ -25,10 +25,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,16 +41,17 @@ import (
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("kubernetes", func() {
@@ -423,13 +424,13 @@ var _ = Describe("kubernetes", func() {
 		port2 = corev1.ServicePort{
 			Name:       "port2",
 			Port:       1234,
-			TargetPort: intstr.FromInt(5678),
+			TargetPort: intstr.FromInt32(5678),
 		}
 		port3 = corev1.ServicePort{
 			Name:       "port3",
 			Protocol:   corev1.ProtocolTCP,
 			Port:       1234,
-			TargetPort: intstr.FromInt(5678),
+			TargetPort: intstr.FromInt32(5678),
 			NodePort:   9012,
 		}
 		desiredPorts = []corev1.ServicePort{port1, port2, port3}
@@ -643,7 +644,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return nil
 						}),
@@ -666,7 +667,7 @@ var _ = Describe("kubernetes", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
 					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						func(_ context.Context, _ *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return errors.New("foo")
 						}),
@@ -752,7 +753,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, podList)
 
 			obj, err := NewestObject(ctx, c, podList, nil)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(BeNil())
 		})
 
@@ -769,7 +770,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			obj, err := NewestObject(ctx, c, podList, nil)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(Equal(obj2))
 			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1, *obj2}))
 		})
@@ -786,7 +787,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			obj, err := NewestObject(ctx, c, podList, filterFn)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(obj).To(Equal(obj1))
 			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1}))
 		})
@@ -921,7 +922,7 @@ var _ = Describe("kubernetes", func() {
 
 		BeforeEach(func() {
 			podSelector, err := metav1.LabelSelectorAsSelector(replicaSet1.Spec.Selector)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			podListOptions = append(rsListOptions, client.MatchingLabelsSelector{Selector: podSelector})
 		})
 
@@ -937,7 +938,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...)
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
@@ -1048,7 +1049,7 @@ var _ = Describe("kubernetes", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), podListOptions...)
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(BeNil())
 		})
 
@@ -1063,7 +1064,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(pod).To(Equal(pod1))
 		})
 	})
@@ -1367,7 +1368,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To[int64](300),
 				}
 
 				toleration2 := corev1.Toleration{
@@ -1375,7 +1376,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To[int64](300),
 				}
 
 				Expect(toleration1).ToNot(BeIdenticalTo(toleration2))
@@ -1392,7 +1393,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(299),
+					TolerationSeconds: ptr.To[int64](299),
 				}
 
 				toleration2 := corev1.Toleration{
@@ -1400,7 +1401,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Operator:          corev1.TolerationOpEqual,
 					Value:             "someValue",
 					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: pointer.Int64(300),
+					TolerationSeconds: ptr.To[int64](300),
 				}
 
 				toleration1 = comparabelTolerations.Transform(toleration1)

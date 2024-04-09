@@ -23,7 +23,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -108,7 +108,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 		Consistently(verifyNotInvalidated).Should(BeTrue())
 
 		By("Update ServiceAccount with automountServiceAccountToken=true")
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 		Expect(testClient.Update(ctx, serviceAccount)).To(Succeed())
 
 		By("Ensure token is still not getting invalidated")
@@ -117,7 +117,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 
 	It("should invalidate the token", func() {
 		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
@@ -134,7 +134,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 
 	It("should invalidate the token and then regenerate it", func() {
 		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
@@ -176,7 +176,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 		By("Create Secret and ServiceAccount with automountServiceAccountToken=false")
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 

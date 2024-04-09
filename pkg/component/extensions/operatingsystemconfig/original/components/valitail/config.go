@@ -17,57 +17,36 @@ package valitail
 import (
 	"bytes"
 	_ "embed"
-	"fmt"
+	"errors"
 	"net/url"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
-	"k8s.io/utils/pointer"
+	"github.com/Masterminds/sprig/v3"
+	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 var (
-	tplNameFetchToken = "fetch-token"
-	//go:embed templates/scripts/fetch-token.tpl.sh
-	tplContentFetchToken string
-	tplFetchToken        *template.Template
-
-	tplNameValitail = "fetch-token"
+	tplNameValitail = "config"
 	//go:embed templates/valitail-config.tpl.yaml
 	tplContentValitail string
 	tplValitail        *template.Template
 )
 
 func init() {
-	var err error
-	tplFetchToken, err = template.
-		New(tplNameFetchToken).
-		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentFetchToken)
-	if err != nil {
-		panic(err)
-	}
-
-	tplValitail, err = template.
+	tplValitail = template.Must(template.
 		New(tplNameValitail).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentValitail)
-	if err != nil {
-		panic(err)
-	}
+		Parse(tplContentValitail))
 }
 
 func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
-	var config bytes.Buffer
-
 	if ctx.ValiIngress == "" {
-		return extensionsv1alpha1.File{}, fmt.Errorf("vali ingress url is missing")
+		return extensionsv1alpha1.File{}, errors.New("vali ingress url is missing")
 	}
 
 	apiServerURL, err := url.Parse(ctx.APIServerURL)
@@ -75,6 +54,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 		return extensionsv1alpha1.File{}, err
 	}
 
+	var config bytes.Buffer
 	if err := tplValitail.Execute(&config, map[string]interface{}{
 		"clientURL":         "https://" + ctx.ValiIngress + "/vali/api/v1/push",
 		"pathCACert":        PathCACert,
@@ -88,7 +68,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To[int32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -103,9 +83,10 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	if ctx.CABundle != nil {
 		cABundle = []byte(*ctx.CABundle)
 	}
+
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To[int32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -115,15 +96,14 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	}
 }
 
-func getValitailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
+func getValitailUnit() extensionsv1alpha1.Unit {
 	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: pointer.String("start"),
-		Enable:  pointer.Bool(true),
-		Content: pointer.String(`[Unit]
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
-After=` + unitNameFetchToken + `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -138,63 +118,8 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail.service || true"
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=` + execStartPre + `
-ExecStart=` + execStart),
-	}
-}
-
-func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
-	var script bytes.Buffer
-	if err := tplFetchToken.Execute(&script, map[string]interface{}{
-		"pathCredentialsToken":  downloader.PathCredentialsToken,
-		"pathCredentialsServer": downloader.PathCredentialsServer,
-		"pathCredentialsCACert": downloader.PathCredentialsCACert,
-		"pathAuthToken":         PathAuthToken,
-		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
-		"secretName":            vali.ValitailTokenSecretName,
-	}); err != nil {
-		return extensionsv1alpha1.File{}, err
-	}
-
-	return extensionsv1alpha1.File{
-		Path:        PathFetchTokenScript,
-		Permissions: pointer.Int32(0744),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64(script.Bytes()),
-			},
-		},
-	}, nil
-}
-
-func getFetchTokenScriptUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
-	unitContent := `[Unit]
-Description=valitail token fetcher
-After=` + downloader.UnitName + `
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-RestartSec=300
-RuntimeMaxSec=120
-EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl stop promtail-fetch-token.service || true"`
-
-	if execStartPre != "" {
-		unitContent += `
-ExecStartPre=` + execStartPre
-	}
-
-	unitContent += `
-ExecStart=` + execStart
-
-	return extensionsv1alpha1.Unit{
-		Name:    unitNameFetchToken,
-		Command: pointer.String("start"),
-		Enable:  pointer.Bool(true),
-		Content: &unitContent,
+ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/valitail -config.file=` + PathConfig),
+		FilePaths: []string{PathConfig, PathCACert, valitailBinaryPath},
 	}
 }

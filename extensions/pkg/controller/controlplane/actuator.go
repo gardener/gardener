@@ -29,6 +29,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (bool, error)
 	// Delete deletes the ControlPlane.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the ControlPlane.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) error
 	// Restore restores the ControlPlane.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (bool, error)
 	// Migrate migrates the ControlPlane.

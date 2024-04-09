@@ -15,8 +15,6 @@
 package helper_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -76,18 +74,18 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
+			egressRules, err := GetEgressRules(subsets...)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip2),
+								CIDR: ip2 + "/32",
 							},
 						},
 					},
@@ -96,22 +94,23 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip3),
+								CIDR: ip3 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip4),
+								CIDR: ip4 + "/32",
 							},
 						},
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip2),
+								CIDR: ip2 + "/32",
 							},
 						},
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 
@@ -149,15 +148,15 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
+			egressRules, err := GetEgressRules(subsets...)
 
-			port443 := intstr.FromInt(443)
+			port443 := intstr.FromInt32(443)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 					},
@@ -172,7 +171,7 @@ var _ = Describe("helper", func() {
 					To: []networkingv1.NetworkPolicyPeer{
 						{
 							IPBlock: &networkingv1.IPBlock{
-								CIDR: fmt.Sprintf("%s/32", ip1),
+								CIDR: ip1 + "/32",
 							},
 						},
 					},
@@ -184,6 +183,7 @@ var _ = Describe("helper", func() {
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 
@@ -211,9 +211,9 @@ var _ = Describe("helper", func() {
 				}
 			)
 
-			egressRules := GetEgressRules(subsets...)
-			port443 := intstr.FromInt(443)
-			port161 := intstr.FromInt(161)
+			egressRules, err := GetEgressRules(subsets...)
+			port443 := intstr.FromInt32(443)
+			port161 := intstr.FromInt32(161)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
@@ -232,6 +232,7 @@ var _ = Describe("helper", func() {
 					},
 				},
 			}
+			Expect(err).ToNot(HaveOccurred())
 			Expect(egressRules).To(Equal(expectedRules))
 		})
 	})

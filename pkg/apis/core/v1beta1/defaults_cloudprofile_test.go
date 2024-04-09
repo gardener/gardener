@@ -37,13 +37,22 @@ var _ = Describe("CloudProfile defaulting", func() {
 		}
 	})
 
+	Describe("MachineImage defaulting", func() {
+		It("should correctly default MachineImage", func() {
+			SetObjectDefaults_CloudProfile(obj)
+
+			machineImage := obj.Spec.MachineImages[0]
+			Expect(machineImage.UpdateStrategy).To(PointTo(Equal(UpdateStrategyMajor)))
+		})
+	})
+
 	Describe("MachineImageVersion defaulting", func() {
 		It("should correctly default MachineImageVersion", func() {
 			SetObjectDefaults_CloudProfile(obj)
 
 			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
 			Expect(machineImageVersion.CRI).To(ConsistOf(
-				CRI{Name: "docker"},
+				CRI{Name: "containerd"},
 			))
 			Expect(machineImageVersion.Architectures).To(ConsistOf(
 				"amd64",

@@ -15,11 +15,13 @@
 package shoot
 
 import (
+	"context"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -30,9 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0),
 		},
 	)
 	if err != nil {
@@ -65,9 +65,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 		r.EventHandler(c.GetLogger()),
-		predicateutils.SeedNamePredicate(r.Config.SeedConfig.Name, gardenerutils.GetShootSeedNames),
 		&predicate.GenerationChangedPredicate{},
 	)
 }
@@ -78,7 +77,7 @@ var CalculateControllerInfos = helper.CalculateControllerInfos
 // EventHandler returns an event handler.
 func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -96,7 +95,7 @@ func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 				Namespace: e.Object.GetNamespace(),
 			}}, enqueueAfter)
 		},
-		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			req := reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),

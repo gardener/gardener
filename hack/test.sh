@@ -38,4 +38,4 @@ else
   timeout_flag=-timeout=2m
 fi
 
-GO111MODULE=on go test -race ${timeout_flag:-} -mod=vendor $@ $test_flags | grep -v 'no test files'
+GO111MODULE=on go test -race ${timeout_flag:-} "$@" $test_flags | grep -v 'no test files'

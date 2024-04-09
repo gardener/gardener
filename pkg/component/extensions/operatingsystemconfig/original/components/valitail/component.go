@@ -15,26 +15,20 @@
 package valitail
 
 import (
-	"fmt"
+	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 const (
 	// UnitName is the name of the valitail service.
-	UnitName           = v1beta1constants.OperatingSystemConfigUnitNameValitailService
-	unitNameFetchToken = "valitail-fetch-token.service"
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNameValitailService
 
 	// PathDirectory is the path for the valitail's directory.
 	PathDirectory = "/var/lib/valitail"
-	// PathFetchTokenScript is the path to a script which fetches valitail's token for communication with the Vali
-	// sidecar proxy.
-	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
 	// PathAuthToken is the path for the file containing valitail's authentication token for communication with the Vali
 	// sidecar proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
@@ -43,10 +37,7 @@ const (
 	// PathCACert is the path for the vali-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
-	// ServerPort is the valitail listening port.
-	ServerPort = 3001
-	// PositionFile is the path for storing the scraped file offsets.
-	PositionFile = "/var/log/positions.yaml"
+	valitailBinaryPath = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/valitail"
 )
 
 type component struct{}
@@ -60,47 +51,30 @@ func (component) Name() string {
 	return "valitail"
 }
 
-func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image) string {
-	return docker.PathBinary + ` run --rm -v ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/bin/` + binaryName + ` ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `"`
-}
-
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	if !ctx.ValitailEnabled {
-		return []extensionsv1alpha1.Unit{
-			getValitailUnit(
-				"/bin/systemctl disable "+UnitName,
-				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
-			),
-			getFetchTokenScriptUnit(
-				"/bin/systemctl disable "+unitNameFetchToken,
-				fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken),
-			),
-		}, nil, nil
+	var (
+		units []extensionsv1alpha1.Unit
+		files []extensionsv1alpha1.File
+	)
+
+	if ctx.ValitailEnabled {
+		valitailConfigFile, err := getValitailConfigurationFile(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		units = append(units, getValitailUnit())
+		files = append(files, valitailConfigFile, getValitailCAFile(ctx), extensionsv1alpha1.File{
+			Path:        valitailBinaryPath,
+			Permissions: ptr.To[int32](0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameValitail].String(),
+					FilePathInImage: "/usr/bin/valitail",
+				},
+			},
+		})
 	}
 
-	valitailConfigFile, err := getValitailConfigurationFile(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	fetchTokenScriptFile, err := getFetchTokenScriptFile()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return []extensionsv1alpha1.Unit{
-			getValitailUnit(
-				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[images.ImageNameValitail]),
-				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/valitail -config.file=`+PathConfig,
-			),
-			getFetchTokenScriptUnit(
-				"",
-				PathFetchTokenScript,
-			),
-		},
-		[]extensionsv1alpha1.File{
-			valitailConfigFile,
-			fetchTokenScriptFile,
-			getValitailCAFile(ctx),
-		}, nil
+	return units, files, nil
 }

@@ -61,8 +61,6 @@ var _ = Describe("Garden Care Control", func() {
 		ctx = context.Background()
 		logf.IntoContext(ctx, logr.Discard())
 
-		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
-
 		operatorConfig = config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{
 				GardenCare: config.GardenCareControllerConfiguration{
@@ -77,6 +75,7 @@ var _ = Describe("Garden Care Control", func() {
 			},
 		}
 
+		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithStatusSubresource(&operatorv1alpha1.Garden{}).Build()
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), runtimeClient).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
@@ -110,7 +109,7 @@ var _ = Describe("Garden Care Control", func() {
 			Context("when no conditions are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(&NewHealthCheck,
-						healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })))
+						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition { return nil })))
 				})
 
 				It("should not set conditions", func() {
@@ -143,8 +142,9 @@ var _ = Describe("Garden Care Control", func() {
 			Context("when conditions are returned unchanged", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							conditionsCopy := append(cond[:0:0], cond...)
+						&NewHealthCheck, healthCheckFunc(func(cond GardenConditions) []gardencorev1beta1.Condition {
+							conditions := cond.ConvertToSlice()
+							conditionsCopy := append(conditions[:0:0], conditions...)
 							return conditionsCopy
 						}),
 					))
@@ -167,7 +167,7 @@ var _ = Describe("Garden Care Control", func() {
 					garden.Status = operatorv1alpha1.GardenStatus{
 						Conditions: []gardencorev1beta1.Condition{gardenSystemComponentsCondition},
 					}
-					Expect(runtimeClient.Update(ctx, garden)).To(Succeed())
+					Expect(runtimeClient.Status().Update(ctx, garden)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -189,7 +189,7 @@ var _ = Describe("Garden Care Control", func() {
 						},
 					}
 					DeferCleanup(test.WithVars(&NewHealthCheck,
-						healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition {
 							return conditions
 						})))
 				})
@@ -206,16 +206,14 @@ var _ = Describe("Garden Care Control", func() {
 	})
 })
 
-type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConditionFunc func(cond GardenConditions) []gardencorev1beta1.Condition
 
-func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, string) HealthCheck {
-		return fn
-	}
+func (c resultingConditionFunc) Check(_ context.Context, conditions GardenConditions) []gardencorev1beta1.Condition {
+	return c(conditions)
 }
 
-func (c resultingConditionFunc) CheckGarden(_ context.Context,
-	conditions []gardencorev1beta1.Condition,
-	_ map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
-	return c(conditions)
+func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
+	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration, string) HealthCheck {
+		return fn
+	}
 }

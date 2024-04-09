@@ -1,5 +1,5 @@
 {{- if .Values.global.apiserver.enabled }}
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-apiserver
@@ -89,7 +89,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-apiserver
-        image: {{ include "utils-templates.image" .Values.global.apiserver.image }}
+        image: {{ include "image" .Values.global.apiserver.image }}
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         args:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
@@ -252,6 +252,9 @@ spec:
         - --secure-port={{ .Values.global.apiserver.securePort | default 8443 }}
         {{- if .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
         - --shoot-admin-kubeconfig-max-expiration={{ .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
+        {{- end }}
+        {{- if .Values.global.apiserver.shootViewerKubeconfigMaxExpiration }}
+        - --shoot-viewer-kubeconfig-max-expiration={{ .Values.global.apiserver.shootViewerKubeconfigMaxExpiration }}
         {{- end }}
         {{- if .Values.global.apiserver.shootCredentialsRotationInterval }}
         - --shoot-credentials-rotation-interval={{ .Values.global.apiserver.shootCredentialsRotationInterval }}

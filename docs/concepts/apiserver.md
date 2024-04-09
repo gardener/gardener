@@ -1,10 +1,11 @@
 ---
-title: API Server
+title: Gardener API Server
+description: Understand the Gardener API server extension and the resources it exposes
 categories:
   - Users
 ---
 
-# Gardener API Server
+## Overview
 
 The Gardener API server is a Kubernetes-native extension based on its [aggregation layer](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/apiserver-aggregation/).
 It is registered via an `APIService` object and designed to run inside a Kubernetes cluster whose API it wants to extend.
@@ -24,6 +25,13 @@ Gardener does not evaluate or understand this config, but extension controllers 
 
 Please see [this](../../example/30-cloudprofile.yaml) example manifest and consult the documentation of your provider extension controller to get information about its `providerConfig`.
 
+### `NamespacedCloudProfile`s
+
+In addition to `CloudProfile`s, `NamespacedCloudProfile`s exist to enable project level `CloudProfile`s. 
+Please view [GEP-25](../proposals/25-namespaced-cloud-profiles.md) for additional information.
+This feature is currently under development and not ready for productive use.
+At the moment, only the necessary APIs and validations exist to allow for extensions to adapt to the new `NamespacedCloudProfile` resource.
+
 ## `InternalSecret`s
 
 End-users can read and/or write `Secret`s in their project namespaces in the garden cluster. This prevents Gardener components from storing such "Gardener-internal" secrets in the respective project namespace.
@@ -40,7 +48,7 @@ Please see [this](../../example/11-internal-secret.yaml) example manifest.
 ## `Seed`s
 
 `Seed`s are resources that represent seed clusters.
-Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.22 and passes the Kubernetes conformance tests.
+Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.25 and passes the Kubernetes conformance tests.
 The Gardener operator has to either deploy the gardenlet into the cluster they want to use as seed (recommended, then the gardenlet will create the `Seed` object itself after bootstrapping) or provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml), and optionally [this](../../example/40-secret-seed.yaml) example manifests.

@@ -18,19 +18,19 @@ import (
 	"context"
 	"fmt"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/webhook"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -40,32 +40,30 @@ func ReconcileWebhookConfig(
 	ctx context.Context,
 	c client.Client,
 	shootNamespace string,
-	extensionNamespace string,
-	extensionName string,
 	managedResourceName string,
-	serverPort int,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
+	shootWebhookConfigs webhook.Configs,
 	cluster *controller.Cluster,
+	createIfNotExists bool,
 ) error {
-	if err := EnsureEgressNetworkPolicy(ctx, c, shootNamespace, extensionNamespace, extensionName, serverPort); err != nil {
-		return fmt.Errorf("could not create or update network policy for shoot webhooks in namespace '%s': %w", shootNamespace, err)
-	}
-
 	if cluster.Shoot == nil {
 		return fmt.Errorf("no shoot found in cluster resource")
 	}
 
 	data, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
-		AddAllAndSerialize(shootWebhookConfig)
+		AddAllAndSerialize(shootWebhookConfigs.GetWebhookConfigs()...)
 	if err != nil {
 		return err
 	}
 
-	if err := managedresources.Create(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
-		return fmt.Errorf("could not create or update managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	f := managedresources.Create
+	if !createIfNotExists {
+		f = managedresources.Update
 	}
 
+	if err := f(ctx, c, shootNamespace, managedResourceName, nil, false, "", data, nil, nil, nil); err != nil {
+		return fmt.Errorf("failed reconciling managed resource '%s/%s' containing shoot webhooks: %w", shootNamespace, managedResourceName, err)
+	}
 	return nil
 }
 
@@ -75,12 +73,9 @@ func ReconcileWebhookConfig(
 func ReconcileWebhooksForAllNamespaces(
 	ctx context.Context,
 	c client.Client,
-	extensionNamespace string,
-	extensionName string,
 	managedResourceName string,
 	shootNamespaceSelector map[string]string,
-	port int,
-	shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
+	shootWebhookConfigs webhook.Configs,
 ) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := c.List(ctx, namespaceList, client.MatchingLabels(utils.MergeStringMaps(map[string]string{
@@ -91,23 +86,17 @@ func ReconcileWebhooksForAllNamespaces(
 
 	fns := make([]flow.TaskFn, 0, len(namespaceList.Items)+1)
 
-	fns = append(fns, func(ctx context.Context) error {
-		return EnsureIngressNetworkPolicy(ctx, c, extensionNamespace, extensionName, port)
-	})
-
 	for _, namespace := range namespaceList.Items {
-		var (
-			networkPolicy     = GetNetworkPolicyMeta(namespace.Name, extensionName)
-			namespaceName     = namespace.Name
-			networkPolicyName = networkPolicy.Name
-		)
+		namespaceName := namespace.Name
 
 		fns = append(fns, func(ctx context.Context) error {
-			if err := c.Get(ctx, kubernetesutils.Key(namespaceName, networkPolicyName), &networkingv1.NetworkPolicy{}); err != nil {
-				if !errors.IsNotFound(err) {
-					return err
+			managedResource := &metav1.PartialObjectMetadata{}
+			managedResource.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResource"))
+			if err := c.Get(ctx, client.ObjectKey{Name: managedResourceName, Namespace: namespaceName}, managedResource); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
 				}
-				return nil
+				return err
 			}
 
 			cluster, err := extensions.GetCluster(ctx, c, namespaceName)
@@ -115,7 +104,11 @@ func ReconcileWebhooksForAllNamespaces(
 				return err
 			}
 
-			return ReconcileWebhookConfig(ctx, c, namespaceName, extensionNamespace, extensionName, managedResourceName, port, shootWebhookConfig.DeepCopy(), cluster)
+			// Ignore not found errors since the managed resource can be deleted in parallel during shoot deletion.
+			if err := ReconcileWebhookConfig(ctx, c, namespaceName, managedResourceName, *shootWebhookConfigs.DeepCopy(), cluster, false); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+			return nil
 		})
 	}
 

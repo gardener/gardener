@@ -24,12 +24,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/apis/settings"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -106,17 +113,18 @@ func ReadGardenSecrets(
 	c client.Reader,
 	namespace string,
 	enforceInternalDomainSecret bool,
+	enforceShootServiceAccountIssuerSecret bool,
 ) (
 	map[string]*corev1.Secret,
 	error,
 ) {
 	var (
-		logInfo                             []string
-		secretsMap                          = make(map[string]*corev1.Secret)
-		numberOfInternalDomainSecrets       = 0
-		numberOfOpenVPNDiffieHellmanSecrets = 0
-		numberOfAlertingSecrets             = 0
-		numberOfGlobalMonitoringSecrets     = 0
+		logInfo                                  []string
+		secretsMap                               = make(map[string]*corev1.Secret)
+		numberOfInternalDomainSecrets            = 0
+		numberOfAlertingSecrets                  = 0
+		numberOfGlobalMonitoringSecrets          = 0
+		numberOfShootServiceAccountIssuerSecrets = 0
 	)
 
 	secretList := &corev1.SecretList{}
@@ -154,19 +162,6 @@ func ReadGardenSecrets(
 			numberOfInternalDomainSecrets++
 		}
 
-		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleOpenVPNDiffieHellman {
-			openvpnDiffieHellman := secret
-			key := "dh2048.pem"
-			if _, ok := secret.Data[key]; !ok {
-				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
-			}
-			secretsMap[v1beta1constants.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
-			logInfo = append(logInfo, fmt.Sprintf("OpenVPN Diffie Hellman secret %q", secret.Name))
-			numberOfOpenVPNDiffieHellmanSecrets++
-		}
-
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleAlerting {
@@ -196,6 +191,18 @@ func ReadGardenSecrets(
 			secretsMap[v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
+
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShootServiceAccountIssuer {
+			shootIssuer := secret
+			if hostname, ok := secret.Data["hostname"]; !ok {
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does not contain key 'hostname'", secret.Name)
+			} else if strings.TrimSpace(string(hostname)) == "" {
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does contain an empty 'hostname' key", secret.Name)
+			}
+			secretsMap[v1beta1constants.GardenRoleShootServiceAccountIssuer] = &shootIssuer
+			logInfo = append(logInfo, fmt.Sprintf("Shoot Service Account Issuer secret %q", secret.Name))
+			numberOfShootServiceAccountIssuerSecrets++
+		}
 	}
 
 	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
@@ -210,15 +217,6 @@ func ReadGardenSecrets(
 		return nil, fmt.Errorf("need an internal domain secret but found none")
 	}
 
-	// The VPN bridge from a Shoot's control plane running in the Seed cluster to the worker nodes of the Shoots is based
-	// on OpenVPN. It requires a Diffie Hellman key. If no such key is explicitly provided as secret in the garden namespace
-	// then the Gardener will use a default one (not recommended, but useful for local development). If a secret is specified
-	// its key will be used for all Shoots. However, at most only one of such a secret is allowed to be specified (otherwise,
-	// the Gardener cannot determine which to choose).
-	if numberOfOpenVPNDiffieHellmanSecrets > 1 {
-		return nil, fmt.Errorf("can only accept at most one OpenVPN Diffie Hellman secret, but found %d", numberOfOpenVPNDiffieHellmanSecrets)
-	}
-
 	// Operators can configure gardener to send email alerts or send the alerts to an external alertmanager. If no configuration
 	// is provided then no alerts will be sent.
 	if numberOfAlertingSecrets > 1 {
@@ -227,6 +225,17 @@ func ReadGardenSecrets(
 
 	if numberOfGlobalMonitoringSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
+	}
+
+	// Ensure that configuration exists if the ShootManagedIssuer feature gate is enabled.
+	if enforceShootServiceAccountIssuerSecret && numberOfShootServiceAccountIssuerSecrets == 0 {
+		return nil, fmt.Errorf("feature gate ShootManagedIssuer is enabled, but shoot service account issuer secret is missing")
+	}
+
+	// The managed shoot service account issuer is configured centrally per Garden cluster.
+	// The presence of more than one secret is an ambiguous behaviour and should be disallowed.
+	if numberOfShootServiceAccountIssuerSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one shoot service account issuer secret, but found %d", numberOfShootServiceAccountIssuerSecrets)
 	}
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
@@ -322,4 +331,45 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caC
 		}
 	}
 	return gardenClientRestConfig
+}
+
+// DefaultGardenerGVKsForEncryption returns the list of GroupVersionKinds served by Gardener API Server which are encrypted by default.
+func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeployment"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistration"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ShootState"),
+	}
+}
+
+// DefaultGardenerResourcesForEncryption returns the list of resources served by Gardener API Server which are encrypted by default.
+func DefaultGardenerResourcesForEncryption() sets.Set[string] {
+	return sets.New(
+		gardencorev1beta1.Resource("controllerdeployments").String(),
+		gardencorev1beta1.Resource("controllerregistrations").String(),
+		gardencorev1beta1.Resource("internalsecrets").String(),
+		gardencorev1beta1.Resource("shootstates").String(),
+	)
+}
+
+// IsServedByGardenerAPIServer returns true if the passed resources is served by the Gardener API Server.
+func IsServedByGardenerAPIServer(resource string) bool {
+	for _, groupName := range []string{
+		gardencore.GroupName,
+		operations.GroupName,
+		settings.GroupName,
+		seedmanagement.GroupName,
+	} {
+		if strings.HasSuffix(resource, groupName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsServedByKubeAPIServer returns true if the passed resources is served by the Kube API Server.
+func IsServedByKubeAPIServer(resource string) bool {
+	return !IsServedByGardenerAPIServer(resource)
 }

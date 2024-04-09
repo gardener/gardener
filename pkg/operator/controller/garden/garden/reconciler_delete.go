@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -49,7 +49,7 @@ func (r *Reconciler) delete(
 	error,
 ) {
 	log.Info("Instantiating component destroyers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()))
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), nil, false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -58,25 +58,71 @@ func (r *Reconciler) delete(
 		g = flow.NewGraph("Garden deletion")
 
 		_ = g.Add(flow.Task{
+			Name: "Destroying Plutono",
+			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Destroying Gardener Metrics Exporter",
+			Fn:   component.OpDestroyAndWait(c.gardenerMetricsExporter).Destroy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 		})
+		destroyAlertmanager = g.Add(flow.Task{
+			Name: "Destroying Alertmanager",
+			Fn:   component.OpDestroyAndWait(c.alertManager).Destroy,
+		})
+
+		destroyGardenerScheduler = g.Add(flow.Task{
+			Name: "Destroying Gardener Scheduler",
+			Fn:   component.OpDestroyAndWait(c.gardenerScheduler).Destroy,
+		})
+		destroyGardenerControllerManager = g.Add(flow.Task{
+			Name: "Destroying Gardener Controller Manager",
+			Fn:   component.OpDestroyAndWait(c.gardenerControllerManager).Destroy,
+		})
+		destroyGardenerAdmissionController = g.Add(flow.Task{
+			Name: "Destroying Gardener Admission Controller",
+			Fn:   component.OpDestroyAndWait(c.gardenerAdmissionController).Destroy,
+		})
+		destroyGardenerAPIServer = g.Add(flow.Task{
+			Name: "Destroying Gardener API Server",
+			Fn:   component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
+		})
+		destroyVirtualSystemResources = g.Add(flow.Task{
+			Name:         "Destroying virtual system resources",
+			Fn:           component.OpDestroyAndWait(c.virtualSystem).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerAPIServer),
+		})
+
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
-			Fn:   c.virtualGardenGardenerAccess.Destroy,
-		})
-		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Destroying gardener-resource-manager for virtual garden",
-			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
+			Fn:   component.OpDestroyAndWait(c.virtualGardenGardenerAccess).Destroy,
 		})
 		destroyKubeControllerManager = g.Add(flow.Task{
 			Name: "Destroying Kubernetes Controller Manager Server",
 			Fn:   component.OpDestroyAndWait(c.kubeControllerManager).Destroy,
 		})
+		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
+			destroyGardenerScheduler,
+			destroyGardenerControllerManager,
+			destroyGardenerAdmissionController,
+			destroyGardenerAPIServer,
+			destroyVirtualSystemResources,
+			destroyVirtualGardenGardenerAccess,
+			destroyKubeControllerManager,
+		)
+
+		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager for virtual garden",
+			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
+		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API server service SNI",
-			Fn:   component.OpDestroyAndWait(c.kubeAPIServerSNI).Destroy,
+			Name:         "Destroying Kubernetes API server service SNI",
+			Fn:           component.OpDestroyAndWait(c.kubeAPIServerSNI).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API Server service",
@@ -84,8 +130,9 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServerSNI),
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server",
-			Fn:   component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
+			Name:         "Destroying Kubernetes API Server",
+			Fn:           component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
@@ -102,16 +149,14 @@ func (r *Reconciler) delete(
 		})
 		invalidateClient = g.Add(flow.Task{
 			Name: "Invalidate client for virtual garden",
-			Fn: func(ctx context.Context) error {
+			Fn: func(_ context.Context) error {
 				return r.GardenClientMap.InvalidateClient(keys.ForGarden(garden))
 			},
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,
-			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
-			destroyKubeControllerManager,
 			destroyKubeAPIServerSNI,
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,
@@ -143,28 +188,68 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.nginxIngressController).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyPrometheusOperator = g.Add(flow.Task{
+			Name:         "Destroying prometheus-operator",
+			Fn:           component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyAlertmanager),
+		})
+		destroyFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Destroying fluent-operator custom resources",
+			Fn:           component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentBit = g.Add(flow.Task{
+			Name:         "Destroying fluent-bit",
+			Fn:           component.OpDestroyAndWait(c.fluentBit).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentOperator = g.Add(flow.Task{
+			Name:         "Destroying fluent-operator",
+			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources, destroyFluentBit),
+		})
+		destroyVali = g.Add(flow.Task{
+			Name:         "Destroying Vali",
+			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
 			destroyNginxIngressController,
+			destroyFluentOperatorCustomResources,
+			destroyFluentBit,
+			destroyFluentOperator,
+			destroyVali,
+			destroyPrometheusOperator,
 		)
 
-		destroySystemResources = g.Add(flow.Task{
-			Name:         "Destroying system resources",
-			Fn:           component.OpDestroyAndWait(c.system).Destroy,
+		destroyRuntimeSystemResources = g.Add(flow.Task{
+			Name:         "Destroying runtime system resources",
+			Fn:           component.OpDestroyAndWait(c.runtimeSystem).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
 		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{
 			Name:         "Ensuring no ManagedResources exist anymore",
 			Fn:           r.checkIfManagedResourcesExist(),
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			Dependencies: flow.NewTaskIDs(destroyRuntimeSystemResources),
 		})
 		destroyGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
 			Fn:           component.OpWait(c.gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for prometheus-operator",
+			Fn:           c.prometheusCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for fluent-operator",
+			Fn:           c.fluentCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",
@@ -173,12 +258,14 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
-			Fn:           flow.TaskFn(c.vpaCRD.Destroy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+			Fn:           c.vpaCRD.Destroy,
+			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for HVPA",
-			Fn:           flow.TaskFn(c.hvpaCRD.Destroy).DoIf(hvpaEnabled()),
+			Fn:           c.hvpaCRD.Destroy,
+			SkipIf:       !hvpaEnabled(),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
@@ -202,9 +289,9 @@ func (r *Reconciler) delete(
 	}
 	*garden = *gardenCopy
 
-	if controllerutil.ContainsFinalizer(garden, finalizerName) {
+	if controllerutil.ContainsFinalizer(garden, operatorv1alpha1.FinalizerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), garden, operatorv1alpha1.FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -214,7 +301,7 @@ func (r *Reconciler) delete(
 
 func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), ptr.To(v1beta1constants.SeedResourceManagerClass))
 		if err != nil {
 			return err
 		}

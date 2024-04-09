@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flow
+package flow_test
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
 	testclock "k8s.io/utils/clock/testing"
+
+	. "github.com/gardener/gardener/pkg/utils/flow"
 )
 
 var _ = Describe("ProgressReporterDelaying", func() {

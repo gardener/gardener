@@ -5,17 +5,19 @@ generatorOptions:
   disableNameSuffixHash: true
 
 namespace: garden
-commonLabels:
-  app: etcd
 
 secretGenerator:
-- name: etcd-tls
-  files:
+- files:
   - tls/ca.crt
   - tls/server.crt
   - tls/server.key
+  name: etcd-tls
 
 resources:
 - networkpolicy.yaml
 - service.yaml
 - statefulset.yaml
+labels:
+- includeSelectors: true
+  pairs:
+    app: etcd

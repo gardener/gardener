@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -56,10 +56,6 @@ var _ = Describe("FakeManager", func() {
 					secret, found := m.Get(name, opts...)
 					Expect(found).To(BeTrue())
 					Expect(secret).To(Equal(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            expectedSecretName,
 							Namespace:       namespace,
@@ -113,7 +109,6 @@ var _ = Describe("FakeManager", func() {
 
 			obj := &corev1.Secret{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), obj)).To(Succeed())
-			secret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
 			Expect(obj).To(Equal(secret))
 		})
 
@@ -130,10 +125,6 @@ var _ = Describe("FakeManager", func() {
 			secret, err := m.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            existingSecret.Name,
 					Namespace:       existingSecret.Namespace,
@@ -148,7 +139,7 @@ var _ = Describe("FakeManager", func() {
 						"persist":                       "true",
 					},
 				},
-				Immutable: pointer.Bool(true),
+				Immutable: ptr.To(true),
 				Type:      existingSecret.Type,
 				Data:      existingSecret.Data,
 			}))
@@ -161,7 +152,7 @@ var _ = Describe("FakeManager", func() {
 
 	Describe("#Cleanup", func() {
 		It("should return nil (not implemented)", func() {
-			Expect(m.Cleanup(ctx)).To(BeNil())
+			Expect(m.Cleanup(ctx)).To(Succeed())
 		})
 	})
 })

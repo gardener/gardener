@@ -21,18 +21,19 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -51,14 +52,14 @@ type reconciler struct {
 	// SyncPeriod is the frequency with which to reload the server cert. Defaults to 5m.
 	SyncPeriod time.Duration
 	// SourceWebhookConfigs are the webhook configurations to reconcile in the Source cluster.
-	SourceWebhookConfigs []client.Object
-	// ShootWebhookConfig is the webhook configuration to reconcile in all Shoot clusters.
-	ShootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
-	// AtomicShootWebhookConfig is an atomic value in which this reconciler will store the updated ShootWebhookConfig.
+	SourceWebhookConfigs extensionswebhook.Configs
+	// ShootWebhookConfigs are the webhook configurations to reconcile in all Shoot clusters.
+	ShootWebhookConfigs *extensionswebhook.Configs
+	// AtomicShootWebhookConfigs is an atomic value in which this reconciler will store the updated ShootWebhookConfigs.
 	// It is supposed to be shared with the ControlPlane actuator. I.e. if the CA bundle changes, this reconciler
 	// updates the CA bundle in this value so that the ControlPlane actuator can configure the correct (the new) CA
 	// bundle for newly created shoots by loading this value.
-	AtomicShootWebhookConfig *atomic.Value
+	AtomicShootWebhookConfigs *atomic.Value
 	// CASecretName is the CA config name.
 	CASecretName string
 	// ServerSecretName is the server certificate config name.
@@ -78,17 +79,28 @@ type reconciler struct {
 	// URL is the URL that is used to register the webhooks in Kubernetes.
 	URL string
 
-	serverPort int
-	client     client.Client
+	// client is the client used to update webhook configuration objects.
+	client client.Client
+	// sourceClient is the client used to manage certificate secrets.
+	sourceClient client.Client
 }
 
-// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet. Then it adds reconciler to
-// the given manager in order to periodically regenerate the webhook secrets.
-func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
-	r.serverPort = mgr.GetWebhookServer().Port
+// AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet.
+// Then it adds the reconciler to the given manager in order to periodically regenerate the webhook secrets.
+// An 'sourceCluster' can be optionally passed to let the certificate secrets be managed in a different cluster.
+func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
 	r.client = mgr.GetClient()
+	r.sourceClient = mgr.GetClient()
+	apiReader := mgr.GetAPIReader()
+	scheme := mgr.GetScheme()
 
-	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), r.ServerSecretName, r.Namespace, r.Identity)
+	if sourceCluster != nil {
+		r.sourceClient = sourceCluster.GetClient()
+		apiReader = sourceCluster.GetAPIReader()
+		scheme = sourceCluster.GetScheme()
+	}
+
+	present, err := isWebhookServerSecretPresent(ctx, apiReader, scheme, r.ServerSecretName, r.Namespace, r.Identity)
 	if err != nil {
 		return err
 	}
@@ -97,10 +109,16 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// otherwise the webhook server will not be able to start (which is a non-leader election runnable and is therefore
 	// started before this controller)
 	if !present {
+		restConfig := mgr.GetConfig()
+		if sourceCluster != nil {
+			restConfig = sourceCluster.GetConfig()
+		}
+
 		// cache is not started yet, we need an uncached client for the initial setup
-		uncachedClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-			Client:      r.client,
-			CacheReader: mgr.GetAPIReader(),
+		uncachedClient, err := client.New(restConfig, client.Options{
+			Cache: &client.CacheOptions{
+				Reader: apiReader,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create new unchached client: %w", err)
@@ -123,7 +141,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// add controller, that regenerates the CA and server cert secrets periodically
 	ctrl, err := controller.New(certificateReconcilerName, mgr, controller.Options{
 		Reconciler:   r,
-		RecoverPanic: pointer.Bool(true),
+		RecoverPanic: ptr.To(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.SyncPeriod),
 	})
@@ -138,7 +156,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	sm, err := r.newSecretsManager(ctx, log, r.client)
+	sm, err := r.newSecretsManager(ctx, log, r.sourceClient)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create new SecretsManager: %w", err)
 	}
@@ -166,29 +184,35 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	for _, sourceWebhookConfig := range r.SourceWebhookConfigs {
-		if sourceWebhookConfig == nil {
-			continue
-		}
+	for _, sourceWebhookConfig := range r.SourceWebhookConfigs.GetWebhookConfigs() {
 		if err := r.reconcileSourceWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config %s: %w", client.ObjectKeyFromObject(sourceWebhookConfig), err)
 		}
 		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", sourceWebhookConfig)
 	}
 
-	if r.ShootWebhookConfig != nil {
-		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
-		// ControlPlane actuator
-		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
-			return reconcile.Result{}, err
+	if r.ShootWebhookConfigs != nil && r.ShootWebhookConfigs.HasWebhookConfig() {
+		for _, shootWebhookConfig := range r.ShootWebhookConfigs.GetWebhookConfigs() {
+			// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
+			// ControlPlane actuator
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
-		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
+
+		r.AtomicShootWebhookConfigs.Store(r.ShootWebhookConfigs.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.Namespace, r.ComponentName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
+		if err := extensionsshootwebhook.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, *r.ShootWebhookConfigs); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
-		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
+
+		if r.ShootWebhookConfigs.MutatingWebhookConfig != nil {
+			log.Info("Updated all shoot mutating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.MutatingWebhookConfig)
+		}
+		if r.ShootWebhookConfigs.ValidatingWebhookConfig != nil {
+			log.Info("Updated all shoot validating webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfigs.ValidatingWebhookConfig)
+		}
 	}
 
 	if err := sm.Cleanup(ctx); err != nil {
@@ -206,14 +230,14 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWeb
 	}
 
 	patch := client.MergeFromWithOptions(config.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
-	if err := webhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+	if err := extensionswebhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 		return err
 	}
 	return r.client.Patch(ctx, config, patch)
 }
 
-func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, secretName, namespace, identity string) (bool, error) {
-	return kubernetesutils.ResourcesExist(ctx, c, corev1.SchemeGroupVersion.WithKind("SecretList"), client.InNamespace(namespace), client.MatchingLabels{
+func isWebhookServerSecretPresent(ctx context.Context, c client.Reader, scheme *runtime.Scheme, secretName, namespace, identity string) (bool, error) {
+	return kubernetesutils.ResourcesExist(ctx, c, &corev1.SecretList{}, scheme, client.InNamespace(namespace), client.MatchingLabels{
 		secretsmanager.LabelKeyName:            secretName,
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: identity,

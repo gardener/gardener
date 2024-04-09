@@ -12,38 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shared
+package shared_test
 
 import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver"
-	"github.com/golang/mock/gomock"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/component/apiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
+	. "github.com/gardener/gardener/pkg/component/shared"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -53,9 +57,10 @@ var _ = Describe("KubeAPIServer", func() {
 	var (
 		ctx = context.TODO()
 
-		runtimeClient   client.Client
-		namespace       string
-		apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
+		runtimeClient        client.Client
+		namespace            string
+		apiServerConfig      *gardencorev1beta1.KubeAPIServerConfig
+		serviceAccountConfig kubeapiserver.ServiceAccountConfig
 	)
 
 	BeforeEach(func() {
@@ -72,15 +77,14 @@ var _ = Describe("KubeAPIServer", func() {
 			secret                       *corev1.Secret
 			runtimeVersion               *semver.Version
 			targetVersion                *semver.Version
-			imageVector                  imagevector.ImageVector
 			namePrefix                   string
 			serviceNetworkCIDR           string
-			autoscalingConfig            kubeapiserver.AutoscalingConfig
+			autoscalingConfig            apiserver.AutoscalingConfig
 			vpnConfig                    kubeapiserver.VPNConfig
 			priorityClassName            string
 			isWorkerless                 bool
 			staticTokenKubeconfigEnabled *bool
-			auditWebhookConfig           *kubeapiserver.AuditWebhook
+			auditWebhookConfig           *apiserver.AuditWebhook
 			authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 			authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 			resourcesToStoreInETCDEvents []schema.GroupResource
@@ -93,19 +97,18 @@ var _ = Describe("KubeAPIServer", func() {
 		BeforeEach(func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-			runtimeVersion = semver.MustParse("1.22.0")
-			targetVersion = semver.MustParse("1.22.1")
-			imageVector = imagevector.ImageVector{{Name: "kube-apiserver"}}
+			runtimeVersion = semver.MustParse("1.25.0")
+			targetVersion = semver.MustParse("1.25.0")
 			namePrefix = ""
 			serviceNetworkCIDR = "10.0.2.0/24"
-			autoscalingConfig = kubeapiserver.AutoscalingConfig{}
+			autoscalingConfig = apiserver.AutoscalingConfig{}
 			vpnConfig = kubeapiserver.VPNConfig{}
 			priorityClassName = "priority-class"
 			isWorkerless = false
 			staticTokenKubeconfigEnabled = nil
 			auditWebhookConfig = nil
-			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: pointer.String("authn-version")}
-			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: pointer.String("authnz-version")}
+			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: ptr.To("authn-version")}
+			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: ptr.To("authnz-version")}
 			resourcesToStoreInETCDEvents = []schema.GroupResource{{Resource: "foo", Group: "bar"}}
 
 			secret = &corev1.Secret{
@@ -116,58 +119,22 @@ var _ = Describe("KubeAPIServer", func() {
 				Data: map[string][]byte{"kubeconfig": []byte("kubeconfig-data")},
 			}
 
-			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.22.0").Build()
+			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion(runtimeVersion.String()).Build()
 			resourceConfigClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 			sm = fakesecretsmanager.New(runtimeClient, namespace)
 		})
 
-		Describe("Images", func() {
-			It("should return an error because the kube-apiserver cannot be found", func() {
-				imageVector = imagevector.ImageVector{}
-
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
-				Expect(kubeAPIServer).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find image \"kube-apiserver\"")))
-			})
-
-			It("should return an error because the alpine cannot be found", func() {
-				targetVersion = semver.MustParse("1.24.4")
-
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
-				Expect(kubeAPIServer).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find image \"alpine\"")))
-			})
-
-			It("should return an error because the alpine cannot be found", func() {
-				vpnConfig.HighAvailabilityEnabled = true
-
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
-				Expect(kubeAPIServer).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find image \"vpn-shoot-client\"")))
-			})
-
-			It("should succeed because all images can be found", func() {
-				targetVersion = semver.MustParse("1.24.4")
-				vpnConfig.HighAvailabilityEnabled = true
-				imageVector = append(imageVector, &imagevector.ImageSource{Name: "alpine"}, &imagevector.ImageSource{Name: "vpn-shoot-client"})
-
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
-				Expect(kubeAPIServer).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
 		Describe("AnonymousAuthenticationEnabled", func() {
 			It("should set the field to false by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeFalse())
 			})
 
 			It("should set the field to true if explicitly enabled", func() {
-				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: pointer.Bool(true)}
+				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeTrue())
 			})
@@ -175,7 +142,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("APIAudiences", func() {
 			It("should set the field to 'kubernetes' and 'gardener' by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(ConsistOf("kubernetes", "gardener"))
 			})
@@ -184,7 +151,7 @@ var _ = Describe("KubeAPIServer", func() {
 				apiAudiences := []string{"foo", "bar"}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{APIAudiences: apiAudiences}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(Equal(append(apiAudiences, "gardener")))
 			})
@@ -193,7 +160,7 @@ var _ = Describe("KubeAPIServer", func() {
 				apiAudiences := []string{"foo", "bar", "gardener"}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{APIAudiences: apiAudiences}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(Equal(apiAudiences))
 			})
@@ -201,26 +168,26 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("AdmissionPlugins", func() {
 			BeforeEach(func() {
-				Expect(resourceConfigClient.Create(ctx, secret)).To(BeNil())
+				Expect(resourceConfigClient.Create(ctx, secret)).To(Succeed())
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{}}
 			})
 
 			DescribeTable("should have the expected admission plugins config",
-				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []kubeapiserver.AdmissionPluginConfig, isWorkerless bool) {
+				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []apiserver.AdmissionPluginConfig, isWorkerless bool) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().EnabledAdmissionPlugins).To(Equal(expectedPlugins))
 				},
 
 				Entry("only default plugins",
 					nil,
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -232,32 +199,15 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					false,
 				),
-				Entry("exclude PodSecurityPolicy from default plugins (workerless)",
-					nil,
-					[]kubeapiserver.AdmissionPluginConfig{
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ResourceQuota"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "StorageObjectInUseProtection"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
-					},
-					true,
-				),
 				Entry("default plugins with overrides",
 					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -276,11 +226,11 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -299,14 +249,14 @@ var _ = Describe("KubeAPIServer", func() {
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "Foo"},
-						{Name: "Bar", Disabled: pointer.Bool(true)},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: pointer.Bool(true)},
+						{Name: "Bar", Disabled: ptr.To(true)},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: ptr.To(true)},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurityPolicy"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
@@ -322,18 +272,18 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default plugins with overrides and skipping default plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ResourceQuota", Disabled: pointer.Bool(true)},
+						{Name: "ResourceQuota", Disabled: ptr.To(true)},
 						{Name: "Foo"},
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
-						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
+						{Name: "ServiceAccount", Disabled: ptr.To(false)},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: ptr.To(false)}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
@@ -346,40 +296,13 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					false,
 				),
-				Entry("default plugins with overrides and skipping disabled plugins for Workerless even if enabled in the config",
-					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ResourceQuota", Disabled: pointer.Bool(true)},
-						{Name: "Foo"},
-						{Name: "Bar"},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
-						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
-					},
-					[]kubeapiserver.AdmissionPluginConfig{
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "StorageObjectInUseProtection"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}}},
-					},
-					true,
-				),
 			)
 
 			Context("should have the expected disabled admission plugins", func() {
 				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
 
 				AfterEach(func() {
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
@@ -389,38 +312,36 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "LimitRanger"},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ServiceAccount"},
+						{Name: "ServiceAccount", Disabled: ptr.To(true)},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass"},
-						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
 						{Name: "ResourceQuota"},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
+						{Name: "ServiceAccount", Disabled: ptr.To(true)},
+						{Name: "DefaultTolerationSeconds", Disabled: ptr.To(true)},
 					}
 				})
 
 				It("should return the correct list of disabled admission plugins", func() {
 					apiServerConfig.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 						{Name: "Priority"},
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
 						{Name: "LimitRanger"},
-						{Name: "PodSecurityPolicy"},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
-						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
+						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
 						{Name: "DefaultTolerationSeconds"},
 						{Name: "ResourceQuota"},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
-						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
-						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: pointer.Bool(true)},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: ptr.To(true)},
+						{Name: "DefaultStorageClass", Disabled: ptr.To(true)},
+						{Name: "foo", Config: &runtime.RawExtension{Raw: []byte("foo-config")}, Disabled: ptr.To(true)},
 					}
 				})
 			})
@@ -430,11 +351,33 @@ var _ = Describe("KubeAPIServer", func() {
 					configData    *runtime.RawExtension
 					err           error
 					kubeAPIServer kubeapiserver.Interface
+
+					runtimeScheme = runtime.NewScheme()
+					codec         runtime.Codec
 				)
 
 				JustBeforeEach(func() {
+					utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
+					utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
+					utilruntime.Must(admissionapiv1.AddToScheme(runtimeScheme))
+
+					var (
+						ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
+							Yaml:   true,
+							Pretty: false,
+							Strict: false,
+						})
+						versions = schema.GroupVersions([]schema.GroupVersion{
+							admissionapiv1alpha1.SchemeGroupVersion,
+							admissionapiv1beta1.SchemeGroupVersion,
+							admissionapiv1.SchemeGroupVersion,
+						})
+					)
+
+					codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
+
 					configData = nil
-					kubeAPIServer, err = NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err = NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				})
 
 				Context("When the config is nil", func() {
@@ -485,7 +428,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -507,7 +450,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -526,7 +469,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.23"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -548,7 +491,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.23"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -567,7 +510,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.22"
+  warn-version: "v1.25"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -589,7 +532,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.22"),
+								"WarnVersion": Equal("v1.25"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -641,12 +584,12 @@ exemptions:
 			})
 
 			DescribeTable("should have the expected audit config",
-				func(prepTest func(), expectedConfig *kubeapiserver.AuditConfig, errMatcher gomegatypes.GomegaMatcher) {
+				func(prepTest func(), expectedConfig *apiserver.AuditConfig, errMatcher gomegatypes.GomegaMatcher) {
 					if prepTest != nil {
 						prepTest()
 					}
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 					Expect(err).To(errMatcher)
 					if kubeAPIServer != nil {
 						Expect(kubeAPIServer.GetValues().Audit).To(Equal(expectedConfig))
@@ -713,7 +656,7 @@ exemptions:
 							},
 						}
 					},
-					&kubeapiserver.AuditConfig{},
+					&apiserver.AuditConfig{},
 					Not(HaveOccurred()),
 				),
 				Entry("ConfigMapRef is provided but configmap does not have correct data field",
@@ -748,7 +691,7 @@ exemptions:
 							},
 						}
 					},
-					&kubeapiserver.AuditConfig{
+					&apiserver.AuditConfig{
 						Policy: &policy,
 					},
 					Not(HaveOccurred()),
@@ -766,11 +709,11 @@ exemptions:
 								},
 							},
 						}
-						auditWebhookConfig = &kubeapiserver.AuditWebhook{Version: pointer.String("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
 					},
-					&kubeapiserver.AuditConfig{
+					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &kubeapiserver.AuditWebhook{Version: pointer.String("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),
@@ -779,7 +722,7 @@ exemptions:
 
 		Describe("DefaultNotReadyTolerationSeconds and DefaultUnreachableTolerationSeconds", func() {
 			It("should not set the fields", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(BeNil())
 				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(BeNil())
@@ -787,11 +730,11 @@ exemptions:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    pointer.Int64(120),
-					DefaultUnreachableTolerationSeconds: pointer.Int64(130),
+					DefaultNotReadyTolerationSeconds:    ptr.To[int64](120),
+					DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(120))))
 				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(130))))
@@ -800,7 +743,7 @@ exemptions:
 
 		Describe("EventTTL", func() {
 			It("should not set the event ttl field", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().EventTTL).To(BeNil())
 			})
@@ -812,7 +755,7 @@ exemptions:
 					EventTTL: eventTTL,
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().EventTTL).To(Equal(eventTTL))
 			})
@@ -820,7 +763,7 @@ exemptions:
 
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().FeatureGates).To(BeNil())
 			})
@@ -834,7 +777,7 @@ exemptions:
 					},
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().FeatureGates).To(Equal(featureGates))
 			})
@@ -847,7 +790,7 @@ exemptions:
 						prepTest()
 					}
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().OIDC).To(Equal(expectedConfig))
 				},
@@ -873,19 +816,19 @@ exemptions:
 
 		Describe("Requests", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().Requests).To(BeNil())
 			})
 
 			It("should set the field to the configured values", func() {
-				requests := &gardencorev1beta1.KubeAPIServerRequests{
-					MaxMutatingInflight:    pointer.Int32(1),
-					MaxNonMutatingInflight: pointer.Int32(2),
+				requests := &gardencorev1beta1.APIServerRequests{
+					MaxMutatingInflight:    ptr.To[int32](1),
+					MaxNonMutatingInflight: ptr.To[int32](2),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().Requests).To(Equal(requests))
 			})
@@ -893,7 +836,7 @@ exemptions:
 
 		Describe("RuntimeConfig", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().RuntimeConfig).To(BeNil())
 			})
@@ -902,7 +845,7 @@ exemptions:
 				runtimeConfig := map[string]bool{"foo": true, "bar": false}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{RuntimeConfig: runtimeConfig}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().RuntimeConfig).To(Equal(runtimeConfig))
 			})
@@ -912,7 +855,7 @@ exemptions:
 			It("should set the field to the configured values", func() {
 				vpnConfig = kubeapiserver.VPNConfig{Enabled: true}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().VPN).To(Equal(vpnConfig))
 			})
@@ -920,19 +863,19 @@ exemptions:
 
 		Describe("WatchCacheSizes", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().WatchCacheSizes).To(BeNil())
 			})
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   pointer.Int32(1),
+					Default:   ptr.To[int32](1),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().WatchCacheSizes).To(Equal(watchCacheSizes))
 			})
@@ -940,7 +883,7 @@ exemptions:
 
 		Describe("PriorityClassName", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().PriorityClassName).To(Equal(priorityClassName))
 			})
@@ -948,7 +891,7 @@ exemptions:
 
 		Describe("IsWorkerless", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().IsWorkerless).To(Equal(isWorkerless))
 			})
@@ -956,7 +899,7 @@ exemptions:
 
 		Describe("Authentication", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AuthenticationWebhook).To(Equal(authenticationWebhookConfig))
 			})
@@ -964,7 +907,7 @@ exemptions:
 
 		Describe("Authorization", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AuthorizationWebhook).To(Equal(authorizationWebhookConfig))
 			})
@@ -972,7 +915,7 @@ exemptions:
 
 		Describe("ResourcesToStoreInETCDEvents", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().ResourcesToStoreInETCDEvents).To(Equal(resourcesToStoreInETCDEvents))
 			})
@@ -988,8 +931,8 @@ exemptions:
 			sniConfig                      kubeapiserver.SNIConfig
 			externalHostname               string
 			externalServer                 string
+			nodeNetworkCIDR                string
 			etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
-			serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 			wantScaleDown                  bool
 		)
 
@@ -1004,7 +947,7 @@ exemptions:
 			externalHostname = "external-hostname"
 			externalServer = "external-server"
 			etcdEncryptionKeyRotationPhase = ""
-			serviceAccountKeyRotationPhase = ""
+			nodeNetworkCIDR = "10.250.0.0/24"
 			wantScaleDown = false
 		})
 
@@ -1016,12 +959,16 @@ exemptions:
 		}
 
 		DescribeTable("should correctly set the autoscaling apiserver resources",
-			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
+			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
 				if prepTest != nil {
 					prepTest()
 				}
 
-				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
+					Values: apiserver.Values{
+						Autoscaling: autoscalingConfig,
+					}},
+				)
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				if expectedResources != nil {
 					kubeAPIServer.EXPECT().SetAutoscalingAPIServerResources(*expectedResources)
@@ -1030,16 +977,17 @@ exemptions:
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			},
 
 			Entry("nothing is set because deployment is not found",
 				nil,
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				nil,
 			),
 			Entry("nothing is set because HVPA is disabled",
@@ -1061,7 +1009,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: false},
+				apiserver.AutoscalingConfig{HVPAEnabled: false},
 				nil,
 			),
 			Entry("set the existing requirements because deployment found and HVPA enabled",
@@ -1083,45 +1031,50 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: true},
+				apiserver.AutoscalingConfig{HVPAEnabled: true},
 				&apiServerResources,
 			),
 		)
 
 		DescribeTable("should correctly set the autoscaling replicas",
-			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedReplicas int32) {
+			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedReplicas int32) {
 				if prepTest != nil {
 					prepTest()
 				}
 
-				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
+					Values: apiserver.Values{
+						Autoscaling: autoscalingConfig,
+					},
+				})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			},
 
 			Entry("no change due to already set",
 				nil,
-				kubeapiserver.AutoscalingConfig{Replicas: pointer.Int32(1)},
+				apiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
 				nil,
-				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
+				apiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(2),
 			),
 			Entry("use 0 because shoot is hibernated, even  if deployment does not exist",
 				func() {
 					wantScaleDown = true
 				},
-				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
+				apiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(0),
 			),
 			Entry("use deployment replicas because they are greater than 0",
@@ -1132,11 +1085,11 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(3),
+							Replicas: ptr.To[int32](3),
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				int32(3),
 			),
 			Entry("use 0 because shoot is hibernated and deployment is already scaled down",
@@ -1148,17 +1101,17 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(0),
+							Replicas: ptr.To[int32](0),
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				int32(0),
 			),
 		)
 
-		DescribeTable("ETCDEncryptionConfig",
-			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig kubeapiserver.ETCDEncryptionConfig, finalizeTest func()) {
+		DescribeTable("ETCD Encryption Key rotation",
+			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig apiserver.ETCDEncryptionConfig, finalizeTest func()) {
 				if len(rotationPhase) > 0 {
 					etcdEncryptionKeyRotationPhase = rotationPhase
 				}
@@ -1173,11 +1126,12 @@ exemptions:
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 
 				if finalizeTest != nil {
 					finalizeTest()
@@ -1187,13 +1141,14 @@ exemptions:
 			Entry("no rotation",
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				nil,
 			),
 			Entry("preparing phase, new key already populated",
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,
@@ -1201,13 +1156,14 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				nil,
 			),
 			Entry("preparing phase, new key not yet populated",
 				gardencorev1beta1.RotationPreparing,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
 							Namespace: namespace,
@@ -1216,14 +1172,15 @@ exemptions:
 
 					kubeAPIServer.EXPECT().Wait(ctx)
 
-					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(kubeapiserver.ETCDEncryptionConfig{
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
 						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
-						Resources:             []string{"secrets"},
+						ResourcesToEncrypt:    []string{"secrets"},
+						EncryptedResources:    []string{"secrets"},
 					})
 					kubeAPIServer.EXPECT().Deploy(ctx)
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1233,13 +1190,14 @@ exemptions:
 			Entry("prepared phase",
 				gardencorev1beta1.RotationPrepared,
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				nil,
 			),
 			Entry("completing phase",
 				gardencorev1beta1.RotationCompleting,
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        "kube-apiserver",
 							Namespace:   namespace,
@@ -1247,7 +1205,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1257,10 +1215,74 @@ exemptions:
 			Entry("completed phase",
 				gardencorev1beta1.RotationCompleted,
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, ResourcesToEncrypt: []string{"secrets"}, EncryptedResources: []string{"secrets"}},
 				nil,
 			),
 		)
+
+		Describe("ETCDEncryptionConfig", func() {
+			It("It should deploy KubeAPIServer with the default ETCDEncryptionConfig when resources are nil", func() {
+				expectedETCDEncryptionConfig := apiserver.ETCDEncryptionConfig{
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt: []string{
+						"secrets",
+					},
+					EncryptedResources: []string{
+						"secrets",
+					},
+				}
+
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+			})
+
+			It("It should deploy KubeAPIServer with the default resources appended to the passed resources", func() {
+				expectedETCDEncryptionConfig := apiserver.ETCDEncryptionConfig{
+					EncryptWithCurrentKey: true,
+					ResourcesToEncrypt: []string{
+						"configmaps",
+						"customresource.fancyoperator.io",
+						"secrets",
+					},
+					EncryptedResources: []string{
+						"deployments.apps",
+						"secrets",
+					},
+				}
+
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				resourcesToEncrypt := []string{
+					"configmaps",
+					"customresource.fancyoperator.io",
+				}
+
+				encryptedResources := []string{
+					"deployments.apps",
+				}
+
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, resourcesToEncrypt, encryptedResources, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+			})
+		})
 
 		Describe("External{Hostname,Server}", func() {
 			It("should set the external {hostname,server} to the provided addresses", func() {
@@ -1270,11 +1292,12 @@ exemptions:
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(externalHostname)
 				kubeAPIServer.EXPECT().SetExternalServer(externalServer)
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
@@ -1286,158 +1309,30 @@ exemptions:
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(serverCertificateConfig)
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 
 		Describe("ServiceAccountConfig", func() {
-			var (
-				maxTokenExpiration    = metav1.Duration{Duration: time.Hour}
-				extendTokenExpiration = false
-				externalHostname      = "api.my-domain.com"
-			)
+			It("should set the field to the provided config", func() {
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(serviceAccountConfig)
+				kubeAPIServer.EXPECT().Deploy(ctx)
 
-			DescribeTable("should have the expected ServiceAccountConfig config",
-				func(prepTest func(), expectedConfig kubeapiserver.ServiceAccountConfig, expectError bool, errMatcher gomegatypes.GomegaMatcher) {
-					if prepTest != nil {
-						prepTest()
-					}
-
-					kubeAPIServer.EXPECT().GetValues()
-					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
-					if !expectError {
-						kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
-						kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
-						kubeAPIServer.EXPECT().Deploy(ctx)
-					}
-
-					Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
-				},
-
-				Entry("KubeAPIServerConfig is nil",
-					nil,
-					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("ServiceAccountConfig is nil",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
-					},
-					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("service account key rotation phase is set",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
-						serviceAccountKeyRotationPhase = gardencorev1beta1.RotationCompleting
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:        "https://" + externalHostname,
-						RotationPhase: gardencorev1beta1.RotationCompleting,
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("Issuer is not provided",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								ExtendTokenExpiration: &extendTokenExpiration,
-								MaxTokenExpiration:    &maxTokenExpiration,
-							},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:                "https://" + externalHostname,
-						ExtendTokenExpiration: &extendTokenExpiration,
-						MaxTokenExpiration:    &maxTokenExpiration,
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("Issuer is provided",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer: pointer.String("issuer"),
-							},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:          "issuer",
-						AcceptedIssuers: []string{"https://" + externalHostname},
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("AcceptedIssuers is provided and Issuer is not",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								AcceptedIssuers: []string{"issuer1", "issuer2"},
-							},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:          "https://" + externalHostname,
-						AcceptedIssuers: []string{"issuer1", "issuer2"},
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("AcceptedIssuers and Issuer are provided",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
-								AcceptedIssuers: []string{"issuer1", "issuer2"},
-							},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:          "issuer",
-						AcceptedIssuers: []string{"issuer1", "issuer2", "https://" + externalHostname},
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("Default Issuer is already part of AcceptedIssuers",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
-								AcceptedIssuers: []string{"https://" + externalHostname},
-							},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{
-						Issuer:          "issuer",
-						AcceptedIssuers: []string{"https://" + externalHostname},
-					},
-					false,
-					Not(HaveOccurred()),
-				),
-				Entry("AcceptedIssuers is not provided",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
-						}
-					},
-					kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname},
-					false,
-					Not(HaveOccurred()),
-				),
-			)
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+			})
 		})
 
 		Describe("SNIConfig", func() {
@@ -1448,11 +1343,29 @@ exemptions:
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, apiServerConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, etcdEncryptionKeyRotationPhase, serviceAccountKeyRotationPhase, wantScaleDown)).To(Succeed())
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
+			})
+		})
+
+		Describe("NodeNetworkCIDR", func() {
+			It("should set the field to the provided config", func() {
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(sniConfig)
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			})
 		})
 	})

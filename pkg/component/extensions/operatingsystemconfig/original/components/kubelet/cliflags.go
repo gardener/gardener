@@ -16,23 +16,20 @@ package kubelet
 
 import (
 	"fmt"
-	"sort"
-	"time"
+	"slices"
 
-	"github.com/Masterminds/semver"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/Masterminds/semver/v3"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // CLIFlags returns a list of kubelet CLI flags based on the provided parameters and for the provided Kubernetes version.
-func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, criName extensionsv1alpha1.CRIName, image *imagevector.Image, cliFlags components.ConfigurableKubeletCLIFlags) []string {
+func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, criName extensionsv1alpha1.CRIName, cliFlags components.ConfigurableKubeletCLIFlags, preferIPv6 bool) []string {
 	setCLIFlagsDefaults(&cliFlags)
 
 	var flags []string
@@ -53,26 +50,18 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 		if versionutils.ConstraintK8sLess127.Check(kubernetesVersion) {
 			flags = append(flags, "--container-runtime=remote")
 		}
-	} else if criName == extensionsv1alpha1.CRINameDocker {
-		flags = append(flags,
-			"--network-plugin=cni",
-			"--cni-bin-dir=/opt/cni/bin/",
-			"--cni-conf-dir=/etc/cni/net.d/",
-			fmt.Sprintf("--image-pull-progress-deadline=%s", cliFlags.ImagePullProgressDeadline.Duration.String()))
-		if image != nil {
-			flags = append(flags, "--pod-infra-container-image="+image.String())
-		}
 	}
 
 	flags = append(flags, "--v=2")
-
+	// This is needed to prefer the ipv6 address over the ipv4 address in case the node has two addresses.
+	// It's important for ipv6-only services with pods in the host network and for vpn, so that the ipv6 address of a node is used.
+	if preferIPv6 {
+		flags = append(flags, "--node-ip=\"::\"")
+	}
 	return flags
 }
 
-func setCLIFlagsDefaults(f *components.ConfigurableKubeletCLIFlags) {
-	if f.ImagePullProgressDeadline == nil {
-		f.ImagePullProgressDeadline = &metav1.Duration{Duration: time.Minute}
-	}
+func setCLIFlagsDefaults(_ *components.ConfigurableKubeletCLIFlags) {
 }
 
 func nodeLabelFlags(nodeLabels map[string]string) []string {
@@ -99,7 +88,7 @@ func nodeLabelFlags(nodeLabels map[string]string) []string {
 
 	// maps are unsorted in go, make sure to output node labels in the exact same order every time
 	// this ensures deterministic behavior so that tests are stable and the OSC doesn't change on every reconciliation
-	sort.Strings(flags)
+	slices.Sort(flags)
 
 	return flags
 }

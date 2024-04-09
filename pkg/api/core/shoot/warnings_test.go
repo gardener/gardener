@@ -22,11 +22,10 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("Warnings", func() {
@@ -41,8 +40,8 @@ var _ = Describe("Warnings", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version:                     "1.22.11",
-						EnableStaticTokenKubeconfig: pointer.Bool(false),
+						Version:                     "1.26.5",
+						EnableStaticTokenKubeconfig: ptr.To(false),
 					},
 					Provider: core.Provider{
 						Workers: []core.Worker{{Name: "test"}},
@@ -65,7 +64,7 @@ var _ = Describe("Warnings", func() {
 		})
 
 		It("should return a warning when static token kubeconfig is explicitly enabled", func() {
-			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(ContainSubstring("you should consider disabling the static token kubeconfig")))
 		})
 
@@ -93,7 +92,7 @@ var _ = Describe("Warnings", func() {
 						CertificateAuthorities: &core.CARotation{},
 						Kubeconfig:             &core.ShootKubeconfigRotation{},
 						SSHKeypair:             &core.ShootSSHKeypairRotation{},
-						Observability:          &core.ShootObservabilityRotation{},
+						Observability:          &core.ObservabilityRotation{},
 						ServiceAccountKey:      &core.ServiceAccountKeyRotation{},
 						ETCDEncryptionKey:      &core.ETCDEncryptionKeyRotation{},
 					}
@@ -173,7 +172,7 @@ var _ = Describe("Warnings", func() {
 
 				Entry("kubeconfig nil", ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig")),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig = nil
@@ -181,7 +180,7 @@ var _ = Describe("Warnings", func() {
 				),
 				Entry("kubeconfig last initiated too long ago", ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig")),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval * 2)}
@@ -189,7 +188,7 @@ var _ = Describe("Warnings", func() {
 				),
 				Entry("kubeconfig last initiated too long ago but disabled", Not(ContainElement(ContainSubstring("you should consider rotating the static token kubeconfig"))),
 					func(shoot *core.Shoot) {
-						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+						shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 					},
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.Kubeconfig.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval * 2)}
@@ -292,77 +291,6 @@ var _ = Describe("Warnings", func() {
 				},
 				),
 			)
-		})
-
-		Context("PodSecurityPolicy", func() {
-			BeforeEach(func() {
-				shoot.CreationTimestamp = metav1.Now()
-			})
-
-			It("should return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.23 and < 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.2"
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(ContainElement(
-					ContainSubstring("you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller for details"),
-				))
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is disabled for shoots >= 1.23 and < 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.24.2"
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					AdmissionPlugins: []core.AdmissionPlugin{
-						{
-							Name:     "PodSecurityPolicy",
-							Disabled: pointer.Bool(true),
-						},
-					},
-				}
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots < 1.23", func() {
-				shoot.Spec.Kubernetes.Version = "1.22.11"
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-
-			It("should not return a warning when the PodSecurity admission plugin is not disabled for shoots >= 1.25", func() {
-				shoot.Spec.Kubernetes.Version = "1.25.0"
-
-				warnings := GetWarnings(ctx, shoot, shoot, credentialsRotationInterval)
-				Expect(warnings).To(BeEmpty())
-			})
-		})
-
-		Context("node-local-dns annotations", func() {
-			It("should return a warning when annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns` is present", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationNodeLocalDNS: "true",
-				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead. Switching on node-local-dns via shoot specification will roll the nodes even if node-local-dns was enabled beforehand via annotation.")))
-			})
-
-			It("should return a warning when annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns` is present", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "true",
-				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToClusterDNS` in Shoot instead.")))
-			})
-
-			It("should return a warning when annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns` is present", func() {
-				shoot.Annotations = map[string]string{
-					v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "true",
-				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToUpstreamDNS` in Shoot instead.")))
-			})
-
-			It("should not return a warning when the node-local-dns related annotation is not present", func() {
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeEmpty())
-			})
 		})
 
 		It("should return a warning when podEvictionTimeout is set", func() {

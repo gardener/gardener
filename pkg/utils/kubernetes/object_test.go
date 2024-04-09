@@ -16,12 +16,12 @@ package kubernetes_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,11 +29,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Object", func() {
@@ -42,7 +43,7 @@ var _ = Describe("Object", func() {
 		c    *mockclient.MockClient
 
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		obj1 = &corev1.Secret{}
 		obj2 = &appsv1.Deployment{}
@@ -156,39 +157,76 @@ var _ = Describe("Object", func() {
 
 	Describe("#ResourcesExist", func() {
 		var (
-			group                     = "group"
-			version                   = "v43"
-			kind                      = "kind"
-			gvk                       = schema.GroupVersionKind{Group: group, Version: version, Kind: kind}
-			partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: group + "/" + version, Kind: kind}}
-			listOpts                  = []client.ListOption{client.InNamespace(namespace)}
+			scheme   *runtime.Scheme
+			objList  client.ObjectList
+			listOpts []client.ListOption
 		)
 
-		It("should return an error because the listing failed", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+		BeforeEach(func() {
+			scheme = kubernetesscheme.Scheme
+			objList = &corev1.SecretList{}
+			listOpts = []client.ListOption{client.InNamespace(namespace)}
+		})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
+		It("should return an error because the listing failed", func() {
+			c.EXPECT().List(ctx, gomock.Any(), client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+
+			inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(inUse).To(BeTrue())
 		})
 
-		It("should return true because objects found", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
-				return nil
+		Context("with partialObjectMetadataList", func() {
+			var partialObjectMetadataList *metav1.PartialObjectMetadataList
+
+			BeforeEach(func() {
+				partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "SecretList"}}
+				listOpts = append(listOpts, client.MatchingFields{"metadata.name": "foo"})
 			})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(inUse).To(BeTrue())
+			It("should return true because objects found", func() {
+				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
+					return nil
+				})
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeTrue())
+			})
+
+			It("should return false because no objects found", func() {
+				c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.MatchingFields{"metadata.name": "foo"}, client.Limit(1))
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeFalse())
+			})
 		})
 
-		It("should return false because no objects found", func() {
-			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1))
+		Context("with objectList", func() {
+			BeforeEach(func() {
+				listOpts = append(listOpts, client.MatchingFields{"data.foo": "bar"})
+			})
 
-			inUse, err := ResourcesExist(ctx, c, gvk, listOpts...)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(inUse).To(BeFalse())
+			It("should return true because objects found", func() {
+				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1)).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = []corev1.Secret{{}}
+					return nil
+				})
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeTrue())
+			})
+
+			It("should return false because no objects found", func() {
+				c.EXPECT().List(ctx, objList, client.InNamespace(namespace), client.MatchingFields{"data.foo": "bar"}, client.Limit(1))
+
+				inUse, err := ResourcesExist(ctx, c, objList, scheme, listOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(inUse).To(BeFalse())
+			})
 		})
 	})
 
@@ -215,7 +253,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedConfigMap.Name += "-e3b0c442"
-			expectedConfigMap.Immutable = pointer.Bool(true)
+			expectedConfigMap.Immutable = ptr.To(true)
 			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(configMap)).To(Succeed())
@@ -234,7 +272,7 @@ var _ = Describe("Object", func() {
 			)
 
 			expectedSecret.Name += "e3b0c442"
-			expectedSecret.Immutable = pointer.Bool(true)
+			expectedSecret.Immutable = ptr.To(true)
 			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
 			Expect(MakeUnique(secret)).To(Succeed())

@@ -56,6 +56,8 @@ type Interface interface {
 	ProviderStatus() *runtime.RawExtension
 	// NodesCIDR returns the generated nodes CIDR of the provider.
 	NodesCIDR() *string
+	// EgressCIDRs returns a list of CIDRs used as source IP by any traffic originating from the shoot's worker nodes.
+	EgressCIDRs() []string
 }
 
 // Values contains the values used to create an Infrastructure resources.
@@ -116,6 +118,7 @@ type infrastructure struct {
 	infrastructure *extensionsv1alpha1.Infrastructure
 	providerStatus *runtime.RawExtension
 	nodesCIDR      *string
+	egressCIDRs    []string
 }
 
 // Deploy uses the seed client to create or update the Infrastructure resource.
@@ -254,9 +257,16 @@ func (i *infrastructure) NodesCIDR() *string {
 	return i.nodesCIDR
 }
 
+// EgressCIDRs returns a list of CIDRs used as source IP by any traffic originating from the shoot's worker nodes.
+func (i *infrastructure) EgressCIDRs() []string {
+	return i.egressCIDRs
+}
+
 func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureStatus) {
 	i.providerStatus = status.ProviderStatus
 	i.nodesCIDR = status.NodesCIDR
+	i.egressCIDRs = make([]string, len(status.EgressCIDRs))
+	copy(i.egressCIDRs, status.EgressCIDRs)
 }
 
 func (i *infrastructure) lastOperationNotSuccessful() bool {

@@ -24,7 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -216,12 +216,13 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 			checkResults = append(checkResults, Result{
 				HealthConditionType: conditionType,
 				Status:              gardencorev1beta1.ConditionFalse,
-				Detail:              pointer.String(trimTrailingWhitespace(details.String())),
+				Detail:              ptr.To(trimTrailingWhitespace(details.String())),
 				SuccessfulChecks:    result.successfulChecks,
 				UnsuccessfulChecks:  len(result.unsuccessfulChecks),
 				FailedChecks:        len(result.failedChecks),
 				Codes:               result.codes,
 			})
+
 			continue
 		}
 
@@ -247,11 +248,12 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 				HealthConditionType:  conditionType,
 				Status:               gardencorev1beta1.ConditionProgressing,
 				ProgressingThreshold: threshold,
-				Detail:               pointer.String(trimTrailingWhitespace(details.String())),
+				Detail:               ptr.To(trimTrailingWhitespace(details.String())),
 				SuccessfulChecks:     result.successfulChecks,
 				ProgressingChecks:    len(result.progressingChecks),
 				Codes:                result.codes,
 			})
+
 			continue
 		}
 

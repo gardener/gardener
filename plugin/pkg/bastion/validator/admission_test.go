@@ -28,14 +28,13 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 )
@@ -44,6 +43,7 @@ const (
 	bastionName = "foo"
 	shootName   = "foo"
 	seedName    = "foo"
+	workerName  = "foo"
 	namespace   = "garden"
 	provider    = "foo-provider"
 	region      = "foo-region"
@@ -54,23 +54,28 @@ var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
 			bastion          *operations.Bastion
-			shoot            *gardencore.Shoot
+			shoot            *gardencorev1beta1.Shoot
 			coreClient       *corefake.Clientset
 			dummyOwnerRef    *metav1.OwnerReference
 			admissionHandler *Bastion
 		)
 
 		BeforeEach(func() {
-			shoot = &gardencore.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 					UID:       "shoot-uid",
 				},
-				Spec: gardencore.ShootSpec{
-					SeedName: pointer.String(seedName),
-					Provider: gardencore.Provider{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: ptr.To(seedName),
+					Provider: gardencorev1beta1.Provider{
 						Type: provider,
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: workerName,
+							},
+						},
 					},
 					Region: region,
 				},
@@ -101,7 +106,7 @@ var _ = Describe("Bastion", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 		})
 
 		It("should do nothing if the resource is not a Bastion", func() {
@@ -112,7 +117,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should allow Bastion creation if all fields are set correctly", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -121,7 +126,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should mutate Bastion with Shoot information", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -132,7 +137,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should ensure an owner reference from the Bastion to the Shoot", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -146,7 +151,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should mutate Bastion with creator information", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -156,7 +161,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should always keep the creator annotation", func() {
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -198,7 +203,7 @@ var _ = Describe("Bastion", func() {
 		It("should forbid the Bastion creation if the Shoot does not specify a Seed", func() {
 			shoot.Spec.SeedName = nil
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -216,7 +221,7 @@ var _ = Describe("Bastion", func() {
 			now := metav1.Now()
 			shoot.DeletionTimestamp = &now
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -231,11 +236,11 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should forbid the Bastion creation if the Shoot's SSH access is disabled", func() {
-			shoot.Spec.Provider.WorkersSettings = &gardencore.WorkersSettings{
-				SSHAccess: &gardencore.SSHAccess{Enabled: false},
+			shoot.Spec.Provider.WorkersSettings = &gardencorev1beta1.WorkersSettings{
+				SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false},
 			}
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
@@ -253,13 +258,32 @@ var _ = Describe("Bastion", func() {
 			now := metav1.Now()
 			shoot.DeletionTimestamp = &now
 
-			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, shoot, nil
 			})
 
 			oldBastion := bastion.DeepCopy()
 			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
-			bastion.ObjectMeta.Finalizers = []string{""}
+			bastion.ObjectMeta.Finalizers = nil
+
+			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+			Expect(err).To(Succeed())
+		})
+
+		It("should allow the Bastion update on finalizers even if the Shoot's SSH access is disabled", func() {
+			shoot.Spec.Provider.WorkersSettings = &gardencorev1beta1.WorkersSettings{
+				SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false},
+			}
+			now := metav1.Now()
+			bastion.DeletionTimestamp = &now
+
+			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			oldBastion := bastion.DeepCopy()
+			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
+			bastion.ObjectMeta.Finalizers = nil
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
@@ -273,7 +297,7 @@ var _ = Describe("Bastion", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement(PluginName))
+			Expect(registered).To(ContainElement("Bastion"))
 		})
 	})
 
@@ -298,7 +322,7 @@ var _ = Describe("Bastion", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

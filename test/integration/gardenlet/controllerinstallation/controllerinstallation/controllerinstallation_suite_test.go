@@ -29,25 +29,26 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
@@ -77,6 +78,7 @@ var (
 	mgrClient     client.Client
 
 	seed                  *gardencorev1beta1.Seed
+	seedNamespace         *corev1.Namespace
 	gardenNamespace       *corev1.Namespace
 	identity              = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 	gardenClusterIdentity = "test-garden"
@@ -152,7 +154,7 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 			},
 		},
 	}
@@ -160,12 +162,26 @@ var _ = BeforeSuite(func() {
 	log.Info("Created Seed for test", "seed", seed.Name)
 
 	patch := client.MergeFrom(seed.DeepCopy())
-	seed.Status.ClusterIdentity = pointer.String(seedClusterIdentity)
+	seed.Status.ClusterIdentity = ptr.To(seedClusterIdentity)
 	Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
 
 	DeferCleanup(func() {
 		By("Delete seed")
 		Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
+	By("Create seed namespace")
+	seedNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "seed-" + seed.Name,
+		},
+	}
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created seed namespace for test", "namespaceName", seedNamespace)
+
+	DeferCleanup(func() {
+		By("Delete seed namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("Create garden namespace")
@@ -175,14 +191,14 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
+	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace)
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             testScheme,
-		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+		Scheme:  testScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: seed.Name}),
@@ -197,7 +213,14 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Secret{}, // applied because of operations on managed resources and their secrets
+				},
+			},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -221,7 +244,7 @@ var _ = BeforeSuite(func() {
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
-					ConcurrentSyncs: pointer.Int(5),
+					ConcurrentSyncs: ptr.To(5),
 				},
 			},
 		},

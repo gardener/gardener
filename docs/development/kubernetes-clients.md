@@ -23,7 +23,7 @@ For historical reasons, you will find different kinds of Kubernetes clients in G
 [client-go](https://github.com/kubernetes/client-go) is the default/official client for talking to the Kubernetes API in Golang.
 It features the so called ["client sets"](https://github.com/kubernetes/client-go/blob/release-1.21/kubernetes/clientset.go#L72) for all built-in Kubernetes API groups and versions (e.g. `v1` (aka `core/v1`), `apps/v1`).
 client-go clients are generated from the built-in API types using [client-gen](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/generating-clientset.md) and are composed of interfaces for every known API GroupVersionKind.
-A typical client-go usage looks like this:  
+A typical client-go usage looks like this:
 ```go
 var (
   ctx        context.Context
@@ -37,7 +37,7 @@ updatedDeployment, err := c.AppsV1().Deployments("default").Update(ctx, deployme
 _Important characteristics of client-go clients:_
 
 - clients are specific to a given API GroupVersionKind, i.e., clients are hard-coded to corresponding API-paths (don't need to use the discovery API to map GVK to a REST endpoint path).
-- client's don't modify the passed in-memory object (e.g. `deployment` in the above example). Instead, they return a new in-memory object.  
+- client's don't modify the passed in-memory object (e.g. `deployment` in the above example). Instead, they return a new in-memory object.
   This means that controllers have to continue working with the new in-memory object or overwrite the shared object to not lose any state updates.
 
 ### Generated Client Sets for Gardener APIs
@@ -81,7 +81,7 @@ A brief introduction to controller-runtime and its basic constructs can be found
 _Important characteristics of controller-runtime clients:_
 
 - The client functions take a generic `client.Object` or `client.ObjectList` value. These interfaces are implemented by all Golang types, that represent Kubernetes API objects or lists respectively which can be interacted with via usual API requests. [1]
-- The client first consults a `runtime.Scheme` (configured during client creation) for recognizing the object's `GroupVersionKind` (this happens on the client-side only).  
+- The client first consults a `runtime.Scheme` (configured during client creation) for recognizing the object's `GroupVersionKind` (this happens on the client-side only).
   A `runtime.Scheme` is basically a registry for Golang API types, defaulting and conversion functions. Schemes are usually provided per `GroupVersion` (see [this example](https://github.com/kubernetes/api/blob/release-1.21/apps/v1/register.go) for `apps/v1`) and can be combined to one single scheme for further usage ([example](https://github.com/gardener/gardener/blob/v1.29.0/pkg/client/kubernetes/types.go#L96)). In controller-runtime clients, schemes are used only for mapping a typed API object to its `GroupVersionKind`.
 - It then consults a `meta.RESTMapper` (also configured during client creation) for mapping the `GroupVersionKind` to a `RESTMapping`, which contains the `GroupVersionResource` and `Scope` (namespaced or cluster-scoped). From these values, the client can unambiguously determine the REST endpoint path of the corresponding API resource. For instance: `appsv1.DeploymentList` is available at `/apis/apps/v1/deployments` or `/apis/apps/v1/namespaces/<namespace>/deployments` respectively.
   - There are different `RESTMapper` implementations, but generally they are talking to the API server's discovery API for retrieving `RESTMappings` for all API resources known to the API server (either built-in, registered via API extension or `CustomResourceDefinition`s).
@@ -95,7 +95,7 @@ _Important characteristics of controller-runtime clients:_
 - The client decoder erases the object's `TypeMeta` (`apiVersion` and `kind` fields) after retrieval from the API server, see [kubernetes/kubernetes#80609](https://github.com/kubernetes/kubernetes/issues/80609), [kubernetes-sigs/controller-runtime#1517](https://github.com/kubernetes-sigs/controller-runtime/issues/1517).
   Unstructured and metadata-only requests objects are an exception to this because the contained `TypeMeta` is the only way to identify the object's type.
   Because of this behavior, `obj.GetObjectKind().GroupVersionKind()` is likely to return an empty `GroupVersionKind`.
-  I.e., you must not rely on `TypeMeta` being set or `GetObjectKind()` to return something usable.  
+  I.e., you must not rely on `TypeMeta` being set or `GetObjectKind()` to return something usable.
   If you need to identify an object's `GroupVersionKind`, use a scheme and its `ObjectKinds` function instead (or the helper function `apiutil.GVKForObject`).
   This is not specific to controller-runtime clients and applies to client-go clients as well.
 
@@ -104,7 +104,7 @@ _Important characteristics of controller-runtime clients:_
 ### Metadata-Only Clients
 
 Additionally, controller-runtime clients can be used to easily retrieve metadata-only objects or lists.
-This is useful for efficiently checking if at least one object of a given kind exists, or retrieving metadata of an object, if one is not interested in the rest (e.g., spec/status).  
+This is useful for efficiently checking if at least one object of a given kind exists, or retrieving metadata of an object, if one is not interested in the rest (e.g., spec/status).
 The `Accept` header sent to the API server then contains `application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1`, which makes the API server only return metadata of the retrieved object(s).
 This saves network traffic and CPU/memory load on the API server and client side.
 If the client fully lists all objects of a given kind including their spec/status, the resulting list can be quite large and easily exceed the controllers available memory.
@@ -134,7 +134,7 @@ if len(shootList.Items) > 0 {
 ### Gardener's Client Collection, ClientMaps
 
 The Gardener codebase has a collection of clients ([`kubernetes.Interface`](https://github.com/gardener/gardener/blob/v1.29.0/pkg/client/kubernetes/types.go#L149)), which can return all the above mentioned client types.
-Additionally, it contains helpers for rendering and applying helm charts (`ChartRender`, `ChartApplier`) and retrieving the API server's version (`Version`).  
+Additionally, it contains helpers for rendering and applying helm charts (`ChartRender`, `ChartApplier`) and retrieving the API server's version (`Version`).
 Client sets are managed by so called `ClientMap`s, which are a form of registry for all client set for a given type of cluster, i.e., Garden, Seed and Shoot.
 ClientMaps manage the whole lifecycle of clients: they take care of creating them if they don't exist already, running their caches, refreshing their cached server version and invalidating them when they are no longer needed.
 
@@ -212,7 +212,7 @@ _Important characteristics of cached controller-runtime clients:_
 In order to allow more granular control over which object kinds should be cached and which calls should bypass the cache, controller-runtime offers a few mechanisms to further tweak the client/cache behavior:
 
 - When creating a `DelegatingClient`, certain object kinds can be configured to always be read directly from the API instead of from the cache. Note that this does not prevent starting a new Informer when retrieving them directly from the cache.
-- Watches can be restricted to a given (set of) namespace(s) by using `cache.MultiNamespacedCacheBuilder` or setting `cache.Options.Namespace`.
+- Watches can be restricted to a given (set of) namespace(s) by setting `cache.Options.Namespaces`.
 - Watches can be filtered (e.g., by label) per object kind by configuring `cache.Options.SelectorsByObject` on creation of the cache.
 - Retrieving metadata-only objects or lists from a cache results in a metadata-only watch/cache for that object kind.
 - The `APIReader` can be used to always talk directly to the API server for a given `Get` or `List` call (use with care and only as a last resort!).
@@ -305,12 +305,12 @@ This might ignore concurrent changes to other fields or blindly overwrite change
 Obviously, this applies only to patch requests that modify only a specific set of fields but not to update requests that replace the entire object.
 
 In such cases, it's even desirable to run without optimistic locking as it will be more performant and save retries.
-If certain requests are made with high frequency and have a good chance of causing conflicts, retries because of optimistic locking can cause a lot of additional network traffic in a large-scale Gardener installation. 
+If certain requests are made with high frequency and have a good chance of causing conflicts, retries because of optimistic locking can cause a lot of additional network traffic in a large-scale Gardener installation.
 
 ## Updates, Patches, Server-Side Apply
 
 There are different ways of modifying Kubernetes API objects.
-The following snippet demonstrates how to do a given modification with the most frequently used options using a controller-runtime client: 
+The following snippet demonstrates how to do a given modification with the most frequently used options using a controller-runtime client:
 
 ```go
 var (
@@ -320,17 +320,17 @@ var (
 )
 
 // update
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err := c.Update(ctx, shoot)
 
 // json merge patch
 patch := client.MergeFrom(shoot.DeepCopy())
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err = c.Patch(ctx, shoot, patch)
 
 // strategic merge patch
 patch = client.StrategicMergeFrom(shoot.DeepCopy())
-shoot.Spec.Kubernetes.Version = "1.22"
+shoot.Spec.Kubernetes.Version = "1.26"
 err = c.Patch(ctx, shoot, patch)
 ```
 
@@ -342,7 +342,7 @@ _Important characteristics of the shown request types:_
     // json merge patch + optimistic locking
     patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
     // ...
-  
+
     // strategic merge patch + optimistic locking
     patch = client.StrategicMergeFrom(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
     // ...

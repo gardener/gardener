@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -41,12 +41,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("Worker", func() {
@@ -73,8 +73,8 @@ var _ = Describe("Worker", func() {
 		worker1Name                           = "worker1"
 		worker1Minimum                  int32 = 1
 		worker1Maximum                  int32 = 2
-		worker1MaxSurge                       = intstr.FromInt(3)
-		worker1MaxUnavailable                 = intstr.FromInt(4)
+		worker1MaxSurge                       = intstr.FromInt32(3)
+		worker1MaxUnavailable                 = intstr.FromInt32(4)
 		worker1Labels                         = map[string]string{"foo": "bar"}
 		worker1Annotations                    = map[string]string{"bar": "foo"}
 		worker1Taints                         = []corev1.Taint{{}}
@@ -97,18 +97,18 @@ var _ = Describe("Worker", func() {
 		worker1ProviderConfig                 = &runtime.RawExtension{Raw: []byte(`{"bar":"baz"}`)}
 		worker1Zone1                          = "worker1zone1"
 		worker1Zone2                          = "worker1zone1"
-		worker1Arch                           = pointer.String("amd64")
+		worker1Arch                           = ptr.To("amd64")
 
 		worker2Name                      = "worker2"
 		worker2Minimum             int32 = 5
 		worker2Maximum             int32 = 6
-		worker2MaxSurge                  = intstr.FromInt(7)
-		worker2MaxUnavailable            = intstr.FromInt(8)
+		worker2MaxSurge                  = intstr.FromInt32(7)
+		worker2MaxUnavailable            = intstr.FromInt32(8)
 		worker2MachineType               = "worker2machinetype"
 		worker2MachineImageName          = "worker2machineimage"
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
-		worker2Arch                      = pointer.String("arm64")
+		worker2Arch                      = ptr.To("arm64")
 
 		machineTypes = []gardencorev1beta1.MachineType{
 			{
@@ -146,6 +146,8 @@ var _ = Describe("Worker", func() {
 
 		defaultDepWaiter worker.Interface
 		values           *worker.Values
+
+		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
 	)
 
 	BeforeEach(func() {
@@ -169,12 +171,12 @@ var _ = Describe("Worker", func() {
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
-					Downloader: operatingsystemconfig.Data{
+					Init: operatingsystemconfig.Data{
 						Content: string(worker1UserData),
 					},
 				},
 				worker2Name: {
-					Downloader: operatingsystemconfig.Data{
+					Init: operatingsystemconfig.Data{
 						Content: string(worker2UserData),
 					},
 				},
@@ -220,6 +222,7 @@ var _ = Describe("Worker", func() {
 					ProviderConfig:                   worker1ProviderConfig,
 					MachineControllerManagerSettings: worker1MCMSettings,
 					Zones:                            []string{worker1Zone1, worker1Zone2},
+					ClusterAutoscaler:                &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 				{
 					Name:           worker2Name,
@@ -238,6 +241,7 @@ var _ = Describe("Worker", func() {
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Version: &workerKubernetesVersion,
 					},
+					ClusterAutoscaler: &gardencorev1beta1.ClusterAutoscalerOptions{},
 				},
 			},
 		}
@@ -305,11 +309,12 @@ var _ = Describe("Worker", func() {
 						},
 					},
 					KubeletDataVolumeName:            &worker1KubeletDataVolumeName,
-					KubernetesVersion:                pointer.String(kubernetesVersion.String()),
+					KubernetesVersion:                ptr.To(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
 					NodeTemplate:                     workerPool1NodeTemplate,
 					Architecture:                     worker1Arch,
+					ClusterAutoscaler:                emptyAutoscalerOptions,
 				},
 				{
 					Name:           worker2Name,
@@ -334,6 +339,7 @@ var _ = Describe("Worker", func() {
 					UserData:          worker2UserData,
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
+					ClusterAutoscaler: emptyAutoscalerOptions,
 				},
 			},
 		}
@@ -359,10 +365,6 @@ var _ = Describe("Worker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -406,10 +408,6 @@ var _ = Describe("Worker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -453,10 +451,6 @@ var _ = Describe("Worker", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -470,6 +464,62 @@ var _ = Describe("Worker", func() {
 			}))
 		})
 
+		It("should successfully deploy the Worker resource with cluster autoscaker options when present", func() {
+			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			newValues := *values
+			newValues.Workers[0].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To(0.5),
+				ScaleDownGpuUtilizationThreshold: ptr.To(0.7),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			newValues.Workers[1].ClusterAutoscaler = &gardencorev1beta1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To(0.8),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+			}
+
+			expectedWorkerSpec := wSpec.DeepCopy()
+			expectedWorkerSpec.Pools[0].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownUtilizationThreshold:    ptr.To("0.5"),
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.7"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 1 * time.Minute}),
+				ScaleDownUnreadyTime:             ptr.To(metav1.Duration{Duration: 2 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 3 * time.Minute}),
+			}
+			expectedWorkerSpec.Pools[1].ClusterAutoscaler = &extensionsv1alpha1.ClusterAutoscalerOptions{
+				ScaleDownGpuUtilizationThreshold: ptr.To("0.8"),
+				ScaleDownUnneededTime:            ptr.To(metav1.Duration{Duration: 4 * time.Minute}),
+				MaxNodeProvisionTime:             ptr.To(metav1.Duration{Duration: 5 * time.Minute}),
+			}
+
+			existingWorker := w.DeepCopy()
+			existingWorker.Spec.Pools = expectedWorkerSpec.Pools
+
+			Expect(c.Create(ctx, existingWorker)).To(Succeed(), "creating worker succeeds")
+
+			defaultDepWaiter = worker.New(log, c, &newValues, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			obj := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
+
+			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
+					},
+					ResourceVersion: "2",
+				},
+				Spec: *expectedWorkerSpec,
+			}))
+		})
 	})
 
 	Describe("#Wait", func() {
@@ -616,34 +666,6 @@ var _ = Describe("Worker", func() {
 			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
 		})
-
-		// TODO(rishabh-11): Remove this test in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime.
-		It("should return no error when status.machineDeploymentsLastUpdateTime is not maintained and worker is ready", func() {
-			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
-			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			By("Deploy")
-			// Deploy should fill internal state with the added timestamp annotation
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			By("Patch object")
-			patch := client.MergeFrom(w.DeepCopy())
-			w.Status.LastError = nil
-			// remove operation annotation, add up-to-date timestamp annotation
-			w.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			}
-			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
-			}
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
-
-			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
-		})
 	})
 
 	Describe("#Destroy", func() {
@@ -695,20 +717,21 @@ var _ = Describe("Worker", func() {
 	})
 
 	Describe("#Restore", func() {
-		var (
-			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
+		var shootState *gardencorev1beta1.ShootState
+
+		BeforeEach(func() {
 			shootState = &gardencorev1beta1.ShootState{
 				Spec: gardencorev1beta1.ShootStateSpec{
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
-							Name:  &name,
+							Name:  &w.Name,
 							Kind:  extensionsv1alpha1.WorkerResource,
-							State: state,
+							State: &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)},
 						},
 					},
 				},
 			}
-		)
+		})
 
 		It("should properly restore the worker state if it exists", func() {
 			defer test.WithVars(
@@ -732,14 +755,14 @@ var _ = Describe("Worker", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})
 
 			// restore state
 			expectedWithState := obj.DeepCopy()
-			expectedWithState.Status.State = state
+			expectedWithState.Status.State = &runtime.RawExtension{Raw: []byte(`{"some":"state"}`)}
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)
 
 			// annotate with restore annotation

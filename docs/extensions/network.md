@@ -9,7 +9,7 @@ Whether a user is an operator or an end-user, it makes sense to provide choice. 
 choose a network-plugin that would support enforcing network policies (some plugins does not come with network-policy support by default). 
 For operators however, choice only matters for delegation purposes i.e., when providing an own managed-service, it becomes important to also provide choice over which network-plugins to use.
  
-Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, [Azure does not support Calico Networking](https://docs.projectcalico.org/v3.0/reference/public-cloud/azure). This leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
+Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, Azure does not support Calico overlay networking with IP in IP [1], this leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
 
 Finally, every provider is different, and thus the network always needs to adapt to the infrastructure needs to provide better performance. Consistency does not necessarily lie in the implementation but in the interface.
 
@@ -45,7 +45,7 @@ spec:
       type: host-local
 ```
 
-The above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage-as-end-user.md)):
+The above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage/usage.md)):
 
 - global configuration (e.g., podCIDR, serviceCIDR, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)
@@ -93,4 +93,4 @@ The networking extensions need to handle this twofold:
 
 ## Related Links
 
-- [Azure Support for Calico Networking](https://docs.projectcalico.org/v3.0/reference/public-cloud/azure)
+- [1] [Calico overlay networking on Azure](https://docs.tigera.io/calico/latest/networking/configuring/vxlan-ipip#encapsulation-types)

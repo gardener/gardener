@@ -33,10 +33,10 @@ var _ = Describe("And", func() {
 
 	BeforeEach(func() {
 		obj = &corev1.Pod{}
-		healthy = func(o client.Object) error {
+		healthy = func(_ client.Object) error {
 			return nil
 		}
-		unhealthy = func(o client.Object) error {
+		unhealthy = func(_ client.Object) error {
 			return fmt.Errorf("unhealthy")
 		}
 	})

@@ -3,7 +3,7 @@ revisionHistoryLimit: 2
 serviceAccountName: gardener-operator
 invalidateServiceAccountToken: true
 image:
-  repository: eu.gcr.io/gardener-project/gardener/operator
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/operator
   tag: latest
   pullPolicy: IfNotPresent
 resources:
@@ -69,9 +69,12 @@ config:
           enableBackupCompaction: false
           eventsThreshold: 1000000
           activeDeadlineDuration: "3h"
+          metricsScrapeWaitDuration: "60s"
       # backupLeaderElection:
       #   reelectionPeriod: 5s
       #   etcdConnectionTimeout: 5s
+      # featureGates:
+      #   UseEtcdWrapper: true
     gardenCare:
       syncPeriod: 1m
       conditionThresholds:
@@ -80,6 +83,8 @@ config:
       - type: VirtualComponentsHealthy
         duration: 1m
       - type: VirtualGardenAPIServerAvailable
+        duration: 1m
+      - type: ObservabilityComponentsHealthy
         duration: 1m
     networkPolicy:
       concurrentSyncs: 5

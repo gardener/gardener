@@ -21,7 +21,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -30,6 +30,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
@@ -68,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// if shoot got deleted or is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if shoot.DeletionTimestamp != nil || pointer.StringDeref(shoot.Spec.SeedName, "") != r.SeedName {
+	if shoot.DeletionTimestamp != nil || ptr.Deref(shoot.Spec.SeedName, "") != r.SeedName {
 		return reconcile.Result{}, nil
 	}
 
@@ -115,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *Reconciler) requeueAfter(lastBackup time.Time) (time.Duration, time.Time) {
 	var (
 		nextRegularBackup = lastBackup.Add(r.Config.SyncPeriod.Duration)
-		randomDuration    = controllerutils.RandomDuration(JitterDuration)
+		randomDuration    = utils.RandomDuration(JitterDuration)
 
 		nextBackup              = nextRegularBackup.Add(-JitterDuration / 2).Add(randomDuration)
 		durationUntilNextBackup = nextBackup.UTC().Sub(r.Clock.Now().UTC())

@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -47,6 +48,9 @@ var _ = Describe("Handler", func() {
 		garden = &operatorv1alpha1.Garden{
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []string{"ingress.bar.com"},
+					},
 					Networking: operatorv1alpha1.RuntimeNetworking{
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",
@@ -71,13 +75,17 @@ var _ = Describe("Handler", func() {
 
 	Describe("#ValidateCreate", func() {
 		It("should return success if there are no errors", func() {
-			Expect(handler.ValidateCreate(ctx, garden)).To(Succeed())
+			warning, err := handler.ValidateCreate(ctx, garden)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 
 		It("should return an error if there are validation errors", func() {
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 
-			err := handler.ValidateCreate(ctx, garden)
+			warnings, err := handler.ValidateCreate(ctx, garden)
+			Expect(warnings).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))
@@ -89,24 +97,54 @@ var _ = Describe("Handler", func() {
 			garden2.SetName("garden2")
 			Expect(fakeClient.Create(ctx, garden2)).To(Succeed())
 
-			err := handler.ValidateCreate(ctx, garden)
+			warnings, err := handler.ValidateCreate(ctx, garden)
+			Expect(warnings).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusBadRequest)))
 			Expect(statusError.Status().Message).To(ContainSubstring("there can be only one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time"))
 		})
+
+		Context("forbidden finalizers", func() {
+			test := func(finalizer string) {
+				It("should return error", func() {
+					garden.Finalizers = append([]string{"some-finalizer", "random"}, finalizer)
+
+					warnings, err := handler.ValidateCreate(ctx, garden)
+					Expect(warnings).To(BeNil())
+
+					statusError, ok := err.(*apierrors.StatusError)
+					Expect(ok).To(BeTrue())
+					Expect(statusError.Status().Code).To(Equal(int32(http.StatusBadRequest)))
+					Expect(statusError.Status().Message).To(Equal(fmt.Sprintf(`finalizer "%s" cannot be added on creation`, finalizer)))
+				})
+			}
+
+			Context("reference-protection", func() {
+				test("gardener.cloud/reference-protection")
+			})
+
+			Context("operator", func() {
+				test("gardener.cloud/operator")
+			})
+		})
 	})
 
 	Describe("#ValidateUpdate", func() {
 		It("should return success if there are no errors", func() {
-			Expect(handler.ValidateUpdate(ctx, garden, garden)).To(Succeed())
+			warnings, err := handler.ValidateUpdate(ctx, garden, garden)
+			Expect(warnings).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error if there are validation errors", func() {
 			oldGarden := garden.DeepCopy()
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
 
-			err := handler.ValidateUpdate(ctx, oldGarden, garden)
+			warnings, err := handler.ValidateUpdate(ctx, oldGarden, garden)
+			Expect(warnings).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))
@@ -117,7 +155,9 @@ var _ = Describe("Handler", func() {
 			oldGarden := garden.DeepCopy()
 			oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
 
-			err := handler.ValidateUpdate(ctx, oldGarden, garden)
+			warnings, err := handler.ValidateUpdate(ctx, oldGarden, garden)
+			Expect(warnings).To(BeNil())
+
 			statusError, ok := err.(*apierrors.StatusError)
 			Expect(ok).To(BeTrue())
 			Expect(statusError.Status().Code).To(Equal(int32(http.StatusUnprocessableEntity)))
@@ -127,13 +167,17 @@ var _ = Describe("Handler", func() {
 
 	Describe("#ValidateDelete", func() {
 		It("should prevent deletion if it was not confirmed", func() {
-			Expect(handler.ValidateDelete(ctx, garden)).To(MatchError(ContainSubstring(`must have a "confirmation.gardener.cloud/deletion" annotation to delete`)))
+			warning, err := handler.ValidateDelete(ctx, garden)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring(`must have a "confirmation.gardener.cloud/deletion" annotation to delete`)))
 		})
 
 		It("should allow deletion if it was confirmed", func() {
 			metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
 
-			Expect(handler.ValidateDelete(ctx, garden)).To(Succeed())
+			warning, err := handler.ValidateDelete(ctx, garden)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
 		})
 	})
 })

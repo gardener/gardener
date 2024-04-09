@@ -16,6 +16,7 @@ package seedrestriction
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -59,6 +60,7 @@ var (
 	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	secretResource                    = corev1.Resource("secrets")
+	configMapResource                 = corev1.Resource("configmaps")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
@@ -68,18 +70,12 @@ var (
 type Handler struct {
 	Logger  logr.Logger
 	Client  client.Reader
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Decoder *admission.Decoder
 }
 
 // Handle restricts requests made by gardenlets.
 func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
-	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
+	seedName, isSeed, userType := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSeed {
 		return admissionwebhook.Allowed("")
 	}
@@ -93,19 +89,21 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	case bastionResource:
 		return h.admitBastion(seedName, request)
 	case certificateSigningRequestResource:
-		return h.admitCertificateSigningRequest(seedName, request)
+		return h.admitCertificateSigningRequest(seedName, userType, request)
 	case clusterRoleBindingResource:
-		return h.admitClusterRoleBinding(ctx, seedName, request)
+		return h.admitClusterRoleBinding(ctx, seedName, userType, request)
 	case internalSecretResource:
 		return h.admitInternalSecret(ctx, seedName, request)
 	case leaseResource:
-		return h.admitLease(seedName, request)
+		return h.admitLease(seedName, userType, request)
 	case secretResource:
 		return h.admitSecret(ctx, seedName, request)
+	case configMapResource:
+		return h.admitConfigMap(ctx, seedName, request)
 	case seedResource:
 		return h.admitSeed(ctx, seedName, request)
 	case serviceAccountResource:
-		return h.admitServiceAccount(ctx, seedName, request)
+		return h.admitServiceAccount(ctx, seedName, userType, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
 	}
@@ -119,7 +117,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
 		// is equal to the gardenlet's seed.
 		backupBucket := &gardencorev1beta1.BackupBucket{}
-		if err := h.decoder.Decode(request, backupBucket); err != nil {
+		if err := h.Decoder.Decode(request, backupBucket); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 		return h.admit(seedName, backupBucket.Spec.SeedName)
@@ -132,7 +130,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if string(seed.UID) != request.Name {
-			return admission.Errored(http.StatusForbidden, fmt.Errorf("cannot delete unrelated BackupBucket"))
+			return admission.Errored(http.StatusForbidden, errors.New("cannot delete unrelated BackupBucket"))
 		}
 		return admission.Allowed("")
 	}
@@ -146,7 +144,7 @@ func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := h.decoder.Decode(request, backupEntry); err != nil {
+	if err := h.Decoder.Decode(request, backupEntry); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -204,20 +202,24 @@ func (h *Handler) admitBastion(seedName string, request admission.Request) admis
 	}
 
 	bastion := &operationsv1alpha1.Bastion{}
-	if err := h.decoder.Decode(request, bastion); err != nil {
+	if err := h.Decoder.Decode(request, bastion); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	return h.admit(seedName, bastion.Spec.SeedName)
 }
 
-func (h *Handler) admitCertificateSigningRequest(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitCertificateSigningRequest(seedName string, userType seedidentity.UserType, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
+	if userType == seedidentity.UserTypeExtension {
+		return admission.Errored(http.StatusForbidden, errors.New("extension client may not create CertificateSigningRequests"))
+	}
+
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := h.decoder.Decode(request, csr); err != nil {
+	if err := h.Decoder.Decode(request, csr); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -230,27 +232,30 @@ func (h *Handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters: %s", reason))
 	}
 
-	seedNameInCSR, _ := seedidentity.FromCertificateSigningRequest(x509cr)
+	seedNameInCSR, _, _ := seedidentity.FromCertificateSigningRequest(x509cr)
 	return h.admit(seedName, &seedNameInCSR)
 }
 
-func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, userType seedidentity.UserType, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if userType == seedidentity.UserTypeExtension {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client may not create ClusterRoleBindings"))
 	}
 
 	// Allow gardenlet to create cluster role bindings referencing service accounts which can be used to bootstrap other
 	// gardenlets deployed as part of the ManagedSeed reconciliation.
 	if strings.HasPrefix(request.Name, gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
 		clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-		if err := h.decoder.Decode(request, clusterRoleBinding); err != nil {
+		if err := h.Decoder.Decode(request, clusterRoleBinding); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
 		if clusterRoleBinding.RoleRef.APIGroup != rbacv1.GroupName ||
 			clusterRoleBinding.RoleRef.Kind != "ClusterRole" ||
 			clusterRoleBinding.RoleRef.Name != gardenletbootstraputil.GardenerSeedBootstrapper {
-
 			return admission.Errored(http.StatusForbidden, fmt.Errorf("can only bindings referring to the bootstrapper role"))
 		}
 
@@ -282,9 +287,17 @@ func (h *Handler) admitInternalSecret(ctx context.Context, seedName string, requ
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *Handler) admitLease(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitLease(seedName string, userType seedidentity.UserType, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// extension clients may only work with leases in the seed namespace
+	if userType == seedidentity.UserTypeExtension {
+		if request.Namespace == gardenerutils.ComputeGardenNamespace(seedName) {
+			return admission.Allowed("")
+		}
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client can only create leases in the namespace for seed %q", seedName))
 	}
 
 	// This allows the gardenlet to create a Lease for leader election (if the garden cluster is a seed as well).
@@ -331,10 +344,46 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
+	// Gardenlets can create secrets that contain the public info of a shoot's
+	// service account issuer in the gardener-system-shoot-issuer namespace.
+	if request.Namespace == gardencorev1beta1.GardenerShootIssuerNamespace {
+		secret := &corev1.Secret{}
+		if err := h.Decoder.Decode(request, secret); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		var (
+			shootName      string
+			shootNamespace string
+			ok             bool
+		)
+		if shootName, ok = secret.Labels[v1beta1constants.LabelShootName]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootName))
+		}
+		if shootNamespace, ok = secret.Labels[v1beta1constants.LabelShootNamespace]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootNamespace))
+		}
+		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelPublicKeys))
+		} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+		}
+
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, shoot.Spec.SeedName)
+	}
+
 	// Check if the secret is a bootstrap token for a ManagedSeed.
 	if strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) && request.Namespace == metav1.NamespaceSystem {
 		secret := &corev1.Secret{}
-		if err := h.decoder.Decode(request, secret); err != nil {
+		if err := h.Decoder.Decode(request, secret); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
@@ -380,17 +429,32 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if seedTemplate.Spec.SecretRef != nil &&
-			seedTemplate.Spec.SecretRef.Namespace == request.Namespace &&
-			seedTemplate.Spec.SecretRef.Name == request.Name {
-			return admission.Allowed("")
-		}
-
 		if seedTemplate.Spec.Backup != nil &&
 			seedTemplate.Spec.Backup.SecretRef.Namespace == request.Namespace &&
 			seedTemplate.Spec.Backup.SecretRef.Name == request.Name {
 			return admission.Allowed("")
 		}
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
+}
+
+func (h *Handler) admitConfigMap(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the config map is related to a Shoot assigned to the seed the gardenlet is responsible for.
+	if shootName, ok := gardenerutils.IsShootProjectConfigMap(request.Name); ok {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.Client.Get(ctx, kubernetesutils.Key(request.Namespace, shootName), shoot); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
@@ -434,9 +498,13 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 	return response
 }
 
-func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, userType seedidentity.UserType, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if userType == seedidentity.UserTypeExtension {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client may not create ServiceAccounts"))
 	}
 
 	// Allow gardenlet to create service accounts which can be used to bootstrap other gardenlets deployed as part of

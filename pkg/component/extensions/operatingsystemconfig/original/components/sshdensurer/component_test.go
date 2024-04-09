@@ -17,7 +17,7 @@ package sshdensurer_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -41,12 +41,12 @@ var _ = Describe("Component", func() {
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				[]extensionsv1alpha1.Unit{
-					{
-						Name:    "sshd-ensurer.service",
-						Command: pointer.String("start"),
-						Content: pointer.String(`[Unit]
+
+			sshdEnsurerUnit := extensionsv1alpha1.Unit{
+
+				Name:    "sshd-ensurer.service",
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -56,23 +56,22 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
+				FilePaths: []string{"/var/lib/sshd-ensurer/run.sh"},
+			}
+
+			sshdEnsurerFile := extensionsv1alpha1.File{
+				Path:        "/var/lib/sshd-ensurer/run.sh",
+				Permissions: ptr.To[int32](0755),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(enableScript)),
 					},
 				},
-			))
-			Expect(files).To(ConsistOf(
-				[]extensionsv1alpha1.File{
-					{
-						Path:        "/var/lib/sshd-ensurer/run.sh",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(enableScript)),
-							},
-						},
-					},
-				},
-			))
+			}
+
+			Expect(units).To(ConsistOf(sshdEnsurerUnit))
+			Expect(files).To(ConsistOf(sshdEnsurerFile))
 		})
 
 		It("should return the expected units and files when SSHAccessEnabled is set to false", func() {
@@ -80,12 +79,11 @@ WantedBy=multi-user.target`),
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				[]extensionsv1alpha1.Unit{
-					{
-						Name:    "sshd-ensurer.service",
-						Command: pointer.String("start"),
-						Content: pointer.String(`[Unit]
+
+			sshdEnsurerUnit := extensionsv1alpha1.Unit{
+				Name:    "sshd-ensurer.service",
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -95,23 +93,22 @@ RestartSec=15
 ExecStart=/var/lib/sshd-ensurer/run.sh
 [Install]
 WantedBy=multi-user.target`),
+				FilePaths: []string{"/var/lib/sshd-ensurer/run.sh"},
+			}
+
+			sshdEnsurerFile := extensionsv1alpha1.File{
+				Path:        "/var/lib/sshd-ensurer/run.sh",
+				Permissions: ptr.To[int32](0755),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(disableScript)),
 					},
 				},
-			))
-			Expect(files).To(ConsistOf(
-				[]extensionsv1alpha1.File{
-					{
-						Path:        "/var/lib/sshd-ensurer/run.sh",
-						Permissions: pointer.Int32(0755),
-						Content: extensionsv1alpha1.FileContent{
-							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "b64",
-								Data:     utils.EncodeBase64([]byte(disableScript)),
-							},
-						},
-					},
-				},
-			))
+			}
+
+			Expect(units).To(ConsistOf(sshdEnsurerUnit))
+			Expect(files).To(ConsistOf(sshdEnsurerFile))
 		})
 	})
 })

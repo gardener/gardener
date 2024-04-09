@@ -28,7 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -36,8 +36,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -60,7 +60,7 @@ var _ = Describe("ManagedSeed", func() {
 	Describe("#Admit", func() {
 		var (
 			managedSeed          *seedmanagement.ManagedSeed
-			shoot                *core.Shoot
+			shoot                *gardencorev1beta1.Shoot
 			secret               *corev1.Secret
 			seed                 *core.Seed
 			coreInformerFactory  gardencoreinformers.SharedInformerFactory
@@ -83,30 +83,30 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			shoot = &core.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: core.ShootSpec{
-					DNS: &core.DNS{
-						Domain: pointer.String(domain),
+				Spec: gardencorev1beta1.ShootSpec{
+					DNS: &gardencorev1beta1.DNS{
+						Domain: ptr.To(domain),
 					},
-					Kubernetes: core.Kubernetes{
-						EnableStaticTokenKubeconfig: pointer.Bool(true),
-						Version:                     "1.23.9",
-						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						EnableStaticTokenKubeconfig: ptr.To(true),
+						Version:                     "1.27.5",
+						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},
 					},
-					Networking: &core.Networking{
-						Pods:     pointer.String("100.96.0.0/11"),
-						Nodes:    pointer.String("10.250.0.0/16"),
-						Services: pointer.String("100.64.0.0/13"),
+					Networking: &gardencorev1beta1.Networking{
+						Pods:     ptr.To("100.96.0.0/11"),
+						Nodes:    ptr.To("10.250.0.0/16"),
+						Services: ptr.To("100.64.0.0/13"),
 					},
-					Provider: core.Provider{
+					Provider: gardencorev1beta1.Provider{
 						Type: provider,
-						Workers: []core.Worker{
+						Workers: []gardencorev1beta1.Worker{
 							{Zones: []string{zone1, zone2}},
 						},
 					},
@@ -143,7 +143,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: core.SeedNetworks{
-						Nodes:    pointer.String("10.250.0.0/16"),
+						Nodes:    ptr.To("10.250.0.0/16"),
 						Pods:     "100.96.0.0/11",
 						Services: "100.64.0.0/13",
 					},
@@ -157,10 +157,6 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: false,
 						},
 					},
-					SecretRef: &corev1.SecretReference{
-						Name:      "seed-secret",
-						Namespace: "garden",
-					},
 					Ingress: &core.Ingress{
 						Domain: "ingress." + domain,
 					},
@@ -173,18 +169,18 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			admissionHandler.SetCoreClientSet(coreClient)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
-			admissionHandler.SetSeedManagementClientset(seedManagementClient)
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a ManagedSeed", func() {
@@ -221,7 +217,7 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot does not exist", func() {
-			Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)).To(Succeed())
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -234,7 +230,7 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{}
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
 
 			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 			Expect(err).To(BeInvalidError())
@@ -261,9 +257,9 @@ var _ = Describe("ManagedSeed", func() {
 		})
 
 		It("should forbid the ManagedSeed creation if the Shoot enables the nginx-ingress addon", func() {
-			shoot.Spec.Addons = &core.Addons{
-				NginxIngress: &core.NginxIngress{
-					Addon: core.Addon{
+			shoot.Spec.Addons = &gardencorev1beta1.Addons{
+				NginxIngress: &gardencorev1beta1.NginxIngress{
+					Addon: gardencorev1beta1.Addon{
 						Enabled: true,
 					},
 				},
@@ -305,7 +301,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+			seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*anotherManagedSeed}}, nil
 			})
 
@@ -336,10 +332,6 @@ var _ = Describe("ManagedSeed", func() {
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
-									SecretRef: &corev1.SecretReference{
-										Name:      "seed-secret",
-										Namespace: "garden",
-									},
 								},
 							},
 						},
@@ -372,33 +364,6 @@ var _ = Describe("ManagedSeed", func() {
 				}))
 			})
 
-			It("should forbid setting seed secretRef if static token kubeconfig is disabled in the shoot", func() {
-				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(BeInvalidError())
-				Expect(getErrorList(err)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.secretRef"),
-						"Detail": ContainSubstring("seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"),
-					})),
-				))
-			})
-
-			It("should add the secret reference annotations to the managedseed if spec.secretRef is present in the seed template", func() {
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(managedSeed.Annotations).To(And(
-					HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
-					HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
-				))
-			})
-
 			It("should fail if config could not be converted to GardenletConfiguration", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config: &corev1.Pod{
@@ -422,7 +387,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networks: gardencorev1beta1.SeedNetworks{
-						Nodes:    pointer.String("10.251.0.0/16"),
+						Nodes:    ptr.To("10.251.0.0/16"),
 						Pods:     "100.97.0.0/11",
 						Services: "100.65.0.0/13",
 					},
@@ -430,10 +395,6 @@ var _ = Describe("ManagedSeed", func() {
 						Type:   "bar-provider",
 						Region: "bar-region",
 						Zones:  []string{"foo", "bar"},
-					},
-					SecretRef: &corev1.SecretReference{
-						Name:      name,
-						Namespace: namespace,
 					},
 					Settings: &gardencorev1beta1.SeedSettings{
 						VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
@@ -502,41 +463,25 @@ var _ = Describe("ManagedSeed", func() {
 				))
 			})
 
-			It("should forbid the ManagedSeed creation if the Shoot kubernetes version is invalid", func() {
-				shoot.Spec.Kubernetes.Version = "foo"
-
-				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, shoot, nil
-				})
-
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: seedx.Spec,
-							},
-						},
-					},
-				}
-
-				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(BeInvalidError())
-				Expect(getErrorList(err)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.shoot.name"),
-						"Detail": ContainSubstring("cannot parse the shoot kubernetes version"),
-					})),
-				))
-			})
-
 			Context("when topology-aware routing Seed setting is enabled", func() {
-				It("it should forbid when the TopologyAwareHints feature gate is not enabled", func() {
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				It("it should forbid when the TopologyAwareHints feature gate is disabled", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeControllerManager = &gardencorev1beta1.KubeControllerManagerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+					shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+							FeatureGates: map[string]bool{"TopologyAwareHints": false},
+						},
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -564,74 +509,37 @@ var _ = Describe("ManagedSeed", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-apiserver"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-apiserver"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-controller-manager"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-controller-manager"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.topologyAwareRouting.enabled"),
-							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-proxy"),
+							"Detail": ContainSubstring("the topology-aware routing seed setting cannot be enabled when the TopologyAwareHints feature gate is disabled for kube-proxy"),
 						})),
 					))
 				})
 
-				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is enabled and the K8s version is 1.23", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-						KubernetesConfig: core.KubernetesConfig{
+				It("should allow the ManagedSeed creation when the TopologyAwareHints feature gate is not disabled", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+					shoot.Spec.Kubernetes.KubeControllerManager = &gardencorev1beta1.KubeControllerManagerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 							FeatureGates: map[string]bool{
 								"TopologyAwareHints": true,
 							},
 						},
 					}
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
-						KubernetesConfig: core.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"TopologyAwareHints": true,
-							},
-						},
-					}
-					shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
-						KubernetesConfig: core.KubernetesConfig{
-							FeatureGates: map[string]bool{
-								"TopologyAwareHints": true,
-							},
+					shoot.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+							FeatureGates: map[string]bool{},
 						},
 					}
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-						return true, shoot, nil
-					})
-
-					seedx.Spec.Settings.TopologyAwareRouting = &gardencorev1beta1.SeedSettingTopologyAwareRouting{
-						Enabled: true,
-					}
-
-					managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
-						Config: &gardenletv1alpha1.GardenletConfiguration{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-								Kind:       "GardenletConfiguration",
-							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
-								SeedTemplate: gardencorev1beta1.SeedTemplate{
-									Spec: seedx.Spec,
-								},
-							},
-						},
-					}
-
-					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("should allow the ManagedSeed creation when the K8s version is > 1.23", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.10"
-
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -673,10 +581,6 @@ var _ = Describe("ManagedSeed", func() {
 						SeedConfig: &gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
-									SecretRef: &corev1.SecretReference{
-										Name:      "seed-secret",
-										Namespace: "garden",
-									},
 									Ingress: seedx.Spec.Ingress,
 									Provider: gardencorev1beta1.SeedProvider{
 										Zones: []string{zone1, zone2},
@@ -691,51 +595,12 @@ var _ = Describe("ManagedSeed", func() {
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 				})
 
-				It("should not remove the secret reference annotations if spec.secretRef is unset in the new managedseed", func() {
-					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-
-					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(managedSeed.Annotations).To(And(
-						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
-						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
-					))
-
-					gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
-							SeedTemplate: gardencorev1beta1.SeedTemplate{
-								Spec: gardencorev1beta1.SeedSpec{
-									SecretRef: nil,
-									Ingress:   seedx.Spec.Ingress,
-									Provider: gardencorev1beta1.SeedProvider{
-										Zones: []string{zone1, zone2},
-									},
-								},
-							},
-						},
-					}
-					newManagedSeed = managedSeed.DeepCopy()
-					newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: gardenletConfig}
-
-					Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
-
-					Expect(newManagedSeed.Annotations).To(And(
-						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
-						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
-					))
-				})
-
 				It("should allow zone removal when there are no shoots running on seed", func() {
 					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 					Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
@@ -746,12 +611,12 @@ var _ = Describe("ManagedSeed", func() {
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
-					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
 					Expect(err).To(BeInvalidError())
@@ -772,12 +637,12 @@ var _ = Describe("ManagedSeed", func() {
 					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
 					gardenletConfig.SeedConfig.Spec.Provider.Zones = append(gardenletConfig.SeedConfig.Spec.Provider.Zones, "zone-foo")
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
 					shoot := &core.Shoot{Spec: core.ShootSpec{SeedName: &newManagedSeed.Name}}
-					Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
 					Expect(err).To(BeInvalidError())
@@ -802,7 +667,7 @@ var _ = Describe("ManagedSeed", func() {
 					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar", "zone-foobar"}
 
-					coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
 						return true, shoot, nil
 					})
 
@@ -827,7 +692,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement(PluginName))
+			Expect(registered).To(ContainElement("ManagedSeed"))
 		})
 	})
 
@@ -852,9 +717,9 @@ var _ = Describe("ManagedSeed", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
-			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
+			admissionHandler.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 			admissionHandler.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := admissionHandler.ValidateInitialization()

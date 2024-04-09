@@ -14,12 +14,12 @@ spec:
         app: net-nginx
     spec:
       containers:
-      - image: eu.gcr.io/gardener-project/3rd/nginx:1.17.6
-        name: net-nginx
+      - name: net-nginx
+        image: registry.k8s.io/e2e-test-images/nginx:1.15-4
         ports:
         - containerPort: 80
-      - image: eu.gcr.io/gardener-project/3rd/curlimages/curl:7.70.0
-        name: net-curl
-        command: ["sh", "-c"]
-        args: ["sleep 300"]
+      - name: pause
+        image: registry.k8s.io/e2e-test-images/agnhost:2.40
+        args:
+        - pause
       serviceAccountName: {{ .name }}

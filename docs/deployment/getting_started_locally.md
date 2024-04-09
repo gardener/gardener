@@ -147,7 +147,7 @@ If you have similar problems with other components which are not deployed by ska
 You can wait for the `Seed` to be ready by running:
 
 ```bash
-./hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
+./hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady
 ```
 
 Alternatively, you can run `kubectl get seed local` and wait for the `STATUS` to indicate readiness:
@@ -166,7 +166,7 @@ kubectl apply -f example/provider-local/shoot.yaml
 You can wait for the `Shoot` to be ready by running:
 
 ```bash
-NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
+NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot local APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
 ```
 
 Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
@@ -197,11 +197,19 @@ Hence, if you want to access the shoot cluster, you have to run the following co
 ```bash
 cat <<EOF | sudo tee -a /etc/hosts
 
-# Manually created to access local Gardener shoot clusters.
-# TODO: Remove this again when the shoot cluster access is no longer required.
+# Begin of Gardener local setup section
+# Shoot API server domains
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
 
+# Ingress
+127.0.0.1 p-seed.ingress.local.seed.local.gardener.cloud
+127.0.0.1 g-seed.ingress.local.seed.local.gardener.cloud
+127.0.0.1 gu-local--local.ingress.local.seed.local.gardener.cloud
+127.0.0.1 p-local--local.ingress.local.seed.local.gardener.cloud
+127.0.0.1 v-local--local.ingress.local.seed.local.gardener.cloud
+
+# E2e tests
 127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud
 127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
 127.0.0.1 api.e2e-hib.local.external.local.gardener.cloud
@@ -218,6 +226,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-migrate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-mgr-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-mgr-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
@@ -226,6 +236,10 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-force-delete.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-force-delete.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-fd-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-fd-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
@@ -238,10 +252,25 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
+# End of Gardener local setup section
 EOF
 ```
 
 To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
+
+For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
+
+```bash
+./hack/usage/generate-admin-kubeconf.sh > admin-kubeconf.yaml
+```
+
+If you want to change the default namespace or shoot name, you can do so by passing different values as arguments.
+
+```bash
+./hack/usage/generate-admin-kubeconf.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
+```
+
+To access an Ingress resource from the `Seed`, use the Ingress host with port `8448` (`https://<ingress-host>:8448`, for example `https://gu-local--local.ingress.local.seed.local.gardener.cloud:8448`).
 
 ## (Optional): Setting Up a Second Seed Cluster
 
@@ -272,7 +301,7 @@ The following steps assume that you are using the kubeconfig that points to the 
 You can wait for the `local2` `Seed` to be ready by running:
 
 ```bash
-./hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped ExtensionsReady
+./hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady
 ```
 
 Alternatively, you can run `kubectl get seed local2` and wait for the `STATUS` to indicate readiness:

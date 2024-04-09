@@ -17,8 +17,9 @@ package managedresource
 import (
 	"sort"
 
+	"helm.sh/helm/v3/pkg/releaseutil"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 var _ = sort.Interface(referenceSorter{})
@@ -64,7 +65,7 @@ type kindSorter struct {
 	objects  []object
 }
 
-func newKindSorter(obj []object, s chartrenderer.SortOrder) *kindSorter {
+func newKindSorter(obj []object, s releaseutil.KindSortOrder) *kindSorter {
 	o := make(map[string]int, len(s))
 	for v, k := range s {
 		o[k] = v
@@ -110,7 +111,7 @@ func (k *kindSorter) Less(i, j int) bool {
 	return first < second
 }
 func sortByKind(resourceObject []object) []object {
-	ordering := chartrenderer.InstallOrder
+	ordering := releaseutil.InstallOrder
 	ks := newKindSorter(resourceObject, ordering)
 	sort.Sort(ks)
 	return ks.objects

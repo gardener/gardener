@@ -34,6 +34,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -127,20 +128,22 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             operatorclient.RuntimeScheme,
-		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Scheme:  operatorclient.RuntimeScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
 			Mapper: mapper,
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&operatorv1alpha1.Garden{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

@@ -30,27 +30,23 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootDNS"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootDNS, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }
@@ -59,13 +55,13 @@ func Register(plugins *admission.Plugins) {
 type DNS struct {
 	*admission.Handler
 	secretLister  kubecorev1listers.SecretLister
-	projectLister gardencorelisters.ProjectLister
-	seedLister    gardencorelisters.SeedLister
+	projectLister gardencorev1beta1listers.ProjectLister
+	seedLister    gardencorev1beta1listers.SeedLister
 	readyFunc     admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DNS{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&DNS{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&DNS{})
 
 	readyFuncs []admission.ReadyFunc
@@ -84,12 +80,12 @@ func (d *DNS) AssignReadyFunc(f admission.ReadyFunc) {
 	d.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (d *DNS) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	projectInformer := f.Core().InternalVersion().Projects()
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (d *DNS) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	projectInformer := f.Core().V1beta1().Projects()
 	d.projectLister = projectInformer.Lister()
 
-	seedInformer := f.Core().InternalVersion().Seeds()
+	seedInformer := f.Core().V1beta1().Seeds()
 	d.seedLister = seedInformer.Lister()
 
 	readyFuncs = append(readyFuncs, projectInformer.Informer().HasSynced, seedInformer.Informer().HasSynced)
@@ -198,7 +194,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
 				for i, provider := range shoot.Spec.DNS.Providers {
 					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
-						shoot.Spec.DNS.Providers[i].Primary = pointer.Bool(true)
+						shoot.Spec.DNS.Providers[i].Primary = ptr.To(true)
 						break
 					}
 				}
@@ -243,7 +239,7 @@ func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.Objec
 func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
 	dns := shoot.Spec.DNS
 	for _, provider := range dns.Providers {
-		if !pointer.BoolDeref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
+		if !ptr.Deref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
 			fieldErr := field.Required(field.NewPath("spec", "dns", "providers"), "non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
@@ -298,7 +294,7 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 
 	primary := helper.FindPrimaryDNSProvider(dns.Providers)
 	if primary == nil && len(dns.Providers) > 0 {
-		dns.Providers[0].Primary = pointer.Bool(true)
+		dns.Providers[0].Primary = ptr.To(true)
 	}
 	return nil
 }
@@ -306,8 +302,8 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
-func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorelisters.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
+func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
+	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -333,8 +329,8 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorelist
 	return nil
 }
 
-func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, projectLister gardencorelisters.ProjectLister, defaultDomains []string) error {
-	project, err := admissionutils.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
+func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, projectLister gardencorev1beta1listers.ProjectLister, defaultDomains []string) error {
+	project, err := admissionutils.ProjectForNamespaceFromLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}

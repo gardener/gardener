@@ -15,15 +15,18 @@
 package utils_test
 
 import (
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -363,11 +366,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicaSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &appsv1.ReplicaSet{
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.ReplicaSet{
@@ -376,7 +379,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.ReplicaSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.ReplicaSetSpec{Replicas: ptr.To[int32](2)},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			}
 		})
@@ -387,11 +390,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("ReplicationController", func() {
 		BeforeEach(func() {
 			healthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
 			}
 			unhealthy = &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &corev1.ReplicationController{
@@ -400,7 +403,7 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+				Spec:   corev1.ReplicationControllerSpec{Replicas: ptr.To[int32](2)},
 				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
 			}
 		})
@@ -441,11 +444,11 @@ var _ = Describe("CheckHealth", func() {
 	Context("StatefulSet", func() {
 		BeforeEach(func() {
 			healthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(1)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](1)},
 				Status: appsv1.StatefulSetStatus{CurrentReplicas: 1, ReadyReplicas: 1},
 			}
 			unhealthy = &appsv1.StatefulSet{
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
 			}
 			unhealthyWithSkipHealthCheckAnnotation = &appsv1.StatefulSet{
@@ -454,8 +457,127 @@ var _ = Describe("CheckHealth", func() {
 						resourcesv1alpha1.SkipHealthCheck: "true",
 					},
 				},
-				Spec:   appsv1.StatefulSetSpec{Replicas: pointer.Int32(2)},
+				Spec:   appsv1.StatefulSetSpec{Replicas: ptr.To[int32](2)},
 				Status: appsv1.StatefulSetStatus{ReadyReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Prometheus", func() {
+		BeforeEach(func() {
+			healthy = &monitoringv1.Prometheus{
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](1)}},
+				Status: monitoringv1.PrometheusStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
+			}
+			unhealthy = &monitoringv1.Prometheus{
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](2)}},
+				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Prometheus{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Spec:   monitoringv1.PrometheusSpec{CommonPrometheusFields: monitoringv1.CommonPrometheusFields{Replicas: ptr.To[int32](2)}},
+				Status: monitoringv1.PrometheusStatus{AvailableReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Alertmanager", func() {
+		BeforeEach(func() {
+			healthy = &monitoringv1.Alertmanager{
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](1)},
+				Status: monitoringv1.AlertmanagerStatus{Replicas: 1, AvailableReplicas: 1, Conditions: []monitoringv1.Condition{{Type: monitoringv1.Available, Status: monitoringv1.ConditionTrue}}},
+			}
+			unhealthy = &monitoringv1.Alertmanager{
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](2)},
+				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &monitoringv1.Alertmanager{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Spec:   monitoringv1.AlertmanagerSpec{Replicas: ptr.To[int32](2)},
+				Status: monitoringv1.AlertmanagerStatus{AvailableReplicas: 1},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("VerticalPodAutoscaler", func() {
+		BeforeEach(func() {
+			healthy = &vpaautoscalingv1.VerticalPodAutoscaler{}
+			unhealthy = &vpaautoscalingv1.VerticalPodAutoscaler{
+				Status: vpaautoscalingv1.VerticalPodAutoscalerStatus{Conditions: []vpaautoscalingv1.VerticalPodAutoscalerCondition{{Type: vpaautoscalingv1.ConfigUnsupported, Status: corev1.ConditionTrue}}},
+			}
+			unhealthyWithSkipHealthCheckAnnotation = &vpaautoscalingv1.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: vpaautoscalingv1.VerticalPodAutoscalerStatus{Conditions: []vpaautoscalingv1.VerticalPodAutoscalerCondition{{Type: vpaautoscalingv1.ConfigUnsupported, Status: corev1.ConditionTrue}}},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Certificate", func() {
+		BeforeEach(func() {
+			healthyReadyCondition := metav1.Condition{Type: "Ready", Status: "True"}
+			unhealthyReadyCondition := metav1.Condition{Type: "Ready", Status: "False"}
+
+			healthy = &certv1alpha1.Certificate{
+				Status: certv1alpha1.CertificateStatus{
+					State:      "Ready",
+					Conditions: []metav1.Condition{healthyReadyCondition},
+				},
+			}
+
+			unhealthy = &certv1alpha1.Certificate{
+				Status: certv1alpha1.CertificateStatus{
+					Conditions: []metav1.Condition{unhealthyReadyCondition},
+				},
+			}
+
+			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Certificate{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
+				Status: certv1alpha1.CertificateStatus{Conditions: []metav1.Condition{unhealthyReadyCondition}},
+			}
+		})
+
+		testSuite()
+	})
+
+	Context("Certificate Issuer", func() {
+		BeforeEach(func() {
+			healthy = &certv1alpha1.Issuer{
+				Status: certv1alpha1.IssuerStatus{
+					State: "Ready",
+				},
+			}
+
+			unhealthy = &certv1alpha1.Issuer{}
+			unhealthyWithSkipHealthCheckAnnotation = &certv1alpha1.Issuer{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						resourcesv1alpha1.SkipHealthCheck: "true",
+					},
+				},
 			}
 		})
 

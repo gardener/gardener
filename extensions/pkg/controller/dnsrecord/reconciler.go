@@ -229,7 +229,13 @@ func (r *reconciler) delete(
 		}
 
 		log.Info("Starting the deletion of DNSRecord")
-		if err := r.actuator.Delete(ctx, log, dns, cluster); err != nil {
+		var err error
+		if cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot) {
+			err = r.actuator.ForceDelete(ctx, log, dns, cluster)
+		} else {
+			err = r.actuator.Delete(ctx, log, dns, cluster)
+		}
+		if err != nil {
 			_ = r.statusUpdater.ErrorCustom(ctx, log, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting DNSRecord", nil)
 			return reconcilerutils.ReconcileErr(err)
 		}

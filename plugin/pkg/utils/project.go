@@ -19,13 +19,14 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
-// ProjectForNamespaceFromInternalLister returns the Project responsible for a given <namespace>. It lists all Projects
+// ProjectForNamespaceFromLister returns the Project responsible for a given <namespace>. It lists all Projects
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
 // in the project spec.
-func ProjectForNamespaceFromInternalLister(projectLister internalversion.ProjectLister, namespaceName string) (*core.Project, error) {
+func ProjectForNamespaceFromLister(projectLister gardencorev1beta1listers.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
 	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err

@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-rules
-  namespace: {{ .Release.Namespace }}
-data:
-{{ (.Files.Glob "prometheus-rules/**").AsConfig | indent 2 }}

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -69,7 +69,55 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		gardenSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: gardenNamespaceName,
+			},
+			Data: map[string][]byte{
+				"foo": []byte("bar"),
+			},
+		}
+
+		backupBucket = &gardencorev1beta1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "foo",
+				Generation: 1,
+			},
+			Spec: gardencorev1beta1.BackupBucketSpec{
+				Provider: gardencorev1beta1.BackupBucketProvider{
+					Type:   "provider-type",
+					Region: "some-region",
+				},
+				ProviderConfig: providerConfig,
+				SecretRef: corev1.SecretReference{
+					Name:      gardenSecret.Name,
+					Namespace: gardenSecret.Namespace,
+				},
+				SeedName: ptr.To(seedName),
+			},
+			Status: gardencorev1beta1.BackupBucketStatus{
+				ObservedGeneration: 1,
+				LastOperation: &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+				},
+				ProviderStatus: providerStatus,
+			},
+		}
+
+		backupEntry = &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
+				Namespace: testNamespaceName,
+			},
+			Spec: gardencorev1beta1.BackupEntrySpec{
+				BucketName: backupBucket.Name,
+				SeedName:   ptr.To(seedName),
+			},
+		}
+
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.BackupBucket{}, &gardencorev1beta1.BackupEntry{}).Build()
 
 		testSchemeBuilder := runtime.NewSchemeBuilder(
 			kubernetes.AddSeedSchemeToScheme,
@@ -87,8 +135,8 @@ var _ = Describe("Controller", func() {
 			SeedClient:   seedClient,
 			Recorder:     &record.FakeRecorder{},
 			Config: config.BackupEntryControllerConfiguration{
-				ConcurrentSyncs:                  pointer.Int(5),
-				DeletionGracePeriodHours:         pointer.Int(deletionGracePeriodHours),
+				ConcurrentSyncs:                  ptr.To(5),
+				DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
 				DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
 			},
 			Clock:           fakeClock,
@@ -96,56 +144,8 @@ var _ = Describe("Controller", func() {
 			SeedName:        seedName,
 		}
 
-		gardenSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-secret",
-				Namespace: gardenNamespaceName,
-			},
-			Data: map[string][]byte{
-				"foo": []byte("bar"),
-			},
-		}
 		Expect(gardenClient.Create(ctx, gardenSecret)).To(Succeed())
-
-		backupBucket = &gardencorev1beta1.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "foo",
-				Generation: 1,
-			},
-			Spec: gardencorev1beta1.BackupBucketSpec{
-				Provider: gardencorev1beta1.BackupBucketProvider{
-					Type:   "provider-type",
-					Region: "some-region",
-				},
-				ProviderConfig: providerConfig,
-				SecretRef: corev1.SecretReference{
-					Name:      gardenSecret.Name,
-					Namespace: gardenSecret.Namespace,
-				},
-				SeedName: pointer.String(seedName),
-			},
-			Status: gardencorev1beta1.BackupBucketStatus{
-				ObservedGeneration: 1,
-				LastOperation: &gardencorev1beta1.LastOperation{
-					State: gardencorev1beta1.LastOperationStateSucceeded,
-					Type:  gardencorev1beta1.LastOperationTypeReconcile,
-				},
-				ProviderStatus: providerStatus,
-			},
-		}
 		Expect(gardenClient.Create(ctx, backupBucket)).To(Succeed())
-
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: testNamespaceName,
-			},
-			Spec: gardencorev1beta1.BackupEntrySpec{
-				BucketName: backupBucket.Name,
-				SeedName:   pointer.String(seedName),
-			},
-		}
-
 		Expect(gardenClient.Create(ctx, backupEntry)).To(Succeed())
 
 		now := fakeClock.Now().UTC()

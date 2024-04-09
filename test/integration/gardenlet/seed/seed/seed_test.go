@@ -16,7 +16,6 @@ package seed_test
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,13 +28,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -43,17 +43,18 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/vpa"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -89,15 +90,17 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		By("Setup manager")
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+		httpClient, err := rest.HTTPClientFor(restConfig)
+		Expect(err).NotTo(HaveOccurred())
+		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:             testScheme,
-			MetricsBindAddress: "0",
-			NewCache: cache.BuilderWithOptions(cache.Options{
+			Scheme:  testScheme,
+			Metrics: metricsserver.Options{BindAddress: "0"},
+			Cache: cache.Options{
 				Mapper: mapper,
-				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				ByObject: map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Seed{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
@@ -105,7 +108,7 @@ var _ = Describe("Seed controller tests", func() {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			}),
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()
@@ -128,10 +131,6 @@ var _ = Describe("Seed controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Register controller")
-		chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
-		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-		Expect(err).NotTo(HaveOccurred())
-
 		Expect((&seedcontroller.Reconciler{
 			SeedClientSet: testClientSet,
 			Config: config.GardenletConfiguration{
@@ -143,20 +142,26 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String(testNamespace.Name + "-istio"),
+						Namespace: ptr.To(testNamespace.Name + "-istio"),
+					},
+				},
+				Logging: &config.Logging{
+					Enabled: ptr.To(true),
+					Vali: &config.Vali{
+						Enabled: ptr.To(true),
 					},
 				},
 				ETCDConfig: &config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
-						EnableBackupCompaction: pointer.Bool(false),
-						EventsThreshold:        pointer.Int64(1),
-						Workers:                pointer.Int64(1),
+						EnableBackupCompaction: ptr.To(false),
+						EventsThreshold:        ptr.To[int64](1),
+						Workers:                ptr.To[int64](1),
 					},
 					CustodianController: &config.CustodianController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To[int64](1),
 					},
 					ETCDController: &config.ETCDController{
-						Workers: pointer.Int64(1),
+						Workers: ptr.To[int64](1),
 					},
 				},
 				SeedConfig: &config.SeedConfig{
@@ -168,9 +173,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 			},
 			Identity:        identity,
-			ImageVector:     imageVector,
 			GardenNamespace: testNamespace.Name,
-			ChartsPath:      chartsPath,
 		}).AddToManager(mgr, mgr)).To(Succeed())
 
 		By("Start manager")
@@ -225,7 +228,7 @@ var _ = Describe("Seed controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 				},
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "someingress.example.com",
@@ -326,12 +329,14 @@ var _ = Describe("Seed controller tests", func() {
 	})
 
 	Context("when seed namespace does not exist", func() {
-		It("should not maintain the Bootstrapped condition", func() {
-			By("Ensure Bootstrapped condition is not set")
-			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
+		It("should set the last operation to 'Error'", func() {
+			By("Wait for 'last operation' state to be set to Error")
+			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				return seed.Status.Conditions
-			}).Should(BeEmpty())
+				g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+				g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+				g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("failed to get seed namespace in garden cluster"))
+			}).Should(Succeed())
 		})
 	})
 
@@ -361,16 +366,14 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		Context("when internal domain secret does not exist", func() {
-			It("should set the Bootstrapped condition to False", func() {
-				By("Wait for Bootstrapped condition to be set to False")
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			It("should set the last operation to 'Error'", func() {
+				By("Wait for 'last operation' state to be set to Error")
+				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-					return seed.Status.Conditions
-				}).Should(ContainCondition(
-					OfType(gardencorev1beta1.SeedBootstrapped),
-					WithStatus(gardencorev1beta1.ConditionFalse),
-					WithReason("GardenSecretsError"),
-				))
+					g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+					g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+					g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("need an internal domain secret but found none"))
+				}).Should(Succeed())
 			})
 		})
 
@@ -412,17 +415,14 @@ var _ = Describe("Seed controller tests", func() {
 			})
 
 			Context("when global monitoring secret does not exist", func() {
-				It("should set the Bootstrapped condition to False", func() {
-					By("Wait for Bootstrapped condition to be set to False")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				It("should set the last operation to 'Error'", func() {
+					By("Wait for 'last operation' state to be set to Error")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(ContainCondition(
-						OfType(gardencorev1beta1.SeedBootstrapped),
-						WithStatus(gardencorev1beta1.ConditionFalse),
-						WithReason("BootstrappingFailed"),
-						WithMessage("global monitoring secret not found in seed namespace"),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+						g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("global monitoring secret not found in seed namespace"))
+					}).Should(Succeed())
 				})
 			})
 
@@ -462,14 +462,12 @@ var _ = Describe("Seed controller tests", func() {
 						return seed.Finalizers
 					}).Should(ConsistOf("gardener"))
 
-					By("Wait for Bootstrapped condition to be set to Progressing")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					By("Wait for 'last operation' state to be set to Processing")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(ContainCondition(
-						OfType(gardencorev1beta1.SeedBootstrapped),
-						WithStatus(gardencorev1beta1.ConditionProgressing),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateProcessing))
+					}).Should(Succeed())
 
 					By("Verify that CA secret was generated")
 					Eventually(func(g Gomega) []corev1.Secret {
@@ -509,29 +507,11 @@ var _ = Describe("Seed controller tests", func() {
 
 					var (
 						crdsOnlyForSeedClusters = []gomegatypes.GomegaMatcher{
-							// fluent-operator
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
 							// machine-controller-manager
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alicloudmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("awsmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("azuremachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gcpmachineclasses.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machineclasses.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinedeployments.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machines.machine.sapcloud.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinesets.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("openstackmachineclasses.machine.sapcloud.io")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("packetmachineclasses.machine.sapcloud.io")})}),
 							// extensions
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupbuckets.extensions.gardener.cloud")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupentries.extensions.gardener.cloud")})}),
@@ -550,6 +530,7 @@ var _ = Describe("Seed controller tests", func() {
 							// etcd-druid
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("managedresources.resources.gardener.cloud")})}),
 							// istio
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("destinationrules.networking.istio.io")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("envoyfilters.networking.istio.io")})}),
@@ -569,6 +550,29 @@ var _ = Describe("Seed controller tests", func() {
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalercheckpoints.autoscaling.k8s.io")})}),
 							// hvpa-controller
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+							// fluent-operator
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
+							// prometheus-operator
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alertmanagerconfigs.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alertmanagers.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("podmonitors.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("probes.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheusagents.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheuses.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheusrules.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("scrapeconfigs.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("servicemonitors.monitoring.coreos.com")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("thanosrulers.monitoring.coreos.com")})}),
 						}
 					)
 
@@ -619,18 +623,24 @@ var _ = Describe("Seed controller tests", func() {
 							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 							istioCRDs                = istio.NewCRD(chartApplier)
 							vpaCRD                   = vpa.NewCRD(applier, nil)
+							fluentCRD                = fluentoperator.NewCRDs(applier)
+							monitoringCRD            = prometheusoperator.NewCRDs(applier)
 						)
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
 						Expect(istioCRDs.Deploy(ctx)).To(Succeed())
 						Expect(vpaCRD.Deploy(ctx)).To(Succeed())
+						Expect(fluentCRD.Deploy(ctx)).To(Succeed())
+						Expect(monitoringCRD.Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
 							Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Succeed())
 							Expect(istioCRDs.Destroy(ctx)).To(Succeed())
 							Expect(vpaCRD.Destroy(ctx)).To(Succeed())
+							Expect(fluentCRD.Destroy(ctx)).To(Succeed())
+							Expect(monitoringCRD.Destroy(ctx)).To(Succeed())
 						})
 					}
 
@@ -639,7 +649,11 @@ var _ = Describe("Seed controller tests", func() {
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-autoscaler")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-weeder")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-prober")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machine-controller-manager")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("system")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-cache")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-seed")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-aggregate")})}),
 					}
 
 					if !seedIsGarden {
@@ -649,6 +663,12 @@ var _ = Describe("Seed controller tests", func() {
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
 							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("nginx-ingress")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("plutono")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vali")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-bit")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-operator")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-operator-custom-resources")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-operator")})}),
 						)
 					}
 
@@ -671,14 +691,12 @@ var _ = Describe("Seed controller tests", func() {
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedIstioManagedResources))
 
-					By("Wait for Bootstrapped condition to be set to True")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					By("Wait for 'last operation' state to be set to Succeeded")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(And(
-						ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped), WithStatus(gardencorev1beta1.ConditionTrue)),
-						ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing)),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					}).Should(Succeed())
 
 					By("Delete Seed")
 					Expect(testClient.Delete(ctx, seed)).To(Succeed())
@@ -701,7 +719,7 @@ var _ = Describe("Seed controller tests", func() {
 						}).Should(BeEmpty())
 					} else {
 						By("Verify that gardener-resource-manager has been deleted")
-						Eventually(func(g Gomega) error {
+						Eventually(func() error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
 						}).Should(BeNotFoundError())
@@ -709,7 +727,7 @@ var _ = Describe("Seed controller tests", func() {
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.
 						By("Verify that CRD has been deleted")
-						Eventually(func(g Gomega) error {
+						Eventually(func() error {
 							return testClient.Get(ctx, client.ObjectKey{Name: "managedresources.resources.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})
 						}).Should(BeNotFoundError())
 					}
@@ -720,7 +738,7 @@ var _ = Describe("Seed controller tests", func() {
 					}).Should(BeNotFoundError())
 				}
 
-				It("should properly maintain the Bootstrapped condition and deploy all seed system components", func() {
+				It("should properly maintain the last operation and deploy all seed system components", func() {
 					test(false)
 				})
 
@@ -740,8 +758,8 @@ var _ = Describe("Seed controller tests", func() {
 										Pods:     "10.1.0.0/16",
 										Services: "10.2.0.0/16",
 									},
-									Ingress: gardencorev1beta1.Ingress{
-										Domain: "ingress.dev.seed.example.com",
+									Ingress: operatorv1alpha1.Ingress{
+										Domains: []string{"ingress.dev.seed.example.com"},
 										Controller: gardencorev1beta1.IngressController{
 											Kind: "nginx",
 										},
@@ -750,6 +768,9 @@ var _ = Describe("Seed controller tests", func() {
 								VirtualCluster: operatorv1alpha1.VirtualCluster{
 									DNS: operatorv1alpha1.DNS{
 										Domains: []string{"virtual-garden.local.gardener.cloud"},
+									},
+									Gardener: operatorv1alpha1.Gardener{
+										ClusterIdentity: "test",
 									},
 									Kubernetes: operatorv1alpha1.Kubernetes{
 										Version: "1.26.3",

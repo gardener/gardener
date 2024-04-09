@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/cmd/utils"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
@@ -50,11 +51,13 @@ type options struct {
 	config     *config.GardenletConfiguration
 }
 
+var _ utils.Options = &options{}
+
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
-func (o *options) complete() error {
+func (o *options) Complete() error {
 	if len(o.configFile) == 0 {
 		return fmt.Errorf("missing config file")
 	}
@@ -74,9 +77,13 @@ func (o *options) complete() error {
 	return features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates)
 }
 
-func (o *options) validate() error {
+func (o *options) Validate() error {
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 	return nil
+}
+
+func (o *options) LogConfig() (string, string) {
+	return o.config.LogLevel, o.config.LogFormat
 }

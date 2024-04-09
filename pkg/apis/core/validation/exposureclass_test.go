@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -30,7 +30,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	var (
 		exposureClass          *core.ExposureClass
 		defaultTestTolerations = []core.Toleration{
-			{Key: "test", Value: pointer.String("foo")},
+			{Key: "test", Value: ptr.To("foo")},
 		}
 	)
 
@@ -41,7 +41,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	Describe("#ValidateExposureClass", func() {
 		It("should pass as exposure class is valid", func() {
 			errorList := ValidateExposureClass(exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class handler is no DNS1123 label with zero length", func() {
@@ -77,7 +77,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 		It("should pass as exposure class handler contains less than 34 characters", func() {
 			exposureClass.Handler = "izqissuczonxfeq346ce5exr9rhkcmb398"
 			errorList := ValidateExposureClass(exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class has an invalid seed selector", func() {
@@ -97,8 +97,8 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			}
 			errorList := ValidateExposureClass(exposureClass)
 
@@ -128,7 +128,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 
 		It("should pass as exposure class is valid", func() {
 			errorList := ValidateExposureClassUpdate(exposureClassNew, exposureClass)
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail as exposure class handlers are different", func() {

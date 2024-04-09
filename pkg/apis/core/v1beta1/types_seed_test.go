@@ -24,6 +24,20 @@ import (
 )
 
 var _ = Describe("Seed", func() {
+	Describe("SeedSpec", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedSpec{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "5" {
+					Fail("protobuf 5 in SeedSpec is reserved for removed secretRef field")
+				}
+			}
+		})
+	})
+
 	Describe("SeedSettings", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(SeedSettings{}).Type()
@@ -33,6 +47,8 @@ var _ = Describe("Seed", func() {
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
 				if protobufNum == "3" {
 					Fail("protobuf 3 in SeedSettings is reserved for removed shootDNS field")
+				} else if protobufNum == "6" {
+					Fail("protobuf 6 in SeedSettings is reserved for removed ownerChecks field")
 				}
 			}
 		})
@@ -63,6 +79,22 @@ var _ = Describe("Seed", func() {
 					Fail("protobuf 3 in SeedDNSProvider is reserved for removed domains field")
 				} else if protobufNum == "4" {
 					Fail("protobuf 4 in SeedDNSProvider is reserved for removed zones field")
+				}
+			}
+		})
+	})
+
+	Describe("SeedSettingDependencyWatchdog", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(SeedSettingDependencyWatchdog{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "1" {
+					Fail("protobuf 1 in SeedSettingDependencyWatchdog is reserved for removed endpoint field")
+				} else if protobufNum == "2" {
+					Fail("protobuf 2 in SeedSettingDependencyWatchdog is reserved for removed probe field")
 				}
 			}
 		})

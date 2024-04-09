@@ -76,7 +76,6 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 
 	var objects []client.Object
 	for _, file := range files {
-
 		if file.IsDir() {
 			continue
 		}
@@ -108,7 +107,6 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 		}
 	}
 	return objects, nil
-
 }
 
 // readDocuments reads documents from file
@@ -118,8 +116,11 @@ func readDocuments(fp string) ([][]byte, error) {
 		return nil, err
 	}
 
-	var docs [][]byte
-	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	var (
+		docs   [][]byte
+		reader = utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(b)))
+	)
+
 	for {
 		// Read document
 		doc, err := reader.Read()

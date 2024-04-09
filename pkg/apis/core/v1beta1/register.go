@@ -63,6 +63,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ExposureClassList{},
 		&InternalSecret{},
 		&InternalSecretList{},
+		&NamespacedCloudProfile{},
+		&NamespacedCloudProfileList{},
 		&Project{},
 		&ProjectList{},
 		&Quota{},
@@ -77,5 +79,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ShootStateList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+
 	return nil
+}
+
+func addDefaultingFuncs(scheme *runtime.Scheme) error {
+	return RegisterDefaults(scheme)
 }

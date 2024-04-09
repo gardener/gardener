@@ -14,7 +14,9 @@
 
 package time
 
-import "time"
+import (
+	"time"
+)
 
 type ops struct{}
 

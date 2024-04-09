@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -25,21 +26,21 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/gardener/gardener/cmd/gardener-operator/app/bootstrappers"
+	"github.com/gardener/gardener/cmd/utils"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,7 +49,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
@@ -66,34 +66,11 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			return run(cmd.Context(), log, opts.config)
 		},
 	}
@@ -118,17 +95,25 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		return err
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  operatorclient.RuntimeScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 
-		Host:                   cfg.Server.Webhooks.BindAddress,
-		Port:                   cfg.Server.Webhooks.Port,
-		CertDir:                "/tmp/gardener-operator-cert",
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -138,21 +123,18 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
-			RecoverPanic: pointer.Bool(true),
+		Controller: controllerconfig.Controller{
+			RecoverPanic: ptr.To(true),
 		},
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: "/tmp/gardener-operator-cert",
+		}),
 	})
 	if err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Setting up health check endpoints")
@@ -164,6 +146,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	}
 	if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 		return err
+	}
+
+	log.Info("Perform Gardener version verification")
+	if err := bootstrappers.VerifyGardenerVersion(ctx, mgr.GetLogger(), mgr.GetAPIReader()); err != nil {
+		return fmt.Errorf("failed verifying Gardener version: %w", err)
 	}
 
 	log.Info("Adding certificate management to manager")
@@ -180,8 +167,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
+		nil,
 		clock.RealClock{},
-		[]client.Object{validatingWebhookConfiguration, mutatingWebhookConfiguration},
+		extensionswebhook.Configs{
+			MutatingWebhookConfig:   mutatingWebhookConfiguration,
+			ValidatingWebhookConfig: validatingWebhookConfiguration,
+		},
 		nil,
 		nil,
 		nil,

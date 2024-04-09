@@ -16,15 +16,17 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 const (
@@ -177,7 +178,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 		var userData []byte
 		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Downloader.Content)
+			userData = []byte(val.Init.Content)
 		}
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
@@ -185,7 +186,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(ctx, obj, workerPool.Name)
+		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(obj, workerPool.Name)
 
 		if nodeTemplate == nil || machineType != workerPool.Machine.Type {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
@@ -199,6 +200,26 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				}
 			} else {
 				nodeTemplate = nil
+			}
+		}
+
+		var autoscalerOptions *extensionsv1alpha1.ClusterAutoscalerOptions
+		if workerPool.ClusterAutoscaler != nil {
+			autoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
+			if workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
+				autoscalerOptions.ScaleDownUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownUtilizationThreshold))
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold != nil {
+				autoscalerOptions.ScaleDownGpuUtilizationThreshold = ptr.To(fmt.Sprint(*workerPool.ClusterAutoscaler.ScaleDownGpuUtilizationThreshold))
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownUnneededTime != nil {
+				autoscalerOptions.ScaleDownUnneededTime = workerPool.ClusterAutoscaler.ScaleDownUnneededTime
+			}
+			if workerPool.ClusterAutoscaler.ScaleDownUnreadyTime != nil {
+				autoscalerOptions.ScaleDownUnreadyTime = workerPool.ClusterAutoscaler.ScaleDownUnreadyTime
+			}
+			if workerPool.ClusterAutoscaler.MaxNodeProvisionTime != nil {
+				autoscalerOptions.MaxNodeProvisionTime = workerPool.ClusterAutoscaler.MaxNodeProvisionTime
 			}
 		}
 
@@ -226,6 +247,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 			Architecture:                     workerPool.Machine.Architecture,
+			ClusterAutoscaler:                autoscalerOptions,
 		})
 	}
 
@@ -369,7 +391,7 @@ func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
 }
 
-func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
+func (w *worker) findNodeTemplateAndMachineTypeByPoolName(obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
 	for _, pool := range obj.Spec.Pools {
 		if pool.Name == poolName {
 			return pool.NodeTemplate, pool.MachineType
@@ -391,10 +413,5 @@ func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) err
 		return nil
 	}
 
-	// TODO(rishabh-11): Remove this check in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime`.
-	if obj.Status.MachineDeploymentsLastUpdateTime == nil {
-		return health.CheckExtensionObject(o)
-	}
-
-	return fmt.Errorf("worker status machineDeployments has not been updated")
+	return errors.New("worker status machineDeployments has not been updated")
 }

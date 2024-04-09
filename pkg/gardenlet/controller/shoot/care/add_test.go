@@ -15,14 +15,15 @@
 package care_test
 
 import (
+	"context"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -31,8 +32,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -57,6 +58,7 @@ var _ = Describe("Add", func() {
 
 	Describe("#EventHandler", func() {
 		var (
+			ctx   = context.TODO()
 			hdlr  handler.EventHandler
 			queue *mockworkqueue.MockRateLimitingInterface
 			req   reconcile.Request
@@ -74,21 +76,21 @@ var _ = Describe("Add", func() {
 			}))
 			queue.EXPECT().AddAfter(req, reconciler.Config.Controllers.ShootCare.SyncPeriod.Duration)
 
-			hdlr.Create(event.CreateEvent{Object: shoot}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: shoot}, queue)
 		})
 
 		It("should enqueue the object for Update events", func() {
 			queue.EXPECT().Add(req)
 
-			hdlr.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot}, queue)
 		})
 
 		It("should not enqueue the object for Delete events", func() {
-			hdlr.Delete(event.DeleteEvent{Object: shoot}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: shoot}, queue)
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: shoot}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: shoot}, queue)
 		})
 	})
 
@@ -165,21 +167,21 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false when the seed name is unchanged in the Shoot spec", func() {
-				shoot.Spec.SeedName = pointer.String("test-seed")
+				shoot.Spec.SeedName = ptr.To("test-seed")
 				oldShoot := shoot.DeepCopy()
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return false when the seed name is changed in the Shoot spec", func() {
-				shoot.Spec.SeedName = pointer.String("test-seed")
+				shoot.Spec.SeedName = ptr.To("test-seed")
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = pointer.String("test-seed1")
+				shoot.Spec.SeedName = ptr.To("test-seed1")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return true when seed gets assigned to shoot", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = pointer.String("test-seed")
+				shoot.Spec.SeedName = ptr.To("test-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeTrue())
 			})
 		})

@@ -1,0 +1,15 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: istio-ingressgateway
+  namespace: test-ingress
+  labels:
+    app: istio-ingressgateway
+    foo: bar
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: istio-ingressgateway
+      foo: bar
+  unhealthyPodEvictionPolicy: AlwaysAllow

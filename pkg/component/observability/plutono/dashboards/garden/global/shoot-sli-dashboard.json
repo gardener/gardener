@@ -1,0 +1,4753 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 3,
+  "iteration": 1612436590043,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 136,
+      "options": {
+        "content": "This dashboard is one possible\nvisualisation for the error budgets\nof the shoots, grouped by the infrastructure.\n\nQuestions/comments: #gardener-monitoring",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.1",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Welcome",
+      "type": "text"
+    },
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 20,
+        "x": 4,
+        "y": 0
+      },
+      "id": 86,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["last"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.1",
+      "targets": [
+        {
+          "expr": "min_over_time((1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\"}) by (iaas))[24h:10m])",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{iaas}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Min over past 24h, excluding worst 10%",
+      "type": "stat"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 27,
+      "panels": [
+        {
+          "datasource": "availability-prometheus",
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": null,
+                "filterable": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byType",
+                  "options": "number"
+                },
+                "properties": [
+                  {
+                    "id": "custom.displayMode",
+                    "value": "lcd-gauge"
+                  },
+                  {
+                    "id": "unit",
+                    "value": "percentunit"
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "blue",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "min",
+                    "value": 0.95
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of Shoots"
+                },
+                "properties": [
+                  {
+                    "id": "custom.displayMode",
+                    "value": "auto"
+                  },
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 94
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Worst Shoot SLI"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": null
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "iaas"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 89
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "IaaS"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 118
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 11,
+            "w": 24,
+            "x": 0,
+            "y": 5
+          },
+          "id": 55,
+          "options": {
+            "frameIndex": 1,
+            "showHeader": true,
+            "sortBy": []
+          },
+          "pluginVersion": "7.3.7",
+          "targets": [
+            {
+              "expr": "1 - max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=\"$term\",window=\"$window\"}) by (iaas)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"}) by (iaas)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "expr": "1 - quantile(0.9,probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=\"$term\",window=\"$window\"}) by (iaas)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "expr": "1 - avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=\"$term\",window=\"$window\"}) by (iaas)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "D"
+            },
+            {
+              "expr": "1 - min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=\"$term\",window=\"$window\"}) by (iaas)",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "E"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Shoot SLIs",
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "iaas",
+                    "Value #A",
+                    "Value #B",
+                    "Value #C",
+                    "Value #D",
+                    "Value #E"
+                  ]
+                }
+              }
+            },
+            {
+              "id": "seriesToColumns",
+              "options": {
+                "byField": "iaas"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "Value #A": 2,
+                  "Value #B": 1,
+                  "Value #C": 3,
+                  "iaas": 0
+                },
+                "renameByName": {
+                  "Value #A": "Worst Shoot SLI",
+                  "Value #B": "# of Shoots",
+                  "Value #C": "Excluding worst 10%",
+                  "Value #D": "Average Shoot SLI",
+                  "Value #E": "Best Shoot SLI :)",
+                  "iaas": "IaaS"
+                }
+              }
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "datasource": "availability-prometheus",
+          "description": "No data means that no shoot cluster exceeds the SLO",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": null,
+                "filterable": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "%"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Value"
+                },
+                "properties": [
+                  {
+                    "id": "custom.displayMode",
+                    "value": "lcd-gauge"
+                  },
+                  {
+                    "id": "displayName",
+                    "value": "Error Budget"
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 16
+          },
+          "id": 2,
+          "options": {
+            "showHeader": true
+          },
+          "pluginVersion": "7.3.7",
+          "targets": [
+            {
+              "expr": "topk(10,probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\", term=~\"$term\", window=\"$window\"} > 1-$SLO/100) * 100",
+              "format": "table",
+              "instant": true,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Top 10 Shoots exceeding the SLO",
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": ["iaas", "name", "project", "Value"]
+                }
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "Value": 3,
+                  "iaas": 2,
+                  "name": 1,
+                  "project": 0
+                },
+                "renameByName": {}
+              }
+            }
+          ],
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 4,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "100%",
+              "color": "#73BF69",
+              "fillBelowTo": "SLO",
+              "lines": false
+            },
+            {
+              "alias": "SLO",
+              "lines": false
+            },
+            {}
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"}) by (iaas)",
+              "interval": "",
+              "legendFormat": "{{iaas}}",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "100%",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Shoot SLI + Error Budget, excluding worst 10%)",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Overview",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 58,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 2
+          },
+          "hiddenSeries": false,
+          "id": 56,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Funnel",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 107,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 3
+          },
+          "hiddenSeries": false,
+          "id": 110,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "iaas",
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "alicloud",
+              "value": "alicloud"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 3
+          },
+          "hiddenSeries": false,
+          "id": 111,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "aws",
+              "value": "aws"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 3
+          },
+          "hiddenSeries": false,
+          "id": 112,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "azure",
+              "value": "azure"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 3
+          },
+          "hiddenSeries": false,
+          "id": 113,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "gcp",
+              "value": "gcp"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 11
+          },
+          "hiddenSeries": false,
+          "id": 114,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "metal",
+              "value": "metal"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 11
+          },
+          "hiddenSeries": false,
+          "id": 115,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "openstack",
+              "value": "openstack"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 11
+          },
+          "hiddenSeries": false,
+          "id": 116,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "ovh",
+              "value": "ovh"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 11
+          },
+          "hiddenSeries": false,
+          "id": 117,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "sen",
+              "value": "sen"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 19
+          },
+          "hiddenSeries": false,
+          "id": 118,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": false,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612432845252,
+          "repeatPanelId": 110,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "vsphere",
+              "value": "vsphere"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Tiny Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": false
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "title": "Tiny Funnels",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 60,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 103,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "alicloud",
+              "value": "alicloud"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeat": "iaas",
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "alicloud",
+          "value": "alicloud"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 137,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 138,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "aws",
+              "value": "aws"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "aws",
+          "value": "aws"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 139,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 140,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "azure",
+              "value": "azure"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "azure",
+          "value": "azure"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 141,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 142,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "gcp",
+              "value": "gcp"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "gcp",
+          "value": "gcp"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 143,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 144,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "metal",
+              "value": "metal"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "metal",
+          "value": "metal"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 145,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 146,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "openstack",
+              "value": "openstack"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "openstack",
+          "value": "openstack"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 147,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 148,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "ovh",
+              "value": "ovh"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "ovh",
+          "value": "ovh"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 149,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 150,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "sen",
+              "value": "sen"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "sen",
+          "value": "sen"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 151,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "availability-prometheus",
+          "decimals": 2,
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "# of shoots"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "none"
+                  }
+                ]
+              }
+            ]
+          },
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 28
+          },
+          "hiddenSeries": false,
+          "id": 152,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": true,
+            "rightSide": true,
+            "show": true,
+            "sort": "min",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "7.3.7",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeatIteration": 1612436590043,
+          "repeatPanelId": 103,
+          "repeatedByRow": true,
+          "scopedVars": {
+            "iaas": {
+              "selected": false,
+              "text": "vsphere",
+              "value": "vsphere"
+            }
+          },
+          "seriesOverrides": [
+            {
+              "alias": "/min|max/",
+              "dashes": true
+            },
+            {
+              "alias": "90%",
+              "fillBelowTo": "50%"
+            },
+            {
+              "alias": "50%",
+              "fillBelowTo": "10%"
+            },
+            {
+              "alias": "SLO",
+              "linewidth": 2,
+              "zindex": 1
+            },
+            {
+              "alias": "# of shoots",
+              "yaxis": 2
+            }
+          ],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "min",
+              "refId": "A"
+            },
+            {
+              "expr": "$SLO/100",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "SLO",
+              "refId": "B"
+            },
+            {
+              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "max",
+              "refId": "D"
+            },
+            {
+              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "90%",
+              "refId": "E"
+            },
+            {
+              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "10%",
+              "refId": "F"
+            },
+            {
+              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "50%",
+              "refId": "G"
+            },
+            {
+              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "avg",
+              "refId": "H"
+            },
+            {
+              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "# of shoots",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Funnel for $iaas",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": 3,
+              "format": "percentunit",
+              "label": "",
+              "logBase": 1,
+              "max": "1",
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": 0,
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
+      "repeatIteration": 1612436590043,
+      "repeatPanelId": 60,
+      "scopedVars": {
+        "iaas": {
+          "selected": false,
+          "text": "vsphere",
+          "value": "vsphere"
+        }
+      },
+      "title": "Funnel for $iaas",
+      "type": "row"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 26,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": "(.+)",
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "availability-prometheus",
+        "definition": "label_values(probe_failure, iaas)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "iaas",
+        "options": [],
+        "query": "label_values(probe_failure, iaas)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "(.+)",
+        "current": {
+          "selected": false,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "availability-prometheus",
+        "definition": "label_values(probe_failure, purpose)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "purpose",
+        "options": [],
+        "query": "label_values(probe_failure, purpose)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "(.+)",
+        "current": {
+          "selected": false,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "availability-prometheus",
+        "definition": "label_values(probe_failure, project)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "project",
+        "options": [],
+        "query": "label_values(probe_failure, project)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "fixed",
+          "value": "fixed"
+        },
+        "datasource": "availability-prometheus",
+        "definition": "label_values(probe_failure:run:time:total:percent, window)",
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "window",
+        "options": [
+          {
+            "selected": true,
+            "text": "fixed",
+            "value": "fixed"
+          },
+          {
+            "selected": false,
+            "text": "moving",
+            "value": "moving"
+          }
+        ],
+        "query": "label_values(probe_failure:run:time:total:percent, window)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "(.+)",
+        "current": {
+          "selected": false,
+          "text": "day",
+          "value": "day"
+        },
+        "datasource": "availability-prometheus",
+        "definition": "label_values(probe_failure:run:time:total:percent,term)",
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "term",
+        "options": [
+          {
+            "selected": true,
+            "text": "day",
+            "value": "day"
+          },
+          {
+            "selected": false,
+            "text": "week",
+            "value": "week"
+          },
+          {
+            "selected": false,
+            "text": "week4",
+            "value": "week4"
+          },
+          {
+            "selected": false,
+            "text": "year_month",
+            "value": "year_month"
+          }
+        ],
+        "query": "label_values(probe_failure:run:time:total:percent,term)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "99.95",
+          "value": "99.95"
+        },
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "SLO",
+        "options": [
+          {
+            "selected": true,
+            "text": "99.95",
+            "value": "99.95"
+          },
+          {
+            "selected": false,
+            "text": "99.9",
+            "value": "99.9"
+          },
+          {
+            "selected": false,
+            "text": "99",
+            "value": "99"
+          },
+          {
+            "selected": false,
+            "text": "95",
+            "value": "95"
+          },
+          {
+            "selected": false,
+            "text": "50",
+            "value": "50"
+          },
+          {
+            "selected": false,
+            "text": ":)",
+            "value": ":)"
+          }
+        ],
+        "query": "99.95,99.9,99,95,50,:)",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Shoot SLI",
+  "uid": "_2l9zIYGk",
+  "version": 1
+}

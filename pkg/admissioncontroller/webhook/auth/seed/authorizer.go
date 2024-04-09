@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -37,7 +38,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -90,12 +90,12 @@ var (
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	seedName, isSeed := seedidentity.FromUserInfoInterface(attrs.GetUser())
+	seedName, isSeed, userType := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
 		return auth.DecisionNoOpinion, "", nil
 	}
 
-	requestLog := a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs))
+	requestLog := a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs), "userType", userType)
 
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
@@ -119,6 +119,10 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"status"},
 			)
 		case certificateSigningRequestResource:
+			if userType == seedidentity.UserTypeExtension {
+				return a.authorizeRead(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs)
+			}
+
 			return a.authorize(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs,
 				[]string{"get", "list", "watch"},
 				[]string{"create"},
@@ -127,9 +131,19 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case cloudProfileResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
 		case clusterRoleBindingResource:
+			if userType == seedidentity.UserTypeExtension {
+				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
+				// have. We want to grant the read-only subset of gardenlet's permissions.
+				return a.authorize(requestLog, seedName, graph.VertexTypeClusterRoleBinding, attrs,
+					[]string{"get"},
+					nil,
+					nil,
+				)
+			}
+
 			return a.authorizeClusterRoleBinding(requestLog, seedName, attrs)
 		case configMapResource:
-			return a.authorizeRead(requestLog, seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeConfigMap(requestLog, seedName, attrs)
 		case controllerDeploymentResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
@@ -155,7 +169,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				nil,
 			)
 		case leaseResource:
-			return a.authorizeLease(requestLog, seedName, attrs)
+			return a.authorizeLease(requestLog, seedName, userType, attrs)
 		case managedSeedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},
@@ -177,6 +191,16 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"status"},
 			)
 		case serviceAccountResource:
+			if userType == seedidentity.UserTypeExtension {
+				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
+				// have. We want to grant the read-only subset of gardenlet's permissions.
+				return a.authorize(requestLog, seedName, graph.VertexTypeServiceAccount, attrs,
+					[]string{"get"},
+					nil,
+					nil,
+				)
+			}
+
 			return a.authorizeServiceAccount(requestLog, seedName, attrs)
 		case shootResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShoot, attrs,
@@ -210,7 +234,6 @@ func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName strin
 	// in the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ClusterRoleBindingNamePrefix) {
-
 		managedSeedNamespace, managedSeedName := gardenletbootstraputil.ManagedSeedInfoFromClusterRoleBindingName(attrs.GetName())
 		if managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName {
 			return auth.DecisionAllow, "", nil
@@ -236,11 +259,23 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType seedidentity.UserType, attrs auth.Attributes) (auth.Decision, string, error) {
+	// extension clients may only work with leases in the seed namespace
+	if userType == seedidentity.UserTypeExtension {
+		if attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
+			if ok, reason := a.checkVerb(log, attrs, "create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"); !ok {
+				return auth.DecisionNoOpinion, reason, nil
+			}
+
+			return auth.DecisionAllow, "", nil
+		}
+
+		return auth.DecisionNoOpinion, "lease object is not in seed namespace", nil
+	}
+
 	// This is needed if the seed cluster is a garden cluster at the same time.
 	if attrs.GetName() == "gardenlet-leader-election" &&
-		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "list", "watch", "update"}) {
-
+		slices.Contains([]string{"create", "get", "list", "watch", "update"}, attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -253,7 +288,7 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth
 
 func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces.
-	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) && attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
+	if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) && attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -263,12 +298,19 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 		attrs.GetNamespace() == metav1.NamespaceSystem &&
 		strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix)) &&
 		(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})) {
-
 		return auth.DecisionAllow, "", nil
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeSecret, attrs,
 		[]string{"get", "patch", "update", "delete"},
+		[]string{"create"},
+		nil,
+	)
+}
+
+func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(log, seedName, graph.VertexTypeConfigMap, attrs,
+		[]string{"get", "patch", "update", "delete", "list", "watch"},
 		[]string{"create"},
 		nil,
 	)
@@ -281,7 +323,6 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
 		strings.HasPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) &&
 		strings.TrimPrefix(attrs.GetName(), gardenletbootstraputil.ServiceAccountNamePrefix) == seedName {
-
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -325,7 +366,7 @@ func (a *authorizer) authorize(
 	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
 	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
 	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
-	if utils.ValueExists(attrs.GetVerb(), alwaysAllowedVerbs) {
+	if slices.Contains(alwaysAllowedVerbs, attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
@@ -364,7 +405,7 @@ func (a *authorizer) hasPathFrom(log logr.Logger, seedName string, fromType grap
 }
 
 func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {
-	if !utils.ValueExists(attrs.GetVerb(), allowedVerbs) {
+	if !slices.Contains(allowedVerbs, attrs.GetVerb()) {
 		log.Info("Denying authorization because verb is not allowed for this resource type", "allowedVerbs", allowedVerbs)
 		return false, fmt.Sprintf("only the following verbs are allowed for this resource type: %+v", allowedVerbs)
 	}
@@ -373,7 +414,7 @@ func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVe
 }
 
 func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
-	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !utils.ValueExists(attrs.GetSubresource(), allowedSubresources) {
+	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, attrs.GetSubresource()) {
 		log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}

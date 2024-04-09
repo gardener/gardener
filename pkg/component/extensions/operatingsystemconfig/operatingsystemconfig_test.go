@@ -21,12 +21,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,10 +43,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/utils"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -55,6 +54,8 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -77,11 +78,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 			now     time.Time
 
 			apiServerURL                = "https://url-to-apiserver"
-			caBundle                    = pointer.String("ca-bundle")
-			clusterCASecretName         = "ca"
+			caBundle                    = ptr.To("ca-bundle")
 			clusterDNSAddress           = "cluster-dns"
 			clusterDomain               = "cluster-domain"
-			images                      = map[string]*imagevector.Image{"foo": {}}
+			images                      = map[string]*imagevector.Image{"gardener-node-agent": {}}
 			evictionHardMemoryAvailable = "100Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
@@ -95,24 +95,26 @@ var _ = Describe("OperatingSystemConfig", func() {
 			workerKubernetesVersion = "4.5.6"
 			valitailEnabled         = false
 
-			ccdUnitContent = "ccd-unit-content"
-
-			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			//nolint:unparam
+			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
-						{Name: cloudConfigUserDataSecretName},
+						{Name: worker.Name},
 						{
-							Name:    "cloud-config-downloader.service",
-							Content: &ccdUnitContent,
+							Name:    "gardener-node-init.service",
+							Content: &nodeAgentImage,
 						},
 					},
 					[]extensionsv1alpha1.File{
-						{Path: apiServerURL},
-						{Path: clusterCASecretName},
+						{Path: config.APIServer.Server},
+						{Path: ""},
+						{Path: "/var/lib/gardener-node-agent/init.sh"},
 					},
 					nil
 			}
+			//nolint:unparam
 			originalConfigFn = func(cctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
+						{Name: cctx.Key},
 						{Name: *cctx.CABundle},
 						{Name: cctx.ClusterDNSAddress},
 						{Name: cctx.ClusterDomain},
@@ -137,7 +139,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker1Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
@@ -148,7 +150,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				{
 					Name: worker2Name,
 					Machine: gardencorev1beta1.Machine{
-						Architecture: pointer.String(v1beta1constants.ArchitectureAMD64),
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name: "type2",
 						},
@@ -166,6 +168,124 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected []*extensionsv1alpha1.OperatingSystemConfig
 		)
 
+		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled bool) []*extensionsv1alpha1.OperatingSystemConfig {
+			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
+			for _, worker := range workers {
+				var (
+					criName   = extensionsv1alpha1.CRINameContainerD
+					criConfig *extensionsv1alpha1.CRIConfig
+				)
+
+				if worker.CRI != nil {
+					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
+					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
+				}
+
+				k8sVersion := values.KubernetesVersion
+				if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
+				}
+
+				key := Key(worker.Name, k8sVersion, worker.CRI)
+
+				imagesCopy := make(map[string]*imagevector.Image, len(images))
+				for imageName, image := range images {
+					imagesCopy[imageName] = image
+				}
+				imagesCopy["hyperkube"] = &imagevector.Image{Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube", Tag: ptr.To("v" + k8sVersion.String())}
+
+				initUnits, initFiles, _ := initConfigFn(
+					worker,
+					imagesCopy["gardener-node-agent"].String(),
+					&nodeagentv1alpha1.NodeAgentConfiguration{APIServer: nodeagentv1alpha1.APIServer{
+						Server:   apiServerURL,
+						CABundle: []byte(*caBundle),
+					}},
+				)
+				componentsContext := components.Context{
+					Key:               key,
+					CABundle:          caBundle,
+					ClusterDNSAddress: clusterDNSAddress,
+					ClusterDomain:     clusterDomain,
+					CRIName:           criName,
+					Images:            imagesCopy,
+					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
+						EvictionHard: map[string]string{
+							"memory.available": evictionHardMemoryAvailable,
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					KubernetesVersion:     k8sVersion,
+					SSHAccessEnabled:      true,
+					SSHPublicKeys:         sshPublicKeys,
+					ValitailEnabled:       valitailEnabled,
+				}
+				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
+
+				oscInit := &extensionsv1alpha1.OperatingSystemConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      key + "-" + worker.Machine.Image.Name + "-init",
+						Namespace: namespace,
+						Annotations: map[string]string{
+							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+						},
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool": worker.Name,
+						},
+					},
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type:           worker.Machine.Image.Name,
+							ProviderConfig: worker.Machine.Image.ProviderConfig,
+						},
+						Purpose:   extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+						CRIConfig: criConfig,
+					},
+				}
+
+				oscInit.Spec.Units = initUnits
+				oscInit.Spec.Files = initFiles
+				if sshAccessEnabled {
+					gUnits, gFiles, err := gardeneruser.New().Config(componentsContext)
+					Expect(err).ToNot(HaveOccurred())
+					oscInit.Spec.Units = append(oscInit.Spec.Units, gUnits...)
+					oscInit.Spec.Files = append(oscInit.Spec.Files, gFiles...)
+					sUnits, sFiles, err := sshdensurer.New().Config(componentsContext)
+					Expect(err).ToNot(HaveOccurred())
+					oscInit.Spec.Units = append(oscInit.Spec.Units, sUnits...)
+					oscInit.Spec.Files = append(oscInit.Spec.Files, sFiles...)
+				}
+
+				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      key + "-" + worker.Machine.Image.Name + "-original",
+						Namespace: namespace,
+						Annotations: map[string]string{
+							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+						},
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool": worker.Name,
+						},
+					},
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type:           worker.Machine.Image.Name,
+							ProviderConfig: worker.Machine.Image.ProviderConfig,
+						},
+						Purpose:   extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+						CRIConfig: criConfig,
+						Units:     originalUnits,
+						Files:     originalFiles,
+					},
+				}
+
+				expected = append(expected, oscInit, oscOriginal)
+			}
+			return expected
+		}
+
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			mockNow = mocktime.NewMockNow(ctrl)
@@ -177,7 +297,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			s := runtime.NewScheme()
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
 			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
-			c = fake.NewClientBuilder().WithScheme(s).Build()
+			c = fakeclient.NewClientBuilder().WithScheme(s).Build()
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 			sm = fakesecretsmanager.New(fakeClient, namespace)
@@ -190,7 +310,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Namespace:         namespace,
 				Workers:           workers,
 				KubernetesVersion: kubernetesVersion,
-				DownloaderValues: DownloaderValues{
+				InitValues: InitValues{
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
@@ -211,108 +331,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 
-			expected = make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
-			for _, worker := range workers {
-				var (
-					criName   = extensionsv1alpha1.CRINameDocker
-					criConfig *extensionsv1alpha1.CRIConfig
-				)
-
-				if worker.CRI != nil {
-					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
-					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
-				}
-
-				k8sVersion := values.KubernetesVersion
-				if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
-					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
-				}
-
-				key := Key(worker.Name, k8sVersion, worker.CRI)
-
-				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
-					key,
-					apiServerURL,
-					clusterCASecretName,
-				)
-				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
-					CABundle:          caBundle,
-					ClusterDNSAddress: clusterDNSAddress,
-					ClusterDomain:     clusterDomain,
-					CRIName:           criName,
-					Images:            images,
-					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
-						EvictionHard: map[string]string{
-							"memory.available": evictionHardMemoryAvailable,
-						},
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					KubernetesVersion:     k8sVersion,
-					SSHPublicKeys:         sshPublicKeys,
-					ValitailEnabled:       valitailEnabled,
-				})
-
-				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      key + "-" + worker.Machine.Image.Name + "-downloader",
-						Namespace: namespace,
-						Annotations: map[string]string{
-							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-						},
-						Labels: map[string]string{
-							"worker.gardener.cloud/pool": worker.Name,
-						},
-					},
-					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-						DefaultSpec: extensionsv1alpha1.DefaultSpec{
-							Type:           worker.Machine.Image.Name,
-							ProviderConfig: worker.Machine.Image.ProviderConfig,
-						},
-						Purpose:   extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-						CRIConfig: criConfig,
-						Units:     downloaderUnits,
-						Files:     downloaderFiles,
-					},
-				}
-
-				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      key + "-" + worker.Machine.Image.Name + "-original",
-						Namespace: namespace,
-						Annotations: map[string]string{
-							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-						},
-						Labels: map[string]string{
-							"worker.gardener.cloud/pool": worker.Name,
-						},
-					},
-					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-						DefaultSpec: extensionsv1alpha1.DefaultSpec{
-							Type:           worker.Machine.Image.Name,
-							ProviderConfig: worker.Machine.Image.ProviderConfig,
-						},
-						Purpose:              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
-						CRIConfig:            criConfig,
-						ReloadConfigFilePath: pointer.String("/var/lib/cloud-config-downloader/downloads/cloud_config"),
-						Units:                originalUnits,
-						Files: append(append(originalFiles, downloaderFiles...), extensionsv1alpha1.File{
-							Path:        "/etc/systemd/system/cloud-config-downloader.service",
-							Permissions: pointer.Int32(0644),
-							Content: extensionsv1alpha1.FileContent{
-								Inline: &extensionsv1alpha1.FileContentInline{
-									Encoding: "b64",
-									Data:     utils.EncodeBase64([]byte(ccdUnitContent)),
-								},
-							},
-						}),
-					},
-				}
-
-				expected = append(expected, oscDownloader, oscOriginal)
-			}
-
+			expected = computeExpectedOperatingSystemConfigs(false)
 			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
 
@@ -321,42 +340,67 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully deploy the shoot access secret for the cloud config downloader", func() {
+			It("should successfully deploy the shoot access secret for the gardener-node-agent", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+				))
+
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-gardener-node-agent", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
 					"resources.gardener.cloud/class":   "shoot",
 				}))
 				Expect(secret.Annotations).To(Equal(map[string]string{
-					"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
+					"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
 					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
 					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
-					"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
+					"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
 					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 				}))
 			})
 
 			It("should successfully deploy all extensions resources", func() {
-				defer test.WithVars(
+				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFn,
+					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
-				)()
+				))
 
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				for _, e := range expected {
+				for _, e := range computeExpectedOperatingSystemConfigs(false) {
 					actual := &extensionsv1alpha1.OperatingSystemConfig{}
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
 					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
+					obj.ResourceVersion = "1"
+
+					Expect(actual).To(Equal(obj))
+				}
+			})
+
+			It("should successfully deploy all extensions resources and SSH access is enabled", func() {
+				DeferCleanup(test.WithVars(
+					&TimeNow, mockNow.Do,
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+					&values.SSHAccessEnabled, true,
+				))
+
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				for _, e := range computeExpectedOperatingSystemConfigs(true) {
+					actual := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+
+					obj := e.DeepCopy()
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -364,15 +408,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
-				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
-				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, err := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
+				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/gardener-node-agent/credentials/bootstrap-token"}
+				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, err := initConfigFn(worker, nodeAgentImage, config)
 					return units, append(files, bootstrapTokenFile), err
 				}
 
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFnWithBootstrapToken,
+					&InitConfigFn, initConfigFnWithBootstrapToken,
 					&OriginalConfigFn, originalConfigFn,
 				)()
 
@@ -390,8 +434,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					obj := e.DeepCopy()
 
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -401,9 +443,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Restore", func() {
 			var (
-				stateDownloader = []byte(`{"dummy":"state downloader"}`)
-				stateOriginal   = []byte(`{"dummy":"state original"}`)
-				shootState      *gardencorev1beta1.ShootState
+				stateInit     = []byte(`{"dummy":"state init"}`)
+				stateOriginal = []byte(`{"dummy":"state original"}`)
+				shootState    *gardencorev1beta1.ShootState
 			)
 
 			BeforeEach(func() {
@@ -417,15 +459,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-downloader"),
+							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-init"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
-							State:   &runtime.RawExtension{Raw: stateDownloader},
+							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
+							State:   &runtime.RawExtension{Raw: stateInit},
 						},
 						gardencorev1beta1.ExtensionResourceState{
-							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-original"),
+							Name:    ptr.To(key + "-" + worker.Machine.Image.Name + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
+							Purpose: ptr.To(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
 						},
 					)
@@ -439,7 +481,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should properly restore the extensions state if it exists", func() {
 				defer test.WithVars(
-					&DownloaderConfigFn, downloaderConfigFn,
+					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 					&TimeNow, mockNow.Do,
 					&extensions.TimeNow, mockNow.Do,
@@ -451,16 +493,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				mc.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
 
-				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-cloud-config-downloader"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-gardener-node-agent"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				mc.EXPECT().Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot-access-cloud-config-downloader",
+						Name:      "shoot-access-gardener-node-agent",
 						Namespace: namespace,
 						Annotations: map[string]string{
-							"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
+							"serviceaccount.resources.gardener.cloud/name":                      "gardener-node-agent",
 							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
 							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
-							"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
+							"token-requestor.resources.gardener.cloud/target-secret-name":       "gardener-node-agent",
 							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 						},
 						Labels: map[string]string{
@@ -473,8 +515,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				for i := range expected {
 					var state []byte
-					if strings.HasSuffix(expected[i].Name, "downloader") {
-						state = stateDownloader
+					if strings.HasSuffix(expected[i].Name, "init") {
+						state = stateInit
 					} else {
 						state = stateOriginal
 					}
@@ -490,7 +532,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 					obj.TypeMeta = metav1.TypeMeta{}
 					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-						DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+						DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 							Expect(actual).To(DeepEqual(obj))
 							return nil
 						})
@@ -546,7 +588,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should return error if we haven't observed the latest timestamp annotation", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -574,7 +615,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -598,7 +639,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should return no error when it's ready", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
-					&DownloaderConfigFn, downloaderConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -627,7 +667,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -666,7 +706,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
+					expected[i].Status.Command = ptr.To("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 
@@ -683,42 +723,58 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, ccSecret)).To(Succeed())
 				}
 
+				worker1OSCDownloader := expected[0]
+				worker1OSCDownloader.Annotations = nil
+
+				worker1OSCOriginal := expected[1]
+				worker1OSCOriginal.Annotations = nil
+
+				worker2OSCDownloader := expected[2]
+				worker2OSCDownloader.Annotations = nil
+
+				worker2OSCOriginal := expected[3]
+				worker2OSCOriginal.Annotations = nil
+
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 				Expect(defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
-						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-downloader"),
+						Init: Data{
+							Content: "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
+							Command: ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-init"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
-								"baz-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
+								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
+								"baz-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
 							},
+							Object: worker1OSCDownloader,
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-original",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-original"),
+							Content: "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
+							Command: ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-type1-original",
-								"baz-cloud-config-" + worker1Name + "-77ac3-type1-original",
+								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
+								"baz-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
 							},
+							Object: worker1OSCOriginal,
 						},
 					},
 					worker2Name: {
-						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-downloader"),
+						Init: Data{
+							Content: "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
+							Command: ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-init"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
-								"baz-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
+								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
+								"baz-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
 							},
+							Object: worker2OSCDownloader,
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-original"),
+							Content: "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
+							Command: ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-d9e53-type2-original",
-								"baz-cloud-config-" + worker2Name + "-d9e53-type2-original",
+								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
+								"baz-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
 							},
+							Object: worker2OSCOriginal,
 						},
 					},
 				}))
@@ -761,7 +817,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
 				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(multierror.Append(fakeErr)))
+				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(error(multierror.Append(fakeErr))))
 			})
 		})
 
@@ -772,7 +828,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should return error if resources still exist", func() {
 				Expect(c.Create(ctx, expected[0])).To(Succeed())
-				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/cloud-config-worker1-77ac3-type1-downloader is still present")))
+				Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/gardener-node-agent-worker1-77ac3-type1-init is still present")))
 			})
 		})
 
@@ -898,19 +954,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("cloud-config-" + workerName + "-77ac3"))
+			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("is different for different worker.cri configurations", func() {
 			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			Expect(containerDKey).NotTo(Equal(dockerKey))
-		})
-
-		It("is the same for `cri=nil` and `cri.name=docker`", func() {
-			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
-			nilKey := Key(workerName, semver.MustParse("1.2.3"), nil)
-			Expect(dockerKey).To(Equal(nilKey))
+			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 	})
 })

@@ -176,7 +176,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, log logr.Logger, re
 
 		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue {
 			logger.Info("Health check for extension resource successful", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionType", healthCheckResult.HealthConditionType)
-			conditions = append(conditions, extensionConditionSuccessful(conditionBuilder, healthCheckResult.HealthConditionType, healthCheckResult))
+			conditions = append(conditions, extensionConditionSuccessful(conditionBuilder, healthCheckResult.HealthConditionType))
 			continue
 		}
 
@@ -212,7 +212,7 @@ func extensionConditionCheckError(conditionBuilder v1beta1helper.ConditionBuilde
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionUnknown).
 		WithReason(gardencorev1beta1.ConditionCheckError).
-		WithMessage(fmt.Sprintf("failed to execute %d health %s: %v", healthCheckResult.FailedChecks, getSingularOrPlural("check", healthCheckResult.FailedChecks), healthCheckResult.GetDetails()))
+		WithMessage(fmt.Sprintf("failed to execute %d health %s: %v", healthCheckResult.FailedChecks, getSingularOrPlural(healthCheckResult.FailedChecks), healthCheckResult.GetDetails()))
 	return condition{
 		builder:             conditionBuilder,
 		healthConditionType: healthConditionType,
@@ -250,7 +250,7 @@ func extensionConditionUnsuccessful(conditionBuilder v1beta1helper.ConditionBuil
 	}
 }
 
-func extensionConditionSuccessful(conditionBuilder v1beta1helper.ConditionBuilder, healthConditionType string, healthCheckResult Result) condition {
+func extensionConditionSuccessful(conditionBuilder v1beta1helper.ConditionBuilder, healthConditionType string) condition {
 	conditionBuilder.
 		WithStatus(gardencorev1beta1.ConditionTrue).
 		WithReason(ReasonSuccessful).

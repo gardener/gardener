@@ -21,15 +21,15 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/component-base/featuregate"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 // WithVar sets the given var to the src value and returns a function to revert to the original state.
@@ -231,7 +231,7 @@ func EXPECTPatchWithOptimisticLock(ctx interface{}, c *mockclient.MockClient, ex
 
 func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.Object, expectedPatch client.Patch, rets ...interface{}) *gomock.Call {
 	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).To(BeNil())
+	Expect(expectedErr).NotTo(HaveOccurred())
 
 	if rets == nil {
 		rets = []interface{}{nil}
@@ -250,7 +250,7 @@ func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.O
 
 			Expect(obj).To(DeepEqual(expectedObj))
 			data, err := patch.Data(obj)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
 			Expect(string(data)).To(Equal(string(expectedData)))
 			return nil
@@ -260,7 +260,7 @@ func expectPatch(ctx interface{}, c *mockclient.MockClient, expectedObj client.O
 
 func expectStatusPatch(ctx interface{}, c *mockclient.MockStatusWriter, expectedObj client.Object, expectedPatch client.Patch, rets ...interface{}) *gomock.Call {
 	expectedData, expectedErr := expectedPatch.Data(expectedObj)
-	Expect(expectedErr).To(BeNil())
+	Expect(expectedErr).NotTo(HaveOccurred())
 
 	if rets == nil {
 		rets = []interface{}{nil}
@@ -279,7 +279,7 @@ func expectStatusPatch(ctx interface{}, c *mockclient.MockStatusWriter, expected
 
 			Expect(obj).To(DeepEqual(expectedObj))
 			data, err := patch.Data(obj)
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
 			Expect(string(data)).To(Equal(string(expectedData)))
 			return nil

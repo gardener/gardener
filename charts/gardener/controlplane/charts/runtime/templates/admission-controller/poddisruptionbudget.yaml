@@ -1,5 +1,5 @@
 {{- if gt (int .Values.global.admission.replicaCount) 1 }}
-apiVersion: {{ include "poddisruptionbudgetversion" .}}
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: gardener-admission-controller
@@ -19,4 +19,7 @@ spec:
       chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
       release: "{{ .Release.Name }}"
       heritage: "{{ .Release.Service }}"
+{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}
 {{- end }}

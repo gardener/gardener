@@ -20,13 +20,11 @@ import (
 	"crypto/x509/pkix"
 	"net"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -38,7 +36,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -111,7 +108,7 @@ var _ = Describe("utils", func() {
 
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("misconfigured seed cluster: not possible to provide more than one secret with annotation")))
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with annotation")))
 		})
 
 		It("should return the wildcard certificate secret", func() {
@@ -126,46 +123,6 @@ var _ = Describe("utils", func() {
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-	Describe("#SeedIsGarden", func() {
-		var (
-			ctx        context.Context
-			mockReader *mockclient.MockReader
-			ctrl       *gomock.Controller
-		)
-
-		BeforeEach(func() {
-			ctx = context.Background()
-			ctrl = gomock.NewController(GinkgoT())
-			mockReader = mockclient.NewMockReader(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should return that seed is a garden cluster", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					list.Items = []metav1.PartialObjectMetadata{{}}
-					return nil
-				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeTrue())
-		})
-
-		It("should return that seed is a not a garden cluster because no garden object found", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
-		})
-
-		It("should return that seed is a not a garden cluster because of a no match error", func() {
-			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
-				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					return &meta.NoResourceMatchError{}
-				})
-			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 	})
 
@@ -385,4 +342,16 @@ var _ = Describe("utils", func() {
 			})
 		})
 	})
+
+	DescribeTable("#GetIPStackForSeed",
+		func(seed *gardencorev1beta1.Seed, expectedResult string) {
+			Expect(GetIPStackForSeed(seed)).To(Equal(expectedResult))
+		},
+
+		Entry("default seed", &gardencorev1beta1.Seed{}, "ipv4"),
+		Entry("ipv4 seed", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}}}}, "ipv4"),
+		Entry("ipv6 seed", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}}}}, "ipv6"),
+		Entry("dual-stack seed (ipv4 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
+		Entry("dual-stack seed (ipv6 preferred)", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
+	)
 })

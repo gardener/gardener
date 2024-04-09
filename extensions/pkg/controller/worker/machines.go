@@ -23,56 +23,37 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
-var diskSizeRegexp *regexp.Regexp
-
-func init() {
-	regexp, err := regexp.Compile(`^(\d+)`)
-	utilruntime.Must(err)
-	diskSizeRegexp = regexp
-}
+var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
 
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
 type MachineDeployment struct {
-	Name                 string
-	ClassName            string
-	SecretName           string
-	Minimum              int32
-	Maximum              int32
-	MaxSurge             intstr.IntOrString
-	MaxUnavailable       intstr.IntOrString
-	Labels               map[string]string
-	Annotations          map[string]string
-	Taints               []corev1.Taint
-	State                *MachineDeploymentState
-	MachineConfiguration *machinev1alpha1.MachineConfiguration
+	Name                         string
+	ClassName                    string
+	SecretName                   string
+	Minimum                      int32
+	Maximum                      int32
+	MaxSurge                     intstr.IntOrString
+	MaxUnavailable               intstr.IntOrString
+	Labels                       map[string]string
+	Annotations                  map[string]string
+	Taints                       []corev1.Taint
+	State                        *shootstate.MachineDeploymentState
+	MachineConfiguration         *machinev1alpha1.MachineConfiguration
+	ClusterAutoscalerAnnotations map[string]string
 }
 
 // MachineDeployments is a list of machine deployments.
 type MachineDeployments []MachineDeployment
-
-// MachineDeploymentState stores the last versions of the machine sets and machine which
-// the machine deployment corresponds
-type MachineDeploymentState struct {
-	Replicas    int32                        `json:"replicas,omitempty"`
-	MachineSets []machinev1alpha1.MachineSet `json:"machineSets,omitempty"`
-	Machines    []machinev1alpha1.Machine    `json:"machines,omitempty"`
-}
-
-// State represent the last known state of a Worker
-type State struct {
-	MachineDeployments map[string]*MachineDeploymentState `json:"machineDeployments,omitempty"`
-}
 
 // HasDeployment checks whether the <name> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
@@ -151,7 +132,7 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 
 	for _, w := range cluster.Shoot.Spec.Provider.Workers {
 		if pool.Name == w.Name {
-			if w.CRI != nil && w.CRI.Name != gardencorev1beta1.CRINameDocker {
+			if w.CRI != nil {
 				data = append(data, string(w.CRI.Name))
 			}
 		}
@@ -166,8 +147,7 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		}
 	}
 
-	// Do not consider the shoot annotations here to prevent unintended node roll-outs.
-	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents, map[string]string{}) {
+	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
 
@@ -232,13 +212,13 @@ func DistributePositiveIntOrPercent(zoneIndex int32, intOrPercent intstr.IntOrSt
 	if intOrPercent.Type == intstr.String {
 		return intstr.FromString(DistributePercentOverZones(zoneIndex, intOrPercent.StrVal, zoneSize, total))
 	}
-	return intstr.FromInt(int(DistributeOverZones(zoneIndex, intOrPercent.IntVal, zoneSize)))
+	return intstr.FromInt32(DistributeOverZones(zoneIndex, intOrPercent.IntVal, zoneSize))
 }
 
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and
 // returns it as string, i.e. "10" will be returned.
 func DiskSize(size string) (int, error) {
-	i, err := strconv.Atoi(diskSizeRegexp.FindString(size))
+	i, err := strconv.Atoi(diskSizeRegex.FindString(size))
 	if err != nil {
 		return -1, err
 	}

@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,11 +36,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#ContainerRuntime", func() {
@@ -370,7 +370,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
 			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().Format(time.RFC3339Nano)
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(expected[0])).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(expected[0]))
 					return nil
 				})
@@ -444,7 +444,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			Expect(defaultDepWaiter.WaitMigrate(ctx)).ToNot(HaveOccurred(), "containerruntime is ready, should not return an error")
 		})
 
-		It("should return error if one resources is not migrated succesfully and others are", func() {
+		It("should return error if one resources is not migrated successfully and others are", func() {
 			for i := range expected[1:] {
 				expected[i].Status.LastError = nil
 				expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -483,7 +483,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
 			Expect(c.List(ctx, containerRuntimeList)).To(Succeed())
 
-			Expect(len(containerRuntimeList.Items)).To(Equal(4))
+			Expect(containerRuntimeList.Items).To(HaveLen(4))
 			for _, item := range containerRuntimeList.Items {
 				Expect(item.Spec.Type).ToNot(Equal("new-type"))
 			}

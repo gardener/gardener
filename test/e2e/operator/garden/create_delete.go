@@ -29,9 +29,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test"
@@ -46,7 +50,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	It("Create, Delete", Label("simple"), func() {
 		By("Create Garden")
-		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
@@ -64,6 +68,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			waitForGardenToBeDeleted(ctx, garden)
 			cleanupVolumes(ctx)
 			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
+			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
 
 			By("Verify deletion")
 			secretList := &corev1.SecretList{}
@@ -85,7 +90,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
-				healthyManagedResource("garden-system"),
 				healthyManagedResource("hvpa"),
 				healthyManagedResource("vpa"),
 				healthyManagedResource("etcd-druid"),
@@ -94,6 +98,25 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("shoot-core-gardener-resource-manager"),
 				healthyManagedResource("shoot-core-gardeneraccess"),
 				healthyManagedResource("nginx-ingress"),
+				healthyManagedResource("fluent-bit"),
+				healthyManagedResource("fluent-operator"),
+				healthyManagedResource("fluent-operator-custom-resources-garden"),
+				healthyManagedResource("vali"),
+				healthyManagedResource("plutono"),
+				healthyManagedResource("prometheus-operator"),
+				healthyManagedResource("alertmanager-garden"),
+				healthyManagedResource("garden-system"),
+				healthyManagedResource("garden-system-virtual"),
+				healthyManagedResource("gardener-apiserver-runtime"),
+				healthyManagedResource("gardener-apiserver-virtual"),
+				healthyManagedResource("gardener-admission-controller-runtime"),
+				healthyManagedResource("gardener-admission-controller-virtual"),
+				healthyManagedResource("gardener-controller-manager-runtime"),
+				healthyManagedResource("gardener-controller-manager-virtual"),
+				healthyManagedResource("gardener-scheduler-runtime"),
+				healthyManagedResource("gardener-scheduler-virtual"),
+				healthyManagedResource("gardener-metrics-exporter-runtime"),
+				healthyManagedResource("gardener-metrics-exporter-virtual"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
@@ -103,11 +126,24 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 
+		var virtualClusterClient kubernetes.Interface
 		By("Verify virtual cluster access using token-request kubeconfig")
 		Eventually(func(g Gomega) {
-			virtualClusterClient, err := kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener", kubernetes.WithDisabledCachedClient())
+			var err error
+			virtualClusterClient, err = kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener",
+				kubernetes.WithDisabledCachedClient(),
+				kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
+			)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(virtualClusterClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("Verify Gardener APIs availability")
+		Eventually(func(g Gomega) {
+			g.Expect(virtualClusterClient.Client().List(ctx, &gardencorev1beta1.ShootList{})).To(Succeed())
+			g.Expect(virtualClusterClient.Client().List(ctx, &seedmanagementv1alpha1.ManagedSeedList{})).To(Succeed())
+			g.Expect(virtualClusterClient.Client().List(ctx, &settingsv1alpha1.ClusterOpenIDConnectPresetList{})).To(Succeed())
+			g.Expect(virtualClusterClient.Client().List(ctx, &operationsv1alpha1.BastionList{})).To(Succeed())
 		}).Should(Succeed())
 	})
 })

@@ -52,6 +52,9 @@ const (
 	// It is set by the ManagedResource controller to the key of the owning ManagedResource, optionally prefixed with the
 	// clusterID.
 	OriginAnnotation = "resources.gardener.cloud/origin"
+	// FinalizeDeletionAfter is an annotation on an object part of a ManagedResource that whose value states the
+	// duration after which a deletion should be finalized (i.e., removal of `.metadata.finalizers[]`).
+	FinalizeDeletionAfter = "resources.gardener.cloud/finalize-deletion-after"
 
 	// ManagedBy is a constant for a label on an object managed by a ManagedResource.
 	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
@@ -96,6 +99,9 @@ const (
 	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account
 	// namespace.
 	ServiceAccountNamespace = "serviceaccount.resources.gardener.cloud/namespace"
+	// ServiceAccountLabels is the key of an annotation of a secret whose value contains the service account
+	// labels.
+	ServiceAccountLabels = "serviceaccount.resources.gardener.cloud/labels"
 	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration
 	// duration of the token created.
 	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
@@ -132,6 +138,9 @@ const (
 	HighAvailabilityConfigZonePinning = "high-availability-config.resources.gardener.cloud/zone-pinning"
 	// HighAvailabilityConfigType is a constant for a label on a resource which describes which component type it is.
 	HighAvailabilityConfigType = "high-availability-config.resources.gardener.cloud/type"
+	// HighAvailabilityConfigHostSpread is a constant for an annotation on a resource which enforces a topology spread
+	// constraint across hosts.
+	HighAvailabilityConfigHostSpread = "high-availability-config.resources.gardener.cloud/host-spread"
 	// HighAvailabilityConfigTypeController is a constant for a label value on a resource describing it's a controller.
 	HighAvailabilityConfigTypeController = "controller"
 	// HighAvailabilityConfigTypeServer is a constant for a label value on a resource describing it's a (webhook)
@@ -176,17 +185,6 @@ const (
 	// NetworkingFromWorldToPorts is a constant for an annotation on a Service which contains a list of ports to which
 	// ingress traffic from everywhere shall be allowed.
 	NetworkingFromWorldToPorts = "networking.resources.gardener.cloud/from-world-to-ports"
-	// NetworkingFromPolicyPodLabelSelector is a constant for an annotation on a Service which contains the label
-	// selector which should be used for pods initiating the communication with this Service. Note that the ports must
-	// be container ports, not service ports.
-	// Deprecated: Use `networking.resources.gardener.cloud/from-<some-alias>-allowed-ports`
-	// (NetworkPolicyFromPolicyAnnotationPrefix and NetworkPolicyFromPolicyAnnotationSuffix) instead.
-	NetworkingFromPolicyPodLabelSelector = "networking.resources.gardener.cloud/from-policy-pod-label-selector"
-	// NetworkingFromPolicyAllowedPorts is a constant for an annotation on a Service which contains a list of ports to
-	// which ingress traffic shall be allowed. Note that the ports must be container ports, not service ports.
-	// Deprecated: Use `networking.resources.gardener.cloud/from-<some-alias>-allowed-ports`
-	// (NetworkPolicyFromPolicyAnnotationPrefix and NetworkPolicyFromPolicyAnnotationSuffix) instead.
-	NetworkingFromPolicyAllowedPorts = "networking.resources.gardener.cloud/from-policy-allowed-ports"
 	// NetworkPolicyFromPolicyAnnotationPrefix is a constant for an annotation key prefix on a Service which contains
 	// the label selector alias which is used by pods initiating the communication to this Service. The annotation key
 	// must be suffixed with NetworkPolicyFromPolicyAnnotationSuffix, and the annotations value must be a list of

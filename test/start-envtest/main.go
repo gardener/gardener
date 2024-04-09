@@ -31,8 +31,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 const name = "start-envtest"
@@ -44,7 +44,7 @@ func main() {
 		Use:   name,
 		Short: "Launch an envtest environment",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.validate(); err != nil {
 				return err
 			}
@@ -114,6 +114,9 @@ func run(ctx context.Context, log logr.Logger, opts *options) error {
 	if opts.environmentType == typeGardener {
 		testEnv = &gardenerenvtest.GardenerTestEnvironment{
 			Environment: kubeEnvironment,
+			GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+				Args: []string{"--disable-admission-plugins="},
+			},
 		}
 	}
 

@@ -23,7 +23,6 @@ import (
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,8 +31,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -105,7 +102,7 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 	return true
 }
 
-// GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
+// GetWildcardCertificate gets the wildcard certificate for the ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
 	wildcardCerts := &corev1.SecretList{}
@@ -119,25 +116,13 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 	}
 
 	if len(wildcardCerts.Items) > 1 {
-		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
+		return nil, fmt.Errorf("misconfigured cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
 	}
 
 	if len(wildcardCerts.Items) == 1 {
 		return &wildcardCerts.Items[0], nil
 	}
 	return nil, nil
-}
-
-// SeedIsGarden returns 'true' if the cluster is registered as a Garden cluster.
-func SeedIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
-	seedIsGarden, err := kubernetesutils.ResourcesExist(ctx, seedClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
-	if err != nil {
-		if !meta.IsNoMatchError(err) {
-			return false, err
-		}
-		seedIsGarden = false
-	}
-	return seedIsGarden, nil
 }
 
 // ComputeRequiredExtensionsForSeed computes the extension kind/type combinations that are required for the
@@ -190,4 +175,10 @@ func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, se
 	}
 
 	return nil
+}
+
+// GetIPStackForSeed returns the value for the AnnotationKeyIPStack annotation based on the given seed.
+// It falls back to IPv4 if no IP families are available.
+func GetIPStackForSeed(seed *gardencorev1beta1.Seed) string {
+	return getIPStackForFamilies(seed.Spec.Networks.IPFamilies)
 }

@@ -94,11 +94,10 @@ var _ = Describe("Controller", func() {
 
 	Context("when deletion timestamp is set", func() {
 		BeforeEach(func() {
-			now := metav1.Now()
-			controllerDeployment.DeletionTimestamp = &now
 			controllerDeployment.Finalizers = []string{finalizerName}
 
 			Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, controllerDeployment)).To(Succeed())
 		})
 
 		It("should do nothing because finalizer is not present", func() {
@@ -113,11 +112,14 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should return error because ControllerRegistration referencing ControllerDeployment exists", func() {
+			controllerRegistration2 := controllerRegistration.DeepCopy()
+			controllerRegistration2.Name = controllerRegistration.Name + "-2"
 			Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
+			Expect(fakeClient.Create(ctx, controllerRegistration2)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerDeploymentName}})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of ControllerDeployment")))
+			Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of ControllerDeployment %q because still found ControllerRegistrations: [%s %s]", controllerDeployment.Name, controllerRegistration.Name, controllerRegistration2.Name)))
 		})
 
 		It("should remove the finalizer because no ControllerRegistration is referencing the ControllerDeployment", func() {

@@ -29,13 +29,14 @@ import (
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -128,14 +129,12 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             resourcemanagerclient.CombinedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			DefaultSelector: cache.ObjectSelector{
-				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-			},
-		}),
+		Scheme:  resourcemanagerclient.CombinedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces:    map[string]cache.Config{testNamespace.Name: {}},
+			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -147,9 +146,9 @@ var _ = BeforeSuite(func() {
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: config.KubeletCSRApproverControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs:  ptr.To(5),
+			MachineNamespace: testNamespace.Name,
 		},
-		SourceNamespace: testNamespace.Namespace,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

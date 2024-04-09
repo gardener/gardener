@@ -1,6 +1,6 @@
 global:
   image:
-    repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-resource-manager
     tag: latest
     pullPolicy: IfNotPresent
 
@@ -21,7 +21,7 @@ global:
     sourceClientConnection:
       qps: 100
       burst: 130
-    # namespace: ""
+    # namespaces: []
     # cacheResyncPeriod: 24h
     # kubeconfig: |
     #   apiVersion: v1
@@ -34,8 +34,7 @@ global:
     #targetClientConnection:
     #  qps: 100
     #  burst: 130
-    #  namespace: ""
-    #  disableCachedClient: false
+    #  namespaces: []
     #  cacheResyncPeriod: 24h
     #  kubeconfig: |
     #    apiVersion: v1
@@ -82,6 +81,7 @@ global:
       kubeletCSRApprover:
         enabled: false
       # concurrentSyncs: 1
+      # machineNamespace: shoot--foo--bar
       managedResources:
         concurrentSyncs: 5
         syncPeriod: 1m
@@ -102,8 +102,6 @@ global:
         enabled: false
       # concurrentSyncs: 5
       # backoff: 10s
-      secret:
-        concurrentSyncs: 5
       tokenInvalidator:
         enabled: false
       # concurrentSyncs: 5

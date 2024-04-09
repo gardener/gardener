@@ -1,4 +1,4 @@
-Port 6222
+Port 443
 ListenAddress 0.0.0.0
 
 HostKey /gardener-apiserver-ssh-keys/ssh_host_rsa_key

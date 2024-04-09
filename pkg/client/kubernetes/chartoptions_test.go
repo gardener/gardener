@@ -56,7 +56,7 @@ var _ = Describe("chart options", func() {
 
 	It("MergeFuncs sets ApplyOptions", func() {
 		funcs := MergeFuncs{
-			schema.GroupKind{}: func(n, o *unstructured.Unstructured) {
+			schema.GroupKind{}: func(n, _ *unstructured.Unstructured) {
 				n.SetName("baz")
 			},
 		}

@@ -8,6 +8,7 @@
 !cmd/
 !extensions/
 !hack/
+!imagevector/
 !pkg/
 !plugin/
 !test/

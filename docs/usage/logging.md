@@ -18,13 +18,9 @@ Container [log rotation](https://kubernetes.io/docs/concepts/cluster-administrat
 * `ContainerLogMaxSize` for rotation
 * `ContainerLogMaxFiles` for retention
 
-### Docker Container Runtime
-
-In this case, the log rotation and retention is implemented by a `logrotate` service provisioned by Gardener, which rotates logs once `100M` size is reached. Logs are compressed on daily basis and retained for a maximum period of `14d`.
-
 ### ContainerD Runtime
 
-In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the same size `100M` as in the `docker` container runtime. Those fields are part of provider's workers definition. Here is an example:
+In this case, it is possible to configure the `containerLogMaxSize` and `containerLogMaxFiles` fields in the Shoot specification. Both fields are optional and if nothing is specified, then the `kubelet` rotates on the size `100M`. Those fields are part of provider's workers definition. Here is an example:
 
 ```yaml
 spec:
@@ -94,9 +90,9 @@ Examples:
 
   > **Note:** Under `unit` label there is only the `docker`, `containerd`, `kubelet` and `kernel` logs.
 
-3. If you want to get the logs from `cloud-config-downloader` systemd service of a given node and search for a string in the logs:
+3. If you want to get the logs from `gardener-node-agent` systemd service of a given node and search for a string in the logs:
 
-    ```{job="systemd-combine-journal",nodename="ip-10-222-31-182.eu-central-1.compute.internal"} | unpack | unit="cloud-config-downloader.service" |~ "last execution was"```
+    ```{job="systemd-combine-journal",nodename="ip-10-222-31-182.eu-central-1.compute.internal"} | unpack | unit="gardener-node-agent.service"```
 
 > **Note:** `{job="systemd-combine-journal",nodename="<node name>"}` stream [pack](https://github.com/credativ/plutono) all logs from systemd services except `docker`, `containerd`, `kubelet`, and `kernel`. To filter those log by unit, you have to [unpack](https://github.com/credativ/plutono) them first.
 
@@ -120,7 +116,7 @@ Exposing logs for a new component to the User's Plutono is described in the [How
 
 ### Fluent-bit
 
-The Fluent-bit configurations can be found on `pkg/component/logging/fluentoperator/customresources`
+The Fluent-bit configurations can be found on `pkg/component/observability/logging/fluentoperator/customresources`
 There are six different specifications:
 
 * FluentBit: Defines the fluent-bit DaemonSet specifications

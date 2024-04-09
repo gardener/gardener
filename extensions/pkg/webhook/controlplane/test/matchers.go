@@ -16,6 +16,7 @@ package test
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/onsi/gomega/types"
@@ -48,8 +49,7 @@ func (m *containElementWithPrefixContainingMatcher) Match(actual interface{}) (s
 		return false, nil
 	}
 	values := strings.Split(strings.TrimPrefix(items[i], m.prefix), m.sep)
-	j := extensionswebhook.StringIndex(values, m.value)
-	return j >= 0, nil
+	return slices.Index(values, m.value) >= 0, nil
 }
 
 func (m *containElementWithPrefixContainingMatcher) FailureMessage(actual interface{}) (message string) {

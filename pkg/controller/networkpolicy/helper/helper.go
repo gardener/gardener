@@ -21,10 +21,12 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 // GetEgressRules creates Network Policy egress rules from endpoint subsets.
-func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPolicyEgressRule {
+func GetEgressRules(subsets ...corev1.EndpointSubset) ([]networkingv1.NetworkPolicyEgressRule, error) {
 	var egressRules []networkingv1.NetworkPolicyEgressRule
 
 	for _, subset := range subsets {
@@ -36,18 +38,23 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 				continue
 			}
 
+			bitLen, err := netutils.GetBitLen(address.IP)
+			if err != nil {
+				return nil, err
+			}
+
 			existingIPs.Insert(address.IP)
 
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/32", address.IP),
+					CIDR: fmt.Sprintf("%s/%d", address.IP, bitLen),
 				},
 			})
 		}
 
 		for _, port := range subset.Ports {
 			// do not use named port as this is e.g not support on Weave
-			parse := intstr.FromInt(int(port.Port))
+			parse := intstr.FromInt32(port.Port)
 			networkPolicyPort := networkingv1.NetworkPolicyPort{
 				Port:     &parse,
 				Protocol: &port.Protocol,
@@ -58,5 +65,5 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 		egressRules = append(egressRules, egressRule)
 	}
 
-	return egressRules
+	return egressRules, nil
 }

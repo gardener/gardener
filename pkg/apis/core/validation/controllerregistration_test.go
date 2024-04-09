@@ -23,7 +23,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -180,7 +180,7 @@ var _ = Describe("validation", func() {
 			resource := core.ControllerResource{
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
-				GloballyEnabled:  pointer.Bool(true),
+				GloballyEnabled:  ptr.To(true),
 				ReconcileTimeout: makeDurationPointer(10 * time.Second),
 				Lifecycle: &core.ControllerResourceLifecycle{
 					Reconcile: &strat,
@@ -195,7 +195,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid to set certain fields for kind != Extension", func() {
 			strat := core.BeforeKubeAPIServer
-			ctrlResource.GloballyEnabled = pointer.Bool(true)
+			ctrlResource.GloballyEnabled = ptr.To(true)
 			ctrlResource.ReconcileTimeout = makeDurationPointer(10 * time.Second)
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
 				Reconcile: &strat,
@@ -242,6 +242,36 @@ var _ = Describe("validation", func() {
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow setting the AfterWorker lifecycle strategy on reconcile", func() {
+			afterStrat := core.AfterWorker
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &afterStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow setting AfterWorker lifecycle strategy on migrate or delete", func() {
+			afterStrat := core.AfterWorker
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Migrate: &afterStrat,
+				Delete:  &afterStrat,
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.migrate"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].lifecycle.delete"),
+			}))))
 		})
 
 		It("should not allow setting invalid lifecycle strategies", func() {
@@ -323,7 +353,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set unsupported seed selectors", func() {
-			controllerRegistration.Spec.Resources[0].Primary = pointer.Bool(false)
+			controllerRegistration.Spec.Resources[0].Primary = ptr.To(false)
 			controllerRegistration.Spec.Deployment.SeedSelector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"foo": "no/slash/allowed",
@@ -384,7 +414,7 @@ var _ = Describe("validation", func() {
 
 		It("should prevent changing the primary field of a resource", func() {
 			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
-			newControllerRegistration.Spec.Resources[0].Primary = pointer.Bool(false)
+			newControllerRegistration.Spec.Resources[0].Primary = ptr.To(false)
 
 			errorList := ValidateControllerRegistrationUpdate(newControllerRegistration, controllerRegistration)
 

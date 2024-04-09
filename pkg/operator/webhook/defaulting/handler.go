@@ -43,6 +43,7 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig == nil {
 		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
 	}
+
 	gardencorev1beta1.SetDefaults_KubeAPIServerConfig(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager == nil {
@@ -51,7 +52,6 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig == nil {
 		garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig = &gardencorev1beta1.KubeControllerManagerConfig{}
 	}
-	gardencorev1beta1.SetDefaults_KubeControllerManagerConfig(garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig)
 
 	return nil
 }

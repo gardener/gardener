@@ -16,23 +16,23 @@ package kubernetes_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockio "github.com/gardener/gardener/pkg/mock/go/io"
+	mockcorev1 "github.com/gardener/gardener/third_party/mock/client-go/core/v1"
+	mockio "github.com/gardener/gardener/third_party/mock/go/io"
 )
 
 var _ = Describe("Pods", func() {
@@ -95,7 +95,7 @@ var _ = Describe("Pods", func() {
 		It("should return error if port forward fails", func() {
 			defer goleak.VerifyNone(GinkgoT(), goleak.IgnoreCurrent())
 			fw := fake.PortForwarder{
-				Err:      fmt.Errorf("foo"),
+				Err:      errors.New("foo"),
 				DoneChan: make(chan struct{}, 1),
 			}
 			close(fw.DoneChan)

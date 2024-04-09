@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +41,7 @@ func ConvertSchedulerConfiguration(obj runtime.Object) (*config.SchedulerConfigu
 	}
 	result, ok := obj.(*config.SchedulerConfiguration)
 	if !ok {
-		return nil, fmt.Errorf("could not convert SchedulerConfiguration to the internal version")
+		return nil, errors.New("could not convert SchedulerConfiguration to the internal version")
 	}
 	return result, nil
 }

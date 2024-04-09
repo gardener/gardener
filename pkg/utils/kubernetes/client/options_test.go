@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -47,7 +47,7 @@ var _ = Describe("CleanOptions", func() {
 	It("should allow setting ErrorToleration", func() {
 		co := &CleanOptions{}
 		TolerateErrors{apierrors.IsConflict}.ApplyToClean(co)
-		Expect(len(co.ErrorToleration)).To(Equal(1))
+		Expect(co.ErrorToleration).To(HaveLen(1))
 	})
 
 	It("should allow setting CleanOptions", func() {
@@ -55,14 +55,14 @@ var _ = Describe("CleanOptions", func() {
 		(&CleanOptions{
 			ListOptions:                []client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}},
 			DeleteOptions:              []client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll},
-			FinalizeGracePeriodSeconds: pointer.Int64(42),
+			FinalizeGracePeriodSeconds: ptr.To[int64](42),
 			ErrorToleration:            []TolerateErrorFunc{apierrors.IsConflict},
 		}).ApplyToClean(co)
 		Expect(co.ListOptions).To(Equal([]client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}}))
 		Expect(co.DeleteOptions).To(Equal([]client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll}))
 		gp := int64(42)
 		Expect(co.FinalizeGracePeriodSeconds).To(Equal(&gp))
-		Expect(len(co.ErrorToleration)).To(Equal(1))
+		Expect(co.ErrorToleration).To(HaveLen(1))
 	})
 
 	It("should merge multiple options together", func() {

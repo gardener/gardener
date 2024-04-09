@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -38,11 +37,6 @@ func (m *secretToBackupBucketMapper) Map(ctx context.Context, _ logr.Logger, rea
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil
-	}
-
 	backupBucketList := &extensionsv1alpha1.BackupBucketList{}
 	if err := reader.List(ctx, backupBucketList); err != nil {
 		return nil
@@ -50,7 +44,7 @@ func (m *secretToBackupBucketMapper) Map(ctx context.Context, _ logr.Logger, rea
 
 	var requests []reconcile.Request
 	for _, backupBucket := range backupBucketList.Items {
-		if backupBucket.Spec.SecretRef.Name == secret.Name && backupBucket.Spec.SecretRef.Namespace == secret.Namespace {
+		if backupBucket.Spec.SecretRef.Name == obj.GetName() && backupBucket.Spec.SecretRef.Namespace == obj.GetNamespace() {
 			if predicateutils.EvalGeneric(&backupBucket, m.predicates...) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{

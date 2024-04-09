@@ -18,15 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Deployments", func() {
@@ -57,7 +57,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -100,7 +100,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -141,7 +141,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {
@@ -182,7 +182,7 @@ var _ = Describe("Deployments", func() {
 				).
 				DoAndReturn(func(
 					_ context.Context,
-					key client.ObjectKey,
+					_ client.ObjectKey,
 					deployment *appsv1.Deployment,
 					_ ...client.GetOption,
 				) error {

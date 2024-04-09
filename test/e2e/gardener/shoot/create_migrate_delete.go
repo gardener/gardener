@@ -21,9 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/framework"
@@ -35,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		f.Shoot = shoot
 
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
-		f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
+		f.Shoot.Spec.SeedName = ptr.To(getSeedName(false))
 
 		It("Create, Migrate and Delete", Offset(1), func() {
 			By("Create Shoot")
@@ -66,9 +65,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	Context("Workerless Shoot", Label("workerless"), func() {
 		test(e2e.DefaultWorkerlessShoot("e2e-migrate"))
 	})
+
+	Context("Hibernated Shoot", Label("hibernated"), func() {
+		shoot := e2e.DefaultShoot("e2e-mgr-hib")
+		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+			Enabled: ptr.To(true),
+		}
+		test(shoot)
+	})
 })
 
-func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
+func newDefaultShootMigrationTest(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
 	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
 		ShootName:               shoot.Name,
 		ShootNamespace:          shoot.Namespace,

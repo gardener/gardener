@@ -27,19 +27,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -111,27 +112,29 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             resourcemanagerclient.CombinedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		Scheme:  resourcemanagerclient.CombinedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
-	filter = predicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
+	filter = resourcemanagerpredicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
 
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.
 			SyncPeriod:          &metav1.Duration{Duration: time.Minute},
-			ManagedByLabelValue: pointer.String("gardener"),
+			ManagedByLabelValue: ptr.To("gardener"),
 		},
 		Clock:                         fakeClock,
 		ClassFilter:                   filter,
-		RequeueAfterOnDeletionPending: pointer.Duration(50 * time.Millisecond),
+		RequeueAfterOnDeletionPending: ptr.To(50 * time.Millisecond),
 		GarbageCollectorActivated:     true,
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 

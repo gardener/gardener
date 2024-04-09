@@ -44,7 +44,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	By("Verify old ssh-keypair secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("id_rsa", Not(BeEmpty())),
 			HaveKeyWithValue("id_rsa.pub", Not(BeEmpty())),
@@ -54,7 +54,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
-		err := v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair.old")}, secret)
+		err := v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)
 		if apierrors.IsNotFound(err) {
 			return
 		}
@@ -67,7 +67,7 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
 
 	By("Verify that old SSH key(s) are accepted")
-	Eventually(func(g Gomega) {
+	Eventually(func(_ Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -91,18 +91,18 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify new ssh-keypair secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
 			HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
 		))
 
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(Equal(v.oldKeypairData))
 	}).Should(Succeed(), "ssh-keypair secret should have been rotated")
 
 	By("Verify that new SSH keys are accepted")
-	Eventually(func(g Gomega) {
+	Eventually(func(_ Gomega) {
 		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -118,10 +118,10 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 // hence, there is nothing to check in the second part of the credentials rotation
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *SSHKeypairVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *SSHKeypairVerifier) ExpectCompletingStatus(_ Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
-func (v *SSHKeypairVerifier) AfterCompleted(ctx context.Context) {}
+func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
 
 // Since we can't (and do not want ;-)) trying to really SSH into the machine pods from our test environment, we can
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.

@@ -2,25 +2,17 @@ run:
   concurrency: 4
   deadline: 10m
 
-  skip-dirs:
-  - pkg/client/core
-  - pkg/client/extensions
-  - pkg/client/seedmanagement
-  - pkg/client/settings
-
-  skip-files:
-  - ".*\\.pb\\.go$"
-  - "zz_generated\\..*\\.go$"
-  - "openapi_generated\\.go$"
-
 linters:
-  disable:
-  - unused
   enable:
   - revive
+  - unconvert
+  - unparam
   - importas
   - logcheck
-  - gomegacheck
+  - ginkgolinter
+  - nilerr
+  - whitespace
+  - misspell
 
 issues:
   exclude-use-default: false
@@ -34,7 +26,6 @@ issues:
   - unexported-return # exported func .* returns unexported type .*, which can be annoying to use
   - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
   - "exported: (type|func) name will be used as .* by other packages, and that stutters;"
-  - unused-parameter # parameter '.*' seems to be unused, consider removing or renaming it as _
   # typecheck:
   - "undeclared name: `.*`"
   - "\".*\" imported but not used"
@@ -45,7 +36,31 @@ issues:
     - staticcheck
     text: "SA1019:" # Excludes messages where deprecated variables are used
 
+  exclude-dirs:
+  - pkg/client/core
+  - pkg/client/extensions
+  - pkg/client/seedmanagement
+  - pkg/client/settings
+
+  exclude-files:
+  - ".*\\.pb\\.go$"
+  - "zz_generated\\..*\\.go$"
+  - "openapi_generated\\.go$"
+
 linters-settings:
+  loggercheck:
+    require-string-key: true
+    no-printf-like: true
+  misspell:
+    mode: restricted # only check comments
+  revive:
+    rules:
+    - name: duplicated-imports
+    - name: unused-parameter
+    - name: unreachable-code
+    - name: context-as-argument
+    - name: early-return
+    - name: exported
   importas:
     alias:
       # External imported packages
@@ -95,7 +110,7 @@ linters-settings:
         alias: logzap
       - pkg: sigs.k8s.io/controller-runtime/pkg/log
         alias: logf
-      - pkg: github.com/golang/mock/gomock
+      - pkg: go.uber.org/mock/gomock
         alias: gmock
       - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2
         alias: fluentbitv1alpha2
@@ -112,6 +127,8 @@ linters-settings:
         alias: machinev1alpha1
       - pkg: github.com/gardener/etcd-druid/api/v1alpha1
         alias: druidv1alpha1
+      - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
+        alias: certv1alpha1
       # Gardener extension package
       - pkg: github.com/gardener/gardener/extensions/.*/(\w+)/mock$
         alias: extensionsmock${1}
@@ -160,16 +177,12 @@ linters-settings:
         alias: admissioninitializer
       - pkg: github.com/gardener/gardener/pkg/chartrenderer
         alias: chartrenderer
-      - pkg: github.com/gardener/gardener/pkg/client/core/clientset/internalversion
-        alias: gardencoreclientset
       - pkg: github.com/gardener/gardener/pkg/client/core/clientset/versioned
-        alias: gardencoreversionedclientset
+        alias: gardencoreclientset
       - pkg: github.com/gardener/gardener/pkg/client/core/informers/externalversions
-        alias: gardencoreexternalinformers
-      - pkg: github.com/gardener/gardener/pkg/client/core/informers/internalversion
         alias: gardencoreinformers
-      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/internalversion
-        alias: gardencorelisters
+      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1
+        alias: gardencorev1beta1listers
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes
         alias: kubernetesclient
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes/(\w+)
@@ -192,7 +205,7 @@ linters-settings:
         alias: settingsv1alpha1lister
       - pkg: github.com/gardener/gardener/pkg/controllerutils/(\w+)
         alias: ${1}utils
-      - pkg: github.com/gardener/gardener/pkg/envtest
+      - pkg: github.com/gardener/gardener/test/envtest
         alias: gardenerenvtest
       - pkg: github.com/gardener/gardener/pkg/extensions
         alias: gardenerextensions
@@ -200,29 +213,29 @@ linters-settings:
         alias: gardenletbootstraputil
       - pkg: github.com/gardener/gardener/pkg/healthz
         alias: gardenerhealthz
-      - pkg: github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer
+      - pkg: github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer
         alias: mockauthorizer
-      - pkg: github.com/gardener/gardener/pkg/mock/\w+/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/\w+/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/core/v1
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/core/v1
         alias: mockcorev1
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/tools/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/tools/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/mock/client-go/util/(\w+)
+      - pkg: github.com/gardener/gardener/third_party/mock/client-go/util/(\w+)
         alias: mock${1}
-      - pkg: github.com/gardener/gardener/pkg/operation/.*/(\w+)/mock$
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/.*/(\w+)/mock$
         alias: mock${1}
       - pkg: github.com/gardener/gardener/pkg/component/(\w+)/constants
         alias: ${1}constants
-      - pkg: github.com/gardener/gardener/pkg/operation/(\w+)
+      - pkg: github.com/gardener/gardener/pkg/gardenlet/operation/(\w+)
         alias: ${1}pkg
       - pkg: github.com/gardener/gardener/pkg/operator/client
         alias: operatorclient
-      - pkg: github.com/gardener/gardener/pkg/registry/(\w+)/rest
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/(\w+)/rest
         alias: ${1}rest
-      - pkg: github.com/gardener/gardener/pkg/registry/\w+/([^r]\w+)
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/([^r]\w+)
         alias: ${1}registry
-      - pkg: github.com/gardener/gardener/pkg/registry/\w+/(\w+)/storage$
+      - pkg: github.com/gardener/gardener/pkg/apiserver/registry/\w+/(\w+)/storage$
         alias: ${1}store
       - pkg: github.com/gardener/gardener/pkg/resourcemanager/client
         alias: resourcemanagerclient
@@ -234,6 +247,8 @@ linters-settings:
         alias: secretsmanager
       - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager/fake
         alias: fakesecretsmanager
+      - pkg: github.com/gardener/gardener/pkg/utils/validation/kubernetes/(\w+)
+        alias: kubernetes${1}validation
       - pkg: github.com/gardener/gardener/plugin/pkg/utils
         alias: admissionutils
       - pkg: github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting
@@ -245,7 +260,3 @@ linters-settings:
       path: hack/tools/bin/logcheck.so
       description: Check structured logging calls to logr.Logger instances
       original-url: github.com/gardener/gardener/hack/tools/logcheck
-    gomegacheck:
-      path: hack/tools/bin/gomegacheck.so
-      description: Check test assertions using gomega
-      original-url: github.com/gardener/gardener/hack/tools/gomegacheck

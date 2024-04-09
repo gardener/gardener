@@ -70,6 +70,6 @@ func InjectNetworkPolicyNamespaceSelectors(service *corev1.Service, selectors ..
 
 // NetworkPolicyLabel returns the network policy label for a component initiating the connection to a service with the
 // given name and TCP port.
-func NetworkPolicyLabel(serviceName string, port int) string {
+func NetworkPolicyLabel(serviceName string, port int32) string {
 	return fmt.Sprintf("networking.resources.gardener.cloud/to-%s-tcp-%d", serviceName, port)
 }

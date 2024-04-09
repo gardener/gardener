@@ -1,0 +1,285 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "panels": [
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateYlGn",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "datasource": "prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 1
+          },
+          "heatmap": {},
+          "hideZeroBuckets": true,
+          "highlightCards": true,
+          "id": 8,
+          "legend": {
+            "show": true
+          },
+          "pluginVersion": "7.4.0",
+          "repeat": "kind",
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "kind": {
+              "selected": false,
+              "text": "unknown",
+              "value": "unknown"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket{kind=~\"$kind\"}[$__rate_interval])) by(le)",
+              "format": "heatmap",
+              "interval": "",
+              "intervalFactor": 3,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "$kind",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "tooltipDecimals": 2,
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": 0,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "title": "Graph Update Duration Per Kind",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 4,
+      "panels": [
+        {
+          "cards": {
+            "cardPadding": null,
+            "cardRound": null
+          },
+          "color": {
+            "cardColor": "#b4ff00",
+            "colorScale": "sqrt",
+            "colorScheme": "interpolateYlGn",
+            "exponent": 0.5,
+            "mode": "spectrum"
+          },
+          "dataFormat": "tsbuckets",
+          "datasource": "prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 2
+          },
+          "heatmap": {},
+          "hideZeroBuckets": true,
+          "highlightCards": true,
+          "id": 2,
+          "legend": {
+            "show": true
+          },
+          "pluginVersion": "7.4.0",
+          "repeat": "from_kind",
+          "reverseYBuckets": false,
+          "scopedVars": {
+            "from_kind": {
+              "selected": false,
+              "text": "unknown",
+              "value": "unknown"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket{fromKind=~\"$from_kind\"}[$__rate_interval])) by(le)",
+              "format": "heatmap",
+              "interval": "",
+              "intervalFactor": 3,
+              "legendFormat": "{{le}}",
+              "refId": "A"
+            }
+          ],
+          "title": "$from_kind",
+          "tooltip": {
+            "show": true,
+            "showHistogram": false
+          },
+          "tooltipDecimals": 2,
+          "type": "heatmap",
+          "xAxis": {
+            "show": true
+          },
+          "xBucketNumber": null,
+          "xBucketSize": null,
+          "yAxis": {
+            "decimals": 0,
+            "format": "s",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true,
+            "splitFactor": null
+          },
+          "yBucketBound": "auto",
+          "yBucketNumber": null,
+          "yBucketSize": null
+        }
+      ],
+      "repeat": null,
+      "title": "Graph Path Check Duration Per FromKind",
+      "type": "row"
+    }
+  ],
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["admission-controller-details", "controlplane", "garden"],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket,kind)",
+        "description": "Objekt kind for the update duration per seconds",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "Update Kind",
+        "multi": true,
+        "name": "kind",
+        "options": [],
+        "query": {
+          "query": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket,kind)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket,fromKind)",
+        "description": "Object kind for the path check duration per seconds",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "Path Check Kind",
+        "multi": true,
+        "name": "from_kind",
+        "options": [],
+        "query": {
+          "query": "label_values(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket,fromKind)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Gardener Admission Controller (SeedAuthorizer Details)",
+  "uid": "gardener-admission-ctr-seedauth-details"
+}

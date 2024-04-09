@@ -1,0 +1,166 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-registry-to-osc
+  annotations:
+    policies.kyverno.io/title: Add registry to OperatingSystemConfig
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/subject: OperatingSystemConfig
+    policies.kyverno.io/description: >-
+      Locally built Gardener images are pushed to a container registry on the seed. One of those images is node-agent.
+      The registry is password protected. This policy adds a registry-cache component to each node via OperatingSystemConfig.
+      The registry-cache component allows pulling node-agent image during node bootstrapping and operation.
+      Additionally, these images are built with ko which uses a different non-configurable entrypoint.
+      Thus, the path of gardener-node-agent in OperatingSystemConfig needs to be modified accordingly.
+spec:
+  rules:
+  - name: add-registry-files-to-osc
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    context:
+    - name: registryHost
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."registry-host"'
+    - name: config
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."config.yml"'
+    - name: hosts
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."hosts.toml"'
+    - name: startScript
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."start-seed-registry-cache.sh"'
+    - name: stopScript
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."stop-seed-registry-cache.sh"'
+    preconditions:
+      all:
+      - key: "{{ request.object.spec.files[0].path || '' }}"
+        operator: NotEquals
+        value: "/var/opt/docker/seed-registry-cache-config.yml"
+      - key: "{{ request.object.spec.files[1].path || '' }}"
+        operator: NotEquals
+        value: "/etc/containerd/certs.d/{{ registryHost | base64_decode(@) }}/hosts.toml"
+      - key: "{{ request.object.spec.files[2].path || '' }}"
+        operator: NotEquals
+        value: "/var/opt/docker/start-seed-registry-cache.sh"
+      - key: "{{ request.object.spec.files[3].path || '' }}"
+        operator: NotEquals
+        value: "/var/opt/docker/stop-seed-registry-cache.sh"
+    mutate:
+      patchesJson6902: |-
+        - path: "/spec/files/0"
+          op: add
+          value: {"content":{"inline":{"data":"{{config}}","encoding":"b64"}},"path":"/var/opt/docker/seed-registry-cache-config.yml","permissions":0640}
+        - path: "/spec/files/1"
+          op: add
+          value: {"content":{"inline":{"data":"{{hosts}}","encoding":"b64"}},"path":"/etc/containerd/certs.d/{{registryHost|base64_decode(@)}}/hosts.toml","permissions":0640}
+        - path: "/spec/files/2"
+          op: add
+          value: {"content":{"inline":{"data":"{{startScript}}","encoding":"b64"}},"path":"/var/opt/docker/start-seed-registry-cache.sh","permissions":0750}
+        - path: "/spec/files/3"
+          op: add
+          value: {"content":{"inline":{"data":"{{stopScript}}","encoding":"b64"}},"path":"/var/opt/docker/stop-seed-registry-cache.sh","permissions":0750}
+  - name: add-seed-registry-cache-dropin
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    context:
+    - name: registryHost
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."registry-host"'
+    - name: startDropIn
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."start-seed-registry-cache.conf"'
+    - name: stopDropIn
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."stop-seed-registry-cache.conf"'
+    mutate:
+      foreach:
+      - list: "request.object.spec.units[]"
+        preconditions:
+          all:
+          - key: "{{ element.name  || '' }}"
+            operator: Equals
+            value: "gardener-node-agent.service"
+          - key: "{{ element.dropIns  || '' }}"
+            operator: Equals
+            value: ""
+        patchesJson6902: |-
+          - path: "/spec/units/{{elementIndex}}/dropIns"
+            op: add
+            value: [{"name":"start-seed-registry-cache.conf","content":"{{startDropIn|base64_decode(@)}}"},{"name":"stop-seed-registry-cache.conf","content":"{{stopDropIn|base64_decode(@)}}"}]
+          - path: "/spec/units/{{elementIndex}}/filePaths/-"
+            op: add
+            value: "/var/opt/docker/seed-registry-cache-config.yml"
+          - path: "/spec/units/{{elementIndex}}/filePaths/-"
+            op: add
+            value: "/etc/containerd/certs.d/{{registryHost|base64_decode(@)}}/hosts.toml"
+          - path: "/spec/units/{{elementIndex}}/filePaths/-"
+            op: add
+            value: "/var/opt/docker/start-seed-registry-cache.sh"
+          - path: "/spec/units/{{elementIndex}}/filePaths/-"
+            op: add
+            value: "/var/opt/docker/stop-seed-registry-cache.sh"
+      - list: "request.object.spec.units[]"
+        preconditions:
+          all:
+          - key: "{{ element.name  || '' }}"
+            operator: Equals
+            value: "gardener-node-init.service"
+          - key: "{{ element.dropIns  || '' }}"
+            operator: Equals
+            value: ""
+        patchesJson6902: |-
+          - path: "/spec/units/{{elementIndex}}/dropIns"
+            op: add
+            value: [{"name":"start-seed-registry-cache.conf","content":"{{startDropIn|base64_decode(@)}}"}]
+  - name: modify-gardener-node-init-path
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    mutate:
+      foreach:
+      - list: "request.object.spec.files[]"
+        preconditions:
+          all:
+          - key: "{{ element.path  || '' }}"
+            operator: Equals
+            value: "/var/lib/gardener-node-agent/init.sh"
+        patchesJson6902: |-
+          - path: "/spec/files/{{elementIndex}}"
+            op: replace
+            value: {"content":{"inline":{"data":"{{base64_encode('{{replace_all('{{base64_decode(element.content.inline.data)}}','$tmp_dir/gardener-node-agent','$tmp_dir/ko-app/gardener-node-agent')}}')}}","encoding":"b64"}},"path":"/var/lib/gardener-node-agent/init.sh","permissions":0755}
+  - name: modify-gardener-node-agent-path
+    match:
+      all:
+      - resources:
+          kinds:
+          - OperatingSystemConfig
+    mutate:
+      foreach:
+      - list: "request.object.spec.files[]"
+        preconditions:
+          all:
+          - key: "{{ element.path  || '' }}"
+            operator: Equals
+            value: "/opt/bin/gardener-node-agent"
+        patchesJson6902: |-
+          - path: "/spec/files/{{elementIndex}}"
+            op: replace
+            value: {"content":{"imageRef":{"filePathInImage":"/ko-app/gardener-node-agent","image":"{{element.content.imageRef.image}}"}},"path":"/opt/bin/gardener-node-agent","permissions":0755}

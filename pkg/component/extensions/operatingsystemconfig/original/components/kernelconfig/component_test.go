@@ -16,15 +16,15 @@ package kernelconfig_test
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -78,36 +78,38 @@ var _ = Describe("Component", func() {
 				lines = append(lines, line)
 			}
 		}
-		sort.Strings(lines)
+		slices.Sort(lines)
 		modifiedData := ""
 		for _, line := range lines {
 			modifiedData += line + "\n"
 		}
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(units).To(ConsistOf(
-			extensionsv1alpha1.Unit{
-				Name:    "systemd-sysctl.service",
-				Command: pointer.String("restart"),
-				Enable:  pointer.Bool(true),
-			},
-		))
-		Expect(files).To(ConsistOf(
-			extensionsv1alpha1.File{
-				Path:        "/etc/sysctl.d/99-k8s-general.conf",
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: modifiedData,
-					},
+
+		systemdSysctlUnit := extensionsv1alpha1.Unit{
+			Name:      "systemd-sysctl.service",
+			Command:   ptr.To(extensionsv1alpha1.CommandRestart),
+			Enable:    ptr.To(true),
+			FilePaths: []string{"/etc/sysctl.d/99-k8s-general.conf"},
+		}
+
+		kernelSettingsFile := extensionsv1alpha1.File{
+			Path:        "/etc/sysctl.d/99-k8s-general.conf",
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: modifiedData,
 				},
 			},
-		))
+		}
+
+		Expect(units).To(ConsistOf(systemdSysctlUnit))
+		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
-		Entry("should return the expected units and files", "1.24.0", "", nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil),
+		Entry("should return the expected units and files", "1.25.0", "", nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.25.0", kubeletSysctlConfig, ptr.To(true), nil),
 		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false), nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", ptr.To(false), nil),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
 		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil),
 		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap),
@@ -130,6 +132,9 @@ net.core.wmem_max = 16777216
 # explicitly enable IPv4 forwarding for all interfaces by default if not enabled by the OS image already
 net.ipv4.conf.all.forwarding = 1
 net.ipv4.conf.default.forwarding = 1
+# explicitly enable IPv6 forwarding for all interfaces by default if not enabled by the OS image already
+net.ipv6.conf.all.forwarding = 1
+net.ipv6.conf.default.forwarding = 1
 # enable martian packets
 net.ipv4.conf.default.log_martians = 1
 # Increase the maximum total buffer-space allocatable

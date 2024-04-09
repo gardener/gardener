@@ -19,9 +19,9 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -82,11 +82,21 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		}
 	}
 
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:    "sshd-ensurer.service",
-				Command: pointer.String("start"),
-				Content: pointer.String(`[Unit]
+	sshdEnsurerFile := extensionsv1alpha1.File{
+		Path:        pathScript,
+		Permissions: ptr.To[int32](0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(script.Bytes()),
+			},
+		},
+	}
+
+	sshdEnsurerUnit := extensionsv1alpha1.Unit{
+		Name:    "sshd-ensurer.service",
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Content: ptr.To(`[Unit]
 Description=Ensure SSHD service is enabled or disabled
 DefaultDependencies=no
 [Service]
@@ -96,17 +106,8 @@ RestartSec=15
 ExecStart=` + pathScript + `
 [Install]
 WantedBy=multi-user.target`),
-			},
-		}, []extensionsv1alpha1.File{
-			{
-				Path:        pathScript,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(script.Bytes()),
-					},
-				},
-			},
-		}, nil
+		FilePaths: []string{sshdEnsurerFile.Path},
+	}
+
+	return []extensionsv1alpha1.Unit{sshdEnsurerUnit}, []extensionsv1alpha1.File{sshdEnsurerFile}, nil
 }

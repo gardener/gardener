@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
 		return r.migrate(ctx, log, osc)
 	case osc.DeletionTimestamp != nil:
-		return r.delete(ctx, log, osc)
+		return r.delete(ctx, log, osc, cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot))
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, osc)
 	default:
@@ -124,12 +124,15 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
-	userData, command, units, err := r.actuator.Reconcile(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
+	// For backwards-compatibility, we have to always create a secret since gardenlet expects to find it - even if the
+	// user data is nil/empty (which should always be the case when purpose=reconcile).
+	// https://github.com/gardener/gardener/blob/328e10d975c7b6caa5db139badcc42ac8f772d31/pkg/component/extensions/operatingsystemconfig/operatingsystemconfig.go#L257-L259
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
@@ -137,9 +140,9 @@ func (r *reconciler) reconcile(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
 	}
 	if err := r.statusUpdater.Success(ctx, log, osc, operationType, "Successfully reconciled OperatingSystemConfig"); err != nil {
@@ -169,12 +172,15 @@ func (r *reconciler) restore(
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
-	userData, command, units, err := r.actuator.Restore(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
 
+	// For backwards-compatibility, we have to always create a secret since gardenlet expects to find it - even if the
+	// user data is nil/empty (which should always be the case when purpose=reconcile).
+	// https://github.com/gardener/gardener/blob/328e10d975c7b6caa5db139badcc42ac8f772d31/pkg/component/extensions/operatingsystemconfig/operatingsystemconfig.go#L257-L259
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
@@ -182,7 +188,7 @@ func (r *reconciler) restore(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, command, units)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
@@ -203,6 +209,7 @@ func (r *reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	osc *extensionsv1alpha1.OperatingSystemConfig,
+	forceDelete bool,
 ) (
 	reconcile.Result,
 	error,
@@ -217,7 +224,13 @@ func (r *reconciler) delete(
 	}
 
 	log.Info("Starting the deletion of OperatingSystemConfig")
-	if err := r.actuator.Delete(ctx, log, osc); err != nil {
+	var err error
+	if forceDelete {
+		err = r.actuator.ForceDelete(ctx, log, osc)
+	} else {
+		err = r.actuator.Delete(ctx, log, osc)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
 	}
@@ -289,15 +302,20 @@ func (r *reconciler) reconcileOSCResultSecret(ctx context.Context, osc *extensio
 	return secret, nil
 }
 
-func setOSCStatus(osc *extensionsv1alpha1.OperatingSystemConfig, secret *corev1.Secret, command *string, units []string) {
-	osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
-		SecretRef: corev1.SecretReference{
-			Name:      secret.Name,
-			Namespace: secret.Namespace,
-		},
+func setOSCStatus(
+	osc *extensionsv1alpha1.OperatingSystemConfig,
+	secret *corev1.Secret,
+	extensionUnits []extensionsv1alpha1.Unit,
+	extensionFiles []extensionsv1alpha1.File,
+) {
+	if secret != nil {
+		osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
+			SecretRef: corev1.SecretReference{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			},
+		}
 	}
-	osc.Status.Units = units
-	if command != nil {
-		osc.Status.Command = command
-	}
+	osc.Status.ExtensionUnits = extensionUnits
+	osc.Status.ExtensionFiles = extensionFiles
 }

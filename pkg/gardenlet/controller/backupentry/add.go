@@ -20,11 +20,12 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,7 +35,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -67,12 +67,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
-			controllerutils.EnqueueCreateEventsOncePer24hDuration(r.Clock),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupEntry{}),
+			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				&predicate.GenerationChangedPredicate{},
 				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
@@ -84,7 +84,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupBucket{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(getBackupBucketLastOperation),
 	); err != nil {
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
+		source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.BackupEntry{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 	)

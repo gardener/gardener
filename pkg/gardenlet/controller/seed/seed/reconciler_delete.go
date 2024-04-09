@@ -19,42 +19,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
-	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/seedsystem"
-	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/component/vpa"
-	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -64,14 +43,11 @@ func (r *Reconciler) delete(
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
-) (
-	reconcile.Result,
-	error,
-) {
+) error {
 	seed := seedObj.GetInfo()
 
 	if !sets.New(seed.Finalizers...).Has(gardencorev1beta1.GardenerName) {
-		return reconcile.Result{}, nil
+		return nil
 	}
 
 	// Before deletion, it has to be ensured that no Shoots nor BackupBuckets depend on the Seed anymore.
@@ -80,71 +56,51 @@ func (r *Reconciler) delete(
 
 	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.GardenClient, seed)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if len(associatedShoots) > 0 {
 		log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
 		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
 
-		return reconcile.Result{}, errors.New("seed still has references")
+		return errors.New("seed still has references")
 	}
 
 	if seed.Spec.Backup != nil {
 		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
 
 		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
 	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if len(associatedBackupBuckets) > 0 {
 		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
 		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
 
-		return reconcile.Result{}, errors.New("seed still has references")
+		return errors.New("seed still has references")
 	}
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
-		}
-		return reconcile.Result{}, err
-	}
-
-	// Remove finalizer from referenced secret
-	if seed.Spec.SecretRef != nil {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: seed.Spec.SecretRef.Name, Namespace: seed.Spec.SecretRef.Namespace}}
-		if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
-			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
-				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
-				}
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to get Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
-		}
+		return err
 	}
 
 	// Remove finalizer from Seed
 	if controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (r *Reconciler) runDeleteSeedFlow(
@@ -153,134 +109,185 @@ func (r *Reconciler) runDeleteSeedFlow(
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
 ) error {
-	seedClient := r.SeedClientSet.Client()
-	kubernetesVersion, err := semver.NewVersion(r.SeedClientSet.Version())
+	log.Info("Instantiating component deployers")
+	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
+	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, r.SeedClientSet.Client(), v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
 		return err
 	}
 
-	secretData, err := getDNSProviderSecretData(ctx, r.GardenClient, seed.GetInfo())
-	if err != nil {
-		return err
-	}
-
-	istioIngressGateway := []istio.IngressGatewayValues{{Namespace: *r.Config.SNI.Ingress.Namespace}}
-	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
-		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: sharedcomponent.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
-		}
-	}
-	// Add for each ExposureClass handler in the config an own Ingress Gateway.
-	for _, handler := range r.Config.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: *handler.SNI.Ingress.Namespace})
-		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
-			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: sharedcomponent.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
-			}
-		}
-	}
-
-	// Delete all ingress objects in garden namespace which are not created as part of ManagedResources. This can be
-	// removed once all seed system components are deployed as part of ManagedResources.
-	// See https://github.com/gardener/gardener/issues/6062 for details.
-	if err := seedClient.DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(r.GardenNamespace)); err != nil {
-		return err
-	}
-
-	// setup for flow graph
 	var (
-		dnsRecord                = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-		clusterAutoscaler        = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		machineControllerManager = machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace)
-		kubeAPIServerIngress     = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
-		kubeAPIServerService     = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-		nginxIngress             = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{ClusterType: component.ClusterTypeSeed})
-		dwdWeeder                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
-		dwdProber                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
-		systemResources          = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpnAuthzServer           = vpnauthzserver.New(seedClient, r.GardenNamespace, "")
-		istioCRDs                = istio.NewCRD(r.SeedClientSet.ChartApplier())
-		istio                    = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
-			Istiod: istio.IstiodValues{
-				Enabled:   !seedIsGarden,
-				Namespace: v1beta1constants.IstioSystemNamespace,
+		g = flow.NewGraph("Seed deletion")
+
+		// Delete all ingress objects in garden namespace which are not created as part of ManagedResources. This can be
+		// removed once all seed system components are deployed as part of ManagedResources.
+		// See https://github.com/gardener/gardener/issues/6062 for details.
+		_ = g.Add(flow.Task{
+			Name: "Destroying all networkingv1.Ingress resources in the garden namespace",
+			Fn: func(ctx context.Context) error {
+				return r.SeedClientSet.Client().DeleteAllOf(ctx, &networkingv1.Ingress{}, client.InNamespace(r.GardenNamespace))
 			},
-			IngressGateway: istioIngressGateway,
 		})
-		mcmCRDs            = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
-	)
+		// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
+		// This prevents gardenlet from deleting the config map accidentally on seed deletion when it was created by a different party (gardener-apiserver or shoot).
+		destroyClusterIdentity = g.Add(flow.Task{
+			Name:   "Destroying cluster-identity",
+			Fn:     component.OpDestroyAndWait(c.clusterIdentity).Destroy,
+			SkipIf: !seedIsOriginOfClusterIdentity,
+		})
 
-	var (
-		g                = flow.NewGraph("Seed cluster deletion")
 		destroyDNSRecord = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
-			Fn:   func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) },
+			Fn:   component.OpDestroyAndWait(c.ingressDNSRecord).Destroy,
 		})
 		noControllerInstallations = g.Add(flow.Task{
 			Name:         "Ensuring no ControllerInstallations are left",
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
+		destroyCachePrometheus = g.Add(flow.Task{
+			Name: "Destroying cache Prometheus",
+			Fn:   c.cachePrometheus.Destroy,
+		})
+		destroySeedPrometheus = g.Add(flow.Task{
+			Name: "Destroying seed Prometheus",
+			Fn:   c.seedPrometheus.Destroy,
+		})
+		destroyAggregatePrometheus = g.Add(flow.Task{
+			Name: "Destroying aggregate Prometheus",
+			Fn:   c.aggregatePrometheus.Destroy,
+		})
+		destroyAlertManager = g.Add(flow.Task{
+			Name: "Destroying AlertManager",
+			Fn:   c.alertManager.Destroy,
+		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler resources",
-			Fn:   component.OpDestroyAndWait(clusterAutoscaler).Destroy,
+			Fn:   component.OpDestroyAndWait(c.clusterAutoscaler).Destroy,
 		})
 		destroyMachineControllerManager = g.Add(flow.Task{
 			Name: "Destroying machine-controller-manager resources",
-			Fn:   flow.TaskFn(component.OpDestroyAndWait(machineControllerManager).Destroy).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Fn:   component.OpDestroyAndWait(c.machineControllerManager).Destroy,
 		})
 		destroyNginxIngress = g.Add(flow.Task{
-			Name: "Destroying nginx-ingress",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return component.OpDestroyAndWait(nginxIngress).Destroy(ctx)
-			}).DoIf(!seedIsGarden),
+			Name:   "Destroying nginx-ingress",
+			Fn:     component.OpDestroyAndWait(c.nginxIngressController).Destroy,
+			SkipIf: seedIsGarden,
 		})
 		destroyDWDWeeder = g.Add(flow.Task{
 			Name: "Destroy dependency-watchdog-weeder",
-			Fn:   component.OpDestroyAndWait(dwdWeeder).Destroy,
+			Fn:   component.OpDestroyAndWait(c.dwdWeeder).Destroy,
 		})
 		destroyDWDProber = g.Add(flow.Task{
 			Name: "Destroy dependency-watchdog-prober",
-			Fn:   component.OpDestroyAndWait(dwdProber).Destroy,
+			Fn:   component.OpDestroyAndWait(c.dwdProber).Destroy,
 		})
 		destroyKubeAPIServerIngress = g.Add(flow.Task{
 			Name: "Destroy kube-apiserver ingress",
-			Fn:   component.OpDestroyAndWait(kubeAPIServerIngress).Destroy,
+			Fn:   component.OpDestroyAndWait(c.kubeAPIServerIngress).Destroy,
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name: "Destroy kube-apiserver service",
-			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Fn:   component.OpDestroyAndWait(c.kubeAPIServerService).Destroy,
 		})
 		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
-			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
+			Fn:   component.OpDestroyAndWait(c.vpnAuthzServer).Destroy,
 		})
 		destroyIstio = g.Add(flow.Task{
 			Name: "Destroy Istio",
-			Fn:   component.OpDestroyAndWait(istio).Destroy,
+			Fn:   component.OpDestroyAndWait(c.istio).Destroy,
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
-			Name: "Destroy Istio CRDs",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
-			}).DoIf(!seedIsGarden),
+			Name:         "Destroy Istio CRDs",
+			Fn:           component.OpDestroyAndWait(c.istioCRD).Destroy,
+			SkipIf:       seedIsGarden,
 			Dependencies: flow.NewTaskIDs(destroyIstio),
-		})
-		destroyFluentOperatorCRDs = g.Add(flow.Task{
-			Name: "Destroy Fluent Operator CRDs",
-			Fn:   component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
 		})
 		destroyMachineControllerManagerCRDs = g.Add(flow.Task{
 			Name: "Destroy machine-controller-manager CRDs",
-			Fn:   component.OpDestroyAndWait(mcmCRDs).Destroy,
+			Fn:   component.OpDestroyAndWait(c.machineCRD).Destroy,
 		})
+		destroyFluentOperatorResources = g.Add(flow.Task{
+			Name: "Destroy Fluent Operator Custom Resources",
+			Fn:   component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+		})
+
+		// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
+		destroyPlutono = g.Add(flow.Task{
+			Name:   "Destroying plutono",
+			Fn:     component.OpDestroyAndWait(c.plutono).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyEtcdDruid = g.Add(flow.Task{
+			Name: "Destroying etcd druid",
+			Fn:   component.OpDestroyAndWait(c.etcdDruid).Destroy,
+			// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start
+			// up again (e.g. after being evicted by VPA)
+			// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
+			Dependencies: flow.NewTaskIDs(noControllerInstallations),
+			SkipIf:       seedIsGarden,
+		})
+		destroyVPA = g.Add(flow.Task{
+			Name:   "Destroy Kubernetes vertical pod autoscaler",
+			Fn:     component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyHVPA = g.Add(flow.Task{
+			Name:   "Destroy HVPA controller",
+			Fn:     component.OpDestroyAndWait(c.hvpaController).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyKubeStateMetrics = g.Add(flow.Task{
+			Name:   "Destroy kube-state-metrics",
+			Fn:     component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyPrometheusOperator = g.Add(flow.Task{
+			Name:   "Destroy Prometheus Operator",
+			Fn:     component.OpDestroyAndWait(c.prometheusOperator).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyFluentBit = g.Add(flow.Task{
+			Name:   "Destroy Fluent Bit",
+			Fn:     component.OpDestroyAndWait(c.fluentBit).Destroy,
+			SkipIf: seedIsGarden,
+		})
+		destroyFluentOperator = g.Add(flow.Task{
+			Name:         "Destroy Fluent Operator",
+			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, destroyFluentBit),
+			SkipIf:       seedIsGarden,
+		})
+		destroyVali = g.Add(flow.Task{
+			Name:         "Destroy Vali",
+			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+			SkipIf:       seedIsGarden,
+		})
+		destroyEtcdCRD = g.Add(flow.Task{
+			Name:         "Destroy ETCD-related custom resource definitions",
+			Fn:           component.OpDestroyAndWait(c.etcdCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
+			SkipIf:       seedIsGarden,
+		})
+		destroyFluentOperatorCRDs = g.Add(flow.Task{
+			Name:         "Destroy Fluent Operator CRDs",
+			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
+			SkipIf:       seedIsGarden,
+		})
+
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyClusterIdentity,
+			destroyCachePrometheus,
+			destroySeedPrometheus,
+			destroyAggregatePrometheus,
+			destroyAlertManager,
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
 			destroyMachineControllerManager,
@@ -291,120 +298,45 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyVPNAuthzServer,
 			destroyIstio,
 			destroyIstioCRDs,
-			destroyFluentOperatorCRDs,
 			destroyMachineControllerManagerCRDs,
+			destroyFluentOperatorResources,
 			noControllerInstallations,
-		)
-		destroySystemResources = g.Add(flow.Task{
-			Name:         "Destroy system resources",
-			Fn:           component.OpDestroyAndWait(systemResources).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
-		})
-	)
-
-	// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
-	// This prevents gardenlet from deleting the config map accidentally on seed deletion when it was created by a different party (gardener-apiserver or shoot).
-	if seedIsOriginOfClusterIdentity {
-		var (
-			clusterIdentity = clusteridentity.NewForSeed(seedClient, r.GardenNamespace, "")
-
-			destroyClusterIdentity = g.Add(flow.Task{
-				Name: "Destroying cluster-identity",
-				Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
-			})
-		)
-		syncPointCleanedUp.Insert(destroyClusterIdentity)
-	}
-
-	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
-	if !seedIsGarden {
-		var (
-			kubeStateMetrics              = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-			etcdCRD                       = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
-			etcdDruid                     = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
-			hvpa                          = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
-			verticalPodAutoscaler         = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-			resourceManager               = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
-			fluentOperator                = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
-			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
-			vali                          = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
-
-			destroyKubeStateMetrics = g.Add(flow.Task{
-				Name: "Destroy kube-state-metrics",
-				Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
-			})
-			destroyEtcdDruid = g.Add(flow.Task{
-				Name: "Destroying etcd druid",
-				Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
-				// only destroy Etcd CRD once all extension controllers are gone, otherwise they might not be able to start up
-				// again (e.g. after being evicted by VPA)
-				// see https://github.com/gardener/gardener/issues/6487#issuecomment-1220597217
-				Dependencies: flow.NewTaskIDs(noControllerInstallations),
-			})
-			destroyVPA = g.Add(flow.Task{
-				Name: "Destroy Kubernetes vertical pod autoscaler",
-				Fn:   component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
-			})
-			destroyHVPA = g.Add(flow.Task{
-				Name: "Destroy HVPA controller",
-				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
-			})
-			destroyFluentOperatorResources = g.Add(flow.Task{
-				Name: "Destroy Fluent Operator Custom Resources",
-				Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
-			})
-			destroyFluentOperator = g.Add(flow.Task{
-				Name:         "Destroy Fluent Operator",
-				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
-			})
-			destroyVali = g.Add(flow.Task{
-				Name:         "Destroy Vali",
-				Fn:           component.OpDestroyAndWait(vali).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
-			})
-			destroyEtcdCRD = g.Add(flow.Task{
-				Name:         "Destroy ETCD-related custom resource definitions",
-				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
-				Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
-			})
-		)
-
-		syncPointCleanedUp.Insert(
+			destroyPrometheusOperator,
+			destroyPlutono,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyHVPA,
 			destroyVPA,
-			destroyFluentOperatorResources,
+			destroyFluentBit,
 			destroyFluentOperator,
 			destroyVali,
 			destroyEtcdCRD,
+			destroyFluentOperatorCRDs,
 		)
 
-		var (
-			ensureNoManagedResourcesExist = g.Add(flow.Task{
-				Name: "Ensuring all ManagedResources are gone",
-				Fn: func(ctx context.Context) error {
-					managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.SeedClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
-					if err != nil {
-						return err
-					}
-					if managedResourcesStillExist {
-						return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
-					}
-					return nil
-				},
-				Dependencies: flow.NewTaskIDs(destroySystemResources),
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Destroying gardener-resource-manager",
-				Fn:           resourceManager.Destroy,
-				Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
-			})
-		)
-	}
+		destroySystemResources = g.Add(flow.Task{
+			Name:         "Destroy system resources",
+			Fn:           component.OpDestroyAndWait(c.system).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
+		})
+		ensureNoManagedResourcesExist = g.Add(flow.Task{
+			Name:         "Ensuring all ManagedResources are gone",
+			Fn:           ensureNoManagedResources(r.SeedClientSet.Client()),
+			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			SkipIf:       seedIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager",
+			Fn:           c.gardenerResourceManager.Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExist),
+			SkipIf:       seedIsGarden,
+		})
+	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
+	}); err != nil {
 		return flow.Errors(err)
 	}
 
@@ -422,6 +354,19 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 			return fmt.Errorf("can't continue with Seed deletion, because the following objects are still referencing it: ControllerInstallations=%v", associatedControllerInstallations)
 		}
 
+		return nil
+	}
+}
+
+func ensureNoManagedResources(c client.Client) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, c, ptr.To(v1beta1constants.SeedResourceManagerClass))
+		if err != nil {
+			return err
+		}
+		if managedResourcesStillExist {
+			return fmt.Errorf("at least one ManagedResource still exists, cannot delete gardener-resource-manager")
+		}
 		return nil
 	}
 }

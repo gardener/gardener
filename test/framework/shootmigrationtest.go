@@ -16,10 +16,12 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -30,15 +32,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/test/utils/access"
 )
@@ -154,7 +154,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
 		}
 		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
-			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, pointer.String(GetTestRunID()))
+			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, ptr.To(GetTestRunID()))
 		}
 		return nil
 	})
@@ -210,7 +210,7 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 		t.GardenerFramework.Logger.Info("Found node", "index", i, "nodeName", node.Name)
 		nodeNames[i] = node.Name
 	}
-	sort.Strings(nodeNames)
+	slices.Sort(nodeNames)
 	return
 }
 
@@ -236,8 +236,8 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 		machineNames[i] = machine.GetName()
 		machineNodes[i] = machine.GetLabels()["node"]
 	}
-	sort.Strings(machineNames)
-	sort.Strings(machineNodes)
+	slices.Sort(machineNames)
+	slices.Sort(machineNodes)
 	return
 }
 
@@ -322,7 +322,7 @@ func (t *ShootMigrationTest) compareElementsAfterMigration() error {
 		if !reflect.DeepEqual(secret.Data, t.ComparisonElementsAfterMigration.SecretsMap[name].Data) {
 			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's data persisted.\n", secret.Namespace, secret.Name)
 		}
-		if !reflect.DeepEqual(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
+		if !maps.Equal(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
 			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's labels persisted: labels before migration: %v, labels after migration: %v\n",
 				secret.Namespace,
 				secret.Name,
@@ -352,12 +352,12 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 	for _, mr := range mrList.Items {
 		if mr.Spec.Class == nil || *mr.Spec.Class != "seed" {
-			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
+			if !slices.Contains(mrExcludeList, mr.GetName()) {
 				log := t.GardenerFramework.Logger.WithValues("managedResource", client.ObjectKeyFromObject(&mr))
 				log.Info("Found ManagedResource")
 
 				for _, r := range mr.Status.Resources {
-					if len(r.Name) > 9 && utils.ValueExists(r.Name[:len(r.Name)-9], resourcesWithGeneratedName) {
+					if len(r.Name) > 9 && slices.Contains(resourcesWithGeneratedName, r.Name[:len(r.Name)-9]) {
 						continue
 					}
 
@@ -402,7 +402,7 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 
 	for _, obj := range []client.ObjectList{
 		&extensionsv1alpha1.ClusterList{},
-		&v1alpha1.BackupEntryList{},
+		&extensionsv1alpha1.BackupEntryList{},
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 	} {
@@ -462,11 +462,11 @@ func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) er
 // CleanUpSecretAndServiceAccount cleans up the test secret and service account
 func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) error {
 	testSecret, testServiceAccount := constructTestSecretAndServiceAccount()
-	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
-		return err
-	}
 
-	return t.ShootClient.Client().Delete(ctx, testServiceAccount)
+	return errors.Join(
+		t.ShootClient.Client().Delete(ctx, testSecret),
+		t.ShootClient.Client().Delete(ctx, testServiceAccount),
+	)
 }
 
 func constructTestSecretAndServiceAccount() (*corev1.Secret, *corev1.ServiceAccount) {

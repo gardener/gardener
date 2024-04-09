@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -180,24 +180,11 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
-				p.KubernetesVersion = pointer.String("1.2.4")
+				p.KubernetesVersion = ptr.To("1.2.4")
 			})
 
 			It("when changing the kubernetes patch version of the control plane version", func() {
 				c.Shoot.Spec.Kubernetes.Version = "1.2.4"
-			})
-
-			It("when changing CRI configuration from `nil` to `docker`", func() {
-				c.Shoot.Spec.Provider = gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}}
-			})
-
-			It("when disabling node local dns via annotations", func() {
-				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "false"}
-			})
-
-			It("when enabling node local dns via annotations", func() {
-				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "true"}
 			})
 
 			It("when disabling node local dns via specification", func() {
@@ -238,7 +225,7 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
-				p.KubernetesVersion = pointer.String("1.3.3")
+				p.KubernetesVersion = ptr.To("1.3.3")
 			})
 
 			It("when changing the kubernetes major/minor version of the control plane version", func() {
@@ -324,7 +311,7 @@ var _ = Describe("Machines", func() {
 		},
 
 		Entry("percent", 2, intstr.FromString("75%"), 3, 5, intstr.FromString("45%")),
-		Entry("positive int", 2, intstr.FromInt(10), 3, 3, intstr.FromInt(3)),
+		Entry("positive int", 2, intstr.FromInt32(10), 3, 3, intstr.FromInt32(3)),
 	)
 
 	DescribeTable("#DiskSize",

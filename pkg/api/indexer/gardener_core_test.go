@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/api/indexer"
@@ -47,7 +47,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no Project", &corev1.Secret{}, ConsistOf("")),
 		Entry("Project w/o namespace", &gardencorev1beta1.Project{}, ConsistOf("")),
-		Entry("Project w/ namespace", &gardencorev1beta1.Project{Spec: gardencorev1beta1.ProjectSpec{Namespace: pointer.String("namespace")}}, ConsistOf("namespace")),
+		Entry("Project w/ namespace", &gardencorev1beta1.Project{Spec: gardencorev1beta1.ProjectSpec{Namespace: ptr.To("namespace")}}, ConsistOf("namespace")),
 	)
 
 	DescribeTable("#AddShootSeedName",
@@ -62,7 +62,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
 		Entry("Shoot w/o seedName", &gardencorev1beta1.Shoot{}, ConsistOf("")),
-		Entry("Shoot w/ seedName", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("seed")}}, ConsistOf("seed")),
+		Entry("Shoot w/ seedName", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("seed")}}, ConsistOf("seed")),
 	)
 
 	DescribeTable("#AddShootStatusSeedName",
@@ -77,7 +77,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no Shoot", &corev1.Secret{}, ConsistOf("")),
 		Entry("Shoot w/o seedName", &gardencorev1beta1.Shoot{}, ConsistOf("")),
-		Entry("Shoot w/ seedName", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: pointer.String("seed")}}, ConsistOf("seed")),
+		Entry("Shoot w/ seedName", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: ptr.To("seed")}}, ConsistOf("seed")),
 	)
 
 	DescribeTable("#AddBackupBucketSeedName",
@@ -92,7 +92,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no BackupBucket", &corev1.Secret{}, ConsistOf("")),
 		Entry("BackupBucket w/o seedName", &gardencorev1beta1.BackupBucket{}, ConsistOf("")),
-		Entry("BackupBucket w/ seedName", &gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: pointer.String("seed")}}, ConsistOf("seed")),
+		Entry("BackupBucket w/ seedName", &gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: ptr.To("seed")}}, ConsistOf("seed")),
 	)
 
 	DescribeTable("#AddBackupEntrySeedName",
@@ -107,7 +107,7 @@ var _ = Describe("Core", func() {
 
 		Entry("no BackupEntry", &corev1.Secret{}, ConsistOf("")),
 		Entry("BackupEntry w/o seedName", &gardencorev1beta1.BackupEntry{}, ConsistOf("")),
-		Entry("BackupEntry w/ seedName", &gardencorev1beta1.BackupEntry{Spec: gardencorev1beta1.BackupEntrySpec{SeedName: pointer.String("seed")}}, ConsistOf("seed")),
+		Entry("BackupEntry w/ seedName", &gardencorev1beta1.BackupEntry{Spec: gardencorev1beta1.BackupEntrySpec{SeedName: ptr.To("seed")}}, ConsistOf("seed")),
 	)
 
 	DescribeTable("#AddBackupEntryBucketName",
@@ -153,5 +153,20 @@ var _ = Describe("Core", func() {
 		Entry("no ControllerInstallation", &corev1.Secret{}, ConsistOf("")),
 		Entry("ControllerInstallation w/o registrationRef", &gardencorev1beta1.ControllerInstallation{}, ConsistOf("")),
 		Entry("ControllerInstallation w/ registrationRef", &gardencorev1beta1.ControllerInstallation{Spec: gardencorev1beta1.ControllerInstallationSpec{RegistrationRef: corev1.ObjectReference{Name: "registration"}}}, ConsistOf("registration")),
+	)
+
+	DescribeTable("#AddInternalSecretType",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddInternalSecretType(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.InternalSecret{}))
+			Expect(indexer.field).To(Equal("type"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no InternalSecret", &corev1.Secret{}, ConsistOf("")),
+		Entry("InternalSecret w/o type", &gardencorev1beta1.InternalSecret{}, ConsistOf("")),
+		Entry("InternalSecret w/ type", &gardencorev1beta1.InternalSecret{Type: corev1.SecretTypeBootstrapToken}, ConsistOf("bootstrap.kubernetes.io/token")),
 	)
 })

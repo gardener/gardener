@@ -17,15 +17,15 @@ package shared
 import (
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/vpa"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -34,7 +34,6 @@ func NewVerticalPodAutoscaler(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	enabled bool,
 	secretNameServerCA string,
@@ -45,17 +44,17 @@ func NewVerticalPodAutoscaler(
 	component.DeployWaiter,
 	error,
 ) {
-	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController, imagevector.TargetVersion(runtimeVersion.String()))
+	imageAdmissionController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaAdmissionController, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender, imagevector.TargetVersion(runtimeVersion.String()))
+	imageRecommender, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaRecommender, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater, imagevector.TargetVersion(runtimeVersion.String()))
+	imageUpdater, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaUpdater, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +75,10 @@ func NewVerticalPodAutoscaler(
 			Recommender: vpa.ValuesRecommender{
 				Image:                        imageRecommender.String(),
 				PriorityClassName:            priorityClassNameRecommender,
-				RecommendationMarginFraction: pointer.Float64(0.05),
+				RecommendationMarginFraction: ptr.To(float64(0.05)),
 			},
 			Updater: vpa.ValuesUpdater{
-				EvictionTolerance:      pointer.Float64(1.0),
+				EvictionTolerance:      ptr.To(float64(1.0)),
 				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
 				Image:                  imageUpdater.String(),
 				PriorityClassName:      priorityClassNameUpdater,

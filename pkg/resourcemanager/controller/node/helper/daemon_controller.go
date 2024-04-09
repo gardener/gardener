@@ -158,10 +158,12 @@ func AddOrUpdateDaemonPodTolerations(spec *corev1.PodSpec) {
 // Returns true if something was updated, false otherwise.
 // Copied from https://github.com/kubernetes/kubernetes/blob/v1.26.0/pkg/apis/core/v1/helper/helpers.go#L290-L316
 func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Toleration) bool {
-	podTolerations := spec.Tolerations
+	var (
+		podTolerations = spec.Tolerations
+		newTolerations []corev1.Toleration
+		updated        = false
+	)
 
-	var newTolerations []corev1.Toleration
-	updated := false
 	for i := range podTolerations {
 		if toleration.MatchToleration(&podTolerations[i]) {
 			if Semantic.DeepEqual(toleration, podTolerations[i]) {
@@ -169,6 +171,7 @@ func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Tol
 			}
 			newTolerations = append(newTolerations, *toleration)
 			updated = true
+
 			continue
 		}
 

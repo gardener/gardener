@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,14 +27,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
@@ -48,9 +50,9 @@ func TestHighAvailabilityConfig(t *testing.T) {
 }
 
 const (
-	testIDPrefix                        = "high-availability-config-webhook-test"
-	defaultNotReadyTolerationSeconds    = 60
-	defaultUnreachableTolerationSeconds = 120
+	testIDPrefix                              = "high-availability-config-webhook-test"
+	defaultNotReadyTolerationSeconds    int64 = 60
+	defaultUnreachableTolerationSeconds int64 = 120
 )
 
 var (
@@ -80,10 +82,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	// TODO(timuthy): `MinDomainsInPodTopologySpread` feature gate is enabled by default as of Kubernetes v1.27. The following lines can be dropped as soon as `envtest` is updated.
-	args := testEnv.ControlPlane.APIServer.Configure()
-	args.Set("feature-gates", "MinDomainsInPodTopologySpread=true")
-
 	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
@@ -100,13 +98,19 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
-		MetricsBindAddress: "0",
-		ClientDisableCacheFor: []client.Object{
-			// Disable cache for namespaces so that changes applied by tests are seen immediately.
-			&corev1.Namespace{},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+		}),
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					// Disable cache for namespaces so that changes applied by tests are seen immediately.
+					&corev1.Namespace{},
+				},
+			},
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -115,12 +119,11 @@ var _ = BeforeSuite(func() {
 	Expect((&highavailabilityconfig.Handler{
 		Logger:       log,
 		TargetClient: testClient,
-		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.26.0"),
 		Config: config.HighAvailabilityConfigWebhookConfig{
-			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
-			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+			DefaultNotReadyTolerationSeconds:    ptr.To(defaultNotReadyTolerationSeconds),
+			DefaultUnreachableTolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 		},
+		Decoder: admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

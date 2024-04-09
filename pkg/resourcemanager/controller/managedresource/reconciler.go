@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,7 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -63,6 +63,7 @@ import (
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 )
 
 var (
@@ -106,19 +107,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	action, responsible := r.ClassFilter.Active(mr)
-	log.Info("Reconciling ManagedResource", "actionRequired", action, "responsible", responsible)
-
 	// If the object should be deleted or the responsibility changed
 	// the actual deployments have to be deleted
-	if mr.DeletionTimestamp != nil || (action && !responsible) {
+	if isTransferringResponsibility := r.ClassFilter.IsTransferringResponsibility(mr); mr.DeletionTimestamp != nil || isTransferringResponsibility {
+		if isTransferringResponsibility {
+			log.Info("Class of ManagedResource changed. Cleaning resources as the responsibility changed")
+		}
 		return r.delete(ctx, log, mr)
 	}
 
 	// If the deletion after a change of responsibility is still
 	// pending, the handling of the object by the responsible controller
 	// must be delayed, until the deletion is finished.
-	if responsible && !action {
+	if r.ClassFilter.IsWaitForCleanupRequired(mr) {
+		log.Info("Waiting for previous handler to clean resources created by ManagedResource")
 		return reconcile.Result{Requeue: true}, nil
 	}
 	return r.reconcile(ctx, log, mr)
@@ -180,7 +182,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		for secretKey := range secret.Data {
 			secretKeys = append(secretKeys, secretKey)
 		}
-		sort.Strings(secretKeys)
+		slices.Sort(secretKeys)
 
 		for _, secretKey := range secretKeys {
 			value := secret.Data[secretKey]
@@ -375,7 +377,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 }
 
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
-	log.Info("Starting to delete ManagedResource")
+	log.Info("Started deleting resources created by ManagedResource")
 
 	deleteCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
@@ -439,7 +441,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv
 		}
 	}
 
-	log.Info("Finished to delete ManagedResource")
+	log.Info("Finished deleting resources created by ManagedResource")
 	return reconcile.Result{}, nil
 }
 
@@ -492,7 +494,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 
 		resourceLogger.V(1).Info("Applying")
 
-		operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, pointer.BoolDeref(r.Config.AlwaysUpdate, false), func() error {
+		operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.TargetClient, r.TargetScheme, current, ptr.Deref(r.Config.AlwaysUpdate, false), func() error {
 			metadata, err := meta.Accessor(obj.obj)
 			if err != nil {
 				return fmt.Errorf("error getting metadata of object %q: %s", resource, err)
@@ -697,13 +699,13 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 				obj.SetNamespace(ref.Namespace)
 				obj.SetName(ref.Name)
 
-				resource := unstructuredToString(obj)
-				log.Info("Deleting", "resource", resource)
+				logger := log.WithValues("resource", unstructuredToString(obj))
+				logger.Info("Deleting")
 
 				// get object before deleting to be able to do cleanup work for it
 				if err := r.TargetClient.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						log.Error(err, "Error during deletion", "resource", resource)
+						logger.Error(err, "Error during deletion")
 						results <- &output{obj, true, err}
 						return
 					}
@@ -714,19 +716,19 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 				}
 
 				if keepObject(obj) {
-					log.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
+					logger.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if r.GarbageCollectorActivated && isGarbageCollectableResource(obj) {
-					log.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
+					logger.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if err := cleanup(ctx, r.TargetClient, r.TargetScheme, obj, deletePVCs); err != nil {
-					log.Error(err, "Error during cleanup", "resource", resource)
+					logger.Error(err, "Error during cleanup")
 					results <- &output{obj, true, err}
 					return
 				}
@@ -745,13 +747,20 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 
 				if err := r.TargetClient.Delete(ctx, obj, deleteOptions); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						log.Error(err, "Error during deletion", "resource", resource)
+						logger.Error(err, "Error during deletion")
 						results <- &output{obj, true, err}
 						return
 					}
 					results <- &output{obj, false, nil}
 					return
 				}
+
+				if err := finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj); err != nil {
+					logger.Error(err, "Error when finalizing resource if necessary")
+					results <- &output{obj, true, err}
+					return
+				}
+
 				results <- &output{obj, true, nil}
 			}(oldResource)
 		}
@@ -808,7 +817,6 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logg
 
 			err := r.releaseOrphanedResource(ctx, log, ref, origin)
 			results <- err
-
 		}(orphanedResource)
 	}
 
@@ -1027,4 +1035,40 @@ func (d *decodingError) StringShort() string {
 
 func (d *decodingError) String() string {
 	return fmt.Sprintf("%s: %s.", d.StringShort(), d.err)
+}
+
+func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client.Client, clock clock.Clock, obj *unstructured.Unstructured) error {
+	var finalizeDeletionAfter time.Duration
+	if v, ok := obj.GetAnnotations()[resourcesv1alpha1.FinalizeDeletionAfter]; ok {
+		var err error
+		finalizeDeletionAfter, err = time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("failed parsing duration of resources.gardener.cloud/finalize-deletion-after annotation: %w", err)
+		}
+	}
+
+	if finalizeDeletionAfter == 0 {
+		return nil
+	}
+
+	log.Info("Found resources.gardener.cloud/finalize-deletion-after annotation", "gracePeriod", finalizeDeletionAfter)
+
+	finalizer := utilclient.NewFinalizer()
+	if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
+		finalizer = utilclient.NewNamespaceFinalizer()
+	}
+
+	if obj.GetDeletionTimestamp() == nil || obj.GetDeletionTimestamp().Time.UTC().Add(finalizeDeletionAfter).After(clock.Now().UTC()) {
+		log.Info("Cannot finalize resource yet since grace period has not yet elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
+		return nil
+	}
+
+	if hasFinalizers, err := finalizer.HasFinalizers(obj); err != nil {
+		return fmt.Errorf("failed checking whether resource has finalizers: %w", err)
+	} else if !hasFinalizers {
+		return nil
+	}
+
+	log.Info("Removing finalizers from resource since grace period has elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
+	return finalizer.Finalize(ctx, cl, obj)
 }

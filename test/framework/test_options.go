@@ -45,7 +45,6 @@ func (o *TestOptions) ApplyOptions(opts []TestOption) *TestOptions {
 // it should be a function that configures a ginkgo test case
 // This should get called when all options are applied.
 func (o *TestOptions) Complete(it func()) {
-
 	if len(o.AfterTests) == 0 && len(o.CAfterTests) == 0 {
 		it()
 		return

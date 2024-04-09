@@ -15,8 +15,11 @@
 package gardener
 
 import (
+	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,12 +27,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilsets "k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -203,6 +208,7 @@ const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	// Deprecated: This constant is deprecated in favor of ShootProjectConfigMapSuffixCACluster
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.
 	ShootProjectSecretSuffixCAClient = "ca-client"
@@ -212,6 +218,8 @@ const (
 	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameSSHKeyPair + ".old"
 	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
 	ShootProjectSecretSuffixMonitoring = "monitoring"
+	// ShootProjectConfigMapSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	ShootProjectConfigMapSuffixCACluster = "ca-cluster"
 )
 
 // GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
@@ -232,20 +240,27 @@ func GetShootProjectInternalSecretSuffixes() []string {
 	}
 }
 
-func shootProjectSecretSuffix(suffix string) string {
+// GetShootProjectConfigMapSuffixes returns the list of shoot-related project config map suffixes.
+func GetShootProjectConfigMapSuffixes() []string {
+	return []string{
+		ShootProjectConfigMapSuffixCACluster,
+	}
+}
+
+func shootProjectResourceSuffix(suffix string) string {
 	return "." + suffix
 }
 
-// ComputeShootProjectSecretName computes the name of a shoot-related project secret.
-func ComputeShootProjectSecretName(shootName, suffix string) string {
-	return shootName + shootProjectSecretSuffix(suffix)
+// ComputeShootProjectResourceName computes the name of a shoot-related project resource.
+func ComputeShootProjectResourceName(shootName, suffix string) string {
+	return shootName + shootProjectResourceSuffix(suffix)
 }
 
 // IsShootProjectSecret checks if the given name matches the name of a shoot-related project secret. If no, it returns
 // an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectSecretSuffixes() {
-		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
 		}
 	}
@@ -257,8 +272,27 @@ func IsShootProjectSecret(secretName string) (string, bool) {
 // If no, it returns an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectInternalSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectInternalSecretSuffixes() {
-		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
+}
+
+// ComputeManagedShootIssuerSecretName returns the name that should be used for
+// storing the service account public keys of a shoot's kube-apiserver
+// in the gardener-system-shoot-issuer namespace in the Garden cluster.
+func ComputeManagedShootIssuerSecretName(projectName string, shootUID types.UID) string {
+	return projectName + "--" + string(shootUID)
+}
+
+// IsShootProjectConfigMap checks if the given name matches the name of a shoot-related project config map. If no, it returns
+// an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectConfigMap(configMapName string) (string, bool) {
+	for _, v := range GetShootProjectConfigMapSuffixes() {
+		if suffix := shootProjectResourceSuffix(v); strings.HasSuffix(configMapName, suffix) {
+			return strings.TrimSuffix(configMapName, suffix), true
 		}
 	}
 
@@ -287,6 +321,7 @@ type AccessSecret struct {
 	kubeconfig              *clientcmdv1.Config
 	targetSecretName        string
 	targetSecretNamespace   string
+	serviceAccountLabels    map[string]string
 }
 
 // NewShootAccessSecret returns a new AccessSecret object and initializes it with an empty corev1.Secret object
@@ -327,6 +362,12 @@ func (s *AccessSecret) WithServiceAccountName(name string) *AccessSecret {
 	return s
 }
 
+// WithServiceAccountLabels sets the serviceAccountLabels field of the AccessSecret.
+func (s *AccessSecret) WithServiceAccountLabels(labels map[string]string) *AccessSecret {
+	s.serviceAccountLabels = labels
+	return s
+}
+
 // WithTokenExpirationDuration sets the tokenExpirationDuration field of the AccessSecret.
 func (s *AccessSecret) WithTokenExpirationDuration(duration string) *AccessSecret {
 	s.tokenExpirationDuration = duration
@@ -357,6 +398,14 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 
 		if s.Class == resourcesv1alpha1.ResourceManagerClassShoot {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
+		}
+
+		if s.serviceAccountLabels != nil {
+			labelsJSON, err := json.Marshal(s.serviceAccountLabels)
+			if err != nil {
+				return fmt.Errorf("failed marshaling the service account labels to JSON: %w", err)
+			}
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountLabels, string(labelsJSON))
 		}
 
 		if s.tokenExpirationDuration != "" {
@@ -419,7 +468,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(420),
+					DefaultMode: ptr.To[int32](420),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -430,7 +479,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  secrets.DataKeyKubeconfig,
 									Path: secrets.DataKeyKubeconfig,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 						{
@@ -442,7 +491,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 					},
@@ -478,7 +527,7 @@ func GetShootSeedNames(obj client.Object) (*string, *string) {
 // on the given workers. Tolerations are only considered for workers which have `SystemComponents.Allow: true`.
 func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []corev1.Toleration {
 	var (
-		tolerations = utilsets.New[corev1.Toleration]()
+		tolerations = sets.New[corev1.Toleration]()
 
 		// We need to use semantically equal tolerations, i.e. equality of underlying values of pointers,
 		// before they are added to the tolerations set.
@@ -494,7 +543,13 @@ func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []co
 		}
 	}
 
-	return tolerations.UnsortedList()
+	sortedTolerations := tolerations.UnsortedList()
+
+	// sort system component tolerations for a stable output
+	slices.SortFunc(sortedTolerations, func(a, b corev1.Toleration) int {
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return sortedTolerations
 }
 
 // IncompleteDNSConfigError is a custom error type.
@@ -587,8 +642,8 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 
 // ComputeRequiredExtensionsForShoot computes the extension kind/type combinations that are required for the
 // shoot reconciliation flow.
-func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
-	requiredExtensions := utilsets.New[string]()
+func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) sets.Set[string] {
+	requiredExtensions := sets.New[string]()
 
 	if seed.Spec.Backup != nil {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
@@ -608,11 +663,11 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		}
 	}
 
-	disabledExtensions := utilsets.New[string]()
+	disabledExtensions := sets.New[string]()
 	for _, extension := range shoot.Spec.Extensions {
 		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
 
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			disabledExtensions.Insert(id)
 		} else {
 			requiredExtensions.Insert(id)
@@ -651,8 +706,8 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
-				if v1beta1helper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
 				requiredExtensions.Insert(id)
@@ -666,4 +721,55 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 // ExtensionsID returns an identifier for the given extension kind/type.
 func ExtensionsID(extensionKind, extensionType string) string {
 	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
+}
+
+// ComputeTechnicalID determines the technical id of the given Shoot which is later used for the name of the
+// namespace and for tagging all the resources created in the infrastructure.
+func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
+	// Use the stored technical ID in the Shoot's status field if it's there.
+	// For backwards compatibility we keep the pattern as it was before we had to change it
+	// (double hyphens).
+	if len(shoot.Status.TechnicalID) > 0 {
+		return shoot.Status.TechnicalID
+	}
+
+	// New clusters shall be created with the new technical id (double hyphens).
+	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
+}
+
+// GetShootConditionTypes returns all known shoot condition types.
+func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
+	shootConditionTypes := []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ShootAPIServerAvailable,
+		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootObservabilityComponentsHealthy,
+	}
+
+	if !workerless {
+		shootConditionTypes = append(shootConditionTypes, gardencorev1beta1.ShootEveryNodeReady)
+	}
+
+	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
+}
+
+// DefaultGVKsForEncryption returns the list of GroupVersionKinds which are encrypted by default.
+func DefaultGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		corev1.SchemeGroupVersion.WithKind("Secret"),
+	}
+}
+
+// DefaultResourcesForEncryption returns the list of resources which are encrypted by default.
+func DefaultResourcesForEncryption() sets.Set[string] {
+	return sets.New(corev1.Resource("secrets").String())
+}
+
+// GetIPStackForShoot returns the value for the AnnotationKeyIPStack annotation based on the given shoot.
+// It falls back to IPv4 if no IP families are available, e.g. in a workerless shoot cluster.
+func GetIPStackForShoot(shoot *gardencorev1beta1.Shoot) string {
+	var ipFamilies []gardencorev1beta1.IPFamily
+	if networking := shoot.Spec.Networking; networking != nil {
+		ipFamilies = networking.IPFamilies
+	}
+	return getIPStackForFamilies(ipFamilies)
 }

@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -55,40 +54,28 @@ func (c *aggregator) cacheForKind(kind schema.GroupVersionKind) cache.Cache {
 	return cache
 }
 
-func processError(err error) error {
-	if !IsAPIError(err) {
-		// Return every other, unspecified error as a `CacheError` to allow users to follow up with a proper error handling.
-		// For instance, a `Multinamespace` cache returns an unspecified error for unknown namespaces.
-		// https://github.com/kubernetes-sigs/controller-runtime/blob/b5065bd85190e92864522fcc85aa4f6a3cce4f82/pkg/cache/multi_namespace_cache.go#L132
-		return NewCacheError(err)
-	}
-	return err
-}
-
 // Get retrieves an obj for the given object key from the Kubernetes Cluster.
 // Every non-API related error is returned as a `CacheError`.
 func (c *aggregator) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if err := c.cacheForObject(obj).Get(ctx, key, obj, opts...); err != nil {
-		return processError(err)
-	}
-	return nil
+	return c.cacheForObject(obj).Get(ctx, key, obj, opts...)
 }
 
 // List retrieves list of objects for a given namespace and list options.
 // Every non-API related error is returned as a `CacheError`.
 func (c *aggregator) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.cacheForObject(list).List(ctx, list, opts...); err != nil {
-		return processError(err)
-	}
-	return nil
+	return c.cacheForObject(list).List(ctx, list, opts...)
 }
 
-func (c *aggregator) GetInformer(ctx context.Context, obj client.Object) (cache.Informer, error) {
-	return c.cacheForObject(obj).GetInformer(ctx, obj)
+func (c *aggregator) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
+	return c.cacheForObject(obj).GetInformer(ctx, obj, opts...)
 }
 
-func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind) (cache.Informer, error) {
-	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk)
+func (c *aggregator) RemoveInformer(ctx context.Context, obj client.Object) error {
+	return c.cacheForObject(obj).RemoveInformer(ctx, obj)
+}
+
+func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cache.InformerGetOption) (cache.Informer, error) {
+	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk, opts...)
 }
 
 func (c *aggregator) Start(ctx context.Context) error {
@@ -97,14 +84,15 @@ func (c *aggregator) Start(ctx context.Context) error {
 	// goroutines to finish, because there might still be goroutines running under the hood of caches.
 	// However, this is not problematic, as long as the aggregator cache is not in any client set, that might
 	// be invalidated during runtime.
-	for gvk, cache := range c.gvkToCache {
-		go func(gvk schema.GroupVersionKind, cache runtimecache.Cache) {
-			err := cache.Start(ctx)
+	for gvk, runtimecache := range c.gvkToCache {
+		go func(gvk schema.GroupVersionKind, runtimecache cache.Cache) {
+			err := runtimecache.Start(ctx)
 			if err != nil {
 				logf.Log.Error(err, "Cache failed to start", "gvk", gvk.String())
 			}
-		}(gvk, cache)
+		}(gvk, runtimecache)
 	}
+
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {
 			logf.Log.Error(err, "Fallback cache failed to start")

@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -43,7 +43,7 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("my-provider-account"),
+				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -60,13 +60,13 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("some-domain.example.com"),
+					Domain: ptr.To("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 			},
 		}
@@ -122,10 +122,10 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     pointer.String("100.128.0.0/11"),
-						Services: pointer.String("100.72.0.0/13"),
+						Pods:     ptr.To("100.128.0.0/11"),
+						Services: ptr.To("100.72.0.0/13"),
 					},
 				},
 			},
@@ -139,7 +139,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady))),
-				Not(ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy))),
@@ -160,7 +159,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady))),
-				Not(ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy))),
@@ -193,10 +191,10 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 		It("should copy the seed conditions to the shoot", func() {
 			conditions := []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionProgressing},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionProgressing},
+				{Type: gardencorev1beta1.ConditionType("custom"), Status: gardencorev1beta1.ConditionProgressing},
 			}
 
 			patch := client.StrategicMergeFrom(seed.DeepCopy())
@@ -210,10 +208,10 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return updatedSeed.Status.Conditions
 			}).Should(And(
 				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
-				ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped)),
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
 			))
 
 			By("Check shoot conditions")
@@ -222,10 +220,34 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
-				ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped)),
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
+			))
+
+			By("Remove seed conditions")
+			patch = client.StrategicMergeFrom(seed.DeepCopy())
+			seed.Status.Conditions = []gardencorev1beta1.Condition{}
+			Expect(testClient.Status().Patch(ctx, seed, patch)).To(Succeed())
+
+			By("Wait until manager cache has observed seed with updated conditions")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				updatedSeed := &gardencorev1beta1.Seed{}
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
+				return updatedSeed.Status.Conditions
+			}).Should(BeEmpty())
+
+			By("Check shoot conditions")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Status.Conditions
+			}).ShouldNot(And(
+				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
+				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
+				ContainCondition(OfType("custom")),
 			))
 		})
 	})

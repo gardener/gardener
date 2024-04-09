@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -100,7 +100,6 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				ObservedGeneration: seed.GetGeneration(),
 				Conditions: []gardencorev1beta1.Condition{
 					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 				},
@@ -137,10 +136,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     pointer.String("100.128.0.0/11"),
-						Services: pointer.String("100.72.0.0/13"),
+						Pods:     ptr.To("100.128.0.0/11"),
+						Services: ptr.To("100.72.0.0/13"),
 					},
 				},
 			},
@@ -190,10 +189,10 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo"),
+					Type: ptr.To("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("replica-name.example.com"),
+					Domain: ptr.To("replica-name.example.com"),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo",
@@ -202,7 +201,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 							Name: "some-worker",
 							Machine: gardencorev1beta1.Machine{
 								Type:         "some-machine-type",
-								Architecture: pointer.String("amd64"),
+								Architecture: ptr.To("amd64"),
 							},
 							Maximum: 2,
 							Minimum: 1,
@@ -210,7 +209,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: pointer.String("shoot-operator-foo"),
+				SecretBindingName: ptr.To("shoot-operator-foo"),
 			},
 		}
 
@@ -233,9 +232,9 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					Spec:       shoot.Spec,
 				},
 				UpdateStrategy: &seedmanagementv1alpha1.UpdateStrategy{
-					Type: updateStrategyTypePtr(seedmanagementv1alpha1.RollingUpdateStrategyType),
+					Type: ptr.To(seedmanagementv1alpha1.RollingUpdateStrategyType),
 					RollingUpdate: &seedmanagementv1alpha1.RollingUpdateStrategy{
-						Partition: pointer.Int32(0),
+						Partition: ptr.To[int32](0),
 					},
 				},
 			},
@@ -317,7 +316,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Update the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(2)
+			managedSeedSet.Spec.Replicas = ptr.To[int32](2)
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -341,7 +340,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-up the Replicas to 2")
 			patch := client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(2)
+			managedSeedSet.Spec.Replicas = ptr.To[int32](2)
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			By("Make one replica ready, to enable controller to pick the next replica")
@@ -356,7 +355,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 
 			By("Scale-down the Replicas to 1")
 			patch = client.MergeFrom(managedSeedSet.DeepCopy())
-			managedSeedSet.Spec.Replicas = pointer.Int32(1)
+			managedSeedSet.Spec.Replicas = ptr.To[int32](1)
 			Expect(testClient.Patch(ctx, managedSeedSet, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) {
@@ -400,7 +399,3 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 		})
 	})
 })
-
-func updateStrategyTypePtr(v seedmanagementv1alpha1.UpdateStrategyType) *seedmanagementv1alpha1.UpdateStrategyType {
-	return &v
-}

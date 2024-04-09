@@ -19,13 +19,13 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -75,11 +75,36 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	const pathEtcSSLCerts = "/etc/ssl/certs"
 	var caBundleBase64 = utils.EncodeBase64([]byte(*ctx.CABundle))
 
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:    "updatecacerts.service",
-				Command: pointer.String("start"),
-				Content: pointer.String(`[Unit]
+	updateCACertsFiles := []extensionsv1alpha1.File{
+		updateLocalCaCertificatesScriptFile,
+		// This file contains Gardener CAs for Debian based OS
+		{
+			Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     caBundleBase64,
+				},
+			},
+		},
+		// This file contains Gardener CAs for Redhat/SUSE OS
+		{
+			Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     caBundleBase64,
+				},
+			},
+		},
+	}
+
+	updateCACertsUnit := extensionsv1alpha1.Unit{
+		Name:    "updatecacerts.service",
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Content: ptr.To(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -92,37 +117,12 @@ ConditionPathExists=!` + kubelet.PathKubeconfigReal + `
 [Service]
 Type=oneshot
 ExecStart=` + pathUpdateLocalCaCertificates + `
-ExecStartPost=/bin/systemctl restart ` + docker.UnitName + `
 [Install]
 WantedBy=multi-user.target`),
-			},
-		},
-		[]extensionsv1alpha1.File{
-			updateLocalCaCertificatesScriptFile,
-			// This file contains Gardener CAs for Debian based OS
-			{
-				Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     caBundleBase64,
-					},
-				},
-			},
-			// This file contains Gardener CAs for Redhat/SUSE OS
-			{
-				Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     caBundleBase64,
-					},
-				},
-			},
-		},
-		nil
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(updateCACertsFiles),
+	}
+
+	return []extensionsv1alpha1.Unit{updateCACertsUnit}, updateCACertsFiles, nil
 }
 
 func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
@@ -135,7 +135,7 @@ func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        pathUpdateLocalCaCertificates,
-		Permissions: pointer.Int32(0744),
+		Permissions: ptr.To[int32](0744),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

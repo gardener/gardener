@@ -26,6 +26,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.InternalSecret">InternalSecret</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
@@ -72,7 +74,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -128,7 +130,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -202,7 +204,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -304,7 +306,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -491,7 +493,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -562,7 +564,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -592,7 +594,7 @@ If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <td>
 <code>registrationRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -606,7 +608,7 @@ The name field of the RegistrationRef is immutable.</p>
 <td>
 <code>seedRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -619,7 +621,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>deploymentRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -681,7 +683,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -775,7 +777,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -851,7 +853,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -913,7 +915,7 @@ The stringData field is never output when reading from the API.</p>
 <td>
 <code>type</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secrettype-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secrettype-v1-core">
 Kubernetes core/v1.SecretType
 </a>
 </em>
@@ -922,6 +924,178 @@ Kubernetes core/v1.SecretType
 <em>(Optional)</em>
 <p>Used to facilitate programmatic handling of secret data.
 More info: <a href="https://kubernetes.io/docs/concepts/configuration/secret/#secret-types">https://kubernetes.io/docs/concepts/configuration/secret/#secret-types</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile
+</h3>
+<p>
+<p>NamespacedCloudProfile represents certain properties about a provider environment.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>NamespacedCloudProfile</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">
+NamespacedCloudProfileSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec defines the provider environment properties.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>caBundle</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
+KubernetesSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubernetes contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
+[]MachineImage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineType">
+[]MachineType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineTypes contains constraints regarding allowed values for machine types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>regions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Region">
+[]Region
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Regions contains constraints regarding allowed values for regions and zones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volumeTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
+[]VolumeType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parent</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<p>Parent contains a reference to a CloudProfile it inherits from.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">
+NamespacedCloudProfileStatus
+</a>
+</em>
+</td>
+<td>
+<p>Most recently observed status of the NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>
@@ -960,7 +1134,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -991,7 +1165,7 @@ ProjectSpec
 <td>
 <code>createdBy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 Kubernetes rbac/v1.Subject
 </a>
 </em>
@@ -1018,7 +1192,7 @@ string
 <td>
 <code>owner</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 Kubernetes rbac/v1.Subject
 </a>
 </em>
@@ -1141,7 +1315,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1184,7 +1358,7 @@ int32
 <td>
 <code>metrics</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
 </a>
 </em>
@@ -1197,7 +1371,7 @@ Kubernetes core/v1.ResourceList
 <td>
 <code>scope</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -1245,7 +1419,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1261,7 +1435,7 @@ Refer to the Kubernetes API documentation for the fields of the
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -1275,7 +1449,7 @@ This field is immutable.</p>
 <td>
 <code>quotas</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 []Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -1337,7 +1511,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1416,23 +1590,6 @@ SeedProvider
 </td>
 <td>
 <p>Provider defines the provider type and region for this Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -1543,7 +1700,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1841,6 +1998,34 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1894,7 +2079,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -1964,6 +2149,95 @@ ShootStateSpec
 </td>
 </tr>
 </table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerLogging">APIServerLogging
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerLogging contains configuration for the logs level and http access logs</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity is the kube-apiserver log verbosity level
+Defaults to 2.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>httpAccessVerbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerRequests">APIServerRequests
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxNonMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
 </td>
 </tr>
 </tbody>
@@ -2199,7 +2473,7 @@ AuditPolicy
 <td>
 <code>configMapRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -2355,7 +2629,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -2455,7 +2729,7 @@ BackupBucket&rsquo;s generation, which is updated on mutation by the API Server.
 <td>
 <code>generatedSecretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -2585,7 +2859,7 @@ at the beginning of a create/reconcile operation. It is used when moving the Bac
 <td>
 <code>migrationStartTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -2631,7 +2905,7 @@ CredentialsRotationPhase
 <td>
 <code>lastCompletionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -2646,7 +2920,7 @@ completed.</p>
 <td>
 <code>lastInitiationTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -2660,7 +2934,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastInitiationFinishedTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -2675,7 +2949,7 @@ completed.</p>
 <td>
 <code>lastCompletionTriggeredTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -2716,7 +2990,7 @@ CRIName
 </em>
 </td>
 <td>
-<p>The name of the CRI library. Supported values are <code>docker</code> and <code>containerd</code>.</p>
+<p>The name of the CRI library. Supported values are <code>containerd</code>.</p>
 </td>
 </tr>
 <tr>
@@ -2744,11 +3018,54 @@ CRIName
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind contains a CloudProfile kind.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name contains the name of the referenced CloudProfile.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">NamespacedCloudProfileStatus</a>)
 </p>
 <p>
 <p>CloudProfileSpec is the specification of a CloudProfile.
@@ -3037,6 +3354,141 @@ int32
 <p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>newPodScaleUpDelay</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxEmptyBulkDelete</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ignoreDaemonsetsUtilization</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity allows CA to modify its log level (default: 2).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">ClusterAutoscalerOptions
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>scaleDownUtilizationThreshold</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownGpuUtilizationThreshold</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnneededTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>scaleDownUnreadyTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition
@@ -3088,7 +3540,7 @@ ConditionStatus
 <td>
 <code>lastTransitionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -3101,7 +3553,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastUpdateTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -3274,7 +3726,7 @@ control plane of a shoot.</p>
 <td>
 <code>registrationRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3288,7 +3740,7 @@ The name field of the RegistrationRef is immutable.</p>
 <td>
 <code>seedRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3301,7 +3753,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 <code>deploymentRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -3395,7 +3847,7 @@ ControllerDeploymentPolicy
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -3418,7 +3870,7 @@ An empty list means that all seeds are selected.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeploymentRefs holds references to <code>ControllerDeployments</code>. Only one element is support now.</p>
+<p>DeploymentRefs holds references to <code>ControllerDeployments</code>. Only one element is supported currently.</p>
 </td>
 </tr>
 </tbody>
@@ -3829,7 +4281,9 @@ kubeconfig that is handed out to end-users. This field is immutable.</p>
 <td>
 <em>(Optional)</em>
 <p>Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
-not a default domain is used.</p>
+not a default domain is used.
+Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.</p>
 </td>
 </tr>
 </tbody>
@@ -3906,7 +4360,8 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Domains contains information about which domains shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
 <tr>
@@ -3918,7 +4373,9 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Primary indicates that this DNSProvider is used for shoot related domains.</p>
+<p>Primary indicates that this DNSProvider is used for shoot related domains.
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.</p>
 </td>
 </tr>
 <tr>
@@ -3960,7 +4417,8 @@ DNSIncludeExclude
 <td>
 <em>(Optional)</em>
 <p>Zones contains information about which hosted zones shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in Gardener release v1.87.</p>
+Deprecated: This field is deprecated and will be removed in a future release.
+Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
 </tbody>
@@ -4094,7 +4552,7 @@ CredentialsRotationPhase
 <td>
 <code>lastCompletionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -4109,7 +4567,7 @@ completed.</p>
 <td>
 <code>lastInitiationTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -4123,7 +4581,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastInitiationFinishedTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -4138,7 +4596,7 @@ completed.</p>
 <td>
 <code>lastCompletionTriggeredTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -4147,6 +4605,40 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
 triggered.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.EncryptionConfig">EncryptionConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>EncryptionConfig contains customizable encryption configuration of the API server.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Resources contains the list of resources that shall be encrypted in addition to secrets.
+Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+Note that configuring a custom resource is only supported for versions &gt;= 1.26.
+Wildcards are not supported for now.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
 </tbody>
@@ -4203,7 +4695,7 @@ string
 <td>
 <code>expirationDate</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -4483,7 +4975,7 @@ string
 </em>
 </td>
 <td>
-<p>ID is the Docker container id of the Gardener which last acted on a resource.</p>
+<p>ID is the container id of the Gardener which last acted on a resource.</p>
 </td>
 </tr>
 <tr>
@@ -5038,8 +5530,8 @@ cache size flags will have no effect, except when setting it to 0 (which disable
 <td>
 <code>requests</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerRequests">
-KubeAPIServerRequests
+<a href="#core.gardener.cloud/v1beta1.APIServerRequests">
+APIServerRequests
 </a>
 </em>
 </td>
@@ -5081,8 +5573,8 @@ Defaults to 1h.</p>
 <td>
 <code>logging</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerLogging">
-KubeAPIServerLogging
+<a href="#core.gardener.cloud/v1beta1.APIServerLogging">
+APIServerLogging
 </a>
 </em>
 </td>
@@ -5121,93 +5613,18 @@ The field has effect only when the <code>DefaultTolerationSeconds</code> admissi
 Defaults to 300.</p>
 </td>
 </tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerLogging contains configuration for the logs level and http access logs</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr>
 <td>
-<code>verbosity</code></br>
+<code>encryptionConfig</code></br>
 <em>
-int32
+<a href="#core.gardener.cloud/v1beta1.EncryptionConfig">
+EncryptionConfig
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Verbosity is the kube-apiserver log verbosity level
-Defaults to 2.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>httpAccessVerbosity</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>maxNonMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
+<p>EncryptionConfig contains customizable encryption configuration of the Kube API server.</p>
 </td>
 </tr>
 </tbody>
@@ -5616,21 +6033,6 @@ int64
 <td>
 <em>(Optional)</em>
 <p>PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>imagePullProgressDeadline</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
-Default: 1m</p>
 </td>
 </tr>
 <tr>
@@ -6183,19 +6585,6 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <tbody>
 <tr>
 <td>
-<code>allowPrivilegedContainers</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>clusterAutoscaler</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">
@@ -6407,7 +6796,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>KubernetesSettings contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
@@ -6496,7 +6886,7 @@ string
 <td>
 <code>lastUpdateTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -6540,7 +6930,7 @@ string
 <td>
 <code>triggeredTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -6582,6 +6972,7 @@ string
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
@@ -6611,7 +7002,7 @@ string
 <td>
 <code>lastUpdateTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -6824,7 +7215,8 @@ int32
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineImage defines the name and multiple versions of the machine image in any environment.</p>
@@ -6861,8 +7253,34 @@ string
 <p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">
+MachineImageUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+- patch: update to the latest patch version of the current minor version.
+- minor: update to the latest minor and patch version.
+- major: always update to the overall latest version (default).</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">MachineImageUpdateStrategy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+</p>
+<p>
+<p>MachineImageUpdateStrategy is the update strategy to use for a machine image</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion
 </h3>
 <p>
@@ -6943,7 +7361,8 @@ Examples:
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>MachineType contains certain properties of a machine type.</p>
@@ -7364,13 +7783,171 @@ string
 <td>
 <code>resourceRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#crossversionobjectreference-v1-autoscaling">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#crossversionobjectreference-v1-autoscaling">
 Kubernetes autoscaling/v1.CrossVersionObjectReference
 </a>
 </em>
 </td>
 <td>
 <p>ResourceRef is a reference to a resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
+</p>
+<p>
+<p>NamespacedCloudProfileSpec is the specification of a NamespacedCloudProfile.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>caBundle</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CABundle is a certificate bundle which will be installed onto every host machine of shoot cluster targeting this profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubernetesSettings">
+KubernetesSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubernetes contains constraints regarding allowed values of the &lsquo;kubernetes&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineImages</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">
+[]MachineImage
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineType">
+[]MachineType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineTypes contains constraints regarding allowed values for machine types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>regions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Region">
+[]Region
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Regions contains constraints regarding allowed values for regions and zones.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volumeTypes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VolumeType">
+[]VolumeType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parent</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<p>Parent contains a reference to a CloudProfile it inherits from.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.NamespacedCloudProfileStatus">NamespacedCloudProfileStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfile">NamespacedCloudProfile</a>)
+</p>
+<p>
+<p>NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cloudProfileSpec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">
+CloudProfileSpec
+</a>
+</em>
+</td>
+<td>
+<p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>observedGeneration</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ObservedGeneration is the most recent generation observed for this project.</p>
 </td>
 </tr>
 </tbody>
@@ -7534,8 +8111,8 @@ See <a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-g
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
@@ -7758,6 +8335,53 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ObservabilityRotation">ObservabilityRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ObservabilityRotation contains information about the observability credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the observability credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.OpenIDConnectClientAuthentication">OpenIDConnectClientAuthentication
 </h3>
 <p>
@@ -7823,7 +8447,7 @@ string
 <td>
 <code>Subject</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 Kubernetes rbac/v1.Subject
 </a>
 </em>
@@ -7894,7 +8518,7 @@ TODO: Remove this field in favor of the <code>roles</code> list in <code>v1</cod
 <td>
 <code>createdBy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 Kubernetes rbac/v1.Subject
 </a>
 </em>
@@ -7921,7 +8545,7 @@ string
 <td>
 <code>owner</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
 Kubernetes rbac/v1.Subject
 </a>
 </em>
@@ -8039,7 +8663,7 @@ ProjectPhase
 <td>
 <code>staleSinceTimestamp</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -8053,7 +8677,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>staleAutoDeleteTimestamp</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -8068,7 +8692,7 @@ because it&rsquo;s stale/unused.</p>
 <td>
 <code>lastActivityTimestamp</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -8264,7 +8888,7 @@ int32
 <td>
 <code>metrics</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
 </a>
 </em>
@@ -8277,7 +8901,7 @@ Kubernetes core/v1.ResourceList
 <td>
 <code>scope</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
 Kubernetes core/v1.ObjectReference
 </a>
 </em>
@@ -8292,7 +8916,8 @@ Kubernetes core/v1.ObjectReference
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>Region contains certain properties of a region.</p>
@@ -8367,7 +8992,7 @@ quality, reliability, access restrictions, etc.</p>
 <td>
 <code>CrossVersionObjectReference</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#crossversionobjectreference-v1-autoscaling">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#crossversionobjectreference-v1-autoscaling">
 Kubernetes autoscaling/v1.CrossVersionObjectReference
 </a>
 </em>
@@ -8578,7 +9203,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -8656,7 +9281,7 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -8853,7 +9478,7 @@ string
 <td>
 <code>LabelSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -8899,36 +9524,6 @@ Kubernetes meta/v1.LabelSelector
 <tbody>
 <tr>
 <td>
-<code>endpoint</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">
-SeedSettingDependencyWatchdogEndpoint
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use <code>Weeder</code> instead.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>probe</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">
-SeedSettingDependencyWatchdogProbe
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Probe controls the probe settings for the dependency-watchdog for the seed.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Use <code>Prober</code> instead.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>weeder</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogWeeder">
@@ -8953,72 +9548,6 @@ SeedSettingDependencyWatchdogProber
 <td>
 <em>(Optional)</em>
 <p>Prober controls the prober settings for the dependency-watchdog for the seed.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">SeedSettingDependencyWatchdogEndpoint
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
-</p>
-<p>
-<p>SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
-Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type <code>SeedSettingDependencyWatchdogWeeder</code> instead.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
-helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
-CrashLoopBackoff status and restarting them once their dependants become ready and available again.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">SeedSettingDependencyWatchdogProbe
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
-</p>
-<p>
-<p>SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
-Deprecated: This type is deprecated and will be removed in a future version of Gardener. Use type <code>SeedSettingDependencyWatchdogProber</code> instead.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
-scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
-reachable via its external ingress in order to avoid melt-down situations.</p>
 </td>
 </tr>
 </tbody>
@@ -9112,7 +9641,80 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether the excess capacity reservation should be enabled.</p>
+<em>(Optional)</em>
+<p>Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>configs</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">
+[]SeedSettingExcessCapacityReservationConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configs configures excess capacity reservation deployments for shoot control planes in the seed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">SeedSettingExcessCapacityReservationConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation</a>)
+</p>
+<p>
+<p>SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<p>Resources specify the resource requests and limits of the excess-capacity-reservation pod.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSelector</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeSelector specifies the node where the excess-capacity-reservation pod should run.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations specify the tolerations for the the excess-capacity-reservation pod.</p>
 </td>
 </tr>
 </tbody>
@@ -9151,8 +9753,8 @@ map[string]string
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
@@ -9225,8 +9827,8 @@ map[string]string
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
@@ -9235,38 +9837,6 @@ Kubernetes core/v1.ServiceExternalTrafficPolicyType
 <p>ExternalTrafficPolicy describes how nodes distribute service traffic they
 receive on one of the service&rsquo;s &ldquo;externally-facing&rdquo; addresses.
 Defaults to &ldquo;Cluster&rdquo;.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">SeedSettingOwnerChecks
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
-</p>
-<p>
-<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
-<p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field is no-op and will be removed in a future version.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed.</p>
 </td>
 </tr>
 </tbody>
@@ -9442,23 +10012,6 @@ SeedSettingVerticalPodAutoscaler
 </tr>
 <tr>
 <td>
-<code>ownerChecks</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">
-SeedSettingOwnerChecks
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
-<p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
-Finally, the field will be removed from the API in a future version of Gardener.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>dependencyWatchdog</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">
@@ -9560,23 +10113,6 @@ SeedProvider
 </td>
 <td>
 <p>Provider defines the provider type and region for this Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -9723,7 +10259,7 @@ string
 <td>
 <code>capacity</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
 </a>
 </em>
@@ -9737,7 +10273,7 @@ Kubernetes core/v1.ResourceList
 <td>
 <code>allocatable</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
 </a>
 </em>
@@ -9752,7 +10288,7 @@ Defaults to Capacity.</p>
 <td>
 <code>clientCertificateExpirationTimestamp</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -9760,6 +10296,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>ClientCertificateExpirationTimestamp is the timestamp at which gardenlet&rsquo;s client certificate expires.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastOperation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
+LastOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Seed.</p>
 </td>
 </tr>
 </tbody>
@@ -9823,7 +10373,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -9904,23 +10454,6 @@ SeedProvider
 </td>
 <td>
 <p>Provider defines the provider type and region for this Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
-cluster to be registered as Seed.</p>
-<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
-hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -10185,7 +10718,7 @@ CredentialsRotationPhase
 <td>
 <code>lastCompletionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10200,7 +10733,7 @@ completed.</p>
 <td>
 <code>lastInitiationTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10214,7 +10747,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastInitiationFinishedTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10229,7 +10762,7 @@ completed.</p>
 <td>
 <code>lastCompletionTriggeredTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10379,8 +10912,8 @@ ShootSSHKeypairRotation
 <td>
 <code>observability</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootObservabilityRotation">
-ShootObservabilityRotation
+<a href="#core.gardener.cloud/v1beta1.ObservabilityRotation">
+ObservabilityRotation
 </a>
 </em>
 </td>
@@ -10440,7 +10973,7 @@ ETCDEncryptionKeyRotation
 <td>
 <code>lastInitiationTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10454,7 +10987,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastCompletionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10567,53 +11100,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ShootObservabilityRotation">ShootObservabilityRotation
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
-</p>
-<p>
-<p>ShootObservabilityRotation contains information about the observability credential rotation.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>lastInitiationTime</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
-Kubernetes meta/v1.Time
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the observability credential rotation was initiated.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastCompletionTime</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
-Kubernetes meta/v1.Time
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootPurpose">ShootPurpose
 (<code>string</code> alias)</p></h3>
 <p>
@@ -10644,7 +11130,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastInitiationTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10658,7 +11144,7 @@ Kubernetes meta/v1.Time
 <td>
 <code>lastCompletionTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -10958,6 +11444,34 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec
@@ -11135,7 +11649,7 @@ Shoot&rsquo;s generation, which is updated on mutation by the API Server.</p>
 <td>
 <code>retryCycleStartTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -11208,14 +11722,15 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>List of addresses on which the Kube API server can be reached.</p>
+<p>List of addresses that are relevant to the shoot.
+These include the Kube API server address and also the service account issuer.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>migrationStartTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -11243,7 +11758,7 @@ ShootCredentials
 <td>
 <code>lastHibernationTriggerTime</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
 </a>
 </em>
@@ -11268,6 +11783,20 @@ LastMaintenance
 <p>LastMaintenance holds information about the last maintenance operations on the Shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+Secrets are encrypted by default and are not part of the list.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootTemplate">ShootTemplate
@@ -11287,7 +11816,7 @@ LastMaintenance
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -11584,6 +12113,34 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfile</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileReference">
+CloudProfileReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -11820,6 +12377,20 @@ Kubernetes meta/v1.Duration
 <p>RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>targetCPUPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+Doesn&rsquo;t affect CPU lower bound, CPU upper bound nor memory recommendations.
+(default: 0.9)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
@@ -11892,7 +12463,8 @@ bool
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>VolumeType contains certain properties of a volume type.</p>
@@ -12182,7 +12754,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>taints</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core">
 []Kubernetes core/v1.Taint
 </a>
 </em>
@@ -12283,6 +12855,20 @@ map[string]string
 <td>
 <em>(Optional)</em>
 <p>Sysctls is a map of kernel settings to apply on all machines in this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clusterAutoscaler</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">
+ClusterAutoscalerOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
 </td>
 </tr>
 </tbody>

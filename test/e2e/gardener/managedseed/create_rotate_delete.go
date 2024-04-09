@@ -25,9 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,13 +35,16 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
+	"github.com/gardener/gardener/test/utils/rotation"
 )
+
+// SeedName is the name of the managed seed used in this e2e test
+const SeedName = "e2e-managedseed"
 
 var parentCtx context.Context
 
@@ -55,7 +56,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 		GardenerConfig: e2e.DefaultGardenConfig("garden"),
 	})
-	f.Shoot = e2e.DefaultShoot("e2e-managedseed")
+	f.Shoot = e2e.DefaultShoot(SeedName)
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")
@@ -112,7 +113,22 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			g.Expect(err).NotTo(HaveOccurred())
 		}).Should(Succeed())
 
-		verifier := gardenletKubeconfigRotationVerifier{gardenReader: f.GardenClient.Client(), seedReader: shootClient.Client(), seed: seed}
+		verifier := rotation.GardenletKubeconfigRotationVerifier{
+			GardenReader:                       f.GardenClient.Client(),
+			SeedReader:                         shootClient.Client(),
+			Seed:                               seed,
+			GardenletKubeconfigSecretName:      gardenletKubeconfigSecretName,
+			GardenletKubeconfigSecretNamespace: gardenletKubeconfigSecretNamespace,
+		}
+
+		By("Trigger gardenlet kubeconfig rotation by annotating Seed")
+		{
+			verifier.Before(ctx)
+			Eventually(func() error {
+				return triggerGardenletKubeconfigRotationViaSeed(ctx, f.GardenClient.Client(), seed)
+			}).Should(Succeed())
+			verifier.After(ctx, false)
+		}
 
 		By("Trigger gardenlet kubeconfig rotation by annotating ManagedSeed")
 		{
@@ -123,13 +139,13 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 			verifier.After(ctx, true)
 		}
 
-		By("Trigger gardenlet kubeconfig rotation by annotating its kubeconfig secret and deleting the pod")
+		By("Trigger gardenlet kubeconfig rotation by annotating its kubeconfig secret")
 		{
 			verifier.Before(ctx)
 			Eventually(func() error {
-				return triggerGardenletKubeconfigRotationViaSecret(ctx, shootClient.Client(), seed.Status.Gardener.Name)
+				return triggerGardenletKubeconfigRotationViaSecret(ctx, shootClient.Client())
 			}).Should(Succeed())
-			verifier.After(ctx, true)
+			verifier.After(ctx, false)
 		}
 
 		By("Trigger gardenlet kubeconfig auto-rotation by reducing kubeconfig validity")
@@ -139,12 +155,12 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				deployment := &appsv1.Deployment{}
 				g.Expect(shootClient.Client().Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: "garden"}, deployment)).To(Succeed())
 
-				if pointer.Int32Deref(deployment.Spec.Replicas, 0) != 0 {
+				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
 					By("Scale down gardenlet deployment to prevent interference of old pods with old validity settings")
 					// See https://github.com/gardener/gardener/issues/6766 for details
 
 					patch := client.MergeFrom(deployment.DeepCopy())
-					deployment.Spec.Replicas = pointer.Int32(0)
+					deployment.Spec.Replicas = ptr.To[int32](0)
 					g.Expect(shootClient.Client().Patch(ctx, deployment, patch)).To(Succeed())
 				}
 
@@ -163,8 +179,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				// valid and then renews it.
 				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, f.GardenClient.Client(), managedSeed, &gardenletv1alpha1.KubeconfigValidity{
 					Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
-					AutoRotationJitterPercentageMin: pointer.Int32(40),
-					AutoRotationJitterPercentageMax: pointer.Int32(41),
+					AutoRotationJitterPercentageMin: ptr.To[int32](40),
+					AutoRotationJitterPercentageMax: ptr.To[int32](41),
 				})
 			}).Should(Succeed())
 			verifier.After(ctx, true)
@@ -192,7 +208,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		CEventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func() error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -200,19 +216,19 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				return err
 			}
 
-			var conditionMessage = fmt.Sprintf("%q condition missing", gardencorev1beta1.SeedBootstrapped)
-			if condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); condition != nil {
-				conditionMessage = condition.Message
+			var message = "last operation missing"
+			if lastOp := seed.Status.LastOperation; lastOp != nil {
+				message = lastOp.Description
 			}
 
-			return fmt.Errorf("seed %q is not deleted yet: %s", client.ObjectKeyFromObject(seed), conditionMessage)
+			return fmt.Errorf("seed %q is not deleted yet: %s", client.ObjectKeyFromObject(seed), message)
 		}).WithPolling(5 * time.Second).Should(Succeed())
 
 		By("Wait for ManagedSeed to be deleted")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		CEventually(ctx, func(g Gomega) error {
+		CEventually(ctx, func() error {
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
@@ -257,7 +273,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{
 						ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-							Enabled: false,
+							Enabled: ptr.To(false),
 						},
 						Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 							Visible: false,
@@ -286,7 +302,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 			Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 				Config: *gardenletConfig,
 				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-					ReplicaCount: pointer.Int32(1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
+					ReplicaCount: ptr.To[int32](1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
 				},
 			},
 		},
@@ -303,19 +319,25 @@ func triggerGardenletKubeconfigRotationViaManagedSeed(ctx context.Context, garde
 	return gardenClient.Patch(ctx, managedSeed, patch)
 }
 
-func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient client.Client, gardenletPodName string) error {
+func triggerGardenletKubeconfigRotationViaSeed(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
+	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(seed.DeepCopy())
+	metav1.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
+	return gardenClient.Patch(ctx, seed, patch)
+}
+
+func triggerGardenletKubeconfigRotationViaSecret(ctx context.Context, seedClient client.Client) error {
 	secret := &corev1.Secret{}
 	if err := seedClient.Get(ctx, client.ObjectKey{Name: gardenletKubeconfigSecretName, Namespace: gardenletKubeconfigSecretNamespace}, secret); err != nil {
 		return err
 	}
 
 	patch := client.MergeFrom(secret.DeepCopy())
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, v1beta1constants.GardenerOperation, "renew")
-	if err := seedClient.Patch(ctx, secret, patch); err != nil {
-		return err
-	}
-
-	return seedClient.Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: gardenletPodName, Namespace: v1beta1constants.GardenNamespace}})
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.KubeconfigSecretOperationRenew)
+	return seedClient.Patch(ctx, secret, patch)
 }
 
 func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
@@ -347,80 +369,4 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	managedSeed.Spec.Gardenlet.Config = *gardenletConfigRaw
 	metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 	return gardenClient.Patch(ctx, managedSeed, patch)
-}
-
-type gardenletKubeconfigRotationVerifier struct {
-	gardenReader client.Reader
-	seedReader   client.Reader
-	seed         *gardencorev1beta1.Seed
-
-	timeBeforeRotation time.Time
-	oldGardenletName   string
-}
-
-func (v *gardenletKubeconfigRotationVerifier) Before(ctx context.Context) {
-	v.timeBeforeRotation = time.Now().UTC()
-
-	Eventually(func(g Gomega) {
-		Expect(v.gardenReader.Get(ctx, client.ObjectKeyFromObject(v.seed), v.seed)).To(Succeed())
-		v.oldGardenletName = v.seed.Status.Gardener.Name
-	}).Should(Succeed())
-}
-
-func (v *gardenletKubeconfigRotationVerifier) After(parentCtx context.Context, expectPodRestart bool) {
-	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
-	defer cancel()
-
-	if expectPodRestart {
-		By("Verify that new gardenlet pod has taken over responsibility for seed")
-		CEventually(ctx, func(g Gomega) error {
-			if err := v.gardenReader.Get(ctx, client.ObjectKeyFromObject(v.seed), v.seed); err != nil {
-				return err
-			}
-
-			if v.seed.Status.Gardener.Name != v.oldGardenletName {
-				return nil
-			}
-
-			return fmt.Errorf("new gardenlet pod has not yet taken over responsibility for seed: %s", client.ObjectKeyFromObject(v.seed))
-		}).WithPolling(5 * time.Second).Should(Succeed())
-	}
-
-	By("Verify that gardenlet's kubeconfig secret has actually been renewed")
-	CEventually(ctx, func(g Gomega) error {
-		secret := &corev1.Secret{}
-		if err := v.seedReader.Get(ctx, client.ObjectKey{Name: gardenletKubeconfigSecretName, Namespace: gardenletKubeconfigSecretNamespace}, secret); err != nil {
-			return err
-		}
-
-		kubeconfig := &clientcmdv1.Config{}
-		if _, _, err := clientcmdlatest.Codec.Decode(secret.Data["kubeconfig"], nil, kubeconfig); err != nil {
-			return err
-		}
-
-		clientCertificate, err := utils.DecodeCertificate(kubeconfig.AuthInfos[0].AuthInfo.ClientCertificateData)
-		if err != nil {
-			return err
-		}
-
-		newClientCertificateIssuedAt := clientCertificate.NotBefore.UTC()
-		// The kube-controller-manager always backdates the issued certificate by 5m, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
-		// Consequently, we add these 5m so that we can assert whether the certificate was actually issued after the
-		// time we recorded before the rotation was triggered.
-		newClientCertificateIssuedAt = newClientCertificateIssuedAt.Add(5 * time.Minute)
-
-		// The newClientCertificateIssuedAt time does not contain any nanoseconds, however the v.timeBeforeRotation
-		// does. This was leading to failing tests in case the new client certificate was issued at the very same second
-		// like the v.timeBeforeRotation, e.g. v.timeBeforeRotation = 2022-09-02 20:12:24.058418988 +0000 UTC,
-		// newClientCertificateIssuedAt = 2022-09-02 20:12:24 +0000 UTC. Hence, let's round the times down to the second
-		// to avoid such discrepancies. See https://github.com/gardener/gardener/issues/6618 for more details.
-		newClientCertificateIssuedAt = newClientCertificateIssuedAt.Truncate(time.Second)
-		timeBeforeRotation := v.timeBeforeRotation.Truncate(time.Second)
-
-		if newClientCertificateIssuedAt.Equal(timeBeforeRotation) || newClientCertificateIssuedAt.After(timeBeforeRotation) {
-			return nil
-		}
-
-		return fmt.Errorf("kubeconfig secret has not yet been renewed, timeBeforeRotation: %s, newClientCertificateIssuedAt: %s", v.timeBeforeRotation, newClientCertificateIssuedAt)
-	}).WithPolling(5 * time.Second).Should(Succeed())
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,30 +33,30 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
+	cmdutils "github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -68,13 +68,10 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Name is a const for the name of this component.
@@ -88,34 +85,11 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			log, err := cmdutils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			ctx, cancel := context.WithCancel(cmd.Context())
 			return run(ctx, cancel, log, opts.config)
 		},
@@ -144,14 +118,25 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(seedRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  kubernetes.SeedScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -161,13 +146,18 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
-			RecoverPanic: pointer.Bool(true),
+		Controller: controllerconfig.Controller{
+			RecoverPanic: ptr.To(true),
 		},
 
-		ClientDisableCacheFor: []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		MapperProvider: apiutil.NewDynamicRESTMapper,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1.Event{},
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -188,15 +178,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 	if err := mgr.AddReadyzCheck("seed-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Adding runnables to manager for bootstrapping")
@@ -255,30 +236,39 @@ func (g *garden) Start(ctx context.Context) error {
 		opts.Scheme = kubernetes.GardenScheme
 		opts.Logger = log
 
-		opts.ClientDisableCacheFor = []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		opts.Client.Cache = &client.CacheOptions{
+			DisableFor: []client.Object{
+				&corev1.Event{},
+				&eventsv1.Event{},
+			},
 		}
+
+		seedNamespace := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 
 		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			// gardenlet should watch only objects which are related to the seed it is responsible for.
-			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
+			opts.ByObject = map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
+				&gardencorev1beta1.Shoot{}: {
+					Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.SeedTemplate.Name: "true"}),
+				},
 				&operationsv1alpha1.Bastion{}: {
 					Field: fields.SelectorFromSet(fields.Set{operations.BastionSeedName: g.config.SeedConfig.SeedTemplate.Name}),
+				},
+				// Gardenlet should watch secrets/serviceAccounts only in the seed namespace of the seed it is responsible for.
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{seedNamespace: {}},
+				},
+				&corev1.ServiceAccount{}: {
+					Namespaces: map[string]cache.Config{seedNamespace: {}},
 				},
 			}
 
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
-					// don't use any selector mechanism here since we want to still fall back to reading secrets with
-					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
-					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
 					// resources on cluster level. Hence, we need to watch them individually with the help of a
 					// SingleObject cache.
@@ -302,26 +292,30 @@ func (g *garden) Start(ctx context.Context) error {
 		// read a secret from another namespace. There might be secrets in namespace other than the seed-specific
 		// namespace (e.g., backup secret in the SeedSpec). Hence, let's use a fallback client which falls back to an
 		// uncached reader in case it fails to read objects from the cache.
-		opts.NewClient = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
-			uncachedClient, err := client.New(config, options)
+		opts.NewClient = func(config *rest.Config, options client.Options) (client.Client, error) {
+			uncachedOptions := options
+			uncachedOptions.Cache = nil
+			uncachedClient, err := client.New(config, uncachedOptions)
 			if err != nil {
 				return nil, err
 			}
 
-			delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-				CacheReader:     cache,
-				Client:          uncachedClient,
-				UncachedObjects: uncachedObjects,
-			})
+			cachedClient, err := client.New(config, options)
 			if err != nil {
 				return nil, err
 			}
 
 			return &kubernetes.FallbackClient{
-				Client: delegatingClient,
+				Client: cachedClient,
 				Reader: uncachedClient,
+				KindToNamespaces: map[string]sets.Set[string]{
+					"Secret":         sets.New[string](seedNamespace),
+					"ServiceAccount": sets.New[string](seedNamespace),
+				},
 			}, nil
 		}
+
+		opts.MapperProvider = apiutil.NewDynamicRESTMapper
 	})
 	if err != nil {
 		return fmt.Errorf("failed creating garden cluster object: %w", err)
@@ -329,7 +323,7 @@ func (g *garden) Start(ctx context.Context) error {
 
 	log.Info("Cleaning bootstrap authentication data used to request a certificate if needed")
 	if len(g.kubeconfigBootstrapResult.CSRName) > 0 && len(g.kubeconfigBootstrapResult.SeedName) > 0 {
-		if err := bootstrap.DeleteBootstrapAuth(ctx, gardenCluster.GetClient(), gardenCluster.GetClient(), g.kubeconfigBootstrapResult.CSRName, g.kubeconfigBootstrapResult.SeedName); err != nil {
+		if err := bootstrap.DeleteBootstrapAuth(ctx, gardenCluster.GetClient(), gardenCluster.GetClient(), g.kubeconfigBootstrapResult.CSRName); err != nil {
 			return fmt.Errorf("failed cleaning bootstrap auth data: %w", err)
 		}
 	}
@@ -344,6 +338,14 @@ func (g *garden) Start(ctx context.Context) error {
 		return fmt.Errorf("failed adding garden cluster to manager: %w", err)
 	}
 
+	waitForSyncCtx, waitForSyncCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer waitForSyncCancel()
+
+	log.V(1).Info("Waiting for cache to be synced")
+	if !gardenCluster.GetCache().WaitForCacheSync(waitForSyncCtx) {
+		return fmt.Errorf("failed waiting for cache to be synced")
+	}
+
 	log.Info("Registering Seed object in garden cluster")
 	if err := g.registerSeed(ctx, gardenCluster.GetClient()); err != nil {
 		return err
@@ -354,15 +356,8 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove this code after v1.74 has been released.
-	{
-		log.Info("Removing legacy ShootState controller finalizer from persistable secrets in seed cluster")
-		if err := removeLegacyShootStateControllerFinalizerFromSecrets(ctx, g.mgr.GetClient()); err != nil {
-			return err
-		}
-		if err := g.cleanupStaleShootStates(ctx, gardenCluster.GetClient()); err != nil {
-			return err
-		}
+	if err := g.runMigrations(ctx, log, gardenCluster); err != nil {
+		return err
 	}
 
 	log.Info("Setting up shoot client map")
@@ -445,7 +440,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return wait.PollUntilWithContext(timeoutCtx, 500*time.Millisecond, func(context.Context) (done bool, err error) {
+	return wait.PollUntilContextCancel(timeoutCtx, 500*time.Millisecond, false, func(context.Context) (done bool, err error) {
 		if err := gardenClient.Get(ctx, kubernetesutils.Key(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
 				return false, nil
@@ -484,73 +479,6 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 			}
 
 			return nil
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func removeLegacyShootStateControllerFinalizerFromSecrets(ctx context.Context, seedClient client.Client) error {
-	secretList := &metav1.PartialObjectMetadataList{}
-	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-	if err := seedClient.List(ctx, secretList, client.MatchingLabels{
-		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
-		secretsmanager.LabelKeyPersist:   secretsmanager.LabelValueTrue,
-	}); err != nil {
-		return fmt.Errorf("failed listing all secrets that must be persisted: %w", err)
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, s := range secretList.Items {
-		secret := s
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			if err := controllerutils.RemoveFinalizers(ctx, seedClient, &secret, "gardenlet.gardener.cloud/secret-controller"); err != nil {
-				return fmt.Errorf("failed to remove legacy ShootState controller finalizer from secret %q: %w", client.ObjectKeyFromObject(&secret), err)
-			}
-			return nil
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func (g *garden) cleanupStaleShootStates(ctx context.Context, gardenClient client.Client) error {
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: g.config.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
-		}
-		return nil
-	}
-
-	g.mgr.GetLogger().Info("Removing stale ShootState resources from garden cluster since I'm responsible for a managed seed (GEP-22)")
-
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := gardenClient.List(ctx, shootList, client.MatchingFields{gardencore.ShootSeedName: g.config.SeedConfig.Name}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, s := range shootList.Items {
-		shoot := s
-
-		// If status.seedName is different than seed name gardenlet is responsible for, then a migration takes place.
-		// In this case, we don't want to delete the shoot state. It will be deleted eventually after successful
-		// restoration by the shoot controller itself.
-		if shoot.Status.SeedName != nil && *shoot.Status.SeedName != g.config.SeedConfig.Name {
-			continue
-		}
-
-		// We don't want to delete the shoot state when the last operation type is 'Restore' (it might not be completed
-		// yet). It will be deleted eventually after successful restoration by the shoot controller itself.
-		if v1beta1helper.ShootHasOperationType(shoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore) {
-			continue
-		}
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			return shootstate.Delete(ctx, gardenClient, &shoot)
 		})
 	}
 

@@ -38,6 +38,7 @@ func ConvertControllerManagerConfiguration(obj runtime.Object) (*config.Controll
 	if err != nil {
 		return nil, err
 	}
+
 	result, ok := obj.(*config.ControllerManagerConfiguration)
 	if !ok {
 		return nil, fmt.Errorf("could not convert ControllerManagerConfiguration to the internal version")
@@ -51,6 +52,7 @@ func ConvertControllerManagerConfigurationExternal(obj runtime.Object) (*v1alpha
 	if err != nil {
 		return nil, err
 	}
+
 	result, ok := obj.(*v1alpha1.ControllerManagerConfiguration)
 	if !ok {
 		return nil, fmt.Errorf("could not convert ControllerManagerConfiguration to the external version")

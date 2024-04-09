@@ -49,7 +49,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -93,7 +93,7 @@ OpenIDConnectPresetSpec
 <td>
 <code>projectSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -147,7 +147,7 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -183,7 +183,7 @@ KubeAPIServerOpenIDConnect
 </td>
 <td>
 <p>Server contains the kube-apiserver&rsquo;s OpenID Connect configuration.
-This configuration is not overwritting any existing OpenID Connect
+This configuration is not overwriting any existing OpenID Connect
 configuration already set on the Shoot object.</p>
 </td>
 </tr>
@@ -200,7 +200,7 @@ OpenIDConnectClientAuthentication
 <em>(Optional)</em>
 <p>Client contains the configuration used for client OIDC authentication
 of Shoot clusters.
-This configuration is not overwritting any existing OpenID Connect
+This configuration is not overwriting any existing OpenID Connect
 client authentication already set on the Shoot object.</p>
 </td>
 </tr>
@@ -208,7 +208,7 @@ client authentication already set on the Shoot object.</p>
 <td>
 <code>shootSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -277,7 +277,7 @@ OpenIDConnectPresetSpec
 <td>
 <code>projectSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>
@@ -497,7 +497,7 @@ KubeAPIServerOpenIDConnect
 </td>
 <td>
 <p>Server contains the kube-apiserver&rsquo;s OpenID Connect configuration.
-This configuration is not overwritting any existing OpenID Connect
+This configuration is not overwriting any existing OpenID Connect
 configuration already set on the Shoot object.</p>
 </td>
 </tr>
@@ -514,7 +514,7 @@ OpenIDConnectClientAuthentication
 <em>(Optional)</em>
 <p>Client contains the configuration used for client OIDC authentication
 of Shoot clusters.
-This configuration is not overwritting any existing OpenID Connect
+This configuration is not overwriting any existing OpenID Connect
 client authentication already set on the Shoot object.</p>
 </td>
 </tr>
@@ -522,7 +522,7 @@ client authentication already set on the Shoot object.</p>
 <td>
 <code>shootSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
 Kubernetes meta/v1.LabelSelector
 </a>
 </em>

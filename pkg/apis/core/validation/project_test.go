@@ -24,7 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -136,7 +136,7 @@ var _ = Describe("Project Validation Tests", func() {
 		)
 
 		It("should forbid Project specification with empty or invalid key for description", func() {
-			project.Spec.Description = pointer.String("")
+			project.Spec.Description = ptr.To("")
 
 			errorList := ValidateProject(project)
 
@@ -147,7 +147,7 @@ var _ = Describe("Project Validation Tests", func() {
 		})
 
 		It("should forbid Project specification with empty or invalid key for purpose", func() {
-			project.Spec.Purpose = pointer.String("")
+			project.Spec.Purpose = ptr.To("")
 
 			errorList := ValidateProject(project)
 
@@ -339,10 +339,10 @@ var _ = Describe("Project Validation Tests", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 				{Key: "baz"},
-				{Key: "baz", Value: pointer.String("baz")},
+				{Key: "baz", Value: ptr.To("baz")},
 			}
 			project.Spec.Tolerations = &core.ProjectTolerations{
 				Defaults:  tolerations,
@@ -413,13 +413,13 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("namespace change w/ preset namespace", pointer.String("garden-dev"), pointer.String("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("namespace change w/ preset namespace", ptr.To("garden-dev"), ptr.To("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.namespace"),
 			})))),
-			Entry("namespace change w/o preset namespace", nil, pointer.String("garden-core"), BeEmpty()),
+			Entry("namespace change w/o preset namespace", nil, ptr.To("garden-core"), BeEmpty()),
 			Entry("no change (both unset)", nil, nil, BeEmpty()),
-			Entry("no change (same value)", pointer.String("garden-dev"), pointer.String("garden-dev"), BeEmpty()),
+			Entry("no change (same value)", ptr.To("garden-dev"), ptr.To("garden-dev"), BeEmpty()),
 		)
 
 		It("should forbid Project updates trying to change the createdBy field", func() {

@@ -15,13 +15,14 @@
 package errors_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	errorsmock "github.com/gardener/gardener/pkg/utils/errors/mock"
@@ -37,13 +38,13 @@ var _ = Describe("Errors", func() {
 		err1, err2 error
 	)
 	BeforeEach(func() {
-		err1 = fmt.Errorf("error 1")
-		err2 = fmt.Errorf("error 2")
+		err1 = errors.New("error 1")
+		err2 = errors.New("error 2")
 	})
 
 	Describe("#WithSuppressed", func() {
 		It("should return nil if the error is nil", func() {
-			Expect(errorsutils.WithSuppressed(nil, err2)).To(BeNil())
+			Expect(errorsutils.WithSuppressed(nil, err2)).To(Succeed())
 		})
 
 		It("should return the error if the suppressed error is nil", func() {
@@ -64,7 +65,7 @@ var _ = Describe("Errors", func() {
 		})
 
 		It("should retrieve nil if the error doesn't have a suppressed error", func() {
-			Expect(errorsutils.Suppressed(err1)).To(BeNil())
+			Expect(errorsutils.Suppressed(err1)).To(Succeed())
 		})
 	})
 
@@ -125,13 +126,13 @@ var _ = Describe("Errors", func() {
 
 		It("Should call default failure handler", func() {
 			errorID := "x1"
-			errorText := fmt.Sprintf("Error in %s", errorID)
+			errorText := "Error in " + errorID
 			expectedErr := errorsutils.WithID(errorID, fmt.Errorf("%s failed (%s)", errorID, errorText))
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				nil,
 				errorsutils.ToExecute(errorID, func() error {
-					return fmt.Errorf(errorText)
+					return errors.New(errorText)
 				}),
 			)
 
@@ -148,7 +149,7 @@ var _ = Describe("Errors", func() {
 					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
 				},
 				errorsutils.ToExecute(errID, func() error {
-					return fmt.Errorf(errorText)
+					return errors.New(errorText)
 				}),
 			)
 
@@ -167,7 +168,7 @@ var _ = Describe("Errors", func() {
 
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
-				func(errorID string, err error) error {
+				func(_ string, err error) error {
 					return err
 				},
 				f1,
@@ -182,7 +183,7 @@ var _ = Describe("Errors", func() {
 			errID := "x2"
 			errorContext := errorsutils.NewErrorContext("Check success handler", []string{errID})
 			Expect(errorsutils.HandleErrors(errorContext,
-				func(errorID string) error {
+				func(_ string) error {
 					return nil
 				},
 				nil,
@@ -208,7 +209,7 @@ var _ = Describe("Errors", func() {
 
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
-				func(errorID string, err error) error {
+				func(_ string, err error) error {
 					return err
 				},
 				f1,

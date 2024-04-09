@@ -23,6 +23,7 @@ import (
 type Task struct {
 	Name         string
 	Fn           TaskFn
+	SkipIf       bool
 	Dependencies TaskIDs
 }
 
@@ -30,6 +31,7 @@ type Task struct {
 func (t *Task) Spec() *TaskSpec {
 	return &TaskSpec{
 		t.Fn,
+		t.SkipIf,
 		t.Dependencies.Copy(),
 	}
 }
@@ -38,6 +40,7 @@ func (t *Task) Spec() *TaskSpec {
 // the dependencies of the Task.
 type TaskSpec struct {
 	Fn           TaskFn
+	Skip         bool
 	Dependencies TaskIDs
 }
 
@@ -69,6 +72,7 @@ func (g *Graph) Add(task Task) TaskID {
 	if _, ok := g.tasks[id]; ok {
 		panic(fmt.Sprintf("Task with id %q already exists", id))
 	}
+
 	spec := task.Spec()
 	for dependencyID := range spec.Dependencies {
 		if _, ok := g.tasks[dependencyID]; !ok {
@@ -91,6 +95,7 @@ func (g *Graph) Compile() *Flow {
 
 		node := nodes.getOrCreate(taskName)
 		node.fn = taskSpec.Fn
+		node.skip = taskSpec.Skip
 		node.required = taskSpec.Dependencies.Len()
 	}
 

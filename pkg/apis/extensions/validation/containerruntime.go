@@ -80,17 +80,3 @@ func ValidateContainerRuntimeSpecUpdate(new, old *extensionsv1alpha1.ContainerRu
 
 	return allErrs
 }
-
-// ValidateContainerRuntimeStatus validates the status of a ContainerRuntime object.
-func ValidateContainerRuntimeStatus(status *extensionsv1alpha1.ContainerRuntimeStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateContainerRuntimeStatusUpdate validates the status of a ContainerRuntime object before an update.
-func ValidateContainerRuntimeStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.ContainerRuntimeStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}

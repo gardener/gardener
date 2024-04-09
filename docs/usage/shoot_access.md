@@ -11,29 +11,19 @@ The username associated with such `kubeconfig` will be the same which is used fo
 In order to request such a `kubeconfig`, you can run the following commands:
 
 ```bash
-export NAMESPACE=my-namespace
+export NAMESPACE=garden-my-namespace
 export SHOOT_NAME=my-shoot
 kubectl create \
-    -f <path>/<to>/kubeconfig-request.json \
-    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
-```
-
-Here, the `kubeconfig-request.json` has the following content:
-
-```json
-{
-    "apiVersion": "authentication.gardener.cloud/v1alpha1",
-    "kind": "AdminKubeconfigRequest",
-    "spec": {
-        "expirationSeconds": 1000
-    }
-}
+    -f <(printf '{"spec":{"expirationSeconds":600}}') \
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | \
+    jq -r ".status.kubeconfig" | \
+    base64 -d
 ```
 
 You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
 
 ```go
-expiration := 8*time.Hour
+expiration := 10 * time.Minute
 expirationSeconds := int64(expiration.Seconds())
 adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
   Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
@@ -47,7 +37,71 @@ if err != nil {
 config = adminKubeconfigRequest.Status.Kubeconfig
 ```
 
-> **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
+In Python you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
+
+```python
+# This script first loads an existing kubeconfig from your system, and then sends a request to the Gardener API to create a new kubeconfig for a shoot cluster. 
+# The received kubeconfig is then decoded and a new API client is created for interacting with the shoot cluster.
+
+import base64
+import json
+from kubernetes import client, config
+import yaml
+
+# Set configuration options
+shoot_name="my-shoot" # Name of the shoot
+project_namespace="garden-my-namespace" # Namespace of the project
+
+# Load kubeconfig from default ~/.kube/config
+config.load_kube_config()
+api = client.ApiClient()
+
+# Create kubeconfig request
+kubeconfig_request = {
+    'apiVersion': 'authentication.gardener.cloud/v1alpha1',
+    'kind': 'AdminKubeconfigRequest',
+    'spec': {
+      'expirationSeconds': 600
+    }
+}
+
+response = api.call_api(resource_path=f'/apis/core.gardener.cloud/v1beta1/namespaces/{project_namespace}/shoots/{shoot_name}/adminkubeconfig',
+                        method='POST',
+                        body=kubeconfig_request,
+                        auth_settings=['BearerToken'],
+                        _preload_content=False,
+                        _return_http_data_only=True,
+                       )
+
+decoded_kubeconfig = base64.b64decode(json.loads(response.data)["status"]["kubeconfig"]).decode('utf-8')
+print(decoded_kubeconfig)
+
+# Create an API client to interact with the shoot cluster
+shoot_api_client = config.new_client_from_config_dict(yaml.safe_load(decoded_kubeconfig))
+v1 = client.CoreV1Api(shoot_api_client)
+```
+
+> **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2) tool simplifies targeting shoot clusters. It automatically downloads a kubeconfig that uses the [gardenlogin](https://github.com/gardener/gardenlogin) kubectl auth plugin. This transparently manages authentication and certificate renewal without containing any credentials.
+
+## `shoots/viewerkubeconfig` Subresource
+
+The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
+The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](./etcd_encryption_config.md)).
+
+In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
+For example, in bash this looks like this:
+
+```bash
+export NAMESPACE=garden-my-namespace
+export SHOOT_NAME=my-shoot
+kubectl create \
+    -f <(printf '{"spec":{"expirationSeconds":600}}') \
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/viewerkubeconfig | \
+    jq -r ".status.kubeconfig" | \
+    base64 -d
+```
+
+The examples for other programming languages are similar to [the above](#shootsadminkubeconfig-subresource) and can be adapted accordingly.
 
 ## OpenID Connect
 
@@ -90,11 +144,13 @@ spec:
 ```
 
 It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
+
 - The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
 When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+
 - for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
 - for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
 
-> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. 
+> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`.

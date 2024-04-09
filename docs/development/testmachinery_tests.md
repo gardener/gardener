@@ -10,6 +10,7 @@ This manual gives an overview about test machinery tests in Gardener.
 - [Add a new test](#add-a-new-test)
 - [Test Labels](#test-labels)
 - [Framework](#framework)
+- [Container Images](#container-images)
 
 ## Structure
 
@@ -26,14 +27,17 @@ The `test` directory is structured as follows:
 ```console
 test
 ├── e2e           # end-to-end tests (using provider-local)
-│  └── shoot
+│  ├── gardener
+│  │  ├── seed
+│  │  ├── shoot
+|  |  └── ...
+|  └──operator
 ├── framework     # helper code shared across integration, e2e and testmachinery tests
 ├── integration   # integration tests (envtests)
 │  ├── controllermanager
 │  ├── envtest
 │  ├── resourcemanager
 │  ├── scheduler
-│  ├── shootmaintenance
 │  └── ...
 └── testmachinery # test machinery tests
    ├── gardener   # actual test cases imported by suites/gardener
@@ -63,7 +67,7 @@ test
 A suite can be executed by running the suite definition with ginkgo's `focus` and `skip` flags 
 to control the execution of specific labeled test. See the example below:
 ```console
-go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
+go test -timeout=0 ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of teh current state if a test fails
@@ -95,7 +99,7 @@ var _ = ginkgo.Describe("my suite", func(){
 The newly created test can be tested by focusing the test with the default ginkgo focus `f.Beta().FCIt("my first test", func(ctx context.Context)`
 and running the shoot test suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
+go test -timeout=0 ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
@@ -106,7 +110,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
 ```
 or for the gardener suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
+go test -timeout=0 ./test/testmachinery/suites/gardener \
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
@@ -118,7 +122,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
 
 Alternatively, a test can be triggered by specifying a ginkgo focus regex with the name of the test e.g.
 ```
-go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
+go test -timeout=0 ./test/testmachinery/suites/gardener \
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -215,22 +219,14 @@ An example document for one test case would look like the following document:
 
 **Resources**
 
-The resources directory contains all the templates, helm config files (e.g., repositories.yaml, charts, and cache index which are downloaded upon the start of the test), shoot configs, etc.
+The resources directory contains templates used by the tests.
 
 ```console
 resources
-├── charts
-├── repository
-│   └── repositories.yaml
 └── templates
     ├── guestbook-app.yaml.tpl
     └── logger-app.yaml.tpl
 ```
-
-There are two special directories that are dynamically filled with the correct test files:
-
-- **charts** - the charts will be downloaded and saved in this directory
-- **repository** - contains the `repository.yaml` file that the target helm repos will be read from and the cache where the `stable-index.yaml` file will be created
 
 ### System Tests
 
@@ -249,7 +245,7 @@ Create Shoot test is meant to test shoot creation.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_creation \
+go test  -timeout=0 ./test/testmachinery/system/shoot_creation \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -278,7 +274,7 @@ Delete Shoot test is meant to test the deletion of a shoot.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.show-node-events \
+go test  -timeout=0 -ginkgo.v -ginkgo.show-node-events \
   ./test/testmachinery/system/shoot_deletion \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -294,7 +290,7 @@ If there is no available newer version, this test is a noop.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_update \
+go test  -timeout=0 ./test/testmachinery/system/shoot_update \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -309,9 +305,25 @@ The Gardener Full Reconcile test is meant to test if all shoots of a Gardener in
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/testmachinery/system/complete_reconcile \
+go test  -timeout=0 ./test/testmachinery/system/complete_reconcile \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -project-namespace=$PROJECT_NAMESPACE \
   -gardenerVersion=$GARDENER_VERSION # needed to validate the last acted gardener version of a shoot
 ```
+
+## Container Images
+
+Test machinery tests usually deploy a workload to the Shoot cluster as part of the test execution. When introducing a new container image, consider the following:
+
+- Make sure the container image is multi-arch.
+  - Tests are executed against `amd64` and `arm64` based worker Nodes.
+- Do not use container images from Docker Hub.
+  - Docker Hub has rate limiting (see [Download rate limit](https://docs.docker.com/docker-hub/download-rate-limit/)). For anonymous users, the rate limit is set to 100 pulls per 6 hours per IP address. In some fenced environments the network setup can be such that all egress connections are issued from single IP (or set of IPs). In such scenarios the allowed rate limit can be exhausted too fast. See https://github.com/gardener/gardener/issues/4160.
+  - Docker Hub registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
+  - Avoid manually copying Docker Hub images to Gardener GCR (`europe-docker.pkg.dev/gardener-project/releases/3rd/`). Use the existing prow job for this (see [Copy Images](https://github.com/gardener/ci-infra/tree/master/config/images)).
+  - If possible, use a Kubernetes e2e image (`registry.k8s.io/e2e-test-images/<image-name>`).
+    - In some cases, there is already a Kubernetes e2e image alternative of the Docker Hub image.
+      - For example, use `registry.k8s.io/e2e-test-images/busybox` instead of `europe-docker.pkg.dev/gardener-project/releases/3rd/busybox` or `docker.io/busybox`.
+    - Kubernetes has multiple test images - see https://github.com/kubernetes/kubernetes/tree/v1.27.0/test/images. `agnhost` is the most widely used image in Kubernetes e2e tests. It contains multiple testing related binaries inside such as `pause`, `logs-generator`, `serve-hostname`, `webhook` and others. See all of them in the [agnhost's README.md](https://github.com/kubernetes/kubernetes/blob/v1.27.0/test/images/agnhost/README.md).
+    - The list of available Kubernetes e2e images and tags can be checked in [this page](https://github.com/kubernetes/k8s.io/blob/main/registry.k8s.io/images/k8s-staging-e2e-test-images/images.yaml).

@@ -14,6 +14,7 @@ Resource Types:
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig</a>, 
 <a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
@@ -118,7 +119,7 @@ AuthenticationWebhook
 <td>
 <code>cacheTTL</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -126,109 +127,6 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>CacheTTL is the duration to cache responses from the webhook authenticator.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeconfigSecretName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Version is the API version to send and expect from the webhook.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.Authorization">Authorization
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>Authorization contains settings related to authorization.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>webhook</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.AuthorizationWebhook">
-AuthorizationWebhook
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Webhook contains settings related to an authorization webhook configuration.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.AuthorizationWebhook">AuthorizationWebhook
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.Authorization">Authorization</a>)
-</p>
-<p>
-<p>AuthorizationWebhook contains settings related to an authorization webhook configuration.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>cacheAuthorizedTTL</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CacheAuthorizedTTL is the duration to cache &lsquo;authorized&rsquo; responses from the webhook authorizer.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>cacheUnauthorizedTTL</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CacheUnauthorizedTTL is the duration to cache &lsquo;unauthorized&rsquo; responses from the webhook authorizer.</p>
 </td>
 </tr>
 <tr>
@@ -299,8 +197,8 @@ string
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
 </a>
 </em>
 </td>
@@ -430,6 +328,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation
 <p>ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>observability</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Observability contains information about the observability credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.DNS">DNS
@@ -449,19 +359,6 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>domain</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
-TODO(timuthy): Drop this after v1.74 has been released.</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>domains</code></br>
@@ -621,7 +518,7 @@ Storage
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -777,6 +674,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener
 </tr>
 <tr>
 <td>
+<code>lastOperation</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Garden.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>observedGeneration</code></br>
 <em>
 int64
@@ -798,6 +707,382 @@ Credentials
 <td>
 <em>(Optional)</em>
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+Resources which are encrypted by default will not appear here.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config">https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config</a> for more details.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Gardener">Gardener
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>Gardener contains the configuration settings for the Gardener components.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>clusterIdentity</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ClusterIdentity is the identity of the garden cluster. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerAPIServer</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">
+GardenerAPIServerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIServer contains configuration settings for the gardener-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerAdmissionController</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">
+GardenerAdmissionControllerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionController contains configuration settings for the gardener-admission-controller.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerControllerManager</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">
+GardenerControllerManagerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControllerManager contains configuration settings for the gardener-controller-manager.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gardenerScheduler</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">
+GardenerSchedulerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Scheduler contains configuration settings for the gardener-scheduler.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>admissionPlugins</code></br>
+<em>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
+and, if desired, the corresponding configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auditConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditConfig contains configuration settings for the audit of the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auditWebhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuditWebhook">
+AuditWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditWebhook contains settings related to an audit webhook configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logging</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging contains configuration for the log level and HTTP access logs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>requests</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests contains configuration for request-specific settings for the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>watchCacheSizes</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.
+Configuring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests
+and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server&rsquo;s watch cache&rsquo;s
+capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
+Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
+cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encryptionConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptionConfig contains customizable encryption configuration of the Gardener API server.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceAdmissionConfiguration</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">
+ResourceAdmissionConfiguration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">GardenerControllerManagerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>defaultProjectQuotas</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ProjectQuotaConfiguration">
+[]ProjectQuotaConfiguration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
+specified.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubernetesConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubernetesConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
+Defaults to info.</p>
 </td>
 </tr>
 </tbody>
@@ -852,6 +1137,49 @@ string
 <p>
 <p>HighAvailability specifies the configuration settings for high availability for a resource.</p>
 </p>
+<h3 id="operator.gardener.cloud/v1alpha1.Ingress">Ingress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>Ingress configures the Ingress specific settings of the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>domains</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
+to construct ingress URLs for system applications running in runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controller</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController
+</em>
+</td>
+<td>
+<p>Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig
 </h3>
 <p>
@@ -910,20 +1238,6 @@ Authentication
 <td>
 <em>(Optional)</em>
 <p>Authentication contains settings related to authentication.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>authorization</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.Authorization">
-Authorization
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Authorization contains settings related to authorization.</p>
 </td>
 </tr>
 <tr>
@@ -994,7 +1308,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig
 <td>
 <code>certificateSigningDuration</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
 </a>
 </em>
@@ -1126,6 +1440,52 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.ProjectQuotaConfiguration">ProjectQuotaConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">GardenerControllerManagerConfig</a>)
+</p>
+<p>
+<p>ProjectQuotaConfiguration defines quota configurations.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>config</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<p>Config is the quota specification used for the project set-up.
+Only v1.ResourceQuota resources are supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>projectSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProjectSelector is an optional setting to select the projects considered for quotas.
+Defaults to empty LabelSelector, which matches all projects.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Provider">Provider
 </h3>
 <p>
@@ -1157,6 +1517,140 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig</a>)
+</p>
+<p>
+<p>ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceLimit">
+[]ResourceLimit
+</a>
+</em>
+</td>
+<td>
+<p>Limits contains configuration for resources which are subjected to size limitations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>unrestrictedSubjects</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac">
+[]Kubernetes rbac/v1.Subject
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UnrestrictedSubjects contains references to users, groups, or service accounts which aren&rsquo;t subjected to any resource size limit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>operationMode</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">
+ResourceAdmissionWebhookMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OperationMode specifies the mode the webhooks operates in. Allowed values are &ldquo;block&rdquo; and &ldquo;log&rdquo;. Defaults to &ldquo;block&rdquo;.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">ResourceAdmissionWebhookMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.</p>
+</p>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceLimit">ResourceLimit
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceLimit contains settings about a kind and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiGroups</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>apiVersions</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIVersions is the version of the resource. WildcardAll represents all versions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Resources is the name of the resource this rule applies to. WildcardAll represents all resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<p>Size specifies the imposed limit.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster
 </h3>
 <p>
@@ -1178,11 +1672,13 @@ string
 <td>
 <code>ingress</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
+<a href="#operator.gardener.cloud/v1alpha1.Ingress">
+Ingress
+</a>
 </em>
 </td>
 <td>
-<p>Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.</p>
+<p>Ingress configures Ingress specific settings for the Garden cluster.</p>
 </td>
 </tr>
 <tr>
@@ -1223,6 +1719,20 @@ Settings
 <td>
 <em>(Optional)</em>
 <p>Settings contains certain settings for this cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volume</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Volume">
+Volume
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -1606,6 +2116,19 @@ ETCD
 </tr>
 <tr>
 <td>
+<code>gardener</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">
+Gardener
+</a>
+</em>
+</td>
+<td>
+<p>Gardener contains the configuration options for the Gardener control plane components.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>kubernetes</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.Kubernetes">
@@ -1642,6 +2165,37 @@ Networking
 </td>
 <td>
 <p>Networking contains information about cluster networking such as CIDRs, etc.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Volume">Volume
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>minimumSize</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.</p>
 </td>
 </tr>
 </tbody>

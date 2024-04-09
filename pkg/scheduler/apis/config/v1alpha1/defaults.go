@@ -15,13 +15,8 @@
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
-
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
 
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
@@ -33,28 +28,31 @@ func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 		obj.LogFormat = LogFormatJSON
 	}
 
-	if obj.Schedulers.BackupBucket == nil {
-		obj.Schedulers.BackupBucket = &BackupBucketSchedulerConfiguration{
-			ConcurrentSyncs: 2,
-		}
-	}
-
-	if obj.Schedulers.Shoot == nil {
-		obj.Schedulers.Shoot = &ShootSchedulerConfiguration{
-			ConcurrentSyncs: 5,
-			Strategy:        Default,
-		}
-	}
-	if len(obj.Schedulers.Shoot.Strategy) == 0 {
-		obj.Schedulers.Shoot.Strategy = Default
-	}
-
-	if obj.Schedulers.Shoot.ConcurrentSyncs == 0 {
-		obj.Schedulers.Shoot.ConcurrentSyncs = 5
-	}
-
 	if obj.LeaderElection == nil {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
+}
+
+// SetDefaults_SchedulerControllerConfiguration sets defaults for the configuration of the controllers.
+func SetDefaults_SchedulerControllerConfiguration(obj *SchedulerControllerConfiguration) {
+	if obj.BackupBucket == nil {
+		obj.BackupBucket = &BackupBucketSchedulerConfiguration{}
+	}
+
+	if obj.BackupBucket.ConcurrentSyncs == 0 {
+		obj.BackupBucket.ConcurrentSyncs = 2
+	}
+
+	if obj.Shoot == nil {
+		obj.Shoot = &ShootSchedulerConfiguration{}
+	}
+
+	if len(obj.Shoot.Strategy) == 0 {
+		obj.Shoot.Strategy = Default
+	}
+
+	if obj.Shoot.ConcurrentSyncs == 0 {
+		obj.Shoot.ConcurrentSyncs = 5
 	}
 }
 

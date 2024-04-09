@@ -16,11 +16,11 @@ package kernelconfig
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 
 	"k8s.io/component-helpers/node/util/sysctl"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -64,36 +64,35 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	// Content should be in well-defined order
-	keys := []string{}
+	keys := make([]string, 0, len(newData))
 	for key := range newData {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	fileContent := ""
 	for _, key := range keys {
 		fileContent += fmt.Sprintf("%s = %s\n", key, newData[key])
 	}
 
-	return []extensionsv1alpha1.Unit{
-			{
-				// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
-				Name:    "systemd-sysctl.service",
-				Command: pointer.String("restart"),
-				Enable:  pointer.Bool(true),
+	kernelSettingsFile := extensionsv1alpha1.File{
+		Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
+		Permissions: ptr.To[int32](0644),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Data: fileContent,
 			},
 		},
-		[]extensionsv1alpha1.File{
-			{
-				Path:        v1beta1constants.OperatingSystemConfigFilePathKernelSettings,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: fileContent,
-					},
-				},
-			},
-		},
-		nil
+	}
+
+	systemdSysctlUnit := extensionsv1alpha1.Unit{
+		// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time
+		Name:      "systemd-sysctl.service",
+		Command:   ptr.To(extensionsv1alpha1.CommandRestart),
+		Enable:    ptr.To(true),
+		FilePaths: []string{kernelSettingsFile.Path},
+	}
+
+	return []extensionsv1alpha1.Unit{systemdSysctlUnit}, []extensionsv1alpha1.File{kernelSettingsFile}, nil
 }
 
 // Do not change the encoding here because extensions might modify it!
@@ -114,6 +113,9 @@ var data = map[string]string{
 	// explicitly enable IPv4 forwarding for all interfaces by default if not enabled by the OS image already
 	"net.ipv4.conf.all.forwarding":     "1",
 	"net.ipv4.conf.default.forwarding": "1",
+	// explicitly enable IPv6 forwarding for all interfaces by default if not enabled by the OS image already
+	"net.ipv6.conf.all.forwarding":     "1",
+	"net.ipv6.conf.default.forwarding": "1",
 	// enable martian packets
 	"net.ipv4.conf.default.log_martians": "1",
 	// Increase the maximum total buffer-space allocatable

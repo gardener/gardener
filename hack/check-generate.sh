@@ -16,7 +16,7 @@
 
 set -e
 
-echo "> Generate / Vendor Check"
+echo "> Generate"
 
 makefile="$1/Makefile"
 check_branch="__check"
@@ -24,14 +24,13 @@ initialized_git=false
 stashed=false
 checked_out=false
 generated=false
-vendored=false
 
 function delete-check-branch {
   git rev-parse --verify "$check_branch" &>/dev/null && git branch -q -D "$check_branch" || :
 }
 
 function cleanup {
-  if [[ "$generated" == true ]] || [[ "$vendored" == true ]]; then
+  if [[ "$generated" == true ]]; then
     if ! clean_err="$(make -f "$makefile" clean && git reset --hard -q && git clean -qdf)"; then
       echo "Could not clean: $clean_err"
     fi
@@ -107,20 +106,35 @@ if which git &>/dev/null; then
     exit 1
   fi
 
-  echo ">> make revendor"
-  vendored=true
-  if ! out=$(make -f "$makefile" revendor 2>&1); then
-    echo "Error during calling make revendor: $out"
-    exit 1
-  fi
-  new_status="$(git status -s)"
+  repo_root="$(git rev-parse --show-toplevel)"
+  if [[ -d "$repo_root/vendor" ]]; then
+    echo ">> make revendor"
+    if ! out=$(make -f "$makefile" revendor 2>&1); then
+      echo "Error during calling make revendor: $out"
+      exit 1
+    fi
+    new_status="$(git status -s)"
 
-  if [[ "$old_status" != "$new_status" ]]; then
-    echo "make revendor needs to be run:"
-    echo "$new_status"
-    exit 1
+    if [[ "$old_status" != "$new_status" ]]; then
+      echo "make revendor needs to be run:"
+      echo "$new_status"
+      exit 1
+    fi
+  else
+    echo ">> make tidy"
+    if ! out=$(make -f "$makefile" tidy 2>&1); then
+      echo "Error during calling make tidy: $out"
+      exit 1
+    fi
+    new_status="$(git status -s)"
+
+    if [[ "$old_status" != "$new_status" ]]; then
+      echo "make tidy needs to be run:"
+      echo "$new_status"
+      exit 1
+    fi
   fi
 else
-  echo "No git detected, cannot run vendor check"
+  echo "No git detected, cannot run make check-generate"
 fi
 exit 0

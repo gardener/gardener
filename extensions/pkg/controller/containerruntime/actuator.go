@@ -29,6 +29,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.ContainerRuntime, *extensionscontroller.Cluster) error
 	// Delete the ContainerRuntime resource.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.ContainerRuntime, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the ContainerRuntime.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.ContainerRuntime, *extensionscontroller.Cluster) error
 	// Restore the ContainerRuntime resource.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.ContainerRuntime, *extensionscontroller.Cluster) error
 	// Migrate the ContainerRuntime resource.

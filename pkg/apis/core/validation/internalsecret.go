@@ -86,6 +86,7 @@ func ValidateInternalSecret(secret *core.InternalSecret) field.ErrorList {
 		if !usernameFieldExists && !passwordFieldExists {
 			allErrs = append(allErrs, field.Required(dataPath.Key(corev1.BasicAuthUsernameKey), ""))
 			allErrs = append(allErrs, field.Required(dataPath.Key(corev1.BasicAuthPasswordKey), ""))
+
 			break
 		}
 	case corev1.SecretTypeSSHAuth:

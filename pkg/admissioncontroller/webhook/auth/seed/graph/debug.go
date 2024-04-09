@@ -168,11 +168,11 @@ func link(v *vertex) string {
 	out := fmt.Sprintf(`<a href="%s">%s</a>:`, path, vertexTypes[v.vertexType])
 
 	if v.namespace != "" {
-		path += fmt.Sprintf("&namespace=%s", v.namespace)
+		path += "&namespace=" + v.namespace
 		out += fmt.Sprintf(`<a href="%s">%s</a>/`, path, v.namespace)
 	}
 
-	path += fmt.Sprintf("&name=%s", v.name)
+	path += "&name=" + v.name
 	out += fmt.Sprintf(`<a href="%s">%s</a>`, path, v.name)
 
 	return out

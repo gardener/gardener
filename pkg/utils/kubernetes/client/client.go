@@ -24,9 +24,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 )
@@ -225,7 +226,7 @@ func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t timeutils.Ops) 
 		op.ApplyToDelete(deleteOp)
 	}
 
-	gracePeriod := time.Second * time.Duration(pointer.Int64Deref(deleteOp.GracePeriodSeconds, 0))
+	gracePeriod := time.Second * time.Duration(ptr.Deref(deleteOp.GracePeriodSeconds, 0))
 	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(t.Now())
 }
 
@@ -401,4 +402,54 @@ var defaultCleanerOps = NewCleanOps(DefaultGoneEnsurer(), DefaultCleaner())
 // DefaultCleanOps are the default CleanOps.
 func DefaultCleanOps() CleanOps {
 	return defaultCleanerOps
+}
+
+// ApplyToObjects applies the passed function to all the objects in the list.
+func ApplyToObjects(ctx context.Context, objectList client.ObjectList, fn func(ctx context.Context, object client.Object) error) error {
+	taskFns := make([]flow.TaskFn, 0, meta.LenList(objectList))
+	if err := meta.EachListItem(objectList, func(obj runtime.Object) error {
+		object, ok := obj.(client.Object)
+		if !ok {
+			return fmt.Errorf("expected client.Object but got %T", obj)
+		}
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return fn(ctx, object)
+		})
+		return nil
+	}); err != nil {
+		return err
+	}
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// ApplyToObjectKinds applies the passed function to all the object lists for the passed kinds.
+func ApplyToObjectKinds(ctx context.Context, fn func(kind string, objectList client.ObjectList) flow.TaskFn, kindToObjectList map[string]client.ObjectList) error {
+	var taskFns []flow.TaskFn
+	for kind, objectList := range kindToObjectList {
+		taskFns = append(taskFns, fn(kind, objectList))
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// ForceDeleteObjects lists and finalizes all the objects in the passed namespace and deletes them.
+func ForceDeleteObjects(c client.Client, namespace string, objectList client.ObjectList, opts ...client.ListOption) flow.TaskFn {
+	return func(ctx context.Context) error {
+		listOpts := &client.ListOptions{Namespace: namespace}
+		listOpts.ApplyOptions(opts)
+		if err := c.List(ctx, objectList, listOpts); err != nil {
+			return err
+		}
+
+		return ApplyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
+			if err := c.Delete(ctx, object); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			return controllerutils.RemoveAllFinalizers(ctx, c, object)
+		})
+	}
 }

@@ -15,42 +15,21 @@
 package kubelet
 
 import (
-	"bytes"
 	_ "embed"
 	"strings"
-	"text/template"
 
-	"github.com/Masterminds/semver"
-	"github.com/Masterminds/sprig"
-	"k8s.io/utils/pointer"
+	"github.com/Masterminds/semver/v3"
+	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
 )
-
-var (
-	tplNameHealthMonitor = "health-monitor"
-	//go:embed templates/scripts/health-monitor.tpl.sh
-	tplContentHealthMonitor string
-	tplHealthMonitor        *template.Template
-)
-
-func init() {
-	var err error
-	tplHealthMonitor, err = template.
-		New(tplNameHealthMonitor).
-		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentHealthMonitor)
-	if err != nil {
-		panic(err)
-	}
-}
 
 const (
 	// UnitName is the name of the kubelet service.
@@ -67,11 +46,6 @@ const (
 	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
 	// PathKubeletDirectory is the path for the kubelet's directory.
 	PathKubeletDirectory = "/var/lib/kubelet"
-	// PathScriptCopyKubernetesBinary is the path for the script copying downloaded Kubernetes binaries.
-	PathScriptCopyKubernetesBinary = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
-	// PathNodeName is the path for a file containing the name of the Node registered by kubelet for the respective
-	// machine.
-	PathNodeName = PathKubeletDirectory + "/nodename"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -88,33 +62,51 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	const pathHealthMonitor = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-kubelet"
-
-	var healthMonitorScript bytes.Buffer
-	if err := tplHealthMonitor.Execute(&healthMonitorScript, map[string]string{
-		"pathBinaries":              v1beta1constants.OperatingSystemConfigFilePathBinaries,
-		"pathKubeletKubeconfigReal": PathKubeconfigReal,
-		"pathNodeName":              PathNodeName,
-	}); err != nil {
-		return nil, nil, err
-	}
-
 	fileContentKubeletConfig, err := getFileContentKubeletConfig(ctx.KubernetesVersion, ctx.ClusterDNSAddress, ctx.ClusterDomain, ctx.KubeletConfigParameters)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.Images[images.ImageNamePauseContainer], ctx.KubeletCLIFlags)
+	kubeletFiles := []extensionsv1alpha1.File{
+		{
+			Path:        PathKubeletCACert,
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "b64",
+					Data:     utils.EncodeBase64(ctx.KubeletCABundle),
+				},
+			},
+		},
+		{
+			Path:        PathKubeletConfig,
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: fileContentKubeletConfig,
+			},
+		},
+		{
+			Path:        v1beta1constants.OperatingSystemConfigFilePathBinaries + "/kubelet",
+			Permissions: ptr.To[int32](0755),
+			Content: extensionsv1alpha1.FileContent{
+				ImageRef: &extensionsv1alpha1.FileContentImageRef{
+					Image:           ctx.Images[imagevector.ImageNameHyperkube].String(),
+					FilePathInImage: "/kubelet",
+				},
+			},
+		},
+	}
 
-	return []extensionsv1alpha1.Unit{
-			{
-				Name:    UnitName,
-				Command: pointer.String("start"),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
+
+	kubeletUnit := extensionsv1alpha1.Unit{
+		Name:    UnitName,
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
-` + unitConfigAfterCRI(ctx.CRIName) + `
+After=` + containerd.UnitName + `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -122,56 +114,12 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-			},
-			{
-				Name:    "kubelet-monitor.service",
-				Command: pointer.String("start"),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
-Description=Kubelet-monitor daemon
-After=` + UnitName + `
-[Install]
-WantedBy=multi-user.target
-[Service]
-Restart=always
-EnvironmentFile=/etc/environment
-ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl
-ExecStart=` + pathHealthMonitor),
-			},
-		},
-		[]extensionsv1alpha1.File{
-			{
-				Path:        PathKubeletCACert,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(ctx.KubeletCABundle),
-					},
-				},
-			},
-			{
-				Path:        PathKubeletConfig,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: fileContentKubeletConfig,
-				},
-			},
-			{
-				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-					},
-				},
-			},
-		},
-		nil
+		FilePaths: extensionsv1alpha1helper.FilePathsFrom(kubeletFiles),
+	}
+
+	return []extensionsv1alpha1.Unit{kubeletUnit}, kubeletFiles, nil
 }
 
 func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {
@@ -182,12 +130,4 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 	)
 
 	return kcCodec.Encode(kubeletConfig, configFCI.Encoding)
-}
-
-func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		return `After=` + containerd.UnitName
-	}
-	return `After=` + docker.UnitName + `
-Wants=docker.socket rpc-statd.service`
 }

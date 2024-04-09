@@ -83,17 +83,3 @@ func ValidateBackupEntrySpecUpdate(new, old *extensionsv1alpha1.BackupEntrySpec,
 
 	return allErrs
 }
-
-// ValidateBackupEntryStatus validates the status of a BackupEntry object.
-func ValidateBackupEntryStatus(status *extensionsv1alpha1.BackupEntryStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateBackupEntryStatusUpdate validates the status field of a BackupEntry object before an update.
-func ValidateBackupEntryStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.BackupEntryStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}

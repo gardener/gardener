@@ -23,10 +23,10 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -42,9 +42,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("handler", func() {
@@ -71,11 +71,10 @@ var _ = Describe("handler", func() {
 			request.Operation = admissionv1.Delete
 
 			var err error
-			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+			decoder = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = &Handler{Logger: log, SourceReader: c}
-			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+			handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 		})
 
 		AfterEach(func() {
@@ -334,13 +333,13 @@ var _ = Describe("handler", func() {
 
 func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
-	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
 func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(BeEquivalentTo(http.StatusForbidden), optionalDescription...)
-	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
 func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {

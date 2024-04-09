@@ -179,11 +179,14 @@ func getFromValues(values interface{}, keys ...interface{}) (interface{}, error)
 	if len(keys) == 0 {
 		return values, nil
 	}
+
 	var ok bool
+
 	switch keys[0].(type) {
 	case string:
 		key := keys[0].(string)
 		var m map[string]interface{}
+
 		if m, ok = values.(map[string]interface{}); !ok {
 			return nil, fmt.Errorf("cannot use key '%s' with a non-map value", key)
 		}
@@ -192,8 +195,11 @@ func getFromValues(values interface{}, keys ...interface{}) (interface{}, error)
 		}
 		return getFromValues(m[key], keys[1:]...)
 	case int:
-		index := keys[0].(int)
-		var s []interface{}
+		var (
+			index = keys[0].(int)
+			s     []interface{}
+		)
+
 		if s, ok = values.([]interface{}); !ok {
 			return nil, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}
@@ -216,13 +222,17 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 	if len(keys) == 0 {
 		return values, nil
 	}
+
 	var ok bool
+
 	switch keys[0].(type) {
 	case string:
 		key := keys[0].(string)
+
 		if values == nil {
 			values = map[string]interface{}{}
 		}
+
 		var m map[string]interface{}
 		if m, ok = values.(map[string]interface{}); !ok {
 			return values, fmt.Errorf("cannot use key '%s' with a non-map value", key)
@@ -239,10 +249,13 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 		return m, nil
 	case int:
 		index := keys[0].(int)
+
 		if values == nil {
 			values = []interface{}{}
 		}
+
 		var s []interface{}
+
 		if s, ok = values.([]interface{}); !ok {
 			return values, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}
@@ -264,6 +277,7 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 				if err != nil {
 					return s, err
 				}
+
 				s = append(s, x)
 			}
 		} else {
@@ -287,11 +301,14 @@ func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, err
 	if len(keys) == 0 {
 		return values, nil
 	}
+
 	var ok bool
+
 	switch keys[0].(type) {
 	case string:
 		key := keys[0].(string)
 		var m map[string]interface{}
+
 		if m, ok = values.(map[string]interface{}); !ok {
 			return values, fmt.Errorf("cannot use key '%s' with a non-map value", key)
 		}
@@ -310,6 +327,7 @@ func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, err
 	case int:
 		index := keys[0].(int)
 		var s []interface{}
+
 		if s, ok = values.([]interface{}); !ok {
 			return values, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}

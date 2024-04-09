@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -46,7 +45,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -60,10 +58,10 @@ import (
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localingress "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
+	localoperatingsystemconfig "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -88,14 +86,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	var (
 		restOpts = &extensionscmdcontroller.RESTOptions{}
 		mgrOpts  = &extensionscmdcontroller.ManagerOptions{
-			LeaderElection:             true,
-			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
-			LeaderElectionID:           extensionscmdcontroller.LeaderElectionNameID(local.Name),
-			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
-			WebhookServerPort:          443,
-			WebhookCertDir:             "/tmp/gardener-extensions-cert",
-			MetricsBindAddress:         ":8080",
-			HealthBindAddress:          ":8081",
+			LeaderElection:          true,
+			LeaderElectionID:        extensionscmdcontroller.LeaderElectionNameID(local.Name),
+			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			WebhookServerPort:       443,
+			WebhookCertDir:          "/tmp/gardener-extensions-cert",
+			MetricsBindAddress:      ":8080",
+			HealthBindAddress:       ":8081",
 		}
 		generalOpts = &extensionscmdcontroller.GeneralOptions{}
 
@@ -191,7 +188,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: fmt.Sprintf("%s-controller-manager", local.Name),
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			seedName := os.Getenv("SEED_NAME")
 
 			if err := aggOption.Complete(); err != nil {
@@ -252,10 +249,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
-			operatingSystemConfigCtrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
+			operatingSystemConfigCtrlOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.Controller)
 			ingressCtrlOpts.Completed().Apply(&localingress.DefaultAddOptions)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
+			localworker.DefaultAddOptions.GardenCluster = gardenCluster
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
@@ -263,14 +261,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
-
-			// TODO(rfranzke): Remove the GardenletManagesMCM fields as soon as the general options no longer support the
-			//  GardenletManagesMCM field.
-			localworker.DefaultAddOptions.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
-			controlplanewebhook.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
-			localhealthcheck.GardenletManagesMCM = generalOpts.Completed().GardenletManagesMCM
 
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 				return fmt.Errorf("could not add readycheck for informers: %w", err)
@@ -282,7 +274,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
-			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr)
+			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr, nil)
 			if err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
@@ -322,17 +314,24 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 // verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is
 // running on, but doesn't do anything useful with the objects. We do this for verifying the extension's garden access
 // in e2e tests. If something fails in this runnable, the extension will crash loop.
-func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Reader, seedName string) error {
-	log = log.WithName("garden-reader").WithValues("seedName", seedName)
+func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Client, seedName string) error {
+	log = log.WithName("garden-access").WithValues("seedName", seedName)
 
-	log.Info("Getting Seed")
+	log.Info("Reading Seed")
+	// NB: reading seeds is allowed by gardener.cloud:system:read-global-resources (bound to all authenticated users)
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
 		return fmt.Errorf("failed reading seed %s: %w", seedName, err)
 	}
 
-	log.Info("Garden access successfully verified")
+	log.Info("Annotating Seed")
+	patch := client.MergeFrom(seed.DeepCopy())
+	metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "provider-local-e2e-test-garden-access", time.Now().UTC().Format(time.RFC3339))
+	if err := c.Patch(ctx, seed, patch); err != nil {
+		return fmt.Errorf("failed annotating seed %s: %w", seedName, err)
+	}
 
+	log.Info("Garden access successfully verified")
 	return nil
 }
 

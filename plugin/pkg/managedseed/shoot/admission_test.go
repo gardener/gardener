@@ -23,11 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
@@ -43,7 +44,7 @@ var _ = Describe("Shoot", func() {
 	Describe("#Validate", func() {
 		var (
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
-			shoot                *core.Shoot
+			shoot                *gardencorev1beta1.Shoot
 			coreInformerFactory  gardencoreinformers.SharedInformerFactory
 			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *Shoot
@@ -57,13 +58,13 @@ var _ = Describe("Shoot", func() {
 				},
 			}
 
-			shoot = &core.Shoot{
+			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 				},
-				Spec: core.ShootSpec{
-					SeedName: pointer.String(name),
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: ptr.To(name),
 				},
 			}
 
@@ -71,10 +72,10 @@ var _ = Describe("Shoot", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
-			admissionHandler.SetSeedManagementClientset(seedManagementClient)
+			admissionHandler.SetSeedManagementClientSet(seedManagementClient)
 		})
 
 		Context("delete", func() {
@@ -86,7 +87,7 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("should forbid the ManagedSeed deletion if a Shoot scheduled on its Seed exists", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 				err := admissionHandler.Validate(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).To(BeForbiddenError())
@@ -113,17 +114,17 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("should forbid multiple ManagedSeed deletion if a Shoots scheduled on any of their Seeds exists", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
 				})
-				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 				err := admissionHandler.Validate(context.TODO(), getAllManagedSeedAttributes(managedSeed.Namespace), nil)
 				Expect(err).To(BeForbiddenError())
 			})
 
 			It("should allow multiple ManagedSeed deletion if no Shoots scheduled on any of their Seeds exist", func() {
-				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
 				})
 
@@ -140,7 +141,7 @@ var _ = Describe("Shoot", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement(PluginName))
+			Expect(registered).To(ContainElement("ManagedSeedShoot"))
 		})
 	})
 
@@ -165,8 +166,8 @@ var _ = Describe("Shoot", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
+			admissionHandler.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

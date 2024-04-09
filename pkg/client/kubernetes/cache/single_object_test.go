@@ -19,21 +19,21 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
 var _ = Describe("SingleObject", func() {
@@ -42,10 +42,10 @@ var _ = Describe("SingleObject", func() {
 		ctx       context.Context
 		ctrl      *gomock.Controller
 
-		obj    *corev1.Secret
-		gvk    = corev1.SchemeGroupVersion.WithKind("Secret")
-		key    client.ObjectKey
-		resync = pointer.Duration(time.Second)
+		obj        *corev1.Secret
+		gvk        = corev1.SchemeGroupVersion.WithKind("Secret")
+		key        client.ObjectKey
+		syncPeriod = ptr.To(time.Second)
 
 		mockCache         *mockcache.MockCache
 		singleObjectCache cache.Cache
@@ -71,15 +71,15 @@ var _ = Describe("SingleObject", func() {
 
 		mockCache = mockcache.NewMockCache(ctrl)
 		newCacheFunc := func(_ *rest.Config, opts cache.Options) (cache.Cache, error) {
-			Expect(opts.Namespace).To(Equal(obj.Namespace))
-			Expect(opts.DefaultSelector).To(Equal(cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{"metadata.name": obj.Name})}))
-			Expect(opts.SelectorsByObject).To(BeNil())
-			Expect(opts.Resync).To(Equal(resync))
+			Expect(opts.DefaultNamespaces).To(HaveKeyWithValue(obj.Namespace, cache.Config{}))
+			Expect(opts.DefaultFieldSelector).To(Equal(fields.SelectorFromSet(fields.Set{"metadata.name": obj.Name})))
+			Expect(opts.ByObject).To(BeNil())
+			Expect(opts.SyncPeriod).To(Equal(syncPeriod))
 			return mockCache, nil
 		}
 		clock = testclock.NewFakeClock(time.Now())
 
-		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{Resync: resync}, gvk, clock, maxIdleTime, 50*time.Millisecond)
+		singleObjectCache = NewSingleObject(logr.Discard(), nil, newCacheFunc, cache.Options{SyncPeriod: syncPeriod}, gvk, clock, maxIdleTime, 50*time.Millisecond)
 
 		var cancel context.CancelFunc
 		parentCtx, cancel = context.WithCancel(context.Background())
@@ -219,7 +219,7 @@ func testCache(
 
 	By("cache is re-created")
 	startChan2 := make(chan struct{})
-	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+	mockCache.EXPECT().Start(gomock.Any()).DoAndReturn(func(_ context.Context) error {
 		startChan2 <- struct{}{}
 		return nil
 	})

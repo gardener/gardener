@@ -15,7 +15,7 @@
 package helper
 
 import (
-	"fmt"
+	"errors"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +49,7 @@ type defaultConditionBuilder struct {
 // NewConditionBuilder returns a ConditionBuilder for a specific condition.
 func NewConditionBuilder(conditionType gardencorev1beta1.ConditionType) (ConditionBuilder, error) {
 	if conditionType == "" {
-		return nil, fmt.Errorf("conditionType cannot be empty")
+		return nil, errors.New("conditionType cannot be empty")
 	}
 
 	return &defaultConditionBuilder{
@@ -155,6 +155,7 @@ func (b *defaultConditionBuilder) buildMessage() string {
 		// without specifying a message we want to retain this message instead of toggling to `b.old.Message == ""`.
 		return "No message given."
 	}
+
 	if b.old.Message == "" {
 		return "The condition has been initialized but its semantic check has not been performed yet."
 	}

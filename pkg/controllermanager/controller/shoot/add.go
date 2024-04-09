@@ -56,9 +56,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 		return fmt.Errorf("failed adding quota reconciler: %w", err)
 	}
 
-	if err := (&reference.Reconciler{
-		Config: *cfg.Controllers.ShootReference,
-	}).AddToManager(mgr); err != nil {
+	if err := reference.AddToManager(mgr, *cfg.Controllers.ShootReference); err != nil {
 		return fmt.Errorf("failed adding reference reconciler: %w", err)
 	}
 

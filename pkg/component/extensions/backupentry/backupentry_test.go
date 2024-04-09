@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,11 +38,11 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#BackupEntry", func() {
@@ -105,10 +105,6 @@ var _ = Describe("#BackupEntry", func() {
 		}
 
 		expected = &extensionsv1alpha1.BackupEntry{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-				Kind:       extensionsv1alpha1.BackupEntryResource,
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Annotations: map[string]string{
@@ -282,7 +278,7 @@ var _ = Describe("#BackupEntry", func() {
 			// Let's **please** just stop writing such tests with mocks and use a fake client or envtest instead.
 			// Testing with mocks does not only assert that the tested unit fulfills its task but also
 			// asserts that specific calls are made in order to fulfill its task. However, we/the caller don't
-			// care about what helper funcs are used internally or whether it uses update or patch to fullfill
+			// care about what helper funcs are used internally or whether it uses update or patch to fulfill
 			// the task, as long as the result is what we expect (which is what should be asserted instead).
 			defer test.WithVars(
 				&extensions.TimeNow, mockNow.Do,
@@ -303,7 +299,7 @@ var _ = Describe("#BackupEntry", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})

@@ -28,7 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 		}
-		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, pointer.Int64(3600))
+		token, err := framework.CreateTokenForServiceAccount(ctx, f.ShootClient, serviceAccount, ptr.To[int64](3600))
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Get the pods matching the logging-pod label")
@@ -103,7 +103,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 					ctx,
 					pod.Namespace,
 					pod.Name,
-					"net-curl",
+					"pause",
 					fmt.Sprintf("curl -k -v -XGET  -H \"Accept: application/json, */*\" -H \"Authorization: Bearer %s\" \"%s/api/v1/namespaces/%s/pods/%s/log?container=logger\"", token, f.Shoot.Status.AdvertisedAddresses[0].URL, pod.Namespace, pod.Name),
 				)
 				if apierrors.IsNotFound(err) {
@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				}
 				time.Sleep(1 * time.Second)
 			}
-			Expect(i < maxIterations).To(Equal(true))
+			Expect(i).To(BeNumerically("<", maxIterations))
 		}
 
 	}, testTimeout, framework.WithCAfterTest(func(ctx context.Context) {
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 
 	f.Beta().CIt("should copy data to pod", func(ctx context.Context) {
 		ginkgo.By("Request kubeconfig with cluster-admin privileges")
-		kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, f.Shoot, pointer.Int64(3600))
+		kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, f.GardenClient, f.Shoot, ptr.To[int64](3600))
 		framework.ExpectNoError(err)
 
 		testSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: copyDeployment, Namespace: namespace}}
@@ -185,7 +185,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		for _, pod := range pods.Items {
 			log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
-			ginkgo.By(fmt.Sprintf("Copy data to target-container in pod %s", pod.Name))
+			ginkgo.By("Copy data to target-container in pod " + pod.Name)
 			reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "source-container", fmt.Sprintf("/data/kubectl cp /data/data %s/%s:/data/data -c target-container", pod.Namespace, pod.Name))
 			if apierrors.IsNotFound(err) {
 				log.Error(err, "Aborting as pod was not found anymore")

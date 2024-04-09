@@ -21,7 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -77,21 +77,19 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	}
 
 	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
-	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIP)
+	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIPs)
 	return nil
 }
 
-// injectDNSConfig changes the `.spec.dnsPolicy` and `.spec.dnsConfig` in the provided `podSpec`. Bascially, we
+// injectDNSConfig changes the `.spec.dnsPolicy` and `.spec.dnsConfig` in the provided `podSpec`. Basically, we
 // configure the same options and search domains as the Kubernetes default behaviour. The only difference is that we use
 // the gardener-extension-provider-local-coredns instead of the cluster's default DNS server. This is because this
 // extension coredns can resolve the local domains (local.gardener.cloud). It otherwise forwards the traffic to the
 // cluster's default DNS server.
-func injectDNSConfig(podSpec *corev1.PodSpec, namespace, coreDNSClusterIP string) {
+func injectDNSConfig(podSpec *corev1.PodSpec, namespace string, coreDNSClusterIPs []string) {
 	podSpec.DNSPolicy = corev1.DNSNone
 	podSpec.DNSConfig = &corev1.PodDNSConfig{
-		Nameservers: []string{
-			coreDNSClusterIP,
-		},
+		Nameservers: coreDNSClusterIPs,
 		Searches: []string{
 			fmt.Sprintf("%s.svc.%s", namespace, v1beta1.DefaultDomain),
 			"svc." + v1beta1.DefaultDomain,
@@ -99,7 +97,7 @@ func injectDNSConfig(podSpec *corev1.PodSpec, namespace, coreDNSClusterIP string
 		},
 		Options: []corev1.PodDNSConfigOption{{
 			Name:  "ndots",
-			Value: pointer.String("5"),
+			Value: ptr.To("5"),
 		}},
 	}
 }

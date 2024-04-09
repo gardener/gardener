@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/util/index"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,7 +68,7 @@ var _ = Describe("Index", func() {
 		It("should return spec.secretBindingName for Shoot", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SecretBindingName: pointer.String("foo"),
+					SecretBindingName: ptr.To("foo"),
 				},
 			}
 

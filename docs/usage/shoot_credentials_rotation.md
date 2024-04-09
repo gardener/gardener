@@ -11,7 +11,7 @@ This page explains how the varieties of credentials can be rotated so that the c
 End-users must provide credentials such that Gardener and Kubernetes controllers can communicate with the respective cloud provider APIs in order to perform infrastructure operations.
 For example, Gardener uses them to setup and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
 
-Depending on the cloud provider, the required [data keys of the `Secret` differ](https://github.com/gardener/gardener/blob/master/example/70-secret-provider.yaml).
+Depending on the cloud provider, the required [data keys of the `Secret` differ](../../example/70-secret-provider.yaml).
 Please consult the documentation of the respective provider extension documentation to get to know the concrete data keys (e.g., [this document for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#provider-secret-data)).
 
 **It is the responsibility of the end-user to regularly rotate those credentials.**
@@ -87,12 +87,12 @@ Gardener generates several certificate authorities (CAs) to ensure secured commu
 Most of those CAs are used for internal communication (e.g., `kube-apiserver` talks to etcd, `vpn-shoot` talks to the `vpn-seed-server`, `kubelet` talks to `kube-apiserver`).
 However, there is also the "cluster CA" which is part of all `kubeconfig`s and used to sign the server certificate exposed by the `kube-apiserver`.
 
-Gardener populates a `Secret` with the name `<shoot-name>.ca-cluster` in the project namespace in the garden cluster which contains the following data keys:
+Gardener populates a `ConfigMap` with the name `<shoot-name>.ca-cluster` in the project namespace in the garden cluster which contains the following data keys:
 
 - `ca.crt`: the CA bundle of the cluster
 
 This bundle contains one or multiple CAs which are used for signing serving certificates of the `Shoot`'s API server.
-Hence, the certificates contained in this `Secret` can be used to verify the API server's identity when communicating with its public endpoint (e.g., as `certificate-authority-data` in a `kubeconfig`).
+Hence, the certificates contained in this `ConfigMap` can be used to verify the API server's identity when communicating with its public endpoint (e.g., as `certificate-authority-data` in a `kubeconfig`).
 This is the same certificate that is also contained in the `kubeconfig`'s `certificate-authority-data` field.
 
 > `Shoot`s created with Gardener >= v1.45 have a dedicated client CA which verifies the legitimacy of client certificates. For older `Shoot`s, the client CA is equal to the cluster CA. With the first CA rotation, such clusters will get a dedicated client CA as well.
@@ -121,7 +121,7 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 This will trigger a `Shoot` reconciliation and performs stage one.
 After it is completed, the `.status.credentials.rotation.certificateAuthorities.phase` is set to `Prepared`.
 
-Now you must update all API clients outside the cluster (such as the `kubeconfig`s on developer machines) to use the newly issued CA bundle in the `<shoot-name>.ca-cluster` `Secret`.
+Now you must update all API clients outside the cluster (such as the `kubeconfig`s on developer machines) to use the newly issued CA bundle in the `<shoot-name>.ca-cluster` `ConfigMap`.
 Please also note that client certificates must be re-issued now.
 
 After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-ca-complete` operation:
@@ -192,7 +192,7 @@ There is no automatic rotation and **it is the responsibility of the end-user to
 The rotation happens in three stages:
 
 - In stage one, a new encryption key is created and added to the bundle (together with the old encryption key).
-- In stage two, all `Secret`s in the cluster are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
+- In stage two, all `Secret`s in the cluster and resources configured in the `spec.kubernetes.kubeAPIServer.encryptionConfig` of the Shoot (see [ETCD Encryption Config](./etcd_encryption_config.md)) are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
 - In stage three, the old encryption is dropped from the bundle.
 
 Technically, the `Preparing` phase indicates the stages one and two.

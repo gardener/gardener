@@ -16,6 +16,7 @@ package tokenrequestor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -29,7 +30,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -119,8 +120,17 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
 	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
 
+	var labels map[string]string
+	if labelsJSON := secret.Annotations[resourcesv1alpha1.ServiceAccountLabels]; labelsJSON != "" {
+		labels = make(map[string]string)
+		if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
+			return nil, fmt.Errorf("failed unmarshaling service account labels from secret annotation %q (%s): %w", resourcesv1alpha1.ServiceAccountLabels, labelsJSON, err)
+		}
+	}
+
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.Labels = labels
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		return nil
 	}); err != nil {
 		return nil, err
@@ -292,6 +302,7 @@ func updateTokenInSecretData(log logr.Logger, data map[string][]byte, token stri
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
 		log.Info("Writing token to data")
 		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
+
 		return nil
 	}
 

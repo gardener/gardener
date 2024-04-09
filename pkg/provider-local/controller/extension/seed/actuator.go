@@ -21,7 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -50,7 +50,7 @@ func NewActuator(mgr manager.Manager) extension.Actuator {
 }
 
 // Reconcile the extension resource.
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.Namespace
 	seedResources, err := getSeedResources(namespace)
 	if err != nil {
@@ -63,12 +63,13 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extension
 
 	twoMinutes := 2 * time.Minute
 	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
+
 	defer cancelSeedCtx()
 	return managedresources.WaitUntilHealthy(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed)
 }
 
 // Delete the extension resource.
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.GetNamespace()
 	twoMinutes := 2 * time.Minute
 
@@ -80,6 +81,11 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1
 	}
 
 	return managedresources.WaitUntilDeleted(timeoutSeedCtx, a.client, namespace, ManagedResourceNamesSeed)
+}
+
+// ForceDelete force deletes the extension resource.
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
+	return a.Delete(ctx, log, ex)
 }
 
 // Migrate the extension resource.
@@ -107,7 +113,7 @@ func getSeedResources(namespace string) (map[string][]byte, error) {
 				Namespace: namespace,
 				Labels:    getLabels(),
 			},
-			AutomountServiceAccountToken: pointer.Bool(false),
+			AutomountServiceAccountToken: ptr.To(false),
 		},
 	)
 }

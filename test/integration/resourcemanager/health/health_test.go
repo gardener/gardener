@@ -15,12 +15,14 @@
 package health_test
 
 import (
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,13 +60,13 @@ var _ = Describe("Health controller tests", func() {
 
 	Context("different class", func() {
 		BeforeEach(func() {
-			managedResource.Spec.Class = pointer.String("foo")
+			managedResource.Spec.Class = ptr.To("foo")
 		})
 
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -102,7 +104,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -145,7 +147,7 @@ var _ = Describe("Health controller tests", func() {
 
 		It("does not touch ManagedResource if it is still being applied", func() {
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionProgressing)
+			setCondition(managedResource, gardencorev1beta1.ConditionProgressing)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
@@ -159,7 +161,7 @@ var _ = Describe("Health controller tests", func() {
 
 		It("does not touch ManagedResource if it failed to be applied", func() {
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionFalse)
+			setCondition(managedResource, gardencorev1beta1.ConditionFalse)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
@@ -176,7 +178,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -320,7 +322,7 @@ var _ = Describe("Health controller tests", func() {
 		JustBeforeEach(func() {
 			By("Set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			setCondition(managedResource, gardencorev1beta1.ConditionTrue)
 			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 		})
 
@@ -368,9 +370,14 @@ var _ = Describe("Health controller tests", func() {
 
 		Context("with existing resources", func() {
 			var (
-				deployment  *appsv1.Deployment
-				statefulSet *appsv1.StatefulSet
-				daemonSet   *appsv1.DaemonSet
+				deployment   *appsv1.Deployment
+				pod          *corev1.Pod
+				statefulSet  *appsv1.StatefulSet
+				daemonSet    *appsv1.DaemonSet
+				prometheus   *monitoringv1.Prometheus
+				alertManager *monitoringv1.Alertmanager
+				cert         *certv1alpha1.Certificate
+				issuer       *certv1alpha1.Issuer
 			)
 
 			JustBeforeEach(func() {
@@ -380,6 +387,9 @@ var _ = Describe("Health controller tests", func() {
 				Expect(testClient.Create(ctx, deployment)).To(Succeed())
 				deployment.Status = *deploymentStatus
 				Expect(testClient.Status().Update(ctx, deployment)).To(Succeed())
+
+				pod = generatePodForDeployment(deployment)
+				Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 				statefulSet = generateStatefulSetTestResource(managedResource.Name)
 				statefulSetStatus := statefulSet.Status.DeepCopy()
@@ -393,11 +403,40 @@ var _ = Describe("Health controller tests", func() {
 				daemonSet.Status = *daemonSetStatus
 				Expect(testClient.Status().Update(ctx, daemonSet)).To(Succeed())
 
+				prometheus = generatePrometheusTestResource(managedResource.Name)
+				prometheusStatus := prometheus.Status.DeepCopy()
+				Expect(testClient.Create(ctx, prometheus)).To(Succeed())
+				prometheus.Status = *prometheusStatus
+				Expect(testClient.Status().Update(ctx, prometheus)).To(Succeed())
+
+				alertManager = generateAlertmanagerTestResource(managedResource.Name)
+				alertManagerStatus := alertManager.Status.DeepCopy()
+				Expect(testClient.Create(ctx, alertManager)).To(Succeed())
+				alertManager.Status = *alertManagerStatus
+				Expect(testClient.Status().Update(ctx, alertManager)).To(Succeed())
+
+				cert = generateCertificateTestResource(managedResource.Name)
+				certStatus := cert.Status.DeepCopy()
+				Expect(testClient.Create(ctx, cert)).To(Succeed())
+				cert.Status = *certStatus
+				Expect(testClient.Status().Update(ctx, cert)).To(Succeed())
+
+				issuer = generateCertificateIssuerTestResource(managedResource.Name)
+				issuerStatus := issuer.Status.DeepCopy()
+				Expect(testClient.Create(ctx, issuer)).To(Succeed())
+				issuer.Status = *issuerStatus
+				Expect(testClient.Status().Update(ctx, issuer)).To(Succeed())
+
 				DeferCleanup(func() {
 					By("Delete test resources")
+					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, deployment)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, statefulSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, prometheus)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, alertManager)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, cert)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, issuer)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
 				By("Add resources to ManagedResource status")
@@ -427,6 +466,38 @@ var _ = Describe("Health controller tests", func() {
 							Name:       daemonSet.Name,
 						},
 					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "monitoring.coreos.com/v1",
+							Kind:       "Prometheus",
+							Namespace:  prometheus.Namespace,
+							Name:       prometheus.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "monitoring.coreos.com/v1",
+							Kind:       "Alertmanager",
+							Namespace:  alertManager.Namespace,
+							Name:       alertManager.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "cert.gardener.cloud/v1alpha1",
+							Kind:       "Certificate",
+							Namespace:  cert.Namespace,
+							Name:       cert.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "cert.gardener.cloud/v1alpha1",
+							Kind:       "Issuer",
+							Namespace:  issuer.Namespace,
+							Name:       issuer.Name,
+						},
+					},
 				}
 				Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
 			})
@@ -449,6 +520,21 @@ var _ = Describe("Health controller tests", func() {
 					Message: `ReplicaSet "nginx-946d57896" has timed out progressing.`,
 				}}
 				Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("DeploymentProgressing")),
+				)
+			})
+
+			It("sets Progressing to true as Deployment still has non-terminated pods", func() {
+				pod2 := generatePodForDeployment(deployment)
+				Expect(testClient.Create(ctx, pod2)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, pod2)).To(Or(Succeed(), BeNotFoundError()))
+				})
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -533,13 +619,125 @@ var _ = Describe("Health controller tests", func() {
 					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
 				)
 			})
+
+			It("sets Progressing to true as Prometheus is not fully rolled out", func() {
+				patch := client.MergeFrom(prometheus.DeepCopy())
+				prometheus.Status.UpdatedReplicas--
+				Expect(testClient.Status().Patch(ctx, prometheus, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("PrometheusProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Prometheus is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(prometheus.DeepCopy())
+				metav1.SetMetaDataAnnotation(&prometheus.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				prometheus.Status.UpdatedReplicas--
+				Expect(testClient.Patch(ctx, prometheus, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, prometheus, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Alertmanager is not fully rolled out", func() {
+				patch := client.MergeFrom(alertManager.DeepCopy())
+				alertManager.Status.UpdatedReplicas--
+				Expect(testClient.Status().Patch(ctx, alertManager, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("AlertmanagerProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Alertmanager is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(alertManager.DeepCopy())
+				metav1.SetMetaDataAnnotation(&alertManager.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				alertManager.Status.UpdatedReplicas--
+				Expect(testClient.Patch(ctx, alertManager, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, alertManager, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Certificate is not fully rolled out", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("CertificateProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Certificate is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				metav1.SetMetaDataAnnotation(&cert.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Patch(ctx, cert, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Issuer is not fully rolled out", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("CertificateProgressing")),
+				)
+			})
+
+			It("sets Progressing to false even if Issuer is not fully rolled out but skip-health-check annotation is present", func() {
+				patch := client.MergeFrom(cert.DeepCopy())
+				metav1.SetMetaDataAnnotation(&cert.ObjectMeta, resourcesv1alpha1.SkipHealthCheck, "true")
+				cert.Status.ObservedGeneration = cert.Generation - 1
+				Expect(testClient.Patch(ctx, cert, patch)).To(Succeed())
+				Expect(testClient.Status().Patch(ctx, cert, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("ResourcesRolledOut")),
+				)
+			})
 		})
 	})
 })
 
-func setCondition(managedResource *resourcesv1alpha1.ManagedResource, conditionType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus) {
+func setCondition(managedResource *resourcesv1alpha1.ManagedResource, status gardencorev1beta1.ConditionStatus) {
 	managedResource.Status.Conditions = v1beta1helper.MergeConditions(managedResource.Status.Conditions, gardencorev1beta1.Condition{
-		Type:               conditionType,
+		Type:               resourcesv1alpha1.ResourcesApplied,
 		Status:             status,
 		LastUpdateTime:     metav1.Now(),
 		LastTransitionTime: metav1.Now(),
@@ -569,12 +767,11 @@ func generatePodTestResource(name string) *corev1.Pod {
 func generateDeploymentTestResource(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"test": "foo",
@@ -594,15 +791,30 @@ func generateDeploymentTestResource(name string) *appsv1.Deployment {
 	}
 }
 
+func generatePodForDeployment(deployment *appsv1.Deployment) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: deployment.Name + "-pod-",
+			Namespace:    deployment.Namespace,
+			Labels:       deployment.Spec.Selector.MatchLabels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:  "app",
+				Image: "app",
+			}},
+		},
+	}
+}
+
 func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"test": "foo",
@@ -622,9 +834,8 @@ func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
 func generateDaemonSetTestResource(name string) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  testNamespace.Name,
-			Generation: 42,
+			Name:      name,
+			Namespace: testNamespace.Name,
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -639,6 +850,107 @@ func generateDaemonSetTestResource(name string) *appsv1.DaemonSet {
 			DesiredNumberScheduled: 1,
 			CurrentNumberScheduled: 1,
 			UpdatedNumberScheduled: 1,
+		},
+	}
+}
+
+func generatePrometheusTestResource(name string) *monitoringv1.Prometheus {
+	return &monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Spec: monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				Replicas: ptr.To[int32](1),
+			},
+		},
+		Status: monitoringv1.PrometheusStatus{
+			Replicas:          1,
+			AvailableReplicas: 1,
+			UpdatedReplicas:   1,
+			Conditions: []monitoringv1.Condition{
+				{
+					Type:               monitoringv1.Available,
+					Status:             monitoringv1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					ObservedGeneration: 42,
+				},
+				{
+					Type:               monitoringv1.Reconciled,
+					Status:             monitoringv1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					ObservedGeneration: 42,
+				},
+			},
+		},
+	}
+}
+
+func generateAlertmanagerTestResource(name string) *monitoringv1.Alertmanager {
+	return &monitoringv1.Alertmanager{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Spec: monitoringv1.AlertmanagerSpec{
+			Replicas: ptr.To[int32](1),
+		},
+		Status: monitoringv1.AlertmanagerStatus{
+			Replicas:          1,
+			AvailableReplicas: 1,
+			UpdatedReplicas:   1,
+			Conditions: []monitoringv1.Condition{
+				{
+					Type:               monitoringv1.Available,
+					Status:             monitoringv1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					ObservedGeneration: 42,
+				},
+				{
+					Type:               monitoringv1.Reconciled,
+					Status:             monitoringv1.ConditionTrue,
+					LastTransitionTime: metav1.Now(),
+					ObservedGeneration: 42,
+				},
+			},
+		},
+	}
+}
+
+func generateCertificateTestResource(name string) *certv1alpha1.Certificate {
+	return &certv1alpha1.Certificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Spec: certv1alpha1.CertificateSpec{
+			DNSNames: []string{"foo.bar"},
+		},
+		Status: certv1alpha1.CertificateStatus{
+			State: "Ready",
+			Conditions: []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "CertificateIssued",
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			ObservedGeneration: 42,
+		},
+	}
+}
+
+func generateCertificateIssuerTestResource(name string) *certv1alpha1.Issuer {
+	return &certv1alpha1.Issuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace.Name,
+		},
+		Status: certv1alpha1.IssuerStatus{
+			State:              "Ready",
+			ObservedGeneration: 42,
 		},
 	}
 }

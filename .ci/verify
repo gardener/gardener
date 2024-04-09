@@ -13,10 +13,6 @@ cd "$(dirname $0)/.."
 git config --global user.email "gardener@sap.com"
 git config --global user.name "Gardener CI/CD"
 
-# TODO: use pre-built image instead of installing in every pipeline run
-apt-get update
-apt-get install -y unzip jq parallel
-
 mkdir -p /go/src/github.com/gardener/gardener
 cp -r . /go/src/github.com/gardener/gardener
 cd /go/src/github.com/gardener/gardener
@@ -48,7 +44,7 @@ if [ $use_cache = yes ] ; then
   done
 
   # run test instead of test-cov to speed-up PR verification as `-cover` flag is not "cacheable"
-  make check-generate verify check-docforge
+  make check-generate verify 
 
   echo "> moving all cached dirs back to concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do
@@ -59,9 +55,9 @@ if [ $use_cache = yes ] ; then
 else
   if [ "${TEST_COV+yes}" = yes ] ; then
     # supposed to be run in release jobs
-    make verify-extended check-docforge
+    make verify-extended
   else
     # run test instead of test-cov to speed-up jobs, as coverage slows down tests significantly
-    make check-generate verify check-docforge
+    make check-generate verify
   fi
 fi

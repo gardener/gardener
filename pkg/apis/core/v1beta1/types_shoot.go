@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +genclient
@@ -130,6 +132,14 @@ type ShootSpec struct {
 	// ControlPlane contains general settings for the control plane of the shoot.
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,20,opt,name=controlPlane"`
+	// SchedulerName is the name of the responsible scheduler which schedules the shoot.
+	// If not specified, the default scheduler takes over.
+	// This field is immutable.
+	// +optional
+	SchedulerName *string `json:"schedulerName,omitempty" protobuf:"bytes,21,opt,name=schedulerName"`
+	// CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
+	// +optional
+	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,opt,name=cloudProfile"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -180,7 +190,8 @@ type ShootStatus struct {
 	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,12,opt,name=clusterIdentity"`
-	// List of addresses on which the Kube API server can be reached.
+	// List of addresses that are relevant to the shoot.
+	// These include the Kube API server address and also the service account issuer.
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -198,6 +209,11 @@ type ShootStatus struct {
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	// +optional
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
+	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+	// Secrets are encrypted by default and are not part of the list.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// +optional
+	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -233,7 +249,7 @@ type ShootCredentialsRotation struct {
 	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`
 	// Observability contains information about the observability credential rotation.
 	// +optional
-	Observability *ShootObservabilityRotation `json:"observability,omitempty" protobuf:"bytes,4,opt,name=observability"`
+	Observability *ObservabilityRotation `json:"observability,omitempty" protobuf:"bytes,4,opt,name=observability"`
 	// ServiceAccountKey contains information about the service account key credential rotation.
 	// +optional
 	ServiceAccountKey *ServiceAccountKeyRotation `json:"serviceAccountKey,omitempty" protobuf:"bytes,5,opt,name=serviceAccountKey"`
@@ -283,8 +299,8 @@ type ShootSSHKeypairRotation struct {
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }
 
-// ShootObservabilityRotation contains information about the observability credential rotation.
-type ShootObservabilityRotation struct {
+// ObservabilityRotation contains information about the observability credential rotation.
+type ObservabilityRotation struct {
 	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
@@ -419,21 +435,26 @@ type DNS struct {
 	Domain *string `json:"domain,omitempty" protobuf:"bytes,1,opt,name=domain"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
+	// Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
 	Providers []DNSProvider `json:"providers,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=providers"`
 }
 
+// TODO(timuthy): Rework the 'DNSProvider' struct and deprecated fields in the scope of https://github.com/gardener/gardener/issues/9176.
+
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// TODO(timuthy): Remove this field with release v1.87.
-
 	// Domains contains information about which domains shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	// +optional
 	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,1,opt,name=domains"`
 	// Primary indicates that this DNSProvider is used for shoot related domains.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.
 	// +optional
 	Primary *bool `json:"primary,omitempty" protobuf:"varint,2,opt,name=primary"`
 	// SecretName is a name of a secret containing credentials for the stated domain and the
@@ -445,10 +466,10 @@ type DNSProvider struct {
 	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`
-	// TODO(timuthy): Remove this field with release v1.87.
 
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	// +optional
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,5,opt,name=zones"`
 }
@@ -514,10 +535,9 @@ type HibernationSchedule struct {
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
-	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-	// Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.
-	// +optional
-	AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty" protobuf:"varint,1,opt,name=allowPrivilegedContainers"`
+	// AllowPrivilegedContainers is tombstoned to show why 1 is reserved protobuf tag.
+	// AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty" protobuf:"varint,1,opt,name=allowPrivilegedContainers"`
+
 	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscaler `json:"clusterAutoscaler,omitempty" protobuf:"bytes,2,opt,name=clusterAutoscaler"`
@@ -588,6 +608,18 @@ type ClusterAutoscaler struct {
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	// +optional
 	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
+	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
+	// +optional
+	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
+	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+	// +optional
+	MaxEmptyBulkDelete *int32 `json:"maxEmptyBulkDelete,omitempty" protobuf:"varint,12,opt,name=maxEmptyBulkDelete"`
+	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
+	// +optional
+	IgnoreDaemonsetsUtilization *bool `json:"ignoreDaemonsetsUtilization,omitempty" protobuf:"varint,13,opt,name=ignoreDaemonsetsUtilization"`
+	// Verbosity allows CA to modify its log level (default: 2).
+	// +optional
+	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,14,opt,name=verbosity"`
 }
 
 // ExpanderMode is type used for Expander values
@@ -640,6 +672,11 @@ type VerticalPodAutoscaler struct {
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	// +optional
 	RecommenderInterval *metav1.Duration `json:"recommenderInterval,omitempty" protobuf:"bytes,8,opt,name=recommenderInterval"`
+	// TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	// (default: 0.9)
+	// +optional
+	TargetCPUPercentile *float64 `json:"targetCPUPercentile,omitempty" protobuf:"fixed64,9,opt,name=targetCPUPercentile"`
 }
 
 const (
@@ -651,6 +688,8 @@ const (
 	DefaultEvictionTolerance = 0.5
 	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
 	DefaultRecommendationMarginFraction = 0.15
+	// DefaultTargetCPUPercentile is the default value for the TargetCPUPercentile field in the VPA configuration
+	DefaultTargetCPUPercentile = 0.9
 )
 
 var (
@@ -711,7 +750,7 @@ type KubeAPIServerConfig struct {
 	WatchCacheSizes *WatchCacheSizes `json:"watchCacheSizes,omitempty" protobuf:"bytes,9,opt,name=watchCacheSizes"`
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
-	Requests *KubeAPIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+	Requests *APIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
 	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -723,7 +762,7 @@ type KubeAPIServerConfig struct {
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
-	Logging *KubeAPIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
+	Logging *APIServerLogging `json:"logging,omitempty" protobuf:"bytes,13,opt,name=logging"`
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
@@ -736,10 +775,13 @@ type KubeAPIServerConfig struct {
 	// Defaults to 300.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
+	// EncryptionConfig contains customizable encryption configuration of the Kube API server.
+	// +optional
+	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
 }
 
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-type KubeAPIServerLogging struct {
+// APIServerLogging contains configuration for the logs level and http access logs
+type APIServerLogging struct {
 	// Verbosity is the kube-apiserver log verbosity level
 	// Defaults to 2.
 	// +optional
@@ -749,8 +791,8 @@ type KubeAPIServerLogging struct {
 	HTTPAccessVerbosity *int32 `json:"httpAccessVerbosity,omitempty" protobuf:"varint,2,opt,name=httpAccessVerbosity"`
 }
 
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-type KubeAPIServerRequests struct {
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type APIServerRequests struct {
 	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	// +optional
@@ -759,6 +801,16 @@ type KubeAPIServerRequests struct {
 	// exceeds this, it rejects requests.
 	// +optional
 	MaxMutatingInflight *int32 `json:"maxMutatingInflight,omitempty" protobuf:"bytes,2,name=maxMutatingInflight"`
+}
+
+// EncryptionConfig contains customizable encryption configuration of the API server.
+type EncryptionConfig struct {
+	// Resources contains the list of resources that shall be encrypted in addition to secrets.
+	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+	// Note that configuring a custom resource is only supported for versions >= 1.26.
+	// Wildcards are not supported for now.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -1063,10 +1115,10 @@ type KubeletConfig struct {
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	// +optional
 	PodPIDsLimit *int64 `json:"podPidsLimit,omitempty" protobuf:"varint,11,opt,name=podPidsLimit"`
-	// ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
-	// +optional
-	// Default: 1m
-	ImagePullProgressDeadline *metav1.Duration `json:"imagePullProgressDeadline,omitempty" protobuf:"bytes,12,opt,name=imagePullProgressDeadline"`
+
+	// ImagePullProgressDeadline is tombstoned to show why 12 is reserved protobuf tag.
+	// ImagePullProgressDeadline *metav1.Duration `json:"imagePullProgressDeadline,omitempty" protobuf:"bytes,12,opt,name=imagePullProgressDeadline"`
+
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	// +optional
 	FailSwapOn *bool `json:"failSwapOn,omitempty" protobuf:"varint,13,opt,name=failSwapOn"`
@@ -1403,6 +1455,28 @@ type Worker struct {
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
+	// +optional
+	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+}
+
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	// +optional
+	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty" protobuf:"fixed64,1,opt,name=scaleDownUtilizationThreshold"`
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	// +optional
+	ScaleDownGpuUtilizationThreshold *float64 `json:"scaleDownGpuUtilizationThreshold,omitempty" protobuf:"fixed64,2,opt,name=scaleDownGpuUtilizationThreshold"`
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty" protobuf:"bytes,3,opt,name=scaleDownUnneededTime"`
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	// +optional
+	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnreadyTime"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	// +optional
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,5,opt,name=maxNodeProvisionTime"`
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
@@ -1502,7 +1576,7 @@ type DataVolume struct {
 
 // CRI contains information about the Container Runtimes.
 type CRI struct {
-	// The name of the CRI library. Supported values are `docker` and `containerd`.
+	// The name of the CRI library. Supported values are `containerd`.
 	Name CRIName `json:"name" protobuf:"bytes,1,opt,name=name,casttype=CRIName"`
 	// ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
 	// +optional
@@ -1515,8 +1589,6 @@ type CRIName string
 const (
 	// CRINameContainerD is a constant for ContainerD CRI name.
 	CRINameContainerD CRIName = "containerd"
-	// CRINameDocker is a constant for Docker CRI name.
-	CRINameDocker CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime
@@ -1545,9 +1617,9 @@ type SSHAccess struct {
 
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.
-	DefaultWorkerMaxSurge = intstr.FromInt(1)
+	DefaultWorkerMaxSurge = intstr.FromInt32(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
-	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
 )
@@ -1637,7 +1709,7 @@ const (
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the health of core control plane components.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
 	// ShootObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
-	ShootObservabilityComponentsHealthy ConditionType = "ObservabilityComponentsHealthy"
+	ShootObservabilityComponentsHealthy ConditionType = v1beta1constants.ObservabilityComponentsHealthy
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.

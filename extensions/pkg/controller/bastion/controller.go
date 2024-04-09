@@ -69,5 +69,5 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 		return err
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Bastion{}}, &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Bastion{}), &handler.EnqueueRequestForObject{}, predicates...)
 }

@@ -23,6 +23,7 @@ It must be ensured that the API is always backwards-compatible.
 1. Modify the field(s) in the respective Golang files of all external versions and the internal version.
     1. Make sure new fields are being added as "optional" fields, i.e., they are of pointer types, they have the `// +optional` comment, and they have the `omitempty` JSON tag.
     1. Make sure that the existing field numbers in the protobuf tags are not changed.
+    1. Do not copy protobuf tags from other fields but create them with `make generate WHAT="protobuf"`.
 2. If necessary, implement/adapt the conversion logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/conversions*.go`).
 3. If necessary, implement/adapt defaulting logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/defaults*.go`).
 4. Run the code generation: `make generate`

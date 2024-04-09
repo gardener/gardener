@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: istiod-clusterrole-istio-system
+  labels:
+    app: istiod
+    istio: pilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: istiod-clusterrole-istio-system
+subjects:
+  - kind: ServiceAccount
+    name: istiod
+    namespace: test
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: istiod-gateway-controller-istio-system
+  labels:
+    app: istiod
+    istio: pilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: istiod-gateway-controller-istio-system
+subjects:
+  - kind: ServiceAccount
+    name: istiod
+    namespace: test
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: istio-reader-clusterrole-istio-system
+  labels:
+    app: istiod
+    istio: pilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: istio-reader-clusterrole-istio-system
+subjects:
+  - kind: ServiceAccount
+    name: istio-reader-service-account
+    namespace: test

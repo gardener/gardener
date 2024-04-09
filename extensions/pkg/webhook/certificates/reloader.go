@@ -22,12 +22,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -56,12 +58,26 @@ type reloader struct {
 
 // AddToManager does an initial retrieval of an existing webhook server secret and then adds reloader to the given
 // manager in order to periodically reload the secret from the cluster.
-func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) error {
 	r.reader = mgr.GetClient()
-	r.certDir = mgr.GetWebhookServer().CertDir
+	if sourceCluster != nil {
+		r.reader = sourceCluster.GetClient()
+	}
+
+	webhookServer := mgr.GetWebhookServer()
+	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+	if !ok {
+		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+	}
+	r.certDir = defaultServer.Options.CertDir
 
 	// initial retrieval of server cert, needed in order for the webhook server to start successfully
-	found, _, serverCert, serverKey, err := r.getServerCert(ctx, mgr.GetAPIReader())
+	apiReader := mgr.GetAPIReader()
+	if sourceCluster != nil {
+		apiReader = sourceCluster.GetAPIReader()
+	}
+
+	found, _, serverCert, serverKey, err := r.getServerCert(ctx, apiReader)
 	if err != nil {
 		return err
 	}
@@ -79,7 +95,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager) error 
 	// add controller that reloads the server cert secret periodically
 	ctrl, err := controller.NewUnmanaged(certificateReloaderName, mgr, controller.Options{
 		Reconciler:   r,
-		RecoverPanic: pointer.Bool(true),
+		RecoverPanic: ptr.To(true),
 		// if going into exponential backoff, wait at most the configured sync period
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.SyncPeriod),
 	})

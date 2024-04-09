@@ -25,10 +25,12 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/utils/pointer"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	"k8s.io/utils/ptr"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/pkg/logger"
@@ -37,9 +39,6 @@ import (
 const (
 	// LeaderElectionFlag is the name of the command line flag to specify whether to do leader election or not.
 	LeaderElectionFlag = "leader-election"
-	// LeaderElectionResourceLockFlag is the name of the command line flag to specify the resource type used for leader
-	// election.
-	LeaderElectionResourceLockFlag = "leader-election-resource-lock"
 	// LeaderElectionIDFlag is the name of the command line flag to specify the leader election ID.
 	LeaderElectionIDFlag = "leader-election-id"
 	// LeaderElectionNamespaceFlag is the name of the command line flag to specify the leader election namespace.
@@ -74,9 +73,6 @@ const (
 
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
-	// GardenletManagesMCMFlag is the name of the command line flag containing the Gardener version.
-	// TODO(rfranzke): Remove this flag when all provider extensions support the feature, see https://github.com/gardener/gardener/issues/7594.
-	GardenletManagesMCMFlag = "gardenlet-manages-mcm"
 
 	// LogLevelFlag is the name of the command line flag containing the log level.
 	LogLevelFlag = "log-level"
@@ -87,7 +83,7 @@ const (
 
 // LeaderElectionNameID returns a leader election ID for the given name.
 func LeaderElectionNameID(name string) string {
-	return fmt.Sprintf("%s-leader-election", name)
+	return name + "-leader-election"
 }
 
 // Flagger adds flags to a given FlagSet.
@@ -174,20 +170,6 @@ func (b *OptionAggregator) Complete() error {
 type ManagerOptions struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
-	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `leases`).
-	//
-	// When changing the default resource lock, please make sure to migrate via multilocks to
-	// avoid situations where multiple running instances of your controller have each acquired leadership
-	// through different resource locks (e.g. during upgrades) and thus act on the same resources concurrently.
-	// For example, if you want to migrate to the "leases" resource lock, you might do so by migrating
-	// to the respective multilock first ("configmapsleases" or "endpointsleases"), which will acquire
-	// a leader lock on both resources. After one release with the multilock as a default, you can
-	// go ahead and migrate to "leases". Please also keep in mind, that users might skip versions
-	// of your controller, so at least add a flashy release note when changing the default lock.
-	//
-	// Note: before controller-runtime version v0.7, the resource lock was set to "configmaps".
-	// Please keep this in mind, when planning a proper migration path for your controller.
-	LeaderElectionResourceLock string
 	// LeaderElectionID is the id to do leader election with.
 	LeaderElectionID string
 	// LeaderElectionNamespace is the namespace to do leader election in.
@@ -212,15 +194,7 @@ type ManagerOptions struct {
 
 // AddFlags implements Flagger.AddFlags.
 func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
-	defaultLeaderElectionResourceLock := m.LeaderElectionResourceLock
-	if defaultLeaderElectionResourceLock == "" {
-		// explicitly default to leases if no default is specified
-		defaultLeaderElectionResourceLock = resourcelock.LeasesResourceLock
-	}
-
 	fs.BoolVar(&m.LeaderElection, LeaderElectionFlag, m.LeaderElection, "Whether to use leader election or not when running this controller manager.")
-	fs.StringVar(&m.LeaderElectionResourceLock, LeaderElectionResourceLockFlag, defaultLeaderElectionResourceLock, "Which resource type to use for leader election. "+
-		"Supported options are 'leases', 'endpointsleases' and 'configmapsleases'.")
 	fs.StringVar(&m.LeaderElectionID, LeaderElectionIDFlag, m.LeaderElectionID, "The leader election id to use.")
 	fs.StringVar(&m.LeaderElectionNamespace, LeaderElectionNamespaceFlag, m.LeaderElectionNamespace, "The namespace to do leader election in.")
 	fs.StringVar(&m.WebhookServerHost, WebhookServerHostFlag, m.WebhookServerHost, "The webhook server host.")
@@ -249,7 +223,6 @@ func (m *ManagerOptions) Complete() error {
 
 	m.config = &ManagerConfig{
 		m.LeaderElection,
-		m.LeaderElectionResourceLock,
 		m.LeaderElectionID,
 		m.LeaderElectionNamespace,
 		m.WebhookServerHost,
@@ -270,8 +243,6 @@ func (m *ManagerOptions) Completed() *ManagerConfig {
 type ManagerConfig struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
-	// LeaderElectionResourceLock is the resource type used for leader election.
-	LeaderElectionResourceLock string
 	// LeaderElectionID is the id to do leader election with.
 	LeaderElectionID string
 	// LeaderElectionNamespace is the namespace to do leader election in.
@@ -293,16 +264,18 @@ type ManagerConfig struct {
 // Apply sets the values of this ManagerConfig in the given manager.Options.
 func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.LeaderElection = c.LeaderElection
-	opts.LeaderElectionResourceLock = c.LeaderElectionResourceLock
+	opts.LeaderElectionResourceLock = resourcelock.LeasesResourceLock
 	opts.LeaderElectionID = c.LeaderElectionID
 	opts.LeaderElectionNamespace = c.LeaderElectionNamespace
-	opts.Host = c.WebhookServerHost
-	opts.Port = c.WebhookServerPort
-	opts.CertDir = c.WebhookCertDir
-	opts.MetricsBindAddress = c.MetricsBindAddress
+	opts.Metrics = metricsserver.Options{BindAddress: c.MetricsBindAddress}
 	opts.HealthProbeBindAddress = c.HealthBindAddress
 	opts.Logger = c.Logger
-	opts.Controller = controllerconfigv1alpha1.ControllerConfigurationSpec{RecoverPanic: pointer.Bool(true)}
+	opts.Controller = controllerconfig.Controller{RecoverPanic: ptr.To(true)}
+	opts.WebhookServer = webhook.NewServer(webhook.Options{
+		Host:    c.WebhookServerHost,
+		Port:    c.WebhookServerPort,
+		CertDir: c.WebhookCertDir,
+	})
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.
@@ -497,8 +470,6 @@ type SwitchConfig struct {
 type GeneralOptions struct {
 	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
-	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
-	GardenletManagesMCM bool
 
 	config *GeneralConfig
 }
@@ -507,13 +478,11 @@ type GeneralOptions struct {
 type GeneralConfig struct {
 	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
-	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
-	GardenletManagesMCM bool
 }
 
 // Complete implements Complete.
 func (r *GeneralOptions) Complete() error {
-	r.config = &GeneralConfig{r.GardenerVersion, r.GardenletManagesMCM}
+	r.config = &GeneralConfig{r.GardenerVersion}
 	return nil
 }
 
@@ -525,5 +494,4 @@ func (r *GeneralOptions) Completed() *GeneralConfig {
 // AddFlags implements Flagger.AddFlags.
 func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
-	fs.BoolVar(&r.GardenletManagesMCM, GardenletManagesMCMFlag, false, "Specifies whether gardenlet manages the machine-controller-manager.")
 }

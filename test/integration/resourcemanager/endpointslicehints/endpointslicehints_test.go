@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,7 +48,7 @@ var _ = Describe("EndpointSliceHints tests", func() {
 		endpointSlice.Endpoints = []discoveryv1.Endpoint{
 			{
 				Addresses: []string{"10.1.2.3"},
-				Zone:      pointer.String("europe-1a"),
+				Zone:      ptr.To("europe-1a"),
 			},
 		}
 		Expect(testClient.Create(ctx, endpointSlice)).To(Succeed())
@@ -57,7 +57,7 @@ var _ = Describe("EndpointSliceHints tests", func() {
 		Expect(endpointSlice.Endpoints).To(Equal([]discoveryv1.Endpoint{
 			{
 				Addresses: []string{"10.1.2.3"},
-				Zone:      pointer.String("europe-1a"),
+				Zone:      ptr.To("europe-1a"),
 			},
 		}))
 	})
@@ -70,11 +70,11 @@ var _ = Describe("EndpointSliceHints tests", func() {
 			},
 			{
 				Addresses: []string{"10.1.2.4"},
-				Zone:      pointer.String(""),
+				Zone:      ptr.To(""),
 			},
 			{
 				Addresses: []string{"10.1.2.5"},
-				Zone:      pointer.String("europe-1c"),
+				Zone:      ptr.To("europe-1c"),
 			},
 		}
 		Expect(testClient.Create(ctx, endpointSlice)).To(Succeed())
@@ -89,14 +89,14 @@ var _ = Describe("EndpointSliceHints tests", func() {
 			{
 				Addresses: []string{"10.1.2.4"},
 				Hints:     nil,
-				Zone:      pointer.String(""),
+				Zone:      ptr.To(""),
 			},
 			{
 				Addresses: []string{"10.1.2.5"},
 				Hints: &discoveryv1.EndpointHints{
 					ForZones: []discoveryv1.ForZone{{Name: "europe-1c"}},
 				},
-				Zone: pointer.String("europe-1c"),
+				Zone: ptr.To("europe-1c"),
 			},
 		}))
 	})
@@ -105,15 +105,15 @@ var _ = Describe("EndpointSliceHints tests", func() {
 		endpointSlice.Endpoints = []discoveryv1.Endpoint{
 			{
 				Addresses: []string{"10.1.2.3"},
-				Zone:      pointer.String("europe-1a"),
+				Zone:      ptr.To("europe-1a"),
 			},
 			{
 				Addresses: []string{"10.1.2.4"},
-				Zone:      pointer.String("europe-1b"),
+				Zone:      ptr.To("europe-1b"),
 			},
 			{
 				Addresses: []string{"10.1.2.5"},
-				Zone:      pointer.String("europe-1c"),
+				Zone:      ptr.To("europe-1c"),
 			},
 		}
 		Expect(testClient.Create(ctx, endpointSlice)).To(Succeed())
@@ -125,21 +125,21 @@ var _ = Describe("EndpointSliceHints tests", func() {
 				Hints: &discoveryv1.EndpointHints{
 					ForZones: []discoveryv1.ForZone{{Name: "europe-1a"}},
 				},
-				Zone: pointer.String("europe-1a"),
+				Zone: ptr.To("europe-1a"),
 			},
 			{
 				Addresses: []string{"10.1.2.4"},
 				Hints: &discoveryv1.EndpointHints{
 					ForZones: []discoveryv1.ForZone{{Name: "europe-1b"}},
 				},
-				Zone: pointer.String("europe-1b"),
+				Zone: ptr.To("europe-1b"),
 			},
 			{
 				Addresses: []string{"10.1.2.5"},
 				Hints: &discoveryv1.EndpointHints{
 					ForZones: []discoveryv1.ForZone{{Name: "europe-1c"}},
 				},
-				Zone: pointer.String("europe-1c"),
+				Zone: ptr.To("europe-1c"),
 			},
 		}))
 	})

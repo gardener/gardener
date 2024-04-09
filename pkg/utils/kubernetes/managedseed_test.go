@@ -16,11 +16,11 @@ package kubernetes_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,8 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -131,7 +131,7 @@ var _ = Describe("managedseed", func() {
 		})
 
 		It("should return an error since reading the ManagedSeed failed", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
@@ -160,5 +160,5 @@ type failingListReader struct {
 }
 
 func (failingListReader) List(context.Context, client.ObjectList, ...client.ListOption) error {
-	return fmt.Errorf("fake")
+	return errors.New("fake")
 }

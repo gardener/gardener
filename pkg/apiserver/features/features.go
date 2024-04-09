@@ -25,6 +25,7 @@ func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.IPv6SingleStack,
 		features.MutableShootSpecNetworkingNodes,
-		features.WorkerlessShoots,
+		features.ShootForceDeletion,
+		features.UseNamespacedCloudProfile,
 	)))
 }

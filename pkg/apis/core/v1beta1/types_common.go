@@ -14,7 +14,9 @@
 
 package v1beta1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // ErrorCode is a string alias.
 type ErrorCode string
@@ -117,7 +119,7 @@ type LastOperation struct {
 
 // Gardener holds the information about the Gardener version that operated a resource.
 type Gardener struct {
-	// ID is the Docker container id of the Gardener which last acted on a resource.
+	// ID is the container id of the Gardener which last acted on a resource.
 	ID string `json:"id" protobuf:"bytes,1,opt,name=id"`
 	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -135,23 +137,23 @@ const (
 )
 
 const (
-	// EventReconciling indicates that the a Reconcile operation started.
+	// EventReconciling indicates that the Reconcile operation started.
 	EventReconciling = "Reconciling"
-	// EventReconciled indicates that the a Reconcile operation was successful.
+	// EventReconciled indicates that the Reconcile operation was successful.
 	EventReconciled = "Reconciled"
-	// EventReconcileError indicates that the a Reconcile operation failed.
+	// EventReconcileError indicates that the Reconcile operation failed.
 	EventReconcileError = "ReconcileError"
-	// EventDeleting indicates that the a Delete operation started.
+	// EventDeleting indicates that the Delete operation started.
 	EventDeleting = "Deleting"
-	// EventDeleted indicates that the a Delete operation was successful.
+	// EventDeleted indicates that the Delete operation was successful.
 	EventDeleted = "Deleted"
-	// EventDeleteError indicates that the a Delete operation failed.
+	// EventDeleteError indicates that the Delete operation failed.
 	EventDeleteError = "DeleteError"
-	// EventPrepareMigration indicates that a Prepare Migration operation started.
+	// EventPrepareMigration indicates that the Prepare Migration operation started.
 	EventPrepareMigration = "PrepareMigration"
-	// EventMigrationPrepared indicates that Migration preparation was successful.
+	// EventMigrationPrepared indicates that the Migration preparation was successful.
 	EventMigrationPrepared = "MigrationPrepared"
-	// EventMigrationPreparationFailed indicates that Migration preparation failed.
+	// EventMigrationPreparationFailed indicates that the Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
 )
 

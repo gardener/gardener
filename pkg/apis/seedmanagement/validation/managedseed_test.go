@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -49,7 +49,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			Spec: core.SeedSpec{
 				Backup: &core.SeedBackup{
 					Provider: "foo",
-					Region:   pointer.String("some-region"),
+					Region:   ptr.To("some-region"),
 					SecretRef: corev1.SecretReference{
 						Name:      "backup-test",
 						Namespace: "garden",
@@ -71,21 +71,17 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 				},
 				Networks: core.SeedNetworks{
-					Nodes:    pointer.String("10.250.0.0/16"),
+					Nodes:    ptr.To("10.250.0.0/16"),
 					Pods:     "100.96.0.0/11",
 					Services: "100.64.0.0/13",
 					ShootDefaults: &core.ShootNetworks{
-						Pods:     pointer.String("10.240.0.0/16"),
-						Services: pointer.String("10.241.0.0/16"),
+						Pods:     ptr.To("10.240.0.0/16"),
+						Services: ptr.To("10.241.0.0/16"),
 					},
 				},
 				Provider: core.SeedProvider{
 					Type:   "foo",
 					Region: "some-region",
-				},
-				SecretRef: &corev1.SecretReference{
-					Name:      "seed-test",
-					Namespace: "garden",
 				},
 				Taints: []core.SeedTaint{
 					{Key: "foo"},
@@ -161,6 +157,28 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			),
 		)
 
+		Context("operation annotation", func() {
+			It("should do nothing if the operation annotation is not set", func() {
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			})
+
+			It("should return an error if the operation annotation is invalid", func() {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "foo-bar")
+				Expect(ValidateManagedSeed(managedSeed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				}))))
+			})
+
+			DescribeTable("should return nothing if the operation annotations is valid", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeed(managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+		})
+
 		It("should forbid nil shoot", func() {
 			managedSeed.Spec.Shoot = nil
 
@@ -213,12 +231,12 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Deployment: &seedmanagement.GardenletDeployment{
 						Image: &seedmanagement.Image{
-							PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+							PullPolicy: ptr.To(corev1.PullIfNotPresent),
 						},
 					},
 					Config:          gardenletConfiguration(seedx, nil),
-					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.Bool(true),
+					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
+					MergeWithParent: ptr.To(true),
 				}
 			})
 
@@ -230,22 +248,22 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Networks.Nodes = pointer.String("")
+				seedx.Spec.Networks.Nodes = ptr.To("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
-					ReplicaCount:         pointer.Int32(-1),
-					RevisionHistoryLimit: pointer.Int32(-1),
-					ServiceAccountName:   pointer.String(""),
+					ReplicaCount:         ptr.To(int32(-1)),
+					RevisionHistoryLimit: ptr.To(int32(-1)),
+					ServiceAccountName:   ptr.To(""),
 					Image: &seedmanagement.Image{
-						Repository: pointer.String(""),
-						Tag:        pointer.String(""),
-						PullPolicy: pullPolicyPtr("foo"),
+						Repository: ptr.To(""),
+						Tag:        ptr.To(""),
+						PullPolicy: ptr.To(corev1.PullPolicy("foo")),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
 					PodAnnotations: map[string]string{"bar@": "baz"},
 				}
 				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx, nil)
-				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr("foo")
+				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.Bootstrap("foo"))
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -327,8 +345,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 							Namespace: namespace,
 						},
 					})
-				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapNone)
-				managedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
+				managedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapNone)
+				managedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -358,6 +376,44 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 		BeforeEach(func() {
 			newManagedSeed = managedSeed.DeepCopy()
 			newManagedSeed.ResourceVersion = "1"
+		})
+
+		Context("operation annotation", func() {
+			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation is removed", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			It("should return an error if a valid operation should be overwritten with a different valid operation", func() {
+				metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "gardener.cloud/operation", "reconcile")
+				metav1.SetMetaDataAnnotation(&newManagedSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+				Expect(ValidateManagedSeedUpdate(newManagedSeed, managedSeed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("must not overwrite operation \"reconcile\" with \"renew-kubeconfig\""),
+					}))))
+			})
 		})
 
 		It("should forbid changes to immutable metadata fields", func() {
@@ -400,8 +456,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config:          gardenletConfiguration(seedx, nil),
-					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.Bool(true),
+					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
+					MergeWithParent: ptr.To(true),
 				}
 
 				newManagedSeed = managedSeed.DeepCopy()
@@ -419,8 +475,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedxCopy.Spec.Backup.Provider = "bar"
 
 				newManagedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
-				newManagedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapServiceAccount)
-				newManagedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
+				newManagedSeed.Spec.Gardenlet.Bootstrap = ptr.To(seedmanagement.BootstrapServiceAccount)
+				newManagedSeed.Spec.Gardenlet.MergeWithParent = ptr.To(false)
 
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 
@@ -491,7 +547,3 @@ func gardenletConfiguration(seed *gardencorev1beta1.Seed, gcc *gardenletv1alpha1
 		GardenClientConnection: gcc,
 	}
 }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v seedmanagement.Bootstrap) *seedmanagement.Bootstrap { return &v }

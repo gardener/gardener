@@ -39,11 +39,6 @@ func (m *secretToBackupEntryMapper) Map(ctx context.Context, _ logr.Logger, read
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil
-	}
-
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
 	if err := reader.List(ctx, backupEntryList); err != nil {
 		return nil
@@ -51,7 +46,7 @@ func (m *secretToBackupEntryMapper) Map(ctx context.Context, _ logr.Logger, read
 
 	var requests []reconcile.Request
 	for _, backupEntry := range backupEntryList.Items {
-		if backupEntry.Spec.SecretRef.Name == secret.Name && backupEntry.Spec.SecretRef.Namespace == secret.Namespace {
+		if backupEntry.Spec.SecretRef.Name == obj.GetName() && backupEntry.Spec.SecretRef.Namespace == obj.GetNamespace() {
 			if predicateutils.EvalGeneric(&backupEntry, m.predicates...) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{

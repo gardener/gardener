@@ -17,19 +17,21 @@ package helper_test
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("helper", func() {
@@ -147,78 +149,78 @@ var _ = Describe("helper", func() {
 			false,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]core.Toleration{{Key: "foo", Value: pointer.String("bar")}},
+			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]core.Toleration{{Key: "foo", Value: ptr.To("bar")}},
 			true,
 		),
 		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-			[]core.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-			[]core.Toleration{{Key: "bar", Value: pointer.String("foo")}},
+			[]core.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]core.Toleration{{Key: "bar", Value: ptr.To("foo")}},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
 				{Key: "bar"},
-				{Key: "foo", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			true,
 		),
 		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("foo")},
 			},
 			false,
 		),
 		Entry("taints > tolerations",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			false,
 		),
 		Entry("tolerations > taints",
 			[]core.SeedTaint{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: ptr.To("baz")},
 			},
 			[]core.Toleration{
-				{Key: "foo", Value: pointer.String("bar")},
-				{Key: "bar", Value: pointer.String("baz")},
-				{Key: "baz", Value: pointer.String("foo")},
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "baz", Value: ptr.To("foo")},
 			},
 			true,
 		),
@@ -246,6 +248,25 @@ var _ = Describe("helper", func() {
 		Entry("dns providers and unmanaged type", &core.DNS{Providers: []core.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#ShootNeedsForceDeletion",
+		func(shoot *core.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(ShootNeedsForceDeletion(shoot)).To(match)
+		},
+
+		Entry("shoot is nil",
+			nil,
+			BeFalse()),
+		Entry("no force-delete annotation present",
+			&core.Shoot{},
+			BeFalse()),
+		Entry("force-delete annotation present but value is false",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "0"}}},
+			BeFalse()),
+		Entry("force-delete annotation present and value is true",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "t"}}},
+			BeTrue()),
+	)
+
 	DescribeTable("#FindWorkerByName",
 		func(workers []core.Worker, name string, expectedWorker *core.Worker) {
 			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))
@@ -262,34 +283,34 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("no providers", nil, BeNil()),
-		Entry("one non primary provider", []core.DNSProvider{{Type: pointer.String("provider")}}, BeNil()),
-		Entry("one primary provider", []core.DNSProvider{{Type: pointer.String("provider"),
-			Primary: pointer.Bool(true)}}, Equal(&core.DNSProvider{Type: pointer.String("provider"), Primary: pointer.Bool(true)})),
+		Entry("one non primary provider", []core.DNSProvider{{Type: ptr.To("provider")}}, BeNil()),
+		Entry("one primary provider", []core.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []core.DNSProvider{
 			{
-				Type: pointer.String("provider2"),
+				Type: ptr.To("provider2"),
 			},
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type:    pointer.String("provider2"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider2"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&core.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#GetRemovedVersions", func() {
@@ -316,7 +337,7 @@ var _ = Describe("helper", func() {
 		It("should do nothing", func() {
 			diff := GetRemovedVersions(versions, versions)
 
-			Expect(diff).To(HaveLen(0))
+			Expect(diff).To(BeEmpty())
 		})
 	})
 
@@ -344,7 +365,7 @@ var _ = Describe("helper", func() {
 		It("should do nothing", func() {
 			diff := GetAddedVersions(versions, versions)
 
-			Expect(diff).To(HaveLen(0))
+			Expect(diff).To(BeEmpty())
 		})
 	})
 
@@ -516,17 +537,6 @@ var _ = Describe("helper", func() {
 		}, true),
 	)
 
-	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
-		func(settings *core.SeedSettings, expectation bool) {
-			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
-		},
-
-		Entry("setting is nil", nil, true),
-		Entry("excess capacity reservation is nil", &core.SeedSettings{}, true),
-		Entry("excess capacity reservation 'enabled' is false", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: false}}, false),
-		Entry("excess capacity reservation 'enabled' is true", &core.SeedSettings{ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{Enabled: true}}, true),
-	)
-
 	DescribeTable("#SeedSettingSchedulingVisible",
 		func(settings *core.SeedSettings, expectation bool) {
 			Expect(SeedSettingSchedulingVisible(settings)).To(Equal(expectation))
@@ -643,6 +653,39 @@ var _ = Describe("helper", func() {
 		previewVersion,
 	}
 
+	var machineImages = []core.MachineImage{
+		{
+			Name: "coreos",
+			Versions: []core.MachineImageVersion{
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "0.0.2",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "0.0.3",
+					},
+				},
+			},
+		},
+	}
+
+	DescribeTable("#DetermineLatestMachineImageVersions",
+		func(versions []core.MachineImage, expectation map[string]core.MachineImageVersion, expectError bool) {
+			result, err := DetermineLatestMachineImageVersions(versions)
+			if expectError {
+				Expect(err).To(HaveOccurred())
+				return
+			}
+			Expect(result).To(Equal(expectation))
+		},
+
+		Entry("should return nil - empty machine image slice", nil, map[string]core.MachineImageVersion{}, false),
+		Entry("should return nil - no valid image", []core.MachineImage{{Name: "coreos", Versions: []core.MachineImageVersion{{ExpirableVersion: core.ExpirableVersion{Version: "abc"}}}}}, nil, true),
+		Entry("should determine latest expirable version", machineImages, map[string]core.MachineImageVersion{"coreos": {ExpirableVersion: core.ExpirableVersion{Version: "0.0.3"}}}, false),
+	)
+
 	DescribeTable("#DetermineLatestMachineImageVersion",
 		func(versions []core.MachineImageVersion, filterPreviewVersions bool, expectation core.MachineImageVersion, expectError bool) {
 			result, err := DetermineLatestMachineImageVersion(versions, filterPreviewVersions)
@@ -660,6 +703,32 @@ var _ = Describe("helper", func() {
 		Entry("should determine latest expirable version - select deprecated version when there is no supported one", []core.MachineImageVersion{previewVersion, deprecatedVersion}, true, core.MachineImageVersion{ExpirableVersion: core.ExpirableVersion{Version: "1.1.1", Classification: &classificationDeprecated}}, false),
 		Entry("should return an error - only preview versions", []core.MachineImageVersion{previewVersion}, true, nil, true),
 		Entry("should return an error - empty version slice", []core.MachineImageVersion{}, true, nil, true),
+	)
+
+	DescribeTable("#GetResourceByName",
+		func(resources []core.NamedResourceReference, name string, expected *core.NamedResourceReference) {
+			actual := GetResourceByName(resources, name)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("resources is nil", nil, "foo", nil),
+		Entry("resources doesn't contain a resource with the given name",
+			[]core.NamedResourceReference{
+				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+			},
+			"foo",
+			nil,
+		),
+		Entry("resources contains a resource with the given name",
+			[]core.NamedResourceReference{
+				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+				{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+			},
+			"foo",
+			&core.NamedResourceReference{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+		),
 	)
 
 	DescribeTable("#KubernetesDashboardEnabled",
@@ -724,10 +793,10 @@ var _ = Describe("helper", func() {
 				s := &core.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = pointer.String(shoot.specSeedName)
+					s.Spec.SeedName = ptr.To(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = pointer.String(shoot.statusSeedName)
+					s.Status.SeedName = ptr.To(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}
@@ -773,7 +842,7 @@ var _ = Describe("helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	DescribeTable("#GetSecretBindingTypes",
@@ -784,19 +853,6 @@ var _ = Describe("helper", func() {
 
 		Entry("with single-value provider type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
 		Entry("with multi-value provider type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
-	)
-
-	DescribeTable("#SecretBindingHasType",
-		func(secretBinding *core.SecretBinding, toFind string, expected bool) {
-			actual := SecretBindingHasType(secretBinding, toFind)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("with empty provider field", &core.SecretBinding{}, "foo", false),
-		Entry("when single-value provider type equals to the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, "foo", true),
-		Entry("when single-value provider type does not match the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, "bar", false),
-		Entry("when multi-value provider type contains the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "bar", true),
-		Entry("when multi-value provider type does not contain the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
 	)
 
 	Describe("#GetAllZonesFromShoot", func() {
@@ -908,6 +964,21 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#HasManagedIssuer", func() {
+		It("should return false when the shoot does not have managed issuer", func() {
+			Expect(HasManagedIssuer(&core.Shoot{})).To(BeFalse())
+		})
+
+		It("should return true when the shoot has managed issuer", func() {
+			shoot := &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
+				},
+			}
+			Expect(HasManagedIssuer(shoot)).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#ShootEnablesSSHAccess",
 		func(workers []core.Worker, workersSettings *core.WorkersSettings, expectedResult bool) {
 			shoot := &core.Shoot{
@@ -921,11 +992,11 @@ var _ = Describe("helper", func() {
 			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return false when shoot provider has zero workers", nil, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{core.Worker{}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{core.Worker{}}, &core.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{core.Worker{}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{core.Worker{}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
+		Entry("should return false when shoot provider has zero workers", []core.Worker{}, nil, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{{Name: "worker"}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
 	)
 
 	Describe("#DeterminePrimaryIPFamily", func() {
@@ -944,208 +1015,4 @@ var _ = Describe("helper", func() {
 			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4})).To(Equal(core.IPFamilyIPv6))
 		})
 	})
-
-	DescribeTable("#KubeAPIServerFeatureGateEnabled",
-		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeAPIServerFeatureGateEnabled(shoot, featureGate)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("with kubeAPIServerConfig=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeAPIServer: nil,
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("with kubeAPIServerConfig.featureGates=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeAPIServer: &core.KubeAPIServerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: nil,
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate does not exist",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeAPIServer: &core.KubeAPIServerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBaz": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate exists and is enabled",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeAPIServer: &core.KubeAPIServerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBar": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			true,
-		),
-	)
-
-	DescribeTable("#KubeControllerManagerFeatureGateEnabled",
-		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeControllerManagerFeatureGateEnabled(shoot, featureGate)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("with kubeControllerManager=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeControllerManager: nil,
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("with kubeControllerManager.featureGates=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeControllerManager: &core.KubeControllerManagerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: nil,
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate does not exist",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeControllerManager: &core.KubeControllerManagerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBaz": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate exists and is enabled",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeControllerManager: &core.KubeControllerManagerConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBar": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			true,
-		),
-	)
-
-	DescribeTable("#KubeProxyFeatureGateEnabled",
-		func(shoot *core.Shoot, featureGate string, expected bool) {
-			actual := KubeProxyFeatureGateEnabled(shoot, featureGate)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("with kubeProxy=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeProxy: nil,
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("with kubeProxy.featureGates=nil",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeProxy: &core.KubeProxyConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: nil,
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate does not exist",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeProxy: &core.KubeProxyConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBaz": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			false,
-		),
-		Entry("when feature gate exists and is enabled",
-			&core.Shoot{
-				Spec: core.ShootSpec{
-					Kubernetes: core.Kubernetes{
-						KubeProxy: &core.KubeProxyConfig{
-							KubernetesConfig: core.KubernetesConfig{
-								FeatureGates: map[string]bool{
-									"FooBar": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			"FooBar",
-			true,
-		),
-	)
 })

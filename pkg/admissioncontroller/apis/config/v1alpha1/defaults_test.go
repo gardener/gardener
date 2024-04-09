@@ -24,69 +24,158 @@ import (
 )
 
 var _ = Describe("Defaults", func() {
-	Describe("AdmissionControllerConfiguration", func() {
-		var obj *AdmissionControllerConfiguration
+	var obj *AdmissionControllerConfiguration
 
-		Context("Empty configuration", func() {
-			BeforeEach(func() {
-				obj = &AdmissionControllerConfiguration{}
-			})
+	BeforeEach(func() {
+		obj = &AdmissionControllerConfiguration{}
+	})
 
-			It("should correctly default the admission controller configuration", func() {
-				SetObjectDefaults_AdmissionControllerConfiguration(obj)
+	Describe("AdmissionControllerConfiguration defaulting", func() {
+		It("should correctly default the AdmissionControllerConfiguration", func() {
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
-				Expect(obj.LogLevel).To(Equal("info"))
-				Expect(obj.LogFormat).To(Equal("json"))
-				Expect(obj.Server.Webhooks.BindAddress).To(BeEmpty())
-				Expect(obj.Server.Webhooks.Port).To(Equal(2721))
-				Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(&ResourceAdmissionConfiguration{}))
-				Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-				Expect(obj.Server.HealthProbes.Port).To(Equal(2722))
-				Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-				Expect(obj.Server.Metrics.Port).To(Equal(2723))
-			})
+			Expect(obj.LogLevel).To(Equal("info"))
+			Expect(obj.LogFormat).To(Equal("json"))
 		})
 
-		Context("Resource Admission Configuration", func() {
-			BeforeEach(func() {
-				obj = &AdmissionControllerConfiguration{
-					Server: ServerConfiguration{
-						ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
-							UnrestrictedSubjects: []rbacv1.Subject{
-								{Kind: rbacv1.UserKind, Name: "foo"},
-								{Kind: rbacv1.GroupKind, Name: "bar"},
-								{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default"},
-							},
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				LogLevel:  "warning",
+				LogFormat: "md",
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.LogLevel).To(Equal("warning"))
+			Expect(obj.LogFormat).To(Equal("md"))
+		})
+	})
+
+	Describe("GardenClientConnection defaulting", func() {
+		It("should not default ContentType and AcceptContentTypes", func() {
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
+			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
+			// logic will be overwritten
+			Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
+			Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+		})
+
+		It("should correctly default the GardenClientConnection", func() {
+			expected := componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+				QPS:   50.0,
+				Burst: 100,
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.GardenClientConnection).To(Equal(expected))
+		})
+
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   67.0,
+					Burst: 230,
+				},
+			}
+			expected := obj.GardenClientConnection.DeepCopy()
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(&obj.GardenClientConnection).To(Equal(expected))
+		})
+	})
+
+	Describe("ServerConfiguration defaulting", func() {
+		It("should correctly default the ServerConfiguration", func() {
+			expected := &ServerConfiguration{
+				Webhooks: HTTPSServer{
+					Server: Server{
+						BindAddress: "",
+						Port:        2721,
+					},
+				},
+				ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{},
+				HealthProbes: &Server{
+					BindAddress: "",
+					Port:        2722,
+				},
+				Metrics: &Server{
+					BindAddress: "",
+					Port:        2723,
+				},
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(&obj.Server).To(Equal(expected))
+		})
+
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				Server: ServerConfiguration{
+					Webhooks: HTTPSServer{
+						Server: Server{
+							BindAddress: "foo",
+							Port:        1234,
 						},
 					},
-				}
-			})
-			It("should correctly default the resource admission configuration if given", func() {
-				SetObjectDefaults_AdmissionControllerConfiguration(obj)
+					HealthProbes: &Server{
+						BindAddress: "bar",
+						Port:        4321,
+					},
+					Metrics: &Server{
+						BindAddress: "baz",
+						Port:        5555,
+					},
+					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{},
+				},
+			}
+			expected := obj.Server.DeepCopy()
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
-				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[0].APIGroup).To(Equal(rbacv1.GroupName))
-				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[1].APIGroup).To(Equal(rbacv1.GroupName))
-				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[2].APIGroup).To(Equal(""))
-			})
+			Expect(&obj.Server).To(Equal(expected))
+		})
+	})
+
+	Describe("ResourceAdmissionConfiguration defaulting", func() {
+		It("should correctly default the resource admission configuration", func() {
+			obj = &AdmissionControllerConfiguration{
+				Server: ServerConfiguration{
+					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
+						UnrestrictedSubjects: []rbacv1.Subject{
+							{Kind: rbacv1.UserKind, Name: "foo"},
+							{Kind: rbacv1.GroupKind, Name: "bar"},
+							{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default"},
+						},
+					},
+				},
+			}
+			expected := &ResourceAdmissionConfiguration{
+				UnrestrictedSubjects: []rbacv1.Subject{
+					{Kind: rbacv1.UserKind, Name: "foo", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: rbacv1.GroupName},
+					{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: ""},
+				},
+			}
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
 
-		Describe("GardenClientConnection", func() {
-			It("should not default ContentType and AcceptContentTypes", func() {
-				SetObjectDefaults_AdmissionControllerConfiguration(obj)
+		It("should not overwrite already set values", func() {
+			obj = &AdmissionControllerConfiguration{
+				Server: ServerConfiguration{
+					ResourceAdmissionConfiguration: &ResourceAdmissionConfiguration{
+						UnrestrictedSubjects: []rbacv1.Subject{
+							{Kind: rbacv1.UserKind, Name: "foo", APIGroup: "fooGroup"},
+							{Kind: rbacv1.GroupKind, Name: "bar", APIGroup: "barGroup"},
+							{Kind: rbacv1.ServiceAccountKind, Name: "foobar", Namespace: "default", APIGroup: "foobarGroup"},
+						},
+					},
+				},
+			}
+			expected := obj.Server.ResourceAdmissionConfiguration.DeepCopy()
+			SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
-				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
-				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
-				// logic will be overwritten
-				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
-				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
-			})
-			It("should correctly default GardenClientConnection", func() {
-				SetObjectDefaults_AdmissionControllerConfiguration(obj)
-				Expect(obj.GardenClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-					QPS:   50.0,
-					Burst: 100,
-				}))
-			})
+			Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(expected))
 		})
 	})
 })

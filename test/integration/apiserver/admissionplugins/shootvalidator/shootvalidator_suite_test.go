@@ -25,16 +25,16 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestShootValidator(t *testing.T) {
@@ -234,7 +234,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.22.1"}},
+				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.26.1"}},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
 				{
@@ -243,9 +243,6 @@ var _ = BeforeSuite(func() {
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1"},
 							CRI: []gardencorev1beta1.CRI{
-								{
-									Name: gardencorev1beta1.CRINameDocker,
-								},
 								{
 									Name: gardencorev1beta1.CRINameContainerD,
 								},
@@ -334,10 +331,10 @@ var _ = BeforeSuite(func() {
 			Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     "10.0.0.0/16",
 				Services: "10.1.0.0/16",
-				Nodes:    pointer.String("10.2.0.0/16"),
+				Nodes:    ptr.To("10.2.0.0/16"),
 				ShootDefaults: &gardencorev1beta1.ShootNetworks{
-					Pods:     pointer.String("100.128.0.0/11"),
-					Services: pointer.String("100.72.0.0/13"),
+					Pods:     ptr.To("100.128.0.0/11"),
+					Services: ptr.To("100.72.0.0/13"),
 				},
 			},
 		},

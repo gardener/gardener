@@ -24,12 +24,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test"
@@ -42,6 +45,10 @@ var (
 	parentCtx     context.Context
 	runtimeClient client.Client
 )
+
+var _ = BeforeSuite(func() {
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+})
 
 var _ = BeforeEach(func() {
 	parentCtx = context.Background()
@@ -79,8 +86,8 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Pods:     "10.1.0.0/16",
 					Services: "10.2.0.0/16",
 				},
-				Ingress: gardencorev1beta1.Ingress{
-					Domain: "ingress.dev.my-garden.example.com",
+				Ingress: operatorv1alpha1.Ingress{
+					Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
@@ -90,7 +97,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 					},
 					TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
 						Enabled: true,
@@ -109,12 +116,14 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
 							BucketName: "gardener-operator/" + name,
-							SecretRef: corev1.SecretReference{
-								Name:      backupSecret.Name,
-								Namespace: backupSecret.Namespace,
+							SecretRef: corev1.LocalObjectReference{
+								Name: backupSecret.Name,
 							},
 						},
 					},
+				},
+				Gardener: operatorv1alpha1.Gardener{
+					ClusterIdentity: "e2e-test",
 				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
 					Version: "1.27.1",
@@ -134,10 +143,13 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 }
 
 func waitForGardenToBeReconciled(ctx context.Context, garden *operatorv1alpha1.Garden) {
-	CEventually(ctx, func(g Gomega) []gardencorev1beta1.Condition {
+	CEventually(ctx, func(g Gomega) gardencorev1beta1.LastOperationState {
 		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-		return garden.Status.Conditions
-	}).WithPolling(2 * time.Second).Should(ContainCondition(OfType(operatorv1alpha1.GardenReconciled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		if garden.Status.LastOperation == nil {
+			return ""
+		}
+		return garden.Status.LastOperation.State
+	}).WithPolling(2 * time.Second).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 }
 
 func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Garden) {

@@ -19,19 +19,7 @@ This document provides a checklist for them that you can walk through.
    All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](../concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s) since it performs health checks out-of-the-box and has a lot of other features (see its documentation for more information).
    Components that can run as both seed system component or shoot control plane component (e.g., VPA or `kube-state-metrics`) can make use of [these utility functions](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/resourceconfig.go).
 
-3. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L82-L83))
-
-   We define all image references centrally in the [`charts/images.yaml`](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml) file.
-   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called [image vector](../deployment/image_vector.md) instead.
-
-4. **Do not use container images from Docker Hub** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L257-L260), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L7-L10))
-
-   The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
-   There is also a strict [rate-limit](https://docs.docker.com/docker-hub/download-rate-limit/) that applies to the Docker Hub registry.
-   There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images from Docker Hub that are needed in gardener components to the gardener GCR under the prefix `eu.gcr.io/gardener-project/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
-   If you want to use a new image from Docker Hub or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
-
-5. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L183-L190), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L353))
+3. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L183-L190), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L353))
 
    [Unique `ConfigMap`s/`Secret`s](https://kubernetes.io/docs/concepts/configuration/configmap/#configmap-immutable) are immutable for modification and have a unique name.
    This has a couple of benefits, e.g. the `kubelet` doesn't watch these resources, and it is always clear which resource contains which data since it cannot be changed.
@@ -43,26 +31,51 @@ This document provides a checklist for them that you can walk through.
    The reason is that the old revision stays in the cluster even if unused until the garbage-collector acts.
    During this time, they would be wrongly aggregated to the full configuration.
 
-6. **Manage certificates/secrets via [secrets manager](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/utils/secrets/manager)** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L100-L109))
+4. **Manage certificates/secrets via [secrets manager](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/utils/secrets/manager)** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L100-L109))
 
    You should use the [secrets manager](secrets_management.md) for the management of any kind of credentials.
    This makes sure that credentials rotation works out-of-the-box without you requiring to think about it.
    Generally, do not use client certificates (see the [Security section](#security)).
 
-7. **Consider hibernation when calculating replica count** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/kubescheduler.go#L36))
+5. **Consider hibernation when calculating replica count** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/kubescheduler.go#L36))
 
    Shoot clusters can be [hibernated](../usage/shoot_hibernate.md) meaning that all control plane components in the shoot namespace in the seed cluster are scaled down to zero and all worker nodes are terminated.
    If your component runs in the seed cluster then you have to consider this case and provide the proper replica count.
    There is a utility function available (see example).
 
-8. **Ensure task dependencies are as precise as possible in shoot flows** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_reconcile.go#L508-L512), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_delete.go#L368-L372))
+6. **Ensure task dependencies are as precise as possible in shoot flows** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_reconcile.go#L508-L512), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot/reconciler_delete.go#L368-L372))
 
    Only define the minimum of needed dependency tasks in the [shoot reconciliation/deletion flows](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/shoot/shoot).
 
-9. **Handle shoot system components**
+7. **Handle shoot system components**
 
    Shoot system components deployed by `gardener-resource-manager` are labelled with `resource.gardener.cloud/managed-by: gardener`. This makes Gardener adding required label selectors and tolerations so that non-`DaemonSet` managed `Pod`s will exclusively run on selected nodes (for more information, see [System Components Webhook](../concepts/resource-manager.md#system-components-webhook)).
    `DaemonSet`s on the other hand, should generally tolerate any `NoSchedule` or `NoExecute` taints so that they can run on any `Node`, regardless of user added taints.
+
+## Images
+
+1. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L82-L83))
+
+   We define all image references centrally in the [`imagevector/images.yaml`](../../imagevector/images.yaml) file.
+   Hence, the image references must not be hard-coded in the pod template spec but read from this so-called [image vector](../deployment/image_vector.md) instead.
+
+2. **Do not use container images from registries that don't support IPv6** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L619-L622), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L37-L40))
+
+   Registries such as ECR, GHCR (`ghcr.io`), MCR (`mcr.microsoft.com`) don't support pulling images over IPv6.
+
+   Check if the upstream image is being also maintained in a registry that support IPv6 natively such as Artifact Registry, Quay (`quay.io`). If there is such image, use the image from registry with IPv6 support.
+
+   If the image is not available in a registry with IPv6 then copy the image to the gardener GCR. There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images that are needed in gardener components from a source registry to the gardener GCR under the prefix `europe-docker.pkg.dev/gardener-project/releases/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
+
+   If you want to use a new image from a registry without IPv6 support or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
+
+3. **Do not use container images from Docker Hub** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L619-L622), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L37-L40))
+
+   There is a strict [rate-limit](https://docs.docker.com/docker-hub/download-rate-limit/) that applies to the Docker Hub registry. As described in 2., use another registry (if possible) or copy the image to the gardener GCR.
+
+4. **Do not use Shoot container images that are not multi-arch**
+
+   Gardener supports Shoot clusters with both `amd64` and `arm64` based worker Nodes. `amd64` container images cannot run on `arm64` worker Nodes and vice-versa.
 
 ## Security
 
@@ -87,20 +100,25 @@ This document provides a checklist for them that you can walk through.
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
-5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
+5. **Do not run containers in privileged mode** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
 
-   Avoid running components with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container).
+   Avoid running containers with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container).
 
-6. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
+6. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12))
 
-   The [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components.
-   However, in some special cases you might need to overwrite it.
+   Avoid runnig containers as root. Usually, components such as Kubernetes controllers and admission webhook servers don't need root user capabilities to do their jobs.
 
-7. **Define `PodSecurityPolicy`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpnshoot/vpnshoot.go#L341-L412))
+   The problem with running as root, starts with how the container is first built. Unless a non-privileged user is configured in the `Dockerfile`, container build systems by default set up the container with the root user. Add a non-privileged user to your `Dockerfile` or use a base image with a non-root user (for example the `nonroot` images from [distroless](https://github.com/GoogleContainerTools/distroless) such as `gcr.io/distroless/static-debian12:nonroot`).
 
-   `PodSecurityPolicy`s are deprecated, however Gardener still supports shoot clusters with older Kubernetes versions ([ref](../usage/supported_k8s_versions.md)).
-   To make sure that such clusters can run with `.spec.kubernetes.allowPrivilegedContainers=false`, you have to define proper `PodSecurityPolicy`s.
-   For more information, see [Pod Security](../usage/pod-security.md).
+   If the image is an upstream one, then consider configuring a securityContext for the container/Pod with a non-privileged user. For more information, see [Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+
+7. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
+
+   For components deployed in the Seed cluster, the [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted to `RuntimeDefault` by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components. However, in some special cases you might need to overwrite it.
+
+   The `gardener-resource-manager`'s SeccompProfile webhook is not enabled for a Shoot cluster. For components deployed in the Shoot cluster, it is required [*] to explicitly specify the Seccomp profile.
+
+   <sub>[*] It is required because if a component deployed in the Shoot cluster does not specify a Seccomp profile and cannot run with the `RuntimeDefault` Seccomp profile, then enabling the `.spec.kubernetes.kubelet.seccompDefault` field in the Shoot spec would break the corresponding component.</sub>
 
 ## High Availability / Stability
 
@@ -167,10 +185,11 @@ This document provides a checklist for them that you can walk through.
 
    In order to allow easy inspection of two `ReplicaSet`s to quickly find the changes that lead to a rolling update, the [revision history limit](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit) should be set to `2`.
 
-4. **Define health checks** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/care/checker.go#L45-L71), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/care/seed_health.go#L46-L54))
+4. **Define health checks** ([example 1](https://github.com/gardener/gardener/blob/180951eac9b8183175d4dcadc305c7722ce8122d/pkg/gardenlet/controller/shoot/care/health.go#L763-L795))
 
-   `gardenlet`'s [care controllers](../concepts/gardenlet.md#controllers) regularly check the health status of system or control plane components.
-   You need to enhance the lists of components to check if your component related to the seed system or shoot control plane (shoot system components are automatically checked via their respective [`ManagedResource` conditions](../concepts/resource-manager.md#managedresource-controller)), see examples above.
+   [`gardener-operators`'s](../concepts/operator.md#controllers) and [`gardenlet`'s](../concepts/gardenlet.md#controllers) care controllers regularly check the health status of components relevant to the respective cluster (garden/seed/shoot).
+   For shoot control plane components, you need to enhance the lists of components to make sure your component is checked, see example above.
+   For components deployed via `ManagedResource`, please consult the respective care controller documentation for more information ([garden](../concepts/operator.md#care-reconciler), [seed](../concepts/gardenlet.md#-care--reconciler-1), [shoot](../concepts/gardenlet.md#-care--reconciler-2)).
 
 5. **Configure automatic restarts in shoot maintenance time window** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L250), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/coredns.go#L90-L107))
 

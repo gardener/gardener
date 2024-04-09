@@ -92,6 +92,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		healthFunc = health.And(health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp), healthFunc)
 	}
 
+	var objectKind string
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		retryCountUntilSevere++
 
@@ -100,6 +101,12 @@ func WaitUntilObjectReadyWithHealthFunction(
 				return retry.MinorError(err)
 			}
 			return retry.SevereError(err)
+		}
+
+		if objectKind == "" {
+			if objectKind = obj.GetObjectKind().GroupVersionKind().Kind; objectKind != "" {
+				log = log.WithValues("kind", objectKind)
+			}
 		}
 
 		if err := healthFunc(obj); err != nil {
@@ -223,17 +230,17 @@ func WaitUntilExtensionObjectDeleted(
 		}
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
-			log.Error(fmt.Errorf(lastErr.Description), "Object did not get deleted yet")
+			log.Info("Object did not get deleted yet", "description", lastErr.Description)
 			lastObservedError = v1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 
-		var message = fmt.Sprintf("%s is still present", extensionKey(kind, namespace, name))
+		var message = extensionKey(kind, namespace, name) + " is still present"
 		if lastObservedError != nil {
 			message += fmt.Sprintf(", last observed error: %s", lastObservedError.Error())
 		}
-		return retry.MinorError(fmt.Errorf(message))
+		return retry.MinorError(errors.New(message))
 	}); err != nil {
-		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
+		message := "Failed to delete " + extensionKey(kind, namespace, name)
 		if lastObservedError != nil {
 			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}

@@ -22,7 +22,7 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -89,7 +89,7 @@ func validateNetworkPolicyControllerConfiguration(conf config.NetworkPolicyContr
 func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if pointer.IntDeref(val, 0) <= 0 {
+	if ptr.Deref(val, 0) <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("concurrentSyncs"), val, "must be at least 1"))
 	}
 
@@ -113,8 +113,8 @@ func validateNodeTolerationConfiguration(conf *config.NodeTolerationConfiguratio
 		return allErrs
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 
 	return allErrs
 }

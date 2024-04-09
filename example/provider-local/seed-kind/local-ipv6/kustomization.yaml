@@ -4,10 +4,10 @@ kind: Kustomization
 resources:
 - ../local
 
-patchesJson6902:
-- target:
+patches:
+- path: patch-seed.yaml
+  target:
     group: core.gardener.cloud
-    version: v1beta1
     kind: Seed
     name: local
-  path: patch-seed.yaml
+    version: v1beta1

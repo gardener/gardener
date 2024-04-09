@@ -26,6 +26,7 @@ func ValidateCIDRParse(cidrPaths ...CIDR) (allErrs field.ErrorList) {
 		if cidrPath == nil {
 			continue
 		}
+
 		allErrs = append(allErrs, cidrPath.ValidateParse()...)
 	}
 	return allErrs
@@ -39,6 +40,7 @@ func ValidateCIDRIPFamily(cidrs []CIDR, ipFamily string) field.ErrorList {
 		if cidr == nil {
 			continue
 		}
+
 		allErrs = append(allErrs, cidr.ValidateIPFamily(ipFamily)...)
 	}
 
@@ -48,6 +50,7 @@ func ValidateCIDRIPFamily(cidrs []CIDR, ipFamily string) field.ErrorList {
 // ValidateCIDROverlap validates that the provided CIDRs do not overlap.
 func ValidateCIDROverlap(paths []CIDR, overlap bool) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	for i := 0; i < len(paths)-1; i++ {
 		if paths[i] == nil {
 			continue

@@ -40,17 +40,14 @@ type ETCDEncryptionKeyVerifier struct {
 	SecretsManagerLabelSelector  client.MatchingLabels
 	GetETCDEncryptionKeyRotation func() *gardencorev1beta1.ETCDEncryptionKeyRotation
 
+	EncryptionKey  string
+	RoleLabelValue string
+
 	secretsBefore   SecretConfigNamesToSecrets
 	secretsPrepared SecretConfigNamesToSecrets
 }
 
-const etcdEncryptionKey = "kube-apiserver-etcd-encryption-key"
-
-var (
-	decoder runtime.Decoder
-
-	labelSelectorEncryptionConfig = client.MatchingLabels{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration}
-)
+var decoder runtime.Decoder
 
 func init() {
 	scheme := runtime.NewScheme()
@@ -66,14 +63,14 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
-		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
+		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
 		v.secretsBefore = grouped
 	}).Should(Succeed())
 
 	By("Verify old etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), labelSelectorEncryptionConfig)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
@@ -86,8 +83,8 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 				AESCBC: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// old key
-						Name:   string(v.secretsBefore[etcdEncryptionKey][0].Data["key"]),
-						Secret: string(v.secretsBefore[etcdEncryptionKey][0].Data["secret"]),
+						Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
+						Secret: string(v.secretsBefore[v.EncryptionKey][0].Data["secret"]),
 					}},
 				},
 			},
@@ -121,15 +118,15 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
-		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
-		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsBefore[etcdEncryptionKey][0]), "old etcd encryption key secret should be kept")
+		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
+		g.Expect(grouped[v.EncryptionKey]).To(ContainElement(v.secretsBefore[v.EncryptionKey][0]), "old etcd encryption key secret should be kept")
 		v.secretsPrepared = grouped
 	}).Should(Succeed())
 
 	By("Verify combined etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), labelSelectorEncryptionConfig)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
@@ -143,12 +140,12 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 				AESCBC: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// new key
-						Name:   string(v.secretsPrepared[etcdEncryptionKey][1].Data["key"]),
-						Secret: string(v.secretsPrepared[etcdEncryptionKey][1].Data["secret"]),
+						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
+						Secret: string(v.secretsPrepared[v.EncryptionKey][1].Data["secret"]),
 					}, {
 						// old key
-						Name:   string(v.secretsPrepared[etcdEncryptionKey][0].Data["key"]),
-						Secret: string(v.secretsPrepared[etcdEncryptionKey][0].Data["secret"]),
+						Name:   string(v.secretsPrepared[v.EncryptionKey][0].Data["key"]),
+						Secret: string(v.secretsPrepared[v.EncryptionKey][0].Data["secret"]),
 					}},
 				},
 			},
@@ -182,14 +179,14 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
-		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
-		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsPrepared[etcdEncryptionKey][1]), "new etcd encryption key secret should be kept")
+		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
+		g.Expect(grouped[v.EncryptionKey]).To(ContainElement(v.secretsPrepared[v.EncryptionKey][1]), "new etcd encryption key secret should be kept")
 	}).Should(Succeed())
 
 	By("Verify new etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), labelSelectorEncryptionConfig)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
@@ -203,8 +200,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 				AESCBC: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// new key
-						Name:   string(v.secretsPrepared[etcdEncryptionKey][1].Data["key"]),
-						Secret: string(v.secretsPrepared[etcdEncryptionKey][1].Data["secret"]),
+						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
+						Secret: string(v.secretsPrepared[v.EncryptionKey][1].Data["secret"]),
 					}},
 				},
 			},

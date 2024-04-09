@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/http"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
@@ -41,7 +41,7 @@ func (h *Handler) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 
 		h.Authorizer = NewAuthorizer(h.Logger, graph)
 
-		if pointer.BoolDeref(enableDebugHandlers, false) {
+		if ptr.Deref(enableDebugHandlers, false) {
 			h.Logger.Info("Registering debug handlers")
 			mgr.GetWebhookServer().Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
 		}

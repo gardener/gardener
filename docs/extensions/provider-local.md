@@ -18,15 +18,11 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
-1. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
+1. No load balancers for Shoot clusters.
 
-   _In order to realize DNS (see the [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
+   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster._
 
-2. No load balancers for Shoot clusters.
-
-   _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster.
-
-3. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
+1. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
 
    _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
 
@@ -78,20 +74,7 @@ Additionally, it creates a few (currently unused) dummy secrets (CA, server and 
 
 #### `DNSRecord`
 
-This controller manipulates the `/etc/hosts` file and adds a new line for each `DNSRecord` it observes.
-This enables accessing the shoot clusters from the respective machine, however, it also requires to run the extension with elevated privileges (`sudo`).
-
-The `/etc/hosts` would be extended as follows:
-
-```text
-# Begin of gardener-extension-provider-local section
-10.84.23.24 api.local.local.external.local.gardener.cloud
-10.84.23.24 api.local.local.internal.local.gardener.cloud
-...
-# End of gardener-extension-provider-local section
-```
-
-In addition to that, the controller also adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
+The controller adapts the cluster internal DNS configuration by extending the `coredns` configuration for every observed `DNSRecord`. It will add two corresponding entries in the custom DNS configuration per shoot cluster:
 
 ```text
 data:
@@ -113,7 +96,7 @@ In addition, we had issues with shoot clusters having more than one node (hence,
 
 #### `OperatingSystemConfig`
 
-This controller leverages the standard [`oscommon` library](../../extensions/pkg/controller/operatingsystemconfig/oscommon) in order to render a simple cloud-init template which can later be executed by the shoot worker nodes.
+This controller renders a simple cloud-init template which can later be executed by the shoot worker nodes.
 
 The shoot worker nodes are `Pod`s with a container based on the `kindest/node` image. This is maintained in the [gardener/machine-controller-manager-provider-local repository](https://github.com/gardener/machine-controller-manager-provider-local/tree/master/node) and has a special `run-userdata` systemd service which executes the cloud-init generated earlier by the `OperatingSystemConfig` controller.
 
@@ -125,9 +108,9 @@ Additionally, it generates the [`MachineClass`es](https://github.com/gardener/ma
 
 #### `Ingress`
 
-Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
+The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
 This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-However, provider-local implements the `DNSRecord` extension API by writing the DNS record to `/etc/hosts`, which doesn't support wildcard entries.
+However, provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)).
 To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
 
 #### `Service`
@@ -141,13 +124,16 @@ It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgatew
 In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `127.0.0.10`, `127.0.0.11`, and `127.0.0.12` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
-This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
+This controller reconciles the `BackupBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
 #### Extension Seed
 This controller reconciles `Extensions` of type `local-ext-seed`. It creates a single `serviceaccount` named `local-ext-seed` in the shoot's namespace in the seed. The extension is reconciled before the `kube-apiserver`. More on extension lifecycle strategies can be read in [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
 
 #### Extension Shoot
 This controller reconciles `Extensions` of type `local-ext-shoot`. It creates a single `serviceaccount` named `local-ext-shoot` in the `kube-system` namespace of the shoot. The extension is reconciled after the `kube-apiserver`. More on extension lifecycle strategies can be read [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
+
+#### Extension Shoot After Worker
+This controller reconciles `Extensions` of type `local-ext-shoot-after-worker`. It creates a `deployment` named `local-ext-shoot-after-worker` in the `kube-system` namespace of the shoot. The extension is reconciled after the workers and waits until the deployment is ready. More on extension lifecycle strategies can be read [Registering Extension Controllers](controllerregistration.md#extension-lifecycle).
 
 #### Health Checks
 

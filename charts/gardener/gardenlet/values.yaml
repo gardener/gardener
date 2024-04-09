@@ -3,7 +3,7 @@ revisionHistoryLimit: 2
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:
-  repository: eu.gcr.io/gardener-project/gardener/gardenlet
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
   tag: latest
   pullPolicy: IfNotPresent
 resources:
@@ -185,9 +185,12 @@ config:
 #     enableBackupCompaction: false
 #     eventsThreshold: 1000000
 #     activeDeadlineDuration: "3h"
+#     metricsScrapeWaitDuration: "60s"
 #   backupLeaderElection:
 #     reelectionPeriod: 5s
 #     etcdConnectionTimeout: 5s
+#   featureGates:
+#     UseEtcdWrapper: true
 # logging:
 #   enabled: false
 # monitoring:

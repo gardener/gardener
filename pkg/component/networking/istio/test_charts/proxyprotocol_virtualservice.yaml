@@ -1,0 +1,24 @@
+# this dummy virtual service is added so the Envoy listener is added
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: proxy-protocol-blackhole
+  namespace: test-ingress
+  labels:
+    app: istio-ingressgateway
+    foo: bar
+spec:
+  hosts:
+  - blackhole.local
+  gateways:
+  - proxy-protocol
+  exportTo:
+  - "."
+  tcp:
+  - match:
+    - port: 8443
+    route:
+    - destination:
+        host: localhost
+        port:
+          number: 9999

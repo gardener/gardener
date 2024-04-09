@@ -68,39 +68,53 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return false because Bootstrapped condition does not exist", func() {
+			It("should return false because last operation is nil on old shoot", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: seed, ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return false because Bootstrapped condition was true before", func() {
-				seed.Status.Conditions = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue}}
-				Expect(p.Update(event.UpdateEvent{ObjectOld: seed, ObjectNew: seed})).To(BeFalse())
-			})
-
-			It("should return false because Bootstrapped condition is no longer true", func() {
-				seed.Status.Conditions = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse}}
+			It("should return false because last operation is nil on new seed", func() {
 				oldSeed := seed.DeepCopy()
-				oldSeed.Status.Conditions[0].Status = gardencorev1beta1.ConditionTrue
+				oldSeed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return false because Bootstrapped condition does no longer exist", func() {
+			It("should return false because last operation type is 'Delete' on old seed", func() {
+				seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 				oldSeed := seed.DeepCopy()
-				oldSeed.Status.Conditions = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue}}
+				oldSeed.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return true because Bootstrapped condition did not exist before", func() {
-				seed.Status.Conditions = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue}}
+			It("should return false because last operation type is 'Delete' on new seed", func() {
+				seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				seed.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
 				oldSeed := seed.DeepCopy()
-				oldSeed.Status.Conditions = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeTrue())
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return true because Bootstrapped condition was not true before", func() {
-				seed.Status.Conditions = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue}}
+			It("should return false because last operation type is not 'Processing' on old seed", func() {
+				seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				seed.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 				oldSeed := seed.DeepCopy()
-				oldSeed.Status.Conditions[0].Status = gardencorev1beta1.ConditionFalse
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeFalse())
+			})
+
+			It("should return false because last operation type is not 'Succeeded' on new seed", func() {
+				seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				seed.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+				oldSeed := seed.DeepCopy()
+				oldSeed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeFalse())
+			})
+
+			It("should return true because last operation type is 'Succeeded' on new seed", func() {
+				seed.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				seed.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+				oldSeed := seed.DeepCopy()
+				oldSeed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: seed})).To(BeTrue())
 			})
 		})

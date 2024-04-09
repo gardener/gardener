@@ -25,12 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -88,8 +89,8 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetesscheme.Scheme,
-		MetricsBindAddress: "0",
+		Scheme:  kubernetesscheme.Scheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -97,7 +98,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
 		Config: config.NetworkPolicyControllerConfig{
-			ConcurrentSyncs:    pointer.Int(5),
+			ConcurrentSyncs:    ptr.To(5),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
 			IngressControllerSelector: &config.IngressControllerSelector{
 				Namespace:   ingressControllerNamespace,

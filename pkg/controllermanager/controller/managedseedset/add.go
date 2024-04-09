@@ -22,7 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -61,22 +61,26 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Named(ControllerName).
 		For(&seedmanagementv1alpha1.ManagedSeedSet{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Watches(
-			&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-			&handler.EnqueueRequestForOwner{
-				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-				IsController: true,
-			},
+			&gardencorev1beta1.Shoot{},
+			handler.EnqueueRequestForOwner(
+				mgr.GetScheme(),
+				mgr.GetRESTMapper(),
+				&seedmanagementv1alpha1.ManagedSeedSet{},
+				handler.OnlyControllerOwner(),
+			),
 			builder.WithPredicates(r.ShootPredicate(ctx)),
 		).
 		Watches(
-			&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
-			&handler.EnqueueRequestForOwner{
-				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-				IsController: true,
-			},
+			&seedmanagementv1alpha1.ManagedSeed{},
+			handler.EnqueueRequestForOwner(
+				mgr.GetScheme(),
+				mgr.GetRESTMapper(),
+				&seedmanagementv1alpha1.ManagedSeedSet{},
+				handler.OnlyControllerOwner(),
+			),
 			builder.WithPredicates(r.ManagedSeedPredicate(ctx)),
 		).
 		Build(r)
@@ -85,7 +89,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Seed{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Seed{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
 		r.SeedPredicate(ctx),
 	)

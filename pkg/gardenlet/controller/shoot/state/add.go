@@ -16,9 +16,8 @@ package state
 
 import (
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -49,28 +48,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{MaxConcurrentReconciles: *r.Config.ConcurrentSyncs}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				r.SeedNamePredicate(),
-				r.SeedNameChangedPredicate(),
-			),
+			builder.WithPredicates(r.SeedNameChangedPredicate()),
 		).
 		Complete(r)
-}
-
-// SeedNamePredicate returns a predicate which returns true for shoots whose seed name in the spec matches the seed name
-// the reconciler is configured with.
-func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return false
-		}
-
-		return pointer.StringDeref(shoot.Spec.SeedName, "") == r.SeedName
-	})
 }
 
 // SeedNameChangedPredicate returns a predicate which returns true for all events except updates - here it only returns
@@ -88,7 +71,7 @@ func (r *Reconciler) SeedNameChangedPredicate() predicate.Predicate {
 				return false
 			}
 
-			return pointer.StringDeref(shoot.Spec.SeedName, "") != pointer.StringDeref(oldShoot.Spec.SeedName, "")
+			return ptr.Deref(shoot.Spec.SeedName, "") != ptr.Deref(oldShoot.Spec.SeedName, "")
 		},
 	}
 }

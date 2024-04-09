@@ -35,18 +35,21 @@ garden_kubeconfig=$1
 seed_kubeconfig=$2
 seed_name=$3
 
-registry_domain=$(cat "$SCRIPT_DIR"/registrydomain)
+registry_domain_file="$SCRIPT_DIR/registrydomain"
 seed_values=values.yaml
 if [[ "$seed_name" != "provider-extensions" ]]; then
-  registry_domain=$(cat "$SCRIPT_DIR"/registrydomain-"$seed_name")
+  registry_domain_file="$SCRIPT_DIR/registrydomain-$seed_name"
   seed_values=values-"$seed_name".yaml
 fi
+registry_domain=$(cat "$registry_domain_file")
 
 echo "Skaffolding seed"
 GARDENER_LOCAL_KUBECONFIG=$garden_kubeconfig \
   SKAFFOLD_DEFAULT_REPO=$registry_domain \
-  REGISTRY_DOMAIN=$registry_domain \
   SEED_NAME=$seed_name \
   SEED_VALUES=$seed_values \
   SKAFFOLD_PUSH=true \
   skaffold run -m gardenlet -p extensions --kubeconfig="$seed_kubeconfig"
+
+echo "Deploying additional kyverno policies"
+kubectl --server-side=true --force-conflicts=true --kubeconfig="$seed_kubeconfig" apply -k "$SCRIPT_DIR/../registry-seed/kyverno-policies"

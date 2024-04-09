@@ -18,19 +18,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("DeletionConfirmation", func() {
@@ -89,9 +89,9 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
-			defer test.WithVars(
+			DeferCleanup(test.WithVars(
 				&TimeNow, mockNow.Do,
-			)()
+			))
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
@@ -103,9 +103,9 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the deletion confirmation annotation for an object with annotations", func() {
-			defer test.WithVars(
+			DeferCleanup(test.WithVars(
 				&TimeNow, mockNow.Do,
-			)()
+			))
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			obj.SetAnnotations(map[string]string{"foo": "bar"})

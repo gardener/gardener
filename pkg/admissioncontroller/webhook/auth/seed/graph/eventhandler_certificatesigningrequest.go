@@ -65,7 +65,7 @@ func (g *graph) handleCertificateSigningRequestCreate(name string, request []byt
 	if ok, _ := gardenerutils.IsSeedClientCert(x509cr, usages); !ok {
 		return
 	}
-	seedName, _ := seedidentity.FromCertificateSigningRequest(x509cr)
+	seedName, _, _ := seedidentity.FromCertificateSigningRequest(x509cr)
 
 	var (
 		certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", name)

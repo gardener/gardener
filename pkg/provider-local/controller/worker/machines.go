@@ -27,24 +27,10 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
-
-// MachineClassKind yields the name of the machine class kind used by local provider.
-func (w *workerDelegate) MachineClassKind() string {
-	return "MachineClass"
-}
-
-// MachineClassList yields a newly initialized MachineClassList object.
-func (w *workerDelegate) MachineClassList() client.ObjectList {
-	return &machinev1alpha1.MachineClassList{}
-}
-
-// MachineClass yields a newly initialized MachineClass object.
-func (w *workerDelegate) MachineClass() client.Object {
-	return &machinev1alpha1.MachineClass{}
-}
 
 // DeployMachineClasses generates and creates the local provider specific machine classes.
 func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
@@ -116,7 +102,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      className,
 				Namespace: w.worker.Namespace,
-				Labels:    map[string]string{v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass},
+				Labels:    map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{"userData": pool.UserData},
@@ -144,17 +130,18 @@ func (w *workerDelegate) generateMachineConfig() error {
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
-			Name:                 deploymentName,
-			ClassName:            className,
-			SecretName:           className,
-			Minimum:              pool.Minimum,
-			Maximum:              pool.Maximum,
-			MaxSurge:             pool.MaxSurge,
-			MaxUnavailable:       pool.MaxUnavailable,
-			Labels:               pool.Labels,
-			Annotations:          pool.Annotations,
-			Taints:               pool.Taints,
-			MachineConfiguration: genericworkeractuator.ReadMachineConfiguration(pool),
+			Name:                         deploymentName,
+			ClassName:                    className,
+			SecretName:                   className,
+			Minimum:                      pool.Minimum,
+			Maximum:                      pool.Maximum,
+			MaxSurge:                     pool.MaxSurge,
+			MaxUnavailable:               pool.MaxUnavailable,
+			Labels:                       pool.Labels,
+			Annotations:                  pool.Annotations,
+			Taints:                       pool.Taints,
+			MachineConfiguration:         genericworkeractuator.ReadMachineConfiguration(pool),
+			ClusterAutoscalerAnnotations: extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations(pool.ClusterAutoscaler),
 		})
 	}
 

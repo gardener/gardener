@@ -50,5 +50,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&OpenIDConnectPreset{},
 		&OpenIDConnectPresetList{},
 	)
+
 	return nil
 }

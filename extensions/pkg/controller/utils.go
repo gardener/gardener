@@ -61,6 +61,7 @@ type AddToManagerBuilder []func(context.Context, manager.Manager) error
 // NewAddToManagerBuilder creates a new AddToManagerBuilder and registers the given functions.
 func NewAddToManagerBuilder(funcs ...func(context.Context, manager.Manager) error) AddToManagerBuilder {
 	var builder AddToManagerBuilder
+
 	builder.Register(funcs...)
 	return builder
 }
@@ -90,6 +91,7 @@ type WatchBuilder []func(controller.Controller) error
 // NewWatchBuilder creates a new WatchBuilder and registers the given functions.
 func NewWatchBuilder(funcs ...func(controller.Controller) error) WatchBuilder {
 	var builder WatchBuilder
+
 	builder.Register(funcs...)
 	return builder
 }
@@ -157,22 +159,4 @@ func ShouldSkipOperation(operationType gardencorev1beta1.LastOperationType, obj 
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
 	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
-}
-
-// UseTokenRequestor returns true when the provided Gardener version is large enough for supporting acquiring tokens
-// for shoot cluster control plane components running in the seed based on the TokenRequestor controller of
-// gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#tokenrequestor).
-// Deprecated: new extension versions need to require at least Gardener version v1.36 and use the token requestor by
-// default which makes this function obsolete.
-func UseTokenRequestor(gardenerVersion string) (bool, error) {
-	return true, nil
-}
-
-// UseServiceAccountTokenVolumeProjection returns true when the provided Gardener version is large enough for supporting
-// automatic token volume projection for components running in the seed and shoot clusters based on the respective
-// webhook part of gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens).
-// Deprecated: new extension versions need to require at least Gardener version v1.37 and use projected service account
-// token volumes by default which makes this function obsolete.
-func UseServiceAccountTokenVolumeProjection(gardenerVersion string) (bool, error) {
-	return true, nil
 }

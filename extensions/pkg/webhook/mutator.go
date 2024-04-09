@@ -33,18 +33,15 @@ type MutatorWithShootClient interface {
 	// "old" is optional and it must always be checked for nil.
 	Mutate(ctx context.Context, new, old client.Object, shootClient client.Client) error
 }
-type mutatorWrapper struct {
+
+type mutationWrapper struct {
 	Mutator
 }
 
-func hybridMutator(mut Mutator) Mutator {
-	return &mutatorWrapper{mut}
+func (d *mutationWrapper) do(ctx context.Context, new, old client.Object) error {
+	return d.Mutate(ctx, new, old)
 }
 
-// MutateFunc is a func to be used directly as an implementation for Mutator
-type MutateFunc func(ctx context.Context, new, old client.Object) error
-
-// Mutate validates and if needed mutates the given object.
-func (mf MutateFunc) Mutate(ctx context.Context, new, old client.Object) error {
-	return mf(ctx, new, old)
+func mutatingActionHandler(val Mutator) handlerAction {
+	return &mutationWrapper{val}
 }

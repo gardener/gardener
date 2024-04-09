@@ -15,10 +15,12 @@
 package care
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -32,7 +34,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -51,17 +52,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 			r.EventHandler(),
-			builder.WithPredicates(
-				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),
-				r.ShootPredicate(),
-			),
+			builder.WithPredicates(r.ShootPredicate()),
 		).
 		Complete(r)
 }
@@ -72,7 +70,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // EventHandler returns a handler for Shoot events.
 func (r *Reconciler) EventHandler() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -93,7 +91,7 @@ func (r *Reconciler) EventHandler() handler.EventHandler {
 			// don't add random duration for enqueueing new Shoots which have never been health checked yet
 			q.Add(req)
 		},
-		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),
@@ -121,20 +119,11 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 			}
 
 			// re-evaluate shoot health status right after a reconciliation operation has succeeded
-			return shootReconciliationFinishedSuccessful(oldShoot, shoot) || seedGotAssigned(oldShoot, shoot)
+			return predicateutils.ReconciliationFinishedSuccessfully(oldShoot.Status.LastOperation, shoot.Status.LastOperation) || seedGotAssigned(oldShoot, shoot)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-func shootReconciliationFinishedSuccessful(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return oldShoot.Status.LastOperation != nil &&
-		oldShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		oldShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
-		newShoot.Status.LastOperation != nil &&
-		newShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		newShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
 func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {

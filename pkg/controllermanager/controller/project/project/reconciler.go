@@ -16,6 +16,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -28,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,7 +39,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/projectrbac"
+	"github.com/gardener/gardener/pkg/component/garden/projectrbac"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -120,7 +121,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// set the created namespace in spec.namespace
 	if project.Spec.Namespace == nil {
-		project.Spec.Namespace = pointer.String(namespace.Name)
+		project.Spec.Namespace = ptr.To(namespace.Name)
 		if err := r.Client.Update(ctx, project); err != nil {
 			r.Recorder.Event(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
@@ -187,7 +188,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
 	var (
-		namespaceName = pointer.StringDeref(project.Spec.Namespace, "")
+		namespaceName = ptr.Deref(project.Spec.Namespace, "")
 
 		projectLabels      = namespaceLabelsFromProject(project)
 		projectAnnotations = namespaceAnnotationsFromProject(project)
@@ -232,7 +233,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 	}
 
 	if metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
-		return nil, fmt.Errorf("namespace is already in-use by another project")
+		return nil, errors.New("namespace is already in-use by another project")
 	}
 
 	before := namespace.DeepCopy()
@@ -331,7 +332,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 	if namespace := project.Spec.Namespace; namespace != nil {
 		log = log.WithValues("namespaceName", *namespace)
 
-		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"), client.InNamespace(*namespace))
+		inUse, err := kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.ShootList{}, r.Client.Scheme(), client.InNamespace(*namespace))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}

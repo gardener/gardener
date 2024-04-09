@@ -16,7 +16,7 @@ package flow
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -50,7 +50,7 @@ func (p *progressReporterDelaying) Start(ctx context.Context) error {
 	defer p.lock.Unlock()
 
 	if p.timer != nil {
-		return fmt.Errorf("progress reporter has already been started")
+		return errors.New("progress reporter has already been started")
 	}
 
 	// We store the context on the progressReporterDelaying object so that we can call the reporterFn with the original

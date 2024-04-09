@@ -83,18 +83,17 @@ var _ = Describe("Reconciler", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(quota), quota)).To(Succeed())
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(quota.GetFinalizers()).Should(ConsistOf(finalizerName))
 		})
 	})
 
 	Context("when deletion timestamp set", func() {
 		BeforeEach(func() {
-			now := metav1.Now()
-			quota.DeletionTimestamp = &now
 			quota.Finalizers = []string{finalizerName}
 
 			Expect(fakeClient.Create(ctx, quota)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, quota)).To(Succeed())
 		})
 
 		It("should do nothing because finalizer is not present", func() {
@@ -116,7 +115,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
 		})
 
-		It("should remove the finalizer beacuse no SecretBinding is referencing the Quota", func() {
+		It("should remove the finalizer because no SecretBinding is referencing the Quota", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())

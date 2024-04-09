@@ -18,14 +18,22 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Secret is a structure for managing a secret.
 type Secret struct {
-	client client.Client
+	client            client.Client
+	createIfNotExists bool
 
 	keyValues map[string]string
 	secret    *corev1.Secret
@@ -34,10 +42,18 @@ type Secret struct {
 // NewSecret creates a new builder for a secret.
 func NewSecret(client client.Client) *Secret {
 	return &Secret{
-		client:    client,
-		keyValues: make(map[string]string),
-		secret:    &corev1.Secret{},
+		client:            client,
+		createIfNotExists: true,
+		keyValues:         make(map[string]string),
+		secret:            &corev1.Secret{},
 	}
+}
+
+// CreateIfNotExists determines if the secret should be created if it does not exist.
+// Immutable secrets are always created, regardless of this configuration.
+func (s *Secret) CreateIfNotExists(createIfNotExists bool) *Secret {
+	s.createIfNotExists = createIfNotExists
+	return s
 }
 
 // WithNamespacedName sets the namespace and name.
@@ -47,9 +63,31 @@ func (s *Secret) WithNamespacedName(namespace, name string) *Secret {
 	return s
 }
 
-// WithLabels sets the labels.
+// WithLabels sets the labels. The label "resources.gardener.cloud/garbage-collectable-reference" is retained
+// if it already exists in the current labels.
 func (s *Secret) WithLabels(labels map[string]string) *Secret {
-	s.secret.Labels = labels
+	if s.secret.Labels == nil {
+		s.secret.Labels = utils.MergeStringMaps(labels)
+		return s
+	}
+	_, ok := s.secret.Labels[references.LabelKeyGarbageCollectable]
+	if ok && ptr.Deref(s.secret.Immutable, false) {
+		s.secret.Labels = map[string]string{
+			references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable,
+		}
+	}
+	s.secret.Labels = utils.MergeStringMaps(labels, s.secret.Labels)
+	return s
+}
+
+// AddLabels adds the labels to the existing secret labels.
+func (s *Secret) AddLabels(labels map[string]string) *Secret {
+	if s.secret.Labels == nil {
+		s.secret.Labels = make(map[string]string, len(labels))
+	}
+	for k, v := range labels {
+		s.secret.Labels[k] = v
+	}
 	return s
 }
 
@@ -65,70 +103,48 @@ func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 	return s
 }
 
+// Unique makes the secret unique and immutable. Returns the new and unique name of the secret and the builder object.
+// This function should be called after the name and data of the secret were set.
+func (s *Secret) Unique() (string, *Secret) {
+	utilruntime.Must(kubernetesutils.MakeUnique(s.secret))
+	return s.secret.Name, s
+}
+
 // Reconcile creates or updates the secret.
 func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: s.secret.Name, Namespace: s.secret.Namespace},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
+	mutate := func() error {
 		secret.Labels = s.secret.Labels
 		secret.Annotations = s.secret.Annotations
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = s.secret.Data
+		secret.Immutable = s.secret.Immutable
 		return nil
-	})
-	return err
-}
-
-// Delete deletes the secret.
-func (s *Secret) Delete(ctx context.Context) error {
-	return client.IgnoreNotFound(s.client.Delete(ctx, s.secret))
-}
-
-// Secrets is a structure for managing multiple secrets.
-type Secrets struct {
-	client client.Client
-
-	secrets []Secret
-}
-
-// NewSecrets creates a Manager for multiple secrets.
-func NewSecrets(client client.Client) *Secrets {
-	return &Secrets{
-		client:  client,
-		secrets: []Secret{},
 	}
-}
 
-// WithSecretList sets the secrets list.
-func (s *Secrets) WithSecretList(secrets []Secret) *Secrets {
-	s.secrets = append(s.secrets, secrets...)
-	return s
-}
-
-// WithSecret adds the given secret to the secrets list.
-func (s *Secrets) WithSecret(secrets Secret) *Secrets {
-	s.secrets = append(s.secrets, secrets)
-	return s
-}
-
-// Reconcile reconciles all secrets.
-func (s *Secrets) Reconcile(ctx context.Context) error {
-	for _, secret := range s.secrets {
-		if err := secret.Reconcile(ctx); err != nil {
-			return err
-		}
+	if s.createIfNotExists || ptr.Deref(s.secret.Immutable, false) {
+		_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, mutate)
+		return err
 	}
-	return nil
+	return updateSecret(ctx, s.client, secret, mutate)
 }
 
-// Delete deletes all secrets.
-func (s *Secrets) Delete(ctx context.Context) error {
-	for _, secret := range s.secrets {
-		if err := secret.Delete(ctx); err != nil {
-			return err
-		}
+func updateSecret(ctx context.Context, cl client.Client, secret *corev1.Secret, mutate func() error) error {
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return err
 	}
-	return nil
+
+	existingSecret := secret.DeepCopy()
+	if err := mutate(); err != nil {
+		return err
+	}
+
+	if equality.Semantic.DeepEqual(existingSecret, secret) {
+		return nil
+	}
+
+	return cl.Update(ctx, secret)
 }

@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -39,7 +39,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
-	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -91,6 +91,12 @@ type Ensurer interface {
 	// EnsureAdditionalFiles ensures additional systemd files
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	// EnsureAdditionalProvisionUnits ensures additional systemd units for the 'provision' OSC
+	// "old" might be "nil" and must always be checked.
+	EnsureAdditionalProvisionUnits(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
+	// EnsureAdditionalProvisionFiles ensures additional systemd files for the 'provision' OSC
+	// "old" might be "nil" and must always be checked.
+	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
 }
 
 // NewMutator creates a new controlplane mutator.
@@ -184,6 +190,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 				return errors.New("could not cast old object to vpaautoscalingv1.VerticalPodAutoscaler")
 			}
 		}
+
 		switch x.Name {
 		case machinecontrollermanager.VPAName:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
@@ -205,20 +212,25 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 			return m.ensurer.EnsureETCD(ctx, gctx, x, oldEtcd)
 		}
 	case *extensionsv1alpha1.OperatingSystemConfig:
-		if x.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-			var oldOSC *extensionsv1alpha1.OperatingSystemConfig
-			if old != nil {
-				var ok bool
-				oldOSC, ok = old.(*extensionsv1alpha1.OperatingSystemConfig)
-				if !ok {
-					return errors.New("could not cast old object to extensionsv1alpha1.OperatingSystemConfig")
-				}
+		var oldOSC *extensionsv1alpha1.OperatingSystemConfig
+		if old != nil {
+			var ok bool
+			oldOSC, ok = old.(*extensionsv1alpha1.OperatingSystemConfig)
+			if !ok {
+				return errors.New("could not cast old object to extensionsv1alpha1.OperatingSystemConfig")
 			}
-
-			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
-			return m.mutateOperatingSystemConfig(ctx, gctx, x, oldOSC)
 		}
-		return nil
+
+		extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+
+		switch x.Spec.Purpose {
+		case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+			return m.mutateOperatingSystemConfigProvision(ctx, gctx, x, oldOSC)
+		case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
+			return m.mutateOperatingSystemConfigReconcile(ctx, gctx, x, oldOSC)
+		default:
+			return nil
+		}
 	}
 	return nil
 }
@@ -251,7 +263,25 @@ func findFileWithPath(osc *extensionsv1alpha1.OperatingSystemConfig, path string
 	return nil
 }
 
-func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
+func (m *mutator) mutateOperatingSystemConfigProvision(ctx context.Context, gctx extensionscontextwebhook.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
+	var (
+		oldFiles *[]extensionsv1alpha1.File
+		oldUnits *[]extensionsv1alpha1.Unit
+	)
+
+	if oldOSC != nil {
+		oldFiles = &oldOSC.Spec.Files
+		oldUnits = &oldOSC.Spec.Units
+	}
+
+	if err := m.ensurer.EnsureAdditionalProvisionFiles(ctx, gctx, &osc.Spec.Files, oldFiles); err != nil {
+		return err
+	}
+
+	return m.ensurer.EnsureAdditionalProvisionUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
+}
+
+func (m *mutator) mutateOperatingSystemConfigReconcile(ctx context.Context, gctx extensionscontextwebhook.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
 	cluster, err := gctx.GetCluster(ctx)
 	if err != nil {
 		return err
@@ -452,7 +482,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx ext
 	// Ensure the cloud provider config file is part of the OperatingSystemConfig
 	osc.Spec.Files = extensionswebhook.EnsureFileWithPath(osc.Spec.Files, extensionsv1alpha1.File{
 		Path:        CloudProviderConfigPath,
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To[int32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: fci,
 		},

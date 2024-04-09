@@ -19,14 +19,12 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
-	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck/general"
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -41,33 +39,20 @@ var (
 			SyncPeriod: metav1.Duration{Duration: defaultSyncPeriod},
 			// Increase default QPS and Burst by factor 10 as a configuration example of custom REST options for shoot clients
 			ShootRESTOptions: &extensionsconfig.RESTOptions{
-				QPS:   pointer.Float32(50),
-				Burst: pointer.Int(100),
+				Burst: ptr.To(100),
+				QPS:   ptr.To[float32](50),
 			},
 		},
 	}
-	// GardenletManagesMCM specifies whether the machine-controller-manager is managed by gardenlet.
-	GardenletManagesMCM bool
 )
 
 // RegisterHealthChecks registers health checks for each extension resource
 // HealthChecks are grouped by extension (e.g worker), extension.type (e.g local) and  Health Check Type (e.g SystemComponentsHealthy)
 func RegisterHealthChecks(ctx context.Context, mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
-	var (
-		healthChecks = []healthcheck.ConditionTypeToHealthCheck{{
-			ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
-			HealthCheck:   worker.NewNodesChecker(),
-		}}
-		conditionTypesToRemove = sets.New(gardencorev1beta1.ShootControlPlaneHealthy)
-	)
-
-	if !GardenletManagesMCM {
-		healthChecks = append(healthChecks, healthcheck.ConditionTypeToHealthCheck{
-			ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
-			HealthCheck:   general.NewSeedDeploymentHealthChecker(local.MachineControllerManagerName),
-		})
-		conditionTypesToRemove = conditionTypesToRemove.Delete(gardencorev1beta1.ShootControlPlaneHealthy)
-	}
+	healthChecks := []healthcheck.ConditionTypeToHealthCheck{{
+		ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
+		HealthCheck:   worker.NewNodesChecker(),
+	}}
 
 	return healthcheck.DefaultRegistration(
 		ctx,
@@ -79,7 +64,7 @@ func RegisterHealthChecks(ctx context.Context, mgr manager.Manager, opts healthc
 		opts,
 		nil,
 		healthChecks,
-		conditionTypesToRemove,
+		nil,
 	)
 }
 

@@ -6,8 +6,8 @@ config:
       # Automatically set
       name: ""
     spec:
+      # Specify all fields when defining 'backup' so that they correctly overwrite the corresponding fields in example/gardener-local/gardenlet/values.yaml
       backup: null
-      secretRef: null
       dns:
         provider:
           secretRef:
@@ -42,9 +42,9 @@ config:
         zones: []
       settings:
         dependencyWatchdog:
-          endpoint:
+          weeder:
             enabled: true
-          probe:
+          prober:
             enabled: true
         excessCapacityReservation:
           enabled: false

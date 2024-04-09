@@ -32,6 +32,7 @@ config:
   controllers:
     shoot:
       reconcileInMaintenanceOnly: true
+      respectSyncPeriodOverwrite: true
     shootState:
       concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
   featureGates:
@@ -39,11 +40,14 @@ config:
     HVPAForShootedSeed: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
-    MachineControllerManagerDeployment: true
     # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.
     # This feature gate doesn't change gardenlet's default behavior, it only allows setting `ipFamilies=[IPv6]` in the
     # Seed config. Only when this is set, gardenlet's behavior changes.
     IPv6SingleStack: true
+    ShootManagedIssuer: true
+  etcdConfig:
+    featureGates:
+      UseEtcdWrapper: true
   logging:
     enabled: true
     vali:
@@ -59,6 +63,8 @@ config:
     kind: Seed
     metadata:
       name: local
+      labels:
+        base: kind
     spec:
       backup:
         provider: local
@@ -81,9 +87,6 @@ config:
         domain: ingress.local.seed.local.gardener.cloud
         controller:
           kind: nginx
-      secretRef:
-        name: seed-local
-        namespace: garden
       networks:
         nodes: 172.18.0.0/16
         # Those CIDRs must match those specified in the kind Cluster configuration.

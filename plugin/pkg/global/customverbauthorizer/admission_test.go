@@ -17,9 +17,9 @@ package customverbauthorizer_test
 import (
 	"context"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -28,8 +28,8 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
 	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
+	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
 )
 
 var _ = Describe("customverbauthorizer", func() {
@@ -367,7 +367,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement(PluginName))
+			Expect(registered).To(ContainElement("CustomVerbAuthorizer"))
 		})
 	})
 

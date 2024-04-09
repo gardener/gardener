@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -26,8 +26,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,587 +35,326 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	var (
 		trueVar                 = true
 		falseVar                = false
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
-		fakeClock               = testclock.NewFakeClock(time.Now())
 	)
 
-	Describe("errors", func() {
-		var (
-			testTime      = metav1.NewTime(time.Unix(10, 10))
-			zeroTime      metav1.Time
-			afterTestTime = func(t metav1.Time) bool { return t.After(testTime.Time) }
-		)
-
-		Describe("#BuildConditions", func() {
-			var (
-				conditionTypes = []gardencorev1beta1.ConditionType{"foo"}
-
-				fooCondition = gardencorev1beta1.Condition{
-					Type:               "foo",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "foo reason",
-					Message:            "foo message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				}
-				barCondition = gardencorev1beta1.Condition{
-					Type:               "bar",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "bar reason",
-					Message:            "bar message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				}
-				conditions = []gardencorev1beta1.Condition{fooCondition}
-
-				newConditions = []gardencorev1beta1.Condition{}
-			)
-
-			BeforeEach(func() {
-				newFooCondition := fooCondition.DeepCopy()
-				newFooCondition.LastTransitionTime = metav1.NewTime(time.Unix(11, 11))
-				newConditions = []gardencorev1beta1.Condition{*newFooCondition}
-			})
-
-			It("should replace the existing condition", func() {
-				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(newConditions))
-			})
-
-			It("should keep existing conditions of a different type", func() {
-				conditions = append(conditions, barCondition)
-				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(append(newConditions, barCondition)))
-			})
-		})
-
-		DescribeTable("#UpdatedConditionWithClock",
-			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
-				updated := UpdatedConditionWithClock(fakeClock, condition, status, reason, message, codes...)
-
-				Expect(updated).To(matcher)
+	DescribeTable("#IsResourceSupported",
+		func(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string, expectation bool) {
+			Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
 			},
-			Entry("initialize empty timestamps",
-				gardencorev1beta1.Condition{
-					Type:    "type",
-					Status:  gardencorev1beta1.ConditionTrue,
-					Reason:  "reason",
-					Message: "message",
+			"foo",
+			"bar",
+			true,
+		),
+		Entry("expect true",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
 				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Not(Equal(zeroTime)),
-					"LastUpdateTime":     Not(Equal(zeroTime)),
-				}),
-			),
-			Entry("no update",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Equal(testTime),
-				}),
-			),
-			Entry("update reason",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"OtherReason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("OtherReason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-				}),
-			),
-			Entry("update codes",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"Codes":              Equal([]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-				}),
-			),
-			Entry("update status",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionFalse,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionFalse),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Satisfy(afterTestTime),
-					"LastUpdateTime":     Equal(testTime),
-				}),
-			),
-			Entry("clear codes",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-					Codes:              []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-					"Codes":              BeEmpty(),
-				}),
-			),
-		)
-
-		Describe("#MergeConditions", func() {
-			It("should merge the conditions", func() {
-				var (
-					typeFoo gardencorev1beta1.ConditionType = "foo"
-					typeBar gardencorev1beta1.ConditionType = "bar"
-				)
-
-				oldConditions := []gardencorev1beta1.Condition{
-					{
-						Type:   typeFoo,
-						Reason: "hugo",
-					},
-				}
-
-				result := MergeConditions(oldConditions, gardencorev1beta1.Condition{Type: typeFoo}, gardencorev1beta1.Condition{Type: typeBar})
-
-				Expect(result).To(Equal([]gardencorev1beta1.Condition{{Type: typeFoo}, {Type: typeBar}}))
-			})
-		})
-
-		DescribeTable("#RemoveConditions",
-			func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
-				Expect(RemoveConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
 			},
-			Entry("remove foo", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo"},
-				[]gardencorev1beta1.Condition{{Type: "bar"}}),
-			Entry("remove bar", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"bar"},
-				[]gardencorev1beta1.Condition{{Type: "foo"}}),
-			Entry("don't remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, nil,
-				[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
-			Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
-		)
-
-		Describe("#GetCondition", func() {
-			It("should return the found condition", func() {
-				var (
-					conditionType gardencorev1beta1.ConditionType = "test-1"
-					condition                                     = gardencorev1beta1.Condition{
-						Type: conditionType,
-					}
-					conditions = []gardencorev1beta1.Condition{condition}
-				)
-
-				cond := GetCondition(conditions, conditionType)
-
-				Expect(cond).NotTo(BeNil())
-				Expect(*cond).To(Equal(condition))
-			})
-
-			It("should return nil because the required condition could not be found", func() {
-				var (
-					conditionType gardencorev1beta1.ConditionType = "test-1"
-					conditions                                    = []gardencorev1beta1.Condition{}
-				)
-
-				cond := GetCondition(conditions, conditionType)
-
-				Expect(cond).To(BeNil())
-			})
-		})
-
-		Describe("#GetOrInitConditionWithClock", func() {
-			It("should get the existing condition", func() {
-				var (
-					c          = gardencorev1beta1.Condition{Type: "foo"}
-					conditions = []gardencorev1beta1.Condition{c}
-				)
-
-				Expect(GetOrInitConditionWithClock(fakeClock, conditions, "foo")).To(Equal(c))
-			})
-
-			It("should return a new, initialized condition", func() {
-				Expect(GetOrInitConditionWithClock(fakeClock, nil, "foo")).To(Equal(InitConditionWithClock(fakeClock, "foo")))
-			})
-		})
-
-		DescribeTable("#IsResourceSupported",
-			func(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string, expectation bool) {
-				Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+			"foo",
+			"BAR",
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"bar",
-				true,
-			),
-			Entry("expect true",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"BAR",
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"baz",
-				false,
-			),
-		)
+			"foo",
+			"baz",
+			false,
+		),
+	)
 
-		DescribeTable("#IsControllerInstallationSuccessful",
-			func(conditions []gardencorev1beta1.Condition, expectation bool) {
-				controllerInstallation := gardencorev1beta1.ControllerInstallation{
-					Status: gardencorev1beta1.ControllerInstallationStatus{
-						Conditions: conditions,
-					},
-				}
-				Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+	DescribeTable("#IsControllerInstallationSuccessful",
+		func(conditions []gardencorev1beta1.Condition, expectation bool) {
+			controllerInstallation := gardencorev1beta1.ControllerInstallation{
+				Status: gardencorev1beta1.ControllerInstallationStatus{
+					Conditions: conditions,
+				},
+			}
+			Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{},
-				false,
-			),
-		)
-
-		DescribeTable("#IsControllerInstallationRequired",
-			func(conditions []gardencorev1beta1.Condition, expectation bool) {
-				controllerInstallation := gardencorev1beta1.ControllerInstallation{
-					Status: gardencorev1beta1.ControllerInstallationStatus{
-						Conditions: conditions,
-					},
-				}
-				Expect(IsControllerInstallationRequired(controllerInstallation)).To(Equal(expectation))
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationRequired,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationRequired,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{},
-				false,
-			),
-		)
-
-		DescribeTable("#HasOperationAnnotation",
-			func(objectMeta metav1.ObjectMeta, expected bool) {
-				Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
 			},
-			Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
-			Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
-			Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
-			Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
-			Entry("not present", metav1.ObjectMeta{}, false),
-		)
-
-		DescribeTable("#FindMachineTypeByName",
-			func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
-				Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
 			},
-
-			Entry("no workers", nil, "", nil),
-			Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
-			Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
-		)
-
-		DescribeTable("#TaintsHave",
-			func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
-				Expect(TaintsHave(taints, key)).To(Equal(expectation))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
-			Entry("taint exists", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "foo", true),
-			Entry("taint does not exist", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "bar", false),
-		)
-
-		DescribeTable("#TaintsAreTolerated",
-			func(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration, expectation bool) {
-				Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{},
+			false,
+		),
+	)
 
-			Entry("no taints",
-				nil,
-				[]gardencorev1beta1.Toleration{{Key: "foo"}},
-				true,
-			),
-			Entry("no tolerations",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				nil,
-				false,
-			),
-			Entry("taints with keys only, tolerations with keys only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				[]gardencorev1beta1.Toleration{{Key: "foo"}},
-				true,
-			),
-			Entry("taints with keys only, tolerations with keys only (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				[]gardencorev1beta1.Toleration{{Key: "bar"}},
-				false,
-			),
-			Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-				[]gardencorev1beta1.Toleration{{Key: "foo", Value: pointer.String("bar")}},
-				true,
-			),
-			Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-				[]gardencorev1beta1.Toleration{{Key: "bar", Value: pointer.String("foo")}},
-				false,
-			),
-			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+	DescribeTable("#IsControllerInstallationRequired",
+		func(conditions []gardencorev1beta1.Condition, expectation bool) {
+			controllerInstallation := gardencorev1beta1.ControllerInstallation{
+				Status: gardencorev1beta1.ControllerInstallationStatus{
+					Conditions: conditions,
 				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+			}
+			Expect(IsControllerInstallationRequired(controllerInstallation)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationRequired,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
-				true,
-			),
-			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+			},
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationRequired,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "bar"},
-					{Key: "foo", Value: pointer.String("baz")},
-				},
-				false,
-			),
-			Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				true,
-			),
-			Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("foo")},
-				},
-				false,
-			),
-			Entry("taints > tolerations",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				false,
-			),
-			Entry("tolerations > taints",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("baz")},
-					{Key: "baz", Value: pointer.String("foo")},
-				},
-				true,
-			),
-		)
-	})
+			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{},
+			false,
+		),
+	)
+
+	DescribeTable("#HasOperationAnnotation",
+		func(objectMeta metav1.ObjectMeta, expected bool) {
+			Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
+		},
+		Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
+		Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
+		Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
+		Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
+		Entry("not present", metav1.ObjectMeta{}, false),
+	)
+
+	DescribeTable("#FindMachineTypeByName",
+		func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
+			Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+		},
+
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
+	)
+
+	DescribeTable("#TaintsHave",
+		func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
+			Expect(TaintsHave(taints, key)).To(Equal(expectation))
+		},
+		Entry("taint exists", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "foo", true),
+		Entry("taint does not exist", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "bar", false),
+	)
+
+	DescribeTable("#TaintsAreTolerated",
+		func(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration, expectation bool) {
+			Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+		},
+
+		Entry("no taints",
+			nil,
+			[]gardencorev1beta1.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("no tolerations",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			nil,
+			false,
+		),
+		Entry("taints with keys only, tolerations with keys only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			[]gardencorev1beta1.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("taints with keys only, tolerations with keys only (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			[]gardencorev1beta1.Toleration{{Key: "bar"}},
+			false,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "foo", Value: ptr.To("bar")}},
+			true,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: ptr.To("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "bar", Value: ptr.To("foo")}},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "bar"},
+				{Key: "foo", Value: ptr.To("baz")},
+			},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("foo")},
+			},
+			false,
+		),
+		Entry("taints > tolerations",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			false,
+		),
+		Entry("tolerations > taints",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: ptr.To("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: ptr.To("bar")},
+				{Key: "bar", Value: ptr.To("baz")},
+				{Key: "baz", Value: ptr.To("foo")},
+			},
+			true,
+		),
+	)
 
 	Describe("#ReadManagedSeedAPIServer", func() {
 		var shoot *gardencorev1beta1.Shoot
@@ -731,9 +470,9 @@ var _ = Describe("helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To[int32](3),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To[int32](3),
 					MaxReplicas: 3,
 				},
 			}))
@@ -748,9 +487,9 @@ var _ = Describe("helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(settings).To(Equal(&ManagedSeedAPIServer{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To[int32](3),
 				Autoscaler: &ManagedSeedAPIServerAutoscaler{
-					MinReplicas: pointer.Int32(3),
+					MinReplicas: ptr.To[int32](3),
 					MaxReplicas: 6,
 				},
 			}))
@@ -790,13 +529,11 @@ var _ = Describe("helper", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualWantsAutoscaler).To(Equal(wantsAutoscaler))
 		},
-
 		Entry("no workers",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{},
 			},
 			false),
-
 		Entry("one worker no difference in auto scaler max and min",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -806,7 +543,6 @@ var _ = Describe("helper", func() {
 				},
 			},
 			false),
-
 		Entry("one worker with difference in auto scaler max and min",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -863,6 +599,25 @@ var _ = Describe("helper", func() {
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#ShootNeedsForceDeletion",
+		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(ShootNeedsForceDeletion(shoot)).To(match)
+		},
+
+		Entry("shoot is nil",
+			nil,
+			BeFalse()),
+		Entry("no force-delete annotation present",
+			&gardencorev1beta1.Shoot{},
+			BeFalse()),
+		Entry("force-delete annotation present but value is false",
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "0"}}},
+			BeFalse()),
+		Entry("force-delete annotation present and value is true",
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationForceDeletion: "t"}}},
+			BeTrue()),
+	)
+
 	var profile = gardencorev1beta1.SchedulingProfileBinPacking
 
 	DescribeTable("#ShootSchedulingProfile",
@@ -873,7 +628,7 @@ var _ = Describe("helper", func() {
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.24.0",
+						Version: "1.27.0",
 					},
 				},
 			},
@@ -883,7 +638,7 @@ var _ = Describe("helper", func() {
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.24.0",
+						Version: "1.27.0",
 						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{
 							Profile: &profile,
 						},
@@ -894,13 +649,28 @@ var _ = Describe("helper", func() {
 		),
 	)
 
+	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expectation bool) {
+			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))
+		},
+
+		Entry("setting is nil", nil, true),
+		Entry("excess capacity reservation is nil", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("excess capacity reservation 'enabled' is nil", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: nil}}, true),
+		Entry("excess capacity reservation 'enabled' is false", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(false)}}, false),
+		Entry("excess capacity reservation 'enabled' is true", &gardencorev1beta1.SeedSettings{ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{Enabled: ptr.To(true)}}, true),
+	)
+
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",
 		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
 			Expect(SeedSettingDependencyWatchdogWeederEnabled(settings)).To(Equal(expected))
 		},
 
-		Entry("only dwd weeder set and its enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: true}}}, true),
-		Entry("both dwd weeder and endpoint set and disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: false}, Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: false}}}, false),
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd weeder setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd weeder enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: true}}}, true),
+		Entry("dwd weeder disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Weeder: &gardencorev1beta1.SeedSettingDependencyWatchdogWeeder{Enabled: false}}}, false),
 	)
 
 	DescribeTable("#SeedSettingDependencyWatchdogProberEnabled",
@@ -908,8 +678,11 @@ var _ = Describe("helper", func() {
 			Expect(SeedSettingDependencyWatchdogProberEnabled(settings)).To(Equal(expected))
 		},
 
-		Entry("only dwd prober set and its enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: true}}}, true),
-		Entry("both dwd prober and probe set and disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: false}, Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: false}}}, false),
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd prober setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd prober enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: true}}}, true),
+		Entry("dwd prober disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{Enabled: false}}}, false),
 	)
 
 	DescribeTable("#SeedSettingTopologyAwareRoutingEnabled",
@@ -971,34 +744,6 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	DescribeTable("#IsAPIServerExposureManaged",
-		func(obj metav1.Object, expected bool) {
-			Expect(IsAPIServerExposureManaged(obj)).To(Equal(expected))
-		},
-		Entry("object is nil",
-			nil,
-			false,
-		),
-		Entry("label is not present",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"foo": "bar",
-			}},
-			false,
-		),
-		Entry("label's value is not the same",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"core.gardener.cloud/apiserver-exposure": "some-dummy-value",
-			}},
-			false,
-		),
-		Entry("label's value is gardener-managed",
-			&metav1.ObjectMeta{Labels: map[string]string{
-				"core.gardener.cloud/apiserver-exposure": "gardener-managed",
-			}},
-			true,
-		),
-	)
-
 	DescribeTable("#FindPrimaryDNSProvider",
 		func(providers []gardencorev1beta1.DNSProvider, matcher gomegatypes.GomegaMatcher) {
 			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
@@ -1006,35 +751,35 @@ var _ = Describe("helper", func() {
 
 		Entry("no providers", nil, BeNil()),
 		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
-			{Type: pointer.String("provider")},
+			{Type: ptr.To("provider")},
 		}, BeNil()),
-		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: pointer.String("provider"),
-			Primary: pointer.Bool(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider"), Primary: pointer.Bool(true)})),
+		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
 		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
 			{
-				Type: pointer.String("provider2"),
+				Type: ptr.To("provider2"),
 			},
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
 			{
-				Type:    pointer.String("provider1"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type:    pointer.String("provider2"),
-				Primary: pointer.Bool(true),
+				Type:    ptr.To("provider2"),
+				Primary: ptr.To(true),
 			},
 			{
-				Type: pointer.String("provider3"),
+				Type: ptr.To("provider3"),
 			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.String("provider1"), Primary: pointer.Bool(true)})),
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
 	)
 
 	Describe("#ShootMachineImageVersionExists", func() {
@@ -1062,7 +807,7 @@ var _ = Describe("helper", func() {
 
 			shootMachineImage = gardencorev1beta1.ShootMachineImage{
 				Name:    "coreos",
-				Version: pointer.String("0.0.2"),
+				Version: ptr.To("0.0.2"),
 			}
 		})
 
@@ -1075,13 +820,13 @@ var _ = Describe("helper", func() {
 		It("should determine that the version does not exist", func() {
 			shootMachineImage.Name = "xy"
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
-			Expect(exists).To(Equal(false))
+			Expect(exists).To(BeFalse())
 		})
 
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = pointer.String("0.0.4")
+			shootMachineImage.Version = ptr.To("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
-			Expect(exists).To(Equal(false))
+			Expect(exists).To(BeFalse())
 		})
 	})
 
@@ -1090,174 +835,201 @@ var _ = Describe("helper", func() {
 		var deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 		var supportedClassification = gardencorev1beta1.ClassificationSupported
 
-		DescribeTable("#GetLatestQualifyingShootMachineImage",
-			func(original gardencorev1beta1.MachineImage, expectVersionToBeFound bool, expected *gardencorev1beta1.ShootMachineImage, expectError bool) {
-				qualifyingVersionFound, latestVersion, err := GetLatestQualifyingShootMachineImage(original)
+		DescribeTable("#GetOverallLatestVersionForAutoUpdate",
+			func(versions []gardencorev1beta1.ExpirableVersion, currentVersion string, foundVersion bool, expectedVersion string, expectError bool) {
+				qualifyingVersionFound, latestVersion, err := GetOverallLatestVersionForAutoUpdate(versions, currentVersion)
 				if expectError {
 					Expect(err).To(HaveOccurred())
 					return
 				}
 				Expect(err).ToNot(HaveOccurred())
-				Expect(qualifyingVersionFound).To(Equal(expectVersionToBeFound))
-				Expect(latestVersion).To(Equal(expected))
+				Expect(qualifyingVersionFound).To(Equal(foundVersion))
+				Expect(latestVersion).To(Equal(expectedVersion))
 			},
 			Entry("Get latest version",
-				gardencorev1beta1.MachineImage{
-					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.MachineImageVersion{
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version: "1.17.1",
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version: "1.15.0",
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version: "1.14.3",
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version: "1.13.1",
-							},
-						},
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
 					},
 				},
+				"1.14.3",
 				true,
-				&gardencorev1beta1.ShootMachineImage{
-					Name:    "gardenlinux",
-					Version: pointer.String("1.17.1"),
+				"1.17.1",
+				false,
+			),
+			Entry("Get latest version across major versions",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "3.0.1",
+					},
+					{
+						Version:        "2.1.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.0.0",
+						Classification: &supportedClassification,
+					},
+					{
+						Version: "0.4.1",
+					},
 				},
+				"0.4.1",
+				true,
+				"3.0.1",
+				false,
+			),
+			Entry("Get latest version across major versions, preferring lower supported version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "3.0.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.1.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.0.0",
+						Classification: &supportedClassification,
+					},
+					{
+						Version: "0.4.1",
+					},
+				},
+				"0.4.1",
+				true,
+				"2.0.0",
+				false,
+			),
+			Entry("Expect no higher version than the current version to be found, as already on the latest version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.0",
+					},
+					{
+						Version: "1.14.3",
+					},
+					{
+						Version: "1.13.1",
+					},
+				},
+				"1.17.1",
+				false,
+				"",
+				false,
+			),
+			Entry("Expect to first update to the latest patch version of the same minor before updating to the overall latest version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.17.1",
+					},
+					{
+						Version: "1.15.3",
+					},
+					{
+						Version: "1.15.0",
+					},
+				},
+				"1.15.0",
+				true,
+				"1.15.3",
 				false,
 			),
 			Entry("Expect no qualifying version to be found - machine image has only versions in preview and expired versions",
-				gardencorev1beta1.MachineImage{
-					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.MachineImageVersion{
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.17.1",
-								Classification: &previewClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.15.0",
-								Classification: &previewClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.14.3",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.13.1",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.17.1",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.15.0",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.14.3",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version:        "1.13.1",
+						ExpirationDate: &expirationDateInThePast,
 					},
 				},
+				"1.13.1",
 				false,
-				nil,
+				"",
 				false,
 			),
 			Entry("Expect older but supported version to be preferred over newer but deprecated one",
-				gardencorev1beta1.MachineImage{
-					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.MachineImageVersion{
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.17.1",
-								Classification: &deprecatedClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.16.1",
-								Classification: &supportedClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.15.0",
-								Classification: &previewClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.14.3",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.13.1",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.17.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "1.16.1",
+						Classification: &supportedClassification,
+					},
+					{
+						Version:        "1.15.0",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.14.3",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version:        "1.13.1",
+						ExpirationDate: &expirationDateInThePast,
 					},
 				},
+				"1.13.1",
 				true,
-				&gardencorev1beta1.ShootMachineImage{
-					Name:    "gardenlinux",
-					Version: pointer.String("1.16.1"),
-				},
+				"1.16.1",
 				false,
 			),
 			Entry("Expect latest deprecated version to be selected when there is no supported version",
-				gardencorev1beta1.MachineImage{
-					Name: "gardenlinux",
-					Versions: []gardencorev1beta1.MachineImageVersion{
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.17.3",
-								Classification: &previewClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.17.2",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.17.1",
-								Classification: &deprecatedClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.16.1",
-								Classification: &deprecatedClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.15.0",
-								Classification: &previewClassification,
-							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version:        "1.14.3",
-								ExpirationDate: &expirationDateInThePast,
-							},
-						},
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.17.3",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.17.2",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version:        "1.17.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "1.16.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "1.15.0",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.14.3",
+						ExpirationDate: &expirationDateInThePast,
 					},
 				},
+				"1.14.3",
 				true,
-				&gardencorev1beta1.ShootMachineImage{
-					Name:    "gardenlinux",
-					Version: pointer.String("1.17.1"),
-				},
+				"1.17.1",
 				false,
 			),
 		)
@@ -1316,17 +1088,204 @@ var _ = Describe("helper", func() {
 			),
 		)
 
-		Describe("#Kubernetes Version Helper", func() {
-			DescribeTable("#GetKubernetesVersionForPatchUpdate",
+		DescribeTable("#GetQualifyingVersionForNextHigher",
+			func(original []gardencorev1beta1.ExpirableVersion, currentVersion string, getNextHigherMinor bool, expectVersionToBeFound bool, expected *string, expectedNextMinorOrMajorVersion int64, expectError bool) {
+				var (
+					majorMinor    GetMajorOrMinor
+					filterSmaller VersionPredicate
+				)
+
+				currentSemVerVersion := semver.MustParse(currentVersion)
+
+				// setup filter for smaller minor or smaller major
+				if getNextHigherMinor {
+					majorMinor = func(v semver.Version) int64 { return int64(v.Minor()) }
+					filterSmaller = FilterEqualAndSmallerMinorVersion(*currentSemVerVersion)
+				} else {
+					majorMinor = func(v semver.Version) int64 { return int64(v.Major()) }
+					filterSmaller = FilterEqualAndSmallerMajorVersion(*currentSemVerVersion)
+				}
+
+				foundVersion, qualifyingVersion, nextMinorOrMajorVersion, err := GetQualifyingVersionForNextHigher(original, majorMinor, currentSemVerVersion, filterSmaller)
+				if expectError {
+					Expect(err).To(HaveOccurred())
+					return
+				}
+				Expect(nextMinorOrMajorVersion).To(Equal(expectedNextMinorOrMajorVersion))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(foundVersion).To(Equal(expectVersionToBeFound))
+				if foundVersion {
+					Expect(qualifyingVersion.Version).To(Equal(*expected))
+				}
+			},
+			Entry("Get latest non-preview version for next higher minor version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "1.3.2",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "1.3.2",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version:        "1.3.1",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version: "1.1.1",
+					},
+					{
+						Version: "1.0.0",
+					},
+				},
+				"1.1.0",
+				true, // target minor
+				true,
+				ptr.To("1.3.2"),
+				int64(3), // next minor version to be found
+				false,
+			),
+			Entry("Get latest non-preview version for next higher major version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "4.4.2",
+						Classification: &previewClassification,
+					},
+					{
+						Version:        "4.3.2",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version:        "4.3.1",
+						ExpirationDate: &expirationDateInThePast,
+					},
+					{
+						Version: "1.1.0",
+					},
+					{
+						Version: "1.0.0",
+					},
+				},
+				"1.1.0",
+				false, // target major
+				true,
+				ptr.To("4.3.2"),
+				int64(4), // next major version to be found
+				false,
+			),
+			Entry("Skip next higher minor version if contains no qualifying version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.4.2",
+					},
+					{
+						Version:        "1.3.2",
+						Classification: &previewClassification,
+					},
+					{
+						Version: "1.1.1",
+					},
+					{
+						Version: "1.0.0",
+					},
+				},
+				"1.1.0",
+				true, // target minor
+				true,
+				ptr.To("1.4.2"),
+				int64(3), // next minor version to be found
+				false,
+			),
+			Entry("Skip next higher major version if contains no qualifying version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "4.4.2",
+					},
+					{
+						Version:        "3.3.2",
+						Classification: &previewClassification,
+					},
+					{
+						Version: "1.1.1",
+					},
+					{
+						Version: "1.0.0",
+					},
+				},
+				"1.1.0",
+				false, // target major
+				true,
+				ptr.To("4.4.2"),
+				int64(3), // next major version to be found
+				false,
+			),
+			Entry("Expect no version to be found: already on highest version in major",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "2.0.0",
+					},
+					{
+						Version:        "1.3.2",
+						Classification: &previewClassification,
+					},
+					{
+						Version: "1.1.1",
+					},
+					{
+						Version: "1.0.0",
+					},
+				},
+				"1.1.0",
+				true, // target minor
+				false,
+				nil,
+				int64(3), // next minor version to be found
+				false,
+			),
+			Entry("Expect no version to be found: already on overall highest version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "2.0.0",
+					},
+				},
+				"2.0.0",
+				false, // target major
+				false,
+				nil,
+				int64(-1), // next minor version to be found
+				false,
+			),
+			Entry("Expect no qualifying version to be found - no latest version could be found",
+				[]gardencorev1beta1.ExpirableVersion{},
+				"1.1.0",
+				true, // target minor
+				false,
+				nil,
+				int64(-1),
+				false,
+			),
+			Entry("Expect error, because contains invalid semVer",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "1.213123xx",
+					},
+				},
+				"1.1.0",
+				false,
+				false,
+				nil,
+				int64(1),
+				true,
+			),
+		)
+
+		Describe("#Expirable Version Helper", func() {
+			classificationPreview := gardencorev1beta1.ClassificationPreview
+
+			DescribeTable("#GetLatestVersionForPatchAutoUpdate",
 				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
-					cloudProfile := gardencorev1beta1.CloudProfile{
-						Spec: gardencorev1beta1.CloudProfileSpec{
-							Kubernetes: gardencorev1beta1.KubernetesSettings{
-								Versions: cloudProfileVersions,
-							},
-						},
-					}
-					ok, newVersion, err := GetKubernetesVersionForPatchUpdate(&cloudProfile, currentVersion)
+					ok, newVersion, err := GetLatestVersionForPatchAutoUpdate(cloudProfileVersions, currentVersion)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(ok).To(Equal(qualifyingVersionFound))
 					Expect(newVersion).To(Equal(expectedVersion))
@@ -1399,6 +1358,7 @@ var _ = Describe("helper", func() {
 						{Version: "1.15.0"},
 						{Version: "1.14.4"},
 						{Version: "1.12.2"},
+						{Version: "1.12.1"},
 					},
 					"",
 					false,
@@ -1416,16 +1376,143 @@ var _ = Describe("helper", func() {
 				),
 			)
 
-			DescribeTable("#GetKubernetesVersionForMinorUpdate",
+			DescribeTable("#GetLatestVersionForMinorAutoUpdate",
 				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
-					cloudProfile := gardencorev1beta1.CloudProfile{
-						Spec: gardencorev1beta1.CloudProfileSpec{
-							Kubernetes: gardencorev1beta1.KubernetesSettings{
-								Versions: cloudProfileVersions,
-							},
+					foundVersion, newVersion, err := GetLatestVersionForMinorAutoUpdate(cloudProfileVersions, currentVersion)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(foundVersion).To(Equal(qualifyingVersionFound))
+					Expect(newVersion).To(Equal(expectedVersion))
+				},
+				Entry("Should find qualifying version - the latest version for the major.",
+					"1.12.2",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+					},
+					"1.15.1",
+					true,
+				),
+				Entry("Should find qualifying version - the latest version for the major.",
+					"0.2.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.15.1"},
+						{Version: "0.4.1"},
+						{Version: "0.4.0"},
+						{Version: "0.2.3"},
+					},
+					"0.4.1",
+					true,
+				),
+				Entry("Should find qualifying version - do not consider preview versions for auto updates.",
+					"1.12.2",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{
+							Version:        "1.15.2",
+							Classification: &previewClassification,
 						},
-					}
-					ok, newVersion, err := GetKubernetesVersionForMinorUpdate(&cloudProfile, currentVersion)
+						// latest qualifying version for updating version 1.12.2 to the latest version for the major
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+					},
+					"1.15.1",
+					true,
+				),
+				Entry("Should find qualifying version - always first update to latest patch of minor.",
+					"1.12.2",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{
+							Version:        "1.15.2",
+							Classification: &previewClassification,
+						},
+						// latest qualifying version for updating version 1.12.2 to the latest version for the major
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.3"},
+						{Version: "1.12.2"},
+					},
+					"1.12.3",
+					true,
+				),
+				Entry("Should find qualifying version - do not consider expired versions for auto updates.",
+					"1.1.2",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{
+							Version:        "1.12.9",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.12.4",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						// latest qualifying version for updating version 1.1.2
+						{Version: "1.10.3"},
+						{Version: "1.10.2"},
+						{Version: "1.1.2"},
+						{Version: "1.0.2"},
+					},
+					"1.10.3",
+					true,
+				),
+				Entry("Should not find qualifying version - no higher version available that is not expired or in preview.",
+					"1.12.2",
+					[]gardencorev1beta1.ExpirableVersion{
+						{
+							Version:        "1.15.1",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.15.0",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.14.4",
+							Classification: &previewClassification,
+						},
+						{Version: "1.12.2"},
+					},
+					"",
+					false,
+				),
+				Entry("Should not find qualifying version - is already highest version of major.",
+					"1.15.1",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+						{Version: "1.12.1"},
+					},
+					"",
+					false,
+				),
+				Entry("Should not find qualifying version - current version is higher than any given version in major.",
+					"1.17.1",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+						{Version: "1.12.1"},
+					},
+					"",
+					false,
+				),
+			)
+
+			DescribeTable("#GetVersionForForcefulUpdateToConsecutiveMinor",
+				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
+					ok, newVersion, err := GetVersionForForcefulUpdateToConsecutiveMinor(cloudProfileVersions, currentVersion)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(ok).To(Equal(qualifyingVersionFound))
 					Expect(newVersion).To(Equal(expectedVersion))
@@ -1497,6 +1584,7 @@ var _ = Describe("helper", func() {
 				Entry("Should not find qualifying version - there is no consecutive minor version available.",
 					"1.10.3",
 					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
 						{Version: "1.15.1"},
 						{Version: "1.15.0"},
 						{
@@ -1537,6 +1625,288 @@ var _ = Describe("helper", func() {
 					false,
 				),
 			)
+
+			DescribeTable("#GetVersionForForcefulUpdateToNextHigherMinor",
+				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
+					ok, newVersion, err := GetVersionForForcefulUpdateToNextHigherMinor(cloudProfileVersions, currentVersion)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ok).To(Equal(qualifyingVersionFound))
+					Expect(newVersion).To(Equal(expectedVersion))
+				},
+				Entry("Should find qualifying version - but do not consider preview versions of the next minor version.",
+					"1.11.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{
+							Version:        "1.13.9",
+							Classification: &previewClassification,
+						},
+						{
+							Version:        "1.13.4",
+							Classification: &previewClassification,
+						},
+						// latest qualifying version for minor version update for version 1.11.3
+						{Version: "1.13.3"},
+						{Version: "1.13.2"},
+						{Version: "1.11.3"},
+					},
+					"1.13.3",
+					true,
+				),
+				Entry("Should find qualifying version - latest non-expired version of the next minor version.",
+					"1.11.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{
+							Version:        "1.12.9",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.12.4",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						// latest qualifying version for updating version 1.11.3
+						{Version: "1.12.3"},
+						{Version: "1.12.2"},
+						{Version: "1.11.3"},
+						{Version: "1.10.1"},
+						{Version: "1.09.0"},
+					},
+					"1.12.3",
+					true,
+				),
+				Entry("Should find qualifying version if the latest version in next minor is expired - pick latest non-expired version of that minor.",
+					"1.11.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						// latest qualifying version for updating version 1.11.3
+						{
+							Version:        "1.13.9",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version: "1.13.4",
+						},
+						{Version: "1.11.3"},
+					},
+					"1.13.4",
+					true,
+				),
+				// check that multiple consecutive minor versions are possible
+				Entry("Should find qualifying version if there are only expired versions available in the next minor version - pick latest expired version of that minor.",
+					"1.11.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						// latest qualifying version for updating version 1.11.3
+						{
+							Version:        "1.13.9",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.13.4",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{Version: "1.11.3"},
+					},
+					"1.13.9",
+					true,
+				),
+				Entry("Should find qualifying version - there is a next higher minor version available.",
+					"1.10.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{
+							Version:        "1.12.9",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1.12.4",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{Version: "1.12.3"},
+						{Version: "1.12.2"},
+						{Version: "1.10.3"},
+					},
+					"1.12.3",
+					true,
+				),
+				Entry("Should find qualifying version - but skip over next higher minor as it does not contain qualifying versions.",
+					"1.10.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{
+							Version:        "1.12.9",
+							Classification: &classificationPreview,
+						},
+						{
+							Version:        "1.12.4",
+							Classification: &classificationPreview,
+						},
+						{Version: "1.10.3"},
+					},
+					"1.15.1",
+					true,
+				),
+				Entry("Should not find qualifying version - already on latest minor version.",
+					"1.17.1",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.17.1"},
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+					},
+					"",
+					false,
+				),
+				Entry("Should not find qualifying version - is already on latest version of latest minor version.",
+					"1.15.1",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+					},
+					"",
+					false,
+				),
+			)
+
+			DescribeTable("#GetVersionForForcefulUpdateToNextHigherMajor",
+				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
+					ok, newVersion, err := GetVersionForForcefulUpdateToNextHigherMajor(cloudProfileVersions, currentVersion)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ok).To(Equal(qualifyingVersionFound))
+					Expect(newVersion).To(Equal(expectedVersion))
+				},
+				Entry("Should find qualifying version - but do not consider preview versions of the next major version.",
+					"534.6.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1096.0.0"},
+						// latest qualifying version for minor version update for version 1.11.3
+						{Version: "1034.1.1"},
+						{Version: "1034.0.0"},
+						{
+							Version:        "1034.0.9",
+							Classification: &previewClassification,
+						},
+						{
+							Version:        "1034.1.4",
+							Classification: &previewClassification,
+						},
+						{Version: "534.6.3"},
+						{Version: "534.5.0"},
+						{Version: "1.11.3"},
+					},
+					"1034.1.1",
+					true,
+				),
+				Entry("Should find qualifying version - latest non-expired version of the next major version.",
+					"534.0.0",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1096.0.0"},
+						{Version: "1034.5.1"},
+						{Version: "1034.5.0"},
+						{Version: "1034.2.0"},
+						{
+							Version:        "1034.1.0",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1034.0.0",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{Version: "534.0.0"},
+					},
+					"1034.5.1",
+					true,
+				),
+				Entry("Should find qualifying version if the latest version in next major is expired - pick latest non-expired version of that major.",
+					"534.0.0",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1096.0.1"},
+						{Version: "1096.0.0"},
+						// latest qualifying version for updating version 1.11.3
+						{
+							Version:        "1034.1.1",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version: "1034.1.0",
+						},
+						{
+							Version:        "1034.0.1",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{Version: "534.0.0"},
+					},
+					"1034.1.0",
+					true,
+				),
+				Entry("Should find qualifying version if there are only expired versions available in the next major version - pick latest expired version of that major.",
+					"534.0.0",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1096.0.1"},
+						{Version: "1096.0.0"},
+						// latest qualifying version for updating version 1.11.3
+						{
+							Version:        "1034.1.1",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1034.1.0",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{
+							Version:        "1034.0.1",
+							ExpirationDate: &expirationDateInThePast,
+						},
+						{Version: "534.0.0"},
+					},
+					"1034.1.1",
+					true,
+				),
+				Entry("Should find qualifying version - skip over next higher major as it contains no qualifying version.",
+					"534.0.0",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "1096.1.0"},
+						{Version: "1096.0.0"},
+						{
+							Version:        "1034.1.0",
+							Classification: &previewClassification,
+						},
+						{
+							Version:        "1034.0.0",
+							Classification: &previewClassification,
+						},
+						{Version: "534.0.0"},
+					},
+					"1096.1.0",
+					true,
+				),
+				Entry("Should not find qualifying version - already on latest overall version.",
+					"2.1.0",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.1.0"},
+						{Version: "2.0.0"},
+						{Version: "1.17.1"},
+						{Version: "1.15.1"},
+						{Version: "1.15.0"},
+						{Version: "1.14.4"},
+						{Version: "1.12.2"},
+					},
+					"",
+					false,
+				),
+			)
+
 			DescribeTable("Test version filter predicates",
 				func(predicate VersionPredicate, version *semver.Version, expirableVersion gardencorev1beta1.ExpirableVersion, expectFilterVersion, expectError bool) {
 					shouldFilter, err := predicate(expirableVersion, version)
@@ -1548,23 +1918,23 @@ var _ = Describe("helper", func() {
 					Expect(shouldFilter).To(Equal(expectFilterVersion))
 				},
 
-				// #FilterDifferentMajorMinorVersion
+				// #FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor
 				Entry("Should filter version - has not the same major.minor.",
-					FilterDifferentMajorMinorVersion(*semver.MustParse("1.2.0")),
+					FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor(*semver.MustParse("1.2.0")),
 					semver.MustParse("1.1.1"),
 					gardencorev1beta1.ExpirableVersion{},
 					true,
 					false,
 				),
 				Entry("Should filter version - version has same major.minor but is lower",
-					FilterDifferentMajorMinorVersion(*semver.MustParse("1.1.2")),
+					FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor(*semver.MustParse("1.1.2")),
 					semver.MustParse("1.1.1"),
 					gardencorev1beta1.ExpirableVersion{},
 					true,
 					false,
 				),
 				Entry("Should not filter version - has the same major.minor.",
-					FilterDifferentMajorMinorVersion(*semver.MustParse("1.1.0")),
+					FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor(*semver.MustParse("1.1.0")),
 					semver.MustParse("1.1.1"),
 					gardencorev1beta1.ExpirableVersion{},
 					false,
@@ -1680,8 +2050,100 @@ var _ = Describe("helper", func() {
 					false,
 					false,
 				),
+				// #FilterEqualAndSmallerMinorVersion
+				Entry("Should filter version - version has the same minor version",
+					FilterEqualAndSmallerMinorVersion(*semver.MustParse("1.1.5")),
+					semver.MustParse("1.1.6"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should filter version - version has smaller minor version",
+					FilterEqualAndSmallerMinorVersion(*semver.MustParse("1.1.5")),
+					semver.MustParse("1.0.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should not filter version - version has higher minor version",
+					FilterEqualAndSmallerMinorVersion(*semver.MustParse("1.1.5")),
+					semver.MustParse("1.2.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					false,
+					false,
+				),
+				// #FilterEqualAndSmallerMajorVersion
+				Entry("Should filter version - version has the same major version",
+					FilterEqualAndSmallerMajorVersion(*semver.MustParse("2.1.5")),
+					semver.MustParse("2.3.6"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should filter version - version has smaller major version",
+					FilterEqualAndSmallerMajorVersion(*semver.MustParse("2.1.5")),
+					semver.MustParse("1.0.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should not filter version - version has higher major version",
+					FilterEqualAndSmallerMajorVersion(*semver.MustParse("1.1.5")),
+					semver.MustParse("2.2.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					false,
+					false,
+				),
+				// #FilterDifferentMajorVersion
+				Entry("Should filter version - version has the higher major version",
+					FilterDifferentMajorVersion(*semver.MustParse("1.1.5")),
+					semver.MustParse("2.3.6"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should filter version - version has smaller major version",
+					FilterDifferentMajorVersion(*semver.MustParse("2.1.5")),
+					semver.MustParse("1.0.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					true,
+					false,
+				),
+				Entry("Should not filter version - version has the same major version",
+					FilterDifferentMajorVersion(*semver.MustParse("2.1.5")),
+					semver.MustParse("2.2.0"),
+					gardencorev1beta1.ExpirableVersion{},
+					false,
+					false,
+				),
 			)
 		})
+
+		DescribeTable("#GetResourceByName",
+			func(resources []gardencorev1beta1.NamedResourceReference, name string, expected *gardencorev1beta1.NamedResourceReference) {
+				actual := GetResourceByName(resources, name)
+				Expect(actual).To(Equal(expected))
+			},
+
+			Entry("resources is nil", nil, "foo", nil),
+			Entry("resources doesn't contain a resource with the given name",
+				[]gardencorev1beta1.NamedResourceReference{
+					{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+					{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+				},
+				"foo",
+				nil,
+			),
+			Entry("resources contains a resource with the given name",
+				[]gardencorev1beta1.NamedResourceReference{
+					{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+					{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+					{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+				},
+				"foo",
+				&gardencorev1beta1.NamedResourceReference{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+			),
+		)
 
 		DescribeTable("#UpsertLastError",
 			func(lastErrors []gardencorev1beta1.LastError, lastError gardencorev1beta1.LastError, expected []gardencorev1beta1.LastError) {
@@ -1692,27 +2154,27 @@ var _ = Describe("helper", func() {
 				"insert",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
-				gardencorev1beta1.LastError{TaskID: pointer.String("foo"), Description: "error"},
+				gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "error"},
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
-					{TaskID: pointer.String("foo"), Description: "error"},
+					{TaskID: ptr.To("bar")},
+					{TaskID: ptr.To("foo"), Description: "error"},
 				},
 			),
 			Entry(
 				"update",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo"), Description: "error"},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo"), Description: "error"},
+					{TaskID: ptr.To("bar")},
 				},
-				gardencorev1beta1.LastError{TaskID: pointer.String("foo"), Description: "new-error"},
+				gardencorev1beta1.LastError{TaskID: ptr.To("foo"), Description: "new-error"},
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo"), Description: "new-error"},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo"), Description: "new-error"},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 		)
@@ -1726,25 +2188,25 @@ var _ = Describe("helper", func() {
 				"task id not found",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 				"foo",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 			Entry(
 				"task id found",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("foo")},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("foo")},
+					{TaskID: ptr.To("bar")},
 				},
 				"foo",
 				[]gardencorev1beta1.LastError{
 					{},
-					{TaskID: pointer.String("bar")},
+					{TaskID: ptr.To("bar")},
 				},
 			),
 		)
@@ -1801,7 +2263,7 @@ var _ = Describe("helper", func() {
 				s2 := ShootItems(shootList2)
 				shootSet := s.Union(&s2)
 
-				Expect(len(shootSet)).To(Equal(5))
+				Expect(shootSet).To(HaveLen(5))
 			})
 
 			It("should not fail if one of the lists is empty", func() {
@@ -1834,10 +2296,10 @@ var _ = Describe("helper", func() {
 				s := ShootItems(shootList1)
 				s2 := ShootItems(shootList2)
 				shootSet := s.Union(&s2)
-				Expect(len(shootSet)).To(Equal(3))
+				Expect(shootSet).To(HaveLen(3))
 
 				shootSet2 := s2.Union(&s)
-				Expect(len(shootSet)).To(Equal(3))
+				Expect(shootSet).To(HaveLen(3))
 				Expect(shootSet).To(ConsistOf(shootSet2))
 
 			})
@@ -1851,7 +2313,7 @@ var _ = Describe("helper", func() {
 			s := ShootItems(shootList1)
 			s2 := ShootItems(shootList2)
 			shootSet := s.Union(&s2)
-			Expect(len(shootSet)).To(Equal(0))
+			Expect(shootSet).To(BeEmpty())
 		})
 	})
 
@@ -1966,8 +2428,8 @@ var _ = Describe("helper", func() {
 
 		Entry("kubeProxy nil", nil, BeFalse()),
 		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
-		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(false)}, BeFalse()),
-		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(true)}, BeTrue()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
 	)
 
 	DescribeTable("#BackupBucketIsErroneous",
@@ -2007,9 +2469,9 @@ var _ = Describe("helper", func() {
 		Entry("both nil", nil, nil, BeTrue()),
 		Entry("old nil, new w/o secret names", nil, &gardencorev1beta1.DNS{}, BeTrue()),
 		Entry("old w/o secret names, new nil", &gardencorev1beta1.DNS{}, nil, BeTrue()),
-		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, BeFalse()),
-		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
-		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, BeTrue()),
+		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeFalse()),
+		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeTrue()),
 	)
 
 	DescribeTable("#ShootResourceReferencesEqual",
@@ -2025,7 +2487,7 @@ var _ = Describe("helper", func() {
 		Entry("old w/ secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeFalse()),
 		Entry("difference", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar"}}}, BeFalse()),
 		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "bar"}}}, BeFalse()),
-		Entry("difference beacuse new is configMap with same name", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
+		Entry("difference because new is configMap with same name", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
 		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
 	)
 
@@ -2099,16 +2561,16 @@ var _ = Describe("helper", func() {
 		}
 
 		test := func(shoots []shootCase, expectedUsage map[string]int) {
-			var shootList []gardencorev1beta1.Shoot
+			var shootList []*gardencorev1beta1.Shoot
 
 			for i, shoot := range shoots {
-				s := gardencorev1beta1.Shoot{}
+				s := &gardencorev1beta1.Shoot{}
 				s.Name = fmt.Sprintf("shoot-%d", i)
 				if shoot.specSeedName != "" {
-					s.Spec.SeedName = pointer.String(shoot.specSeedName)
+					s.Spec.SeedName = ptr.To(shoot.specSeedName)
 				}
 				if shoot.statusSeedName != "" {
-					s.Status.SeedName = pointer.String(shoot.statusSeedName)
+					s.Status.SeedName = ptr.To(shoot.statusSeedName)
 				}
 				shootList = append(shootList, s)
 			}
@@ -2154,7 +2616,7 @@ var _ = Describe("helper", func() {
 
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	DescribeTable("#GetSecretBindingTypes",
@@ -2234,22 +2696,14 @@ var _ = Describe("helper", func() {
 	})
 
 	DescribeTable("#IsNodeLocalDNSEnabled",
-		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
-			Expect(IsNodeLocalDNSEnabled(systemComponents, annotations)).To(Equal(expected))
+		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {
+			Expect(IsNodeLocalDNSEnabled(systemComponents)).To(Equal(expected))
 		},
 
-		Entry("with nil (disabled)", nil, nil, false),
-		Entry("with empty system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{"something": "wrong"}, true),
-		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{"something": "wrong"}, false),
-		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
-		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
-		Entry("with empty system components and proper annotation, but wrong value (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "test"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
-		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, true),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
+		Entry("with nil (disabled)", nil, false),
+		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
+		Entry("with system components and node-local-dns is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
+		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
 	)
 
 	DescribeTable("#GetNodeLocalDNS",
@@ -2258,7 +2712,7 @@ var _ = Describe("helper", func() {
 		},
 		Entry("with nil", nil, nil),
 		Entry("with system components and nil", nil, nil),
-		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: pointer.Bool(true), ForceTCPToUpstreamDNS: pointer.Bool(true), DisableForwardToUpstreamDNS: pointer.Bool(true)}),
+		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
 	)
 
 	DescribeTable("#GetShootCARotationPhase",
@@ -2378,7 +2832,7 @@ var _ = Describe("helper", func() {
 
 		DescribeTable("mutate function not nil",
 			func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
-				MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+				MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 					rotation.LastInitiationTime = &lastInitiationTime
 				})
 				Expect(shoot.Status.Credentials.Rotation.Observability.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
@@ -2387,7 +2841,7 @@ var _ = Describe("helper", func() {
 			Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
 			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
 			Entry("observability nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
-			Entry("observability non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}}}, metav1.Now()),
+			Entry("observability non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{}}}}}, metav1.Now()),
 		)
 	})
 
@@ -2399,11 +2853,11 @@ var _ = Describe("helper", func() {
 		Entry("credentials nil", nil, BeFalse()),
 		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, BeFalse()),
 		Entry("observability nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, BeFalse()),
-		Entry("lastInitiationTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}, BeFalse()),
-		Entry("lastCompletionTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time)}}}, BeTrue()),
-		Entry("lastCompletionTime before lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(-time.Minute))}}}, BeTrue()),
-		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
-		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
+		Entry("lastInitiationTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{}}}, BeFalse()),
+		Entry("lastCompletionTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time)}}}, BeTrue()),
+		Entry("lastCompletionTime before lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(-time.Minute))}}}, BeTrue()),
+		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
+		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
 	)
 
 	DescribeTable("#GetShootServiceAccountKeyRotationPhase",
@@ -2474,74 +2928,34 @@ var _ = Describe("helper", func() {
 		)
 	})
 
-	Describe("#IsPSPDisabled", func() {
-		var shoot *gardencorev1beta1.Shoot
+	Describe("#GetAllZonesFromShoot", func() {
+		It("should return an empty list because there are no zones", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{}))).To(BeEmpty())
+		})
 
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
+		It("should return the expected list when there is only one pool", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version:       "1.24.0",
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-					},
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
-							{
-								Name: "worker",
-							},
+							{Zones: []string{"a", "b"}},
 						},
 					},
 				},
-			}
+			}))).To(ConsistOf("a", "b"))
 		})
 
-		It("should return true if Kubernetes version >= 1.25", func() {
-			shoot.Spec.Kubernetes.Version = "1.25.0"
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
-		})
-
-		It("should return true if PodSecurityPolicy admissionPlugin is disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name:     "PodSecurityPolicy",
-					Disabled: pointer.Bool(true),
+		It("should return the expected list when there are more than one pools", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{Zones: []string{"a", "c"}},
+							{Zones: []string{"b", "d"}},
+						},
+					},
 				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not disabled", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "PodSecurityPolicy",
-				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if PodSecurityPolicy admissionPlugin is not specified in the shootSpec", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "NamespaceLifecycle",
-				},
-			}
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return false if KubeAPIServerConfig is nil", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer = nil
-
-			Expect(IsPSPDisabled(shoot)).To(BeFalse())
-		})
-
-		It("should return true for workerless Shoots", func() {
-			shoot.Spec.Provider.Workers = nil
-
-			Expect(IsPSPDisabled(shoot)).To(BeTrue())
+			}))).To(ConsistOf("a", "b", "c", "d"))
 		})
 	})
 
@@ -2550,8 +2964,8 @@ var _ = Describe("helper", func() {
 			Expect(IsFailureToleranceTypeZone(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeZone), true),
-		Entry("failureToleranceType is node", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeNode), false),
+		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), true),
+		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), false),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 
@@ -2560,8 +2974,8 @@ var _ = Describe("helper", func() {
 			Expect(IsFailureToleranceTypeNode(failureToleranceType)).To(Equal(expectedResult))
 		},
 
-		Entry("failureToleranceType is zone", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeZone), false),
-		Entry("failureToleranceType is node", failureToleranceTypePointer(gardencorev1beta1.FailureToleranceTypeNode), true),
+		Entry("failureToleranceType is zone", ptr.To(gardencorev1beta1.FailureToleranceTypeZone), false),
+		Entry("failureToleranceType is node", ptr.To(gardencorev1beta1.FailureToleranceTypeNode), true),
 		Entry("failureToleranceType is nil", nil, false),
 	)
 
@@ -2643,6 +3057,21 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#HasManagedIssuer", func() {
+		It("should return false when the shoot does not have managed issuer", func() {
+			Expect(HasManagedIssuer(&gardencorev1beta1.Shoot{})).To(BeFalse())
+		})
+
+		It("should return true when the shoot has managed issuer", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
+				},
+			}
+			Expect(HasManagedIssuer(shoot)).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#ShootEnablesSSHAccess",
 		func(workers []gardencorev1beta1.Worker, workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
 			shoot := &gardencorev1beta1.Shoot{
@@ -2657,10 +3086,10 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("should return false when shoot provider has zero workers", nil, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{{}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
 	)
 
 	Describe("#GetFailureToleranceType", func() {
@@ -2728,12 +3157,283 @@ var _ = Describe("helper", func() {
 		Entry("last operation type does not match", &gardencorev1beta1.LastOperation{}, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
 		Entry("last operation type matches", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}, gardencorev1beta1.LastOperationTypeCreate, BeTrue()),
 	)
+
+	DescribeTable("#KubeAPIServerFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeAPIServerFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeAPIServerConfig=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeAPIServerConfig.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeControllerManagerFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeControllerManagerFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeControllerManager=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeControllerManager.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	DescribeTable("#KubeProxyFeatureGateDisabled",
+		func(shoot *gardencorev1beta1.Shoot, featureGate string, expected bool) {
+			actual := KubeProxyFeatureGateDisabled(shoot, featureGate)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with kubeProxy=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: nil,
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("with kubeProxy.featureGates=nil",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: nil,
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate does not exist",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBaz": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is enabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			false,
+		),
+		Entry("when feature gate exists and is disabled",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeProxy: &gardencorev1beta1.KubeProxyConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{
+									"FooBar": false,
+								},
+							},
+						},
+					},
+				},
+			},
+			"FooBar",
+			true,
+		),
+	)
+
+	Describe("#ConvertShootList", func() {
+		It("should convert a list of Shoots", func() {
+			shootList := &gardencorev1beta1.ShootList{
+				Items: []gardencorev1beta1.Shoot{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "shoot1"},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "shoot2"},
+					},
+				},
+			}
+
+			converted := ConvertShootList(shootList.Items)
+			Expect(converted).To(HaveLen(2))
+			Expect(converted[0].Name).To(Equal("shoot1"))
+			Expect(converted[1].Name).To(Equal("shoot2"))
+		})
+	})
 })
 
 func timePointer(t time.Time) *metav1.Time {
 	return &metav1.Time{Time: t}
-}
-
-func failureToleranceTypePointer(failureToleranceType gardencorev1beta1.FailureToleranceType) *gardencorev1beta1.FailureToleranceType {
-	return &failureToleranceType
 }

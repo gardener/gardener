@@ -19,7 +19,7 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -92,7 +92,7 @@ func (l *resolver) Start(stopCtx context.Context) error {
 			return
 		}
 
-		sort.Strings(addresses)
+		slices.Sort(addresses)
 
 		l.lock.Lock()
 		updated := !equal(addresses, l.addrs)
@@ -180,6 +180,7 @@ func CreateForCluster(restConfig *rest.Config, log logr.Logger) (Provider, error
 		}
 
 		providerLogger.Info("Using hostname resolver")
+
 		return NewProvider(
 			serverHostname,
 			port,
@@ -189,8 +190,8 @@ func CreateForCluster(restConfig *rest.Config, log logr.Logger) (Provider, error
 	} else if envHostname != "" &&
 		envPort != "" &&
 		net.ParseIP(envHostname) == nil {
-
 		providerLogger.Info("Fallback to environment variable hostname resolver")
+
 		return NewProvider(
 			envHostname,
 			envPort,

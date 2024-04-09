@@ -25,26 +25,21 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/utils"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootManagedSeed"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootManagedSeed, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }
@@ -58,8 +53,8 @@ type ManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
+	_ = admissioninitializer.WantsCoreClientSet(&ManagedSeed{})
+	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -77,13 +72,13 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreClientset sets the garden core clientset.
-func (v *ManagedSeed) SetInternalCoreClientset(c gardencoreclientset.Interface) {
+// SetCoreClientSet sets the garden core clientset.
+func (v *ManagedSeed) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
-// SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+// SetSeedManagementClientSet sets the garden seedmanagement clientset.
+func (v *ManagedSeed) SetSeedManagementClientSet(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
@@ -177,15 +172,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
 	}
 
-	if seedTemplate.Spec.SecretRef != nil && !pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
-	}
-
-	zoneValidationErrs, err := v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-	allErrs = append(allErrs, zoneValidationErrs...)
+	allErrs = append(allErrs, v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)...)
 
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
@@ -196,7 +183,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 
 // validateZoneRemovalFromShoot returns an error if worker zones for the given shoot were changed
 // while they are still registered in the ManagedSeed.
-func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot, newShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
+func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot, newShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	removedZones := gardencorehelper.GetAllZonesFromShoot(oldShoot).Difference(gardencorehelper.GetAllZonesFromShoot(newShoot))
@@ -208,7 +195,7 @@ func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot
 		allErrs = append(allErrs, field.Forbidden(fldPath, "shoot worker zone(s) must not be removed as long as registered in managedseed"))
 	}
 
-	return allErrs, nil
+	return allErrs
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {
@@ -216,6 +203,7 @@ func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.
 	if err != nil {
 		return err
 	}
+
 	for _, shoot := range shoots {
 		if err := v.validateDelete(ctx, utils.NewAttributesWithName(a, shoot.Name)); err != nil {
 			return err
@@ -237,8 +225,8 @@ func (v *ManagedSeed) validateDelete(ctx context.Context, a admission.Attributes
 	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot %s/%s since it is still referenced by a managed seed", a.GetNamespace(), a.GetName()))
 }
 
-func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]core.Shoot, error) {
-	shootList, err := v.coreClient.Core().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]gardencorev1beta1.Shoot, error) {
+	shootList, err := v.coreClient.CoreV1beta1().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}

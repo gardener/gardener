@@ -1,7 +1,7 @@
 # Image Vector
 
 The Gardenlet is deploying several different container images into the seed and the shoot clusters.
-The image repositories and tags are defined in a [central image vector file](../../charts/images.yaml).
+The image repositories and tags are defined in a [central image vector file](../../imagevector/images.yaml).
 Obviously, the image versions defined there must fit together with the deployment manifests (e.g., some command-line flags do only exist in certain versions).
 
 ## Example

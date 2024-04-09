@@ -8,12 +8,11 @@ spec:
   - name: local
   kubernetes:
     versions:
+    - version: 1.29.0
+    - version: 1.28.2
     - version: 1.27.1
     - version: 1.26.0
     - version: 1.25.4
-    - version: 1.24.8
-    - version: 1.23.6
-    - version: 1.22.0
   # These values do not represent the actual machine capacity. The actual
   # capacity of the machine depends on your docker resource allocation. 
   machineTypes:
@@ -27,10 +26,6 @@ spec:
     - version: 1.0.0
       cri:
       - name: containerd
-      # provider-local image doesn't contain a full docker runtime but includes nerdctl imitating the docker CLI for fulfilling gardener's bootstrap needs:
-      # see https://github.com/gardener/machine-controller-manager-provider-local/blob/f2c93198c794afc4e8e742a26026584ecce9aadf/node/Dockerfile#L9-L20
-      # this can be removed as soon as https://github.com/gardener/gardener/issues/4673 is resolved
-      - name: docker
   providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig

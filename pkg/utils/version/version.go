@@ -18,27 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
-	// ConstraintK8sEqual122 is a version constraint for versions == 1.22.
-	ConstraintK8sEqual122 *semver.Constraints
-	// ConstraintK8sEqual123 is a version constraint for versions == 1.23.
-	ConstraintK8sEqual123 *semver.Constraints
-	// ConstraintK8sGreaterEqual123 is a version constraint for versions >= 1.23.
-	ConstraintK8sGreaterEqual123 *semver.Constraints
-	// ConstraintK8sLess123 is a version constraint for versions < 1.23.
-	ConstraintK8sLess123 *semver.Constraints
-	// ConstraintK8sEqual124 is a version constraint for versions == 1.24.
-	ConstraintK8sEqual124 *semver.Constraints
-	// ConstraintK8sLess124 is a version constraint for versions < 1.24.
-	ConstraintK8sLess124 *semver.Constraints
-	// ConstraintK8sGreaterEqual125 is a version constraint for versions >= 1.25.
-	ConstraintK8sGreaterEqual125 *semver.Constraints
-	// ConstraintK8sLess125 is a version constraint for versions < 1.25.
-	ConstraintK8sLess125 *semver.Constraints
 	// ConstraintK8sGreaterEqual126 is a version constraint for versions >= 1.26.
 	ConstraintK8sGreaterEqual126 *semver.Constraints
 	// ConstraintK8sLess126 is a version constraint for versions < 1.26.
@@ -47,26 +31,16 @@ var (
 	ConstraintK8sGreaterEqual127 *semver.Constraints
 	// ConstraintK8sLess127 is a version constraint for versions < 1.27.
 	ConstraintK8sLess127 *semver.Constraints
+	// ConstraintK8sGreaterEqual128 is a version constraint for versions >= 1.28.
+	ConstraintK8sGreaterEqual128 *semver.Constraints
+	// ConstraintK8sEqual128 is a version constraint for versions == 1.28.
+	ConstraintK8sEqual128 *semver.Constraints
+	// ConstraintK8sGreaterEqual129 is a version constraint for versions >= 1.29.
+	ConstraintK8sGreaterEqual129 *semver.Constraints
 )
 
 func init() {
 	var err error
-	ConstraintK8sEqual122, err = semver.NewConstraint("~ 1.22.x-0")
-	utilruntime.Must(err)
-	ConstraintK8sEqual123, err = semver.NewConstraint("~ 1.23.x-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual123, err = semver.NewConstraint(">= 1.23-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess123, err = semver.NewConstraint("< 1.23-0")
-	utilruntime.Must(err)
-	ConstraintK8sEqual124, err = semver.NewConstraint("~ 1.24.x-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess124, err = semver.NewConstraint("< 1.24-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual125, err = semver.NewConstraint(">= 1.25-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess125, err = semver.NewConstraint("< 1.25-0")
-	utilruntime.Must(err)
 	ConstraintK8sGreaterEqual126, err = semver.NewConstraint(">= 1.26-0")
 	utilruntime.Must(err)
 	ConstraintK8sLess126, err = semver.NewConstraint("< 1.26-0")
@@ -74,6 +48,12 @@ func init() {
 	ConstraintK8sGreaterEqual127, err = semver.NewConstraint(">= 1.27-0")
 	utilruntime.Must(err)
 	ConstraintK8sLess127, err = semver.NewConstraint("< 1.27-0")
+	utilruntime.Must(err)
+	ConstraintK8sGreaterEqual128, err = semver.NewConstraint(">= 1.28-0")
+	utilruntime.Must(err)
+	ConstraintK8sEqual128, err = semver.NewConstraint("~ 1.28.x-0")
+	utilruntime.Must(err)
+	ConstraintK8sGreaterEqual129, err = semver.NewConstraint(">= 1.29-0")
 	utilruntime.Must(err)
 }
 
@@ -111,5 +91,46 @@ func normalize(version string) string {
 	if idx != -1 {
 		v = v[:idx]
 	}
+
 	return v
+}
+
+// VersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
+type VersionRange struct {
+	AddedInVersion   string
+	RemovedInVersion string
+}
+
+// Contains returns true if the range contains the given version, false otherwise.
+// The range contains the given version only if it's greater or equal than AddedInVersion (always true if AddedInVersion is empty),
+// and less than RemovedInVersion (always true if RemovedInVersion is empty).
+func (r *VersionRange) Contains(version string) (bool, error) {
+	var constraint string
+
+	switch {
+	case r.AddedInVersion != "" && r.RemovedInVersion == "":
+		constraint = ">= " + r.AddedInVersion
+	case r.AddedInVersion == "" && r.RemovedInVersion != "":
+		constraint = "< " + r.RemovedInVersion
+	case r.AddedInVersion != "" && r.RemovedInVersion != "":
+		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
+	default:
+		constraint = "*"
+	}
+
+	return CheckVersionMeetsConstraint(version, constraint)
+}
+
+// SupportedVersionRange returns the supported version range for the given API.
+func (r *VersionRange) SupportedVersionRange() string {
+	switch {
+	case r.AddedInVersion != "" && r.RemovedInVersion == "":
+		return "versions >= " + r.AddedInVersion
+	case r.AddedInVersion == "" && r.RemovedInVersion != "":
+		return "versions < " + r.RemovedInVersion
+	case r.AddedInVersion != "" && r.RemovedInVersion != "":
+		return fmt.Sprintf("versions >= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
+	default:
+		return "all kubernetes versions"
+	}
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedseedset
+package managedseedset_test
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -34,11 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-)
-
-const (
-	name      = "test"
-	namespace = "garden"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 )
 
 var _ = Describe("Add", func() {
@@ -91,7 +87,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -105,7 +101,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -326,7 +322,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -340,7 +336,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -460,7 +456,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},
@@ -485,7 +481,6 @@ var _ = Describe("Add", func() {
 		It("should return true for update and false for create and delete event when Seed Ready status changes", func() {
 			newSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}
@@ -543,13 +538,11 @@ var _ = Describe("Add", func() {
 		It("should return true for create, update and delete event when pending replica has SeedNotReady status and Seed is ready", func() {
 			oldSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}
 			newSeed.Status.Conditions = []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 			}
@@ -597,7 +590,7 @@ var _ = Describe("Add", func() {
 						{
 							Kind:       "ManagedSeedSet",
 							Name:       name,
-							Controller: pointer.Bool(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},

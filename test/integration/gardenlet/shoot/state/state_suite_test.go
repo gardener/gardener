@@ -29,21 +29,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestState(t *testing.T) {
@@ -90,6 +90,10 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_networks.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machines.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machinesets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machinedeployments.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machineclasses.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -97,7 +101,6 @@ var _ = BeforeSuite(func() {
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
 				"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator",
-				"--feature-gates=WorkerlessShoots=true",
 			},
 		},
 	}
@@ -114,7 +117,7 @@ var _ = BeforeSuite(func() {
 
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddGardenSchemeToScheme,
-		extensionsv1alpha1.AddToScheme,
+		kubernetes.AddSeedSchemeToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
@@ -162,8 +165,8 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             testScheme,
-		MetricsBindAddress: "0",
+		Scheme:  testScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -173,7 +176,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&state.Reconciler{
 		Config: config.ShootStateControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
 		},
 		Clock:    fakeClock,

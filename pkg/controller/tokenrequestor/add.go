@@ -43,6 +43,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetCoreV1Client == nil {
 		var err error
+
 		r.TargetCoreV1Client, err = corev1clientset.NewForConfig(targetCluster.GetConfig())
 		if err != nil {
 			return fmt.Errorf("could not create coreV1Client: %w", err)
@@ -65,7 +66,7 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 		CreateFunc:  func(e event.CreateEvent) bool { return r.isRelevantSecret(e.Object) },
 		UpdateFunc:  func(e event.UpdateEvent) bool { return r.isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
 		DeleteFunc:  func(e event.DeleteEvent) bool { return r.isRelevantSecret(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
 	}
 }
 

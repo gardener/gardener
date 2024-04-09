@@ -62,6 +62,9 @@ func (healthChecker *ManagedResourceHealthChecker) DeepCopy() healthcheck.Health
 	return &shallowCopy
 }
 
+// configurationProblemRegex is used to check if a not healthy managed resource has a configuration problem.
+var configurationProblemRegex = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+
 // Check executes the health check
 func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	mcmDeployment := &resourcesv1alpha1.ManagedResource{}
@@ -81,12 +84,8 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 
-		var (
-			errorCodes                 []gardencorev1beta1.ErrorCode
-			configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
-		)
-
-		if configurationProblemRegexp.MatchString(err.Error()) {
+		var errorCodes []gardencorev1beta1.ErrorCode
+		if configurationProblemRegex.MatchString(err.Error()) {
 			errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 		}
 

@@ -22,26 +22,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateResourceManagerConfiguration validates the given `ResourceManagerConfiguration`.
 func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateSourceClientConnection(conf.SourceClientConnection, field.NewPath("sourceClientConnection"))...)
+	allErrs = append(allErrs, validateClientConnection(conf.SourceClientConnection, field.NewPath("sourceClientConnection"))...)
 	if conf.TargetClientConnection != nil {
-		allErrs = append(allErrs, validateTargetClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
+		allErrs = append(allErrs, validateClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
 	}
+
 	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
 	}
+
 	if !sets.New(logger.AllLogFormats...).Has(conf.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
 	}
@@ -56,19 +59,7 @@ func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfigurat
 	return allErrs
 }
 
-func validateSourceClientConnection(conf config.SourceClientConnection, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if conf.CacheResyncPeriod != nil && conf.CacheResyncPeriod.Duration < 10*time.Second {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("cacheResyncPeriod"), conf.CacheResyncPeriod.Duration, "must be at least 10s"))
-	}
-
-	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
-
-	return allErrs
-}
-
-func validateTargetClientConnection(conf config.TargetClientConnection, fldPath *field.Path) field.ErrorList {
+func validateClientConnection(conf config.ClientConnection, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.CacheResyncPeriod != nil && conf.CacheResyncPeriod.Duration < 10*time.Second {
@@ -104,13 +95,15 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 	if conf.ClusterID == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("clusterID"), "cluster id must be non-nil"))
 	}
-	if len(pointer.StringDeref(conf.ResourceClass, "")) == 0 {
+
+	if len(ptr.Deref(conf.ResourceClass, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("resourceClass"), "must provide a resource class"))
 	}
 
 	if conf.KubeletCSRApprover.Enabled {
 		allErrs = append(allErrs, validateConcurrentSyncs(conf.KubeletCSRApprover.ConcurrentSyncs, fldPath.Child("kubeletCSRApprover"))...)
 	}
+
 	if conf.GarbageCollector.Enabled {
 		allErrs = append(allErrs, validateSyncPeriod(conf.GarbageCollector.SyncPeriod, fldPath.Child("garbageCollector"))...)
 	}
@@ -119,8 +112,6 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 	allErrs = append(allErrs, validateSyncPeriod(conf.Health.SyncPeriod, fldPath.Child("health"))...)
 
 	allErrs = append(allErrs, validateManagedResourceControllerConfiguration(conf.ManagedResource, fldPath.Child("managedResources"))...)
-
-	allErrs = append(allErrs, validateConcurrentSyncs(conf.Secret.ConcurrentSyncs, fldPath.Child("secret"))...)
 
 	if conf.TokenRequestor.Enabled {
 		allErrs = append(allErrs, validateConcurrentSyncs(conf.TokenRequestor.ConcurrentSyncs, fldPath.Child("tokenRequestor"))...)
@@ -135,7 +126,7 @@ func validateManagedResourceControllerConfiguration(conf config.ManagedResourceC
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
 
-	if len(pointer.StringDeref(conf.ManagedByLabelValue, "")) == 0 {
+	if len(ptr.Deref(conf.ManagedByLabelValue, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("managedByLabelValue"), "must specify value of managed-by label"))
 	}
 
@@ -148,6 +139,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 	allErrs = append(allErrs, validatePodSchedulerNameWebhookConfiguration(conf.PodSchedulerName, fldPath.Child("podSchedulerName"))...)
 	allErrs = append(allErrs, validateProjectedTokenMountWebhookConfiguration(conf.ProjectedTokenMount, fldPath.Child("projectedTokenMount"))...)
 	allErrs = append(allErrs, validateHighAvailabilityConfigWebhookConfiguration(conf.HighAvailabilityConfig, fldPath.Child("highAvailabilityConfig"))...)
+	allErrs = append(allErrs, validateSystemComponentsConfigWebhookConfig(&conf.SystemComponentsConfig, fldPath.Child("systemComponentsConfig"))...)
 
 	return allErrs
 }
@@ -155,7 +147,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 func validatePodSchedulerNameWebhookConfiguration(conf config.PodSchedulerNameWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.Enabled && len(pointer.StringDeref(conf.SchedulerName, "")) == 0 {
+	if conf.Enabled && len(ptr.Deref(conf.SchedulerName, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("schedulerName"), "must specify schedulerName when webhook is enabled"))
 	}
 
@@ -165,8 +157,8 @@ func validatePodSchedulerNameWebhookConfiguration(conf config.PodSchedulerNameWe
 func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenMountWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.Enabled && pointer.Int64Deref(conf.ExpirationSeconds, 0) < 600 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), pointer.Int64Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
+	if conf.Enabled && ptr.Deref(conf.ExpirationSeconds, 0) < 600 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), ptr.Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
 	}
 
 	return allErrs
@@ -175,8 +167,8 @@ func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenM
 func validateHighAvailabilityConfigWebhookConfiguration(conf config.HighAvailabilityConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(ptr.Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 
 	return allErrs
 }
@@ -184,7 +176,7 @@ func validateHighAvailabilityConfigWebhookConfiguration(conf config.HighAvailabi
 func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if pointer.IntDeref(val, 0) <= 0 {
+	if ptr.Deref(val, 0) <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("concurrentSyncs"), val, "must be at least 1"))
 	}
 
@@ -197,6 +189,14 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	if val == nil || val.Duration < 15*time.Second {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
 	}
+
+	return allErrs
+}
+
+func validateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, kubernetescorevalidation.ValidateTolerations(conf.PodTolerations, fldPath.Child("podTolerations"))...)
 
 	return allErrs
 }

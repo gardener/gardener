@@ -259,6 +259,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 // getFailureToleranceType returns a failureToleranceType based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
 func getFailureToleranceType() gardencorev1beta1.FailureToleranceType {
 	var failureToleranceType gardencorev1beta1.FailureToleranceType
+
 	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
 	case "zone":
 		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone

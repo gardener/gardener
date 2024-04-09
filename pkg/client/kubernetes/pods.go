@@ -96,6 +96,7 @@ func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, nam
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() { utilruntime.HandleError(stream.Close()) }()
 
 	return io.ReadAll(stream)

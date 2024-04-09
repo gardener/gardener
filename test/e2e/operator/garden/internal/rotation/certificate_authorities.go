@@ -35,10 +35,6 @@ type CAVerifier struct {
 	RuntimeClient client.Client
 	Garden        *operatorv1alpha1.Garden
 
-	oldCACert []byte
-	caBundle  []byte
-	newCACert []byte
-
 	secretsBefore    rotation.SecretConfigNamesToSecrets
 	secretsPrepared  rotation.SecretConfigNamesToSecrets
 	secretsCompleted rotation.SecretConfigNamesToSecrets
@@ -50,6 +46,7 @@ var allCAs = []string{
 	caETCD,
 	caETCDPeer,
 	caFrontProxy,
+	caGardener,
 }
 
 const (
@@ -58,6 +55,7 @@ const (
 	caETCD       = "ca-etcd"
 	caETCDPeer   = "ca-etcd-peer"
 	caFrontProxy = "ca-front-proxy"
+	caGardener   = "ca-gardener"
 )
 
 // Before is called before the rotation is started.

@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -77,6 +77,7 @@ var _ = Describe("Reconciler", func() {
 			c = fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.GardenScheme).
 				WithObjects(seed).
+				WithStatusSubresource(seed).
 				WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, indexer.BackupBucketSeedNameIndexerFunc).
 				Build()
 
@@ -197,7 +198,7 @@ var _ = Describe("Reconciler", func() {
 								LastUpdateTime:     metav1.Time{Time: fakeClock.Now().Add(-30 * time.Second)},
 							},
 						}
-						Expect(c.Update(ctx, seed)).To(Succeed())
+						Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
 						matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
 							"Message": matchMessage,
@@ -218,7 +219,7 @@ var _ = Describe("Reconciler", func() {
 								LastUpdateTime:     metav1.Time{Time: fakeClock.Now().Add(-2 * time.Minute)},
 							},
 						}
-						Expect(c.Update(ctx, seed)).To(Succeed())
+						Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
 						matchExpectedCondition = MatchFields(IgnoreExtras, Fields{
 							"Message": matchMessage,
@@ -290,7 +291,7 @@ func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastEr
 			Name: name,
 		},
 		Spec: gardencorev1beta1.BackupBucketSpec{
-			SeedName: pointer.String(seedName),
+			SeedName: ptr.To(seedName),
 		},
 		Status: gardencorev1beta1.BackupBucketStatus{
 			LastError: lastErr,

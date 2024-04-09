@@ -1,0 +1,798 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": 5,
+  "iteration": 1605268642592,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 22,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "content": "[99.95%][] allows for 5 minutes of downtime per week\n\n[99.95%]: https://uptime.is/99.95\n\n\n",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.1",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "SLA (over the last 7 days)",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null
+          },
+          "mappings": [],
+          "max": 30,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 0,
+        "y": 2
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["mean"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.1",
+      "targets": [
+        {
+          "expr": "count(\n  count_over_time(\n    garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",project=~\"$project\",name=~\"$name\",iaas=\"$iaas\", purpose=~\"$purpose\"}[7d:]\n  )\n)",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "B"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "# of shoots",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null
+          },
+          "mappings": [],
+          "max": 30,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 3,
+        "y": 2
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["mean"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.1",
+      "targets": [
+        {
+          "expr": "count(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",project=~\"$project\",name=~\"$name\",iaas=\"$iaas\", purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "# with > 5 down minutes",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null
+          },
+          "decimals": 2,
+          "mappings": [],
+          "max": 30,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.02
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 7,
+        "y": 2
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["mean"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.1",
+      "targets": [
+        {
+          "expr": "count(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)\n/\ncount(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"})[7d :]\n  )\n)",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "% with > 5 down minutes",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null,
+            "displayMode": "auto",
+            "filterable": false
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "down minutes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "m"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "lcd-gauge"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 13,
+        "x": 11,
+        "y": 2
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.3.1",
+      "targets": [
+        {
+          "expr": "sum by (project, name) (\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Shoots with > 5 down minutes during the last 7 days",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": ["name", "project", "Value"]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value": 2,
+              "name": 1,
+              "project": 0
+            },
+            "renameByName": {
+              "Value": "down minutes"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null
+          },
+          "links": [],
+          "mappings": [],
+          "max": 30,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 15,
+        "w": 11,
+        "x": 0,
+        "y": 7
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "min",
+        "sortDesc": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.1",
+      "pointradius": 3,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "min_over_time(\n  garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"}[$__interval:]\n) < 1",
+          "format": "time_series",
+          "instant": false,
+          "interval": "1h",
+          "legendFormat": "{{project}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": "7d",
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Down minutes",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transformations": [],
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "availability-prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 1,
+      "gridPos": {
+        "h": 15,
+        "w": 13,
+        "x": 11,
+        "y": 7
+      },
+      "hiddenSeries": false,
+      "id": 10,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "max": true,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.1",
+      "pointradius": 0.5,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "count_over_time(\n  (sum without (instance)\n     (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"} < 1)\n  )[7d:]\n) > 3",
+          "format": "time_series",
+          "instant": false,
+          "interval": "1h",
+          "legendFormat": "{{project}} {{name}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": false,
+          "op": "gt",
+          "value": 6,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": "7d",
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Cumulative down minutes of the trailing 7 days (filtered for >3), >5 violates 99.95% SLO",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "transformations": [],
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 26,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "openstack",
+          "value": "openstack"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(garden_shoot_condition, iaas)",
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "iaas",
+        "options": [
+          {
+            "selected": false,
+            "text": "alicloud",
+            "value": "alicloud"
+          },
+          {
+            "selected": false,
+            "text": "aws",
+            "value": "aws"
+          },
+          {
+            "selected": false,
+            "text": "azure",
+            "value": "azure"
+          },
+          {
+            "selected": false,
+            "text": "gcp",
+            "value": "gcp"
+          },
+          {
+            "selected": false,
+            "text": "metal",
+            "value": "metal"
+          },
+          {
+            "selected": true,
+            "text": "openstack",
+            "value": "openstack"
+          },
+          {
+            "selected": false,
+            "text": "ovh",
+            "value": "ovh"
+          },
+          {
+            "selected": false,
+            "text": "sen",
+            "value": "sen"
+          },
+          {
+            "selected": false,
+            "text": "vsphere",
+            "value": "vsphere"
+          }
+        ],
+        "query": "label_values(garden_shoot_condition, iaas)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "project",
+        "options": [],
+        "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "name",
+        "options": [],
+        "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\"}, purpose)",
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "purpose",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "testing",
+            "value": "testing"
+          },
+          {
+            "selected": false,
+            "text": "development",
+            "value": "development"
+          },
+          {
+            "selected": false,
+            "text": "evaluation",
+            "value": "evaluation"
+          },
+          {
+            "selected": false,
+            "text": "infrastructure",
+            "value": "infrastructure"
+          },
+          {
+            "selected": false,
+            "text": "production",
+            "value": "production"
+          }
+        ],
+        "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\"}, purpose)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "",
+  "title": "Shoot SLA",
+  "uid": "shoot-sla",
+  "version": 1
+}

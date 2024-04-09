@@ -48,7 +48,7 @@ import (
 )
 
 var (
-	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is succesfully deleted. Exposed for tests.
+	// DefaultTimeout defines how long the controller should wait until the BackupBucket resource is ready or is successfully deleted. Exposed for tests.
 	DefaultTimeout = 30 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by the component is treated as 'severe'. Exposed for tests.
 	DefaultSevereThreshold = 15 * time.Second
@@ -80,6 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
@@ -231,7 +232,10 @@ func (r *Reconciler) reconcileBackupEntry(
 		mustReconcileExtensionBackupEntry = true
 	} else if extensionBackupEntry.Status.LastOperation == nil {
 		// if the extension did not record a lastOperation yet, record it as error in the backupentry status
-		lastObservedError = fmt.Errorf("extension did not record a last operation yet")
+		lastObservedError = errors.New("extension did not record a last operation yet")
+		if !metav1.HasAnnotation(extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation) {
+			mustReconcileExtensionBackupEntry = true
+		}
 	} else {
 		// check for errors, and if none are present, reconciliation has succeeded
 		lastOperationState := extensionBackupEntry.Status.LastOperation.State
@@ -281,6 +285,7 @@ func (r *Reconciler) reconcileBackupEntry(
 			}
 		}
 	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -353,7 +358,7 @@ func (r *Reconciler) deleteBackupEntry(
 			if !apierrors.IsNotFound(err) {
 				return reconcile.Result{}, err
 			}
-		} else {
+		} else if err == nil {
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 
@@ -367,7 +372,7 @@ func (r *Reconciler) deleteBackupEntry(
 		}
 
 		if err := client.IgnoreNotFound(r.SeedClient.Delete(seedCtx, extensionSecret)); err != nil {
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
 
 		if updateErr := r.updateBackupEntryStatusSucceeded(gardenCtx, backupEntry, operationType); updateErr != nil {
@@ -435,12 +440,12 @@ func (r *Reconciler) migrateBackupEntry(
 		if lastOperation == nil {
 			return reconcile.Result{}, fmt.Errorf("extension object did not record a lastOperation yet")
 		}
+
 		switch lastOperation.Type {
 		case gardencorev1beta1.LastOperationTypeMigrate:
 			if extensionBackupEntry.Status.LastError != nil ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateError ||
 				lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
-
 				lastError := fmt.Errorf("extension state is not Succeeded but %v", lastOperation.State)
 				if extensionBackupEntry.Status.LastError != nil {
 					lastError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", extensionBackupEntry.Status.LastError.Description), extensionBackupEntry.Status.LastError.Codes...)
@@ -497,6 +502,7 @@ func (r *Reconciler) migrateBackupEntry(
 
 func (r *Reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, be *gardencorev1beta1.BackupEntry, operationType gardencorev1beta1.LastOperationType) error {
 	var description string
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of BackupEntry state initialized."
@@ -595,7 +601,7 @@ func (r *Reconciler) updateBackupEntryStatusPending(ctx context.Context, be *gar
 func (r *Reconciler) emptyExtensionSecret(backupEntry *gardencorev1beta1.BackupEntry) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("entry-%s", backupEntry.Name),
+			Name:      "entry-" + backupEntry.Name,
 			Namespace: r.GardenNamespace,
 		},
 	}
@@ -643,7 +649,7 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 	}
 
 	if backupBucket.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		return fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
+		return fmt.Errorf("associated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
 	}
 
 	return nil

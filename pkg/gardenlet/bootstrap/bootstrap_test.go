@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -44,9 +44,9 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Bootstrap", func() {
@@ -173,7 +173,7 @@ var _ = Describe("Bootstrap", func() {
 				return approvedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &approvedCSR, nil
 			})
 
@@ -203,8 +203,8 @@ var _ = Describe("Bootstrap", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(kubeconfig).ToNot(BeEmpty())
-			Expect(len(csrName)).ToNot(Equal(0))
-			Expect(len(seedName)).ToNot(Equal(0))
+			Expect(csrName).ToNot(BeEmpty())
+			Expect(seedName).ToNot(BeEmpty())
 		})
 
 		It("should return an error - the CSR got denied", func() {
@@ -212,7 +212,7 @@ var _ = Describe("Bootstrap", func() {
 				return deniedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &deniedCSR, nil
 			})
 
@@ -230,7 +230,7 @@ var _ = Describe("Bootstrap", func() {
 				return failedCSR.Name, nil
 			})()
 
-			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(_ testing.Action) (handled bool, ret runtime.Object, err error) {
 				return true, &failedCSR, nil
 			})
 
@@ -255,7 +255,7 @@ var _ = Describe("Bootstrap", func() {
 				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).NotTo(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).NotTo(Succeed())
 		})
 
 		It("should delete nothing because the username in the CSR does not match a known pattern", func() {
@@ -263,7 +263,7 @@ var _ = Describe("Bootstrap", func() {
 				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(nil)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 
 		It("should delete the bootstrap token secret", func() {
@@ -285,7 +285,7 @@ var _ = Describe("Bootstrap", func() {
 					Delete(ctx, bootstrapTokenSecret),
 			)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, "")).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 
 		It("should delete the service account and cluster role binding", func() {
@@ -312,7 +312,7 @@ var _ = Describe("Bootstrap", func() {
 					Delete(ctx, clusterRoleBinding),
 			)
 
-			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName, seedName)).To(Succeed())
+			Expect(DeleteBootstrapAuth(ctx, reader, writer, csrName)).To(Succeed())
 		})
 	})
 })

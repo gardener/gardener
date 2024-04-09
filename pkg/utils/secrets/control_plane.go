@@ -24,11 +24,11 @@ import (
 
 // ControlPlaneSecretDataKeyCertificatePEM returns the data key inside a Secret of type ControlPlane whose value
 // contains the certificate PEM.
-func ControlPlaneSecretDataKeyCertificatePEM(name string) string { return fmt.Sprintf("%s.crt", name) }
+func ControlPlaneSecretDataKeyCertificatePEM(name string) string { return name + ".crt" }
 
 // ControlPlaneSecretDataKeyPrivateKey returns the data key inside a Secret of type ControlPlane whose value
 // contains the private key PEM.
-func ControlPlaneSecretDataKeyPrivateKey(name string) string { return fmt.Sprintf("%s.key", name) }
+func ControlPlaneSecretDataKeyPrivateKey(name string) string { return name + ".key" }
 
 // ControlPlaneSecretConfig is a struct which inherits from CertificateSecretConfig and is extended with a couple of additional
 // properties. A control plane secret will always contain a server/client certificate and optionally a kubeconfig.

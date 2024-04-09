@@ -18,17 +18,18 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                             | Default | Stage   | Since  | Until  |
-|-------------------------------------|---------|---------|--------|--------|
-| HVPA                                | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
-| DefaultSeccompProfile               | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
-| IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
-| WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
-| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
+| Feature                            | Default | Stage   | Since  | Until  |
+|------------------------------------|---------|---------|--------|--------|
+| HVPA                               | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
+| DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
+| IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
+| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
+| ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
+| ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
+| UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
+| ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -107,11 +108,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedChange                                   | `false` | `Alpha`      | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`       | `1.53` | `1.68` |
 | SeedChange                                   | `true`  | `GA`         | `1.69` | `1.72` |
-| SeedChange                                   | `true`  | `Removed`    | `1.73` |        |
+| SeedChange                                   |         | `Removed`    | `1.73` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37` | `1.52` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53` | `1.68` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69` | `1.72` |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Removed`    | `1.73` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   |         | `Removed`    | `1.73` |        |
 | ManagedIstio                                 | `false` | `Alpha`      | `1.5`  | `1.18` |
 | ManagedIstio                                 | `true`  | `Beta`       | `1.19` |        |
 | ManagedIstio                                 | `true`  | `Deprecated` | `1.48` | `1.69` |
@@ -119,15 +120,38 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                                 | `false` | `Alpha`      | `1.7`  | `1.18` |
 | APIServerSNI                                 | `true`  | `Beta`       | `1.19` |        |
 | APIServerSNI                                 | `true`  | `Deprecated` | `1.48` | `1.72` |
-| APIServerSNI                                 | `true`  | `Removed`    | `1.73` |        |
+| APIServerSNI                                 |         | `Removed`    | `1.73` |        |
 | HAControlPlanes                              | `false` | `Alpha`      | `1.49` | `1.70` |
 | HAControlPlanes                              | `true`  | `Beta`       | `1.71` | `1.72` |
 | HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.73` |
-| HAControlPlanes                              | `true`  | `Removed`    | `1.74` |        |
+| HAControlPlanes                              |         | `Removed`    | `1.74` |        |
 | FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66` | `1.70` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71` | `1.72` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.73` |
-| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Removed`    | `1.74` |        |
+| FullNetworkPoliciesInRuntimeCluster          |         | `Removed`    | `1.74` |        |
+| DisableScalingClassesForShoots               | `false` | `Alpha`      | `1.73` | `1.78` |
+| DisableScalingClassesForShoots               | `true`  | `Beta`       | `1.79` | `1.80` |
+| DisableScalingClassesForShoots               | `true`  | `GA`         | `1.81` | `1.81` |
+| DisableScalingClassesForShoots               |         | `Removed`    | `1.82` |        |
+| ContainerdRegistryHostsDir                   | `false` | `Alpha`      | `1.77` | `1.85` |
+| ContainerdRegistryHostsDir                   | `true`  | `Beta`       | `1.86` | `1.86` |
+| ContainerdRegistryHostsDir                   | `true`  | `GA`         | `1.87` | `1.87` |
+| ContainerdRegistryHostsDir                   |         | `Removed`    | `1.88` |        |
+| WorkerlessShoots                             | `false` | `Alpha`      | `1.70` | `1.78` |
+| WorkerlessShoots                             | `true`  | `Beta`       | `1.79` | `1.85` |
+| WorkerlessShoots                             | `true`  | `GA`         | `1.86` |        |
+| WorkerlessShoots                             |         | `Removed`    | `1.88` |        |
+| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73` |        |
+| MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81` | `1.81` |
+| MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82` | `1.91` |
+| MachineControllerManagerDeployment           |         | `Removed`    | `1.92` |        |
+| APIServerFastRollout                         | `true`  | `Beta`       | `1.82` | `1.89` |
+| APIServerFastRollout                         | `true`  | `GA`         | `1.90` | `1.91` |
+| APIServerFastRollout                         |         | `Removed`    | `1.92` |        |
+| UseGardenerNodeAgent                         | `false` | `Alpha`      | `1.82` | `1.88` |
+| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89` |        |
+| UseGardenerNodeAgent                         | `true`  | `GA`         | `1.90` | `1.91` |
+| UseGardenerNodeAgent                         |         | `Removed`    | `1.92` |        |
 
 ## Using a Feature
 
@@ -165,15 +189,14 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 
 ## List of Feature Gates
 
-| Feature                                    | Relevant Components               | Description                                                                                                                                                                                                                                                                                                                                                                        |
-|--------------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| HVPA                                       | `gardenlet`, `gardener-operator`  | Enables simultaneous horizontal and vertical scaling in garden or seed clusters.                                                                                                                                                                                                                                                                                                   |
-| HVPAForShootedSeed                         | `gardenlet`                       | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.                                                                                                                                                                                                                                                                                |
-| SecretBindingProviderValidation            | `gardener-apiserver`              | Enables validations on Gardener API server that:<br>- requires the provider type of a SecretBinding to be set (on SecretBinding creation)<br>- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)<br>- enforces immutability on the provider type of a SecretBinding                                                                    |
-| DefaultSeccompProfile                      | `gardenlet`, `gardener-operator`  | Enables the defaulting of the seccomp profile for Gardener managed workload in the garden or seed to `RuntimeDefault`.                                                                                                                                                                                                                                                             |
-| CoreDNSQueryRewriting                      | `gardenlet`                       | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md).                                                                                        |
-| IPv6SingleStack                            | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
-| MutableShootSpecNetworkingNodes            | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
-| WorkerlessShoots                           | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
-| MachineControllerManagerDeployment         | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
-| DisableScalingClassesForShoots             | `gardenlet`                       | Disables assigning a ScalingClass to Shoots based on their maximum Node count. All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this depend on the ScalingClass.                                                                                                                                                         |
+| Feature                            | Relevant Components               | Description                                                                                                                                                                                                                                                                                                                                                                        |
+|------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| HVPA                               | `gardenlet`, `gardener-operator`  | Enables simultaneous horizontal and vertical scaling in garden or seed clusters.                                                                                                                                                                                                                                                                                                   |
+| HVPAForShootedSeed                 | `gardenlet`                       | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.                                                                                                                                                                                                                                                                                |
+| DefaultSeccompProfile              | `gardenlet`, `gardener-operator`  | Enables the defaulting of the seccomp profile for Gardener managed workload in the garden or seed to `RuntimeDefault`.                                                                                                                                                                                                                                                             |
+| CoreDNSQueryRewriting              | `gardenlet`                       | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md).                                                                                        |
+| IPv6SingleStack                    | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
+| MutableShootSpecNetworkingNodes    | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
+| ShootForceDeletion                 | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                            |
+| UseNamespacedCloudProfile          | `gardener-apiserver`              | Enables usage of `NamespacedCloudProfile`s in `Shoot`s.                                                                                                                                                                                                                                                                                                                            |
+| ShootManagedIssuer                 | `gardenlet`                       | Enables the shoot managed issuer functionality described in GEP 24.                                                                                                                                                                                                                                                                                                                |

@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -184,7 +183,7 @@ func GetRequiredDrivers(pods []corev1.Pod) sets.Set[string] {
 	requiredDrivers := sets.Set[string]{}
 	for _, pod := range pods {
 		for key, value := range pod.Annotations {
-			if strings.HasPrefix(key, constants.AnnotationPrefixWaitForCSINode) {
+			if strings.HasPrefix(key, v1beta1constants.AnnotationPrefixWaitForCSINode) {
 				requiredDrivers.Insert(value)
 			}
 		}

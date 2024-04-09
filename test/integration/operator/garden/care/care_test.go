@@ -22,42 +22,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/component/vpa"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Garden Care controller tests", func() {
 	var (
-		requiredRuntimeClusterManagedResources = []string{
-			etcd.Druid,
-			gardensystem.ManagedResourceName,
-			hvpa.ManagedResourceName,
-			kubestatemetrics.ManagedResourceName,
-			vpa.ManagedResourceControlName,
-			"istio-system",
-			"virtual-garden-istio",
-		}
-
-		requiredVirtualGardenManagedResources = []string{
-			resourcemanager.ManagedResourceName,
-			gardeneraccess.ManagedResourceName,
-			kubecontrollermanager.ManagedResourceName,
-		}
-
 		requiredControlPlaneDeployments = []string{
 			"virtual-garden-" + v1beta1constants.DeploymentNameGardenerResourceManager,
 			"virtual-garden-" + v1beta1constants.DeploymentNameKubeAPIServer,
@@ -84,8 +60,8 @@ var _ = Describe("Garden Care controller tests", func() {
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",
 					},
-					Ingress: gardencorev1beta1.Ingress{
-						Domain: "ingress.dev.garden.example.com",
+					Ingress: operatorv1alpha1.Ingress{
+						Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},
@@ -95,13 +71,16 @@ var _ = Describe("Garden Care controller tests", func() {
 					},
 					Settings: &operatorv1alpha1.Settings{
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
 						Domains: []string{"virtual-garden.local.gardener.cloud"},
+					},
+					Gardener: operatorv1alpha1.Gardener{
+						ClusterIdentity: "test",
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",
@@ -134,44 +113,28 @@ var _ = Describe("Garden Care controller tests", func() {
 		})
 	})
 
-	Context("when all ManagedResources for the Garden are missing", func() {
-		It("should set condition to False", func() {
-			By("Expect RuntimeComponentsHealthy condition to be False")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-				return garden.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("ResourceNotFound"),
-				WithMessageSubstrings("not found"),
-			))
-		})
-	})
-
 	Context("when ManagedResources for Runtime Cluster exist", func() {
-		BeforeEach(func() {
-			for _, name := range requiredRuntimeClusterManagedResources {
-				By("Create ManagedResource for " + name)
-				managedResource := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: getManagedResourceNamespace(name, testNamespace.Name),
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
-					},
-				}
-				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-				log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
-			}
-		})
+		managedResourceName := "foo"
 
-		AfterEach(func() {
-			for _, name := range requiredRuntimeClusterManagedResources {
-				By("Delete ManagedResource for " + name)
-				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: getManagedResourceNamespace(name, testNamespace.Name)}})).To(Succeed())
+		BeforeEach(func() {
+			By("Create ManagedResource for runtime cluster")
+			managedResource := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name),
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:      ptr.To("seed"),
+					SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+				},
 			}
+			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
+
+			DeferCleanup(func() {
+				By("Delete ManagedResource for runtime cluster")
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name)}})).To(Succeed())
+			})
 		})
 
 		It("should set condition to False because all ManagedResource statuses are outdated", func() {
@@ -187,27 +150,8 @@ var _ = Describe("Garden Care controller tests", func() {
 			))
 		})
 
-		It("should set condition to False because some ManagedResource statuses are outdated", func() {
-			for _, name := range requiredRuntimeClusterManagedResources[1:] {
-				updateManagedResourceStatusToHealthy(name)
-			}
-
-			By("Expect RuntimeComponentsHealthy condition to be False")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-				return garden.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("OutdatedStatus"),
-				WithMessageSubstrings("observed generation of managed resource"),
-			))
-		})
-
 		It("should set condition to True because all ManagedResource statuses are healthy", func() {
-			for _, name := range requiredRuntimeClusterManagedResources {
-				updateManagedResourceStatusToHealthy(name)
-			}
+			updateManagedResourceStatusToHealthy(managedResourceName)
 
 			By("Expect RuntimeComponentsHealthy condition to be True")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -223,9 +167,11 @@ var _ = Describe("Garden Care controller tests", func() {
 	})
 
 	Context("when ManagedResources for Virtual Cluster exist", func() {
+		managedResourceName := "bar"
+
 		BeforeEach(func() {
 			By("Create deployments")
-			createDeployments(requiredControlPlaneDeployments)
+			createDeployments(requiredControlPlaneDeployments, v1beta1constants.GardenRole, v1beta1constants.GardenRoleControlPlane)
 			By("Update deployment status to healthy")
 			for _, name := range requiredControlPlaneDeployments {
 				updateDeploymentStatusToHealthy(name)
@@ -238,27 +184,23 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateETCDStatusToHealthy(name)
 			}
 
-			for _, name := range requiredVirtualGardenManagedResources {
-				By("Create ManagedResource for " + name)
-				managedResource := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: getManagedResourceNamespace(name, testNamespace.Name),
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
-					},
-				}
-				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-				log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
+			By("Create ManagedResource for virtual Cluster")
+			managedResource := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name),
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+				},
 			}
-		})
+			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 
-		AfterEach(func() {
-			for _, name := range requiredVirtualGardenManagedResources {
-				By("Delete ManagedResource for " + name)
-				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: getManagedResourceNamespace(name, testNamespace.Name)}})).To(Succeed())
-			}
+			DeferCleanup(func() {
+				By("Delete ManagedResource for virtual cluster")
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name)}})).To(Succeed())
+			})
 		})
 
 		It("should set condition to False because all ManagedResource statuses are outdated", func() {
@@ -274,27 +216,8 @@ var _ = Describe("Garden Care controller tests", func() {
 			))
 		})
 
-		It("should set condition to False because some ManagedResource statuses are outdated", func() {
-			for _, name := range requiredVirtualGardenManagedResources[1:] {
-				updateManagedResourceStatusToHealthy(name)
-			}
-
-			By("Expect RuntimeComponentsHealthy condition to be False")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-				return garden.Status.Conditions
-			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualComponentsHealthy),
-				WithStatus(gardencorev1beta1.ConditionFalse),
-				WithReason("OutdatedStatus"),
-				WithMessageSubstrings("observed generation of managed resource"),
-			))
-		})
-
 		It("should set condition to True because all ManagedResource statuses are healthy", func() {
-			for _, name := range requiredVirtualGardenManagedResources {
-				updateManagedResourceStatusToHealthy(name)
-			}
+			updateManagedResourceStatusToHealthy(managedResourceName)
 
 			By("Expect VirtualGardenComponentsHealthy condition to be True")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -327,32 +250,7 @@ var _ = Describe("Garden Care controller tests", func() {
 	Context("when control-plane components of the Garden exist", func() {
 		BeforeEach(func() {
 			By("Create deployments")
-			createDeployments(requiredControlPlaneDeployments)
-
-			for _, name := range requiredVirtualGardenManagedResources {
-				By("Create ManagedResource for " + name)
-				managedResource := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: getManagedResourceNamespace(name, testNamespace.Name),
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
-					},
-				}
-				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
-				log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
-			}
-			for _, name := range requiredVirtualGardenManagedResources {
-				updateManagedResourceStatusToHealthy(name)
-			}
-		})
-
-		AfterEach(func() {
-			for _, name := range requiredVirtualGardenManagedResources {
-				By("Delete ManagedResource for " + name)
-				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: getManagedResourceNamespace(name, testNamespace.Name)}})).To(Succeed())
-			}
+			createDeployments(requiredControlPlaneDeployments, v1beta1constants.GardenRole, v1beta1constants.GardenRoleControlPlane)
 		})
 
 		It("should set condition to False because status of all deployments are outdated", func() {
@@ -477,22 +375,75 @@ var _ = Describe("Garden Care controller tests", func() {
 			))
 		})
 	})
+
+	Context("when observability-related ManagedResources exist", func() {
+		managedResourceName := "baz"
+
+		BeforeEach(func() {
+			By("Create ManagedResource for observability components")
+			managedResource := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name),
+					Labels:    map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+				},
+			}
+			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
+
+			DeferCleanup(func() {
+				By("Delete ManagedResource for observability components")
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: getManagedResourceNamespace(managedResourceName, testNamespace.Name)}})).To(Succeed())
+			})
+		})
+
+		It("should set condition to False because all ManagedResource statuses are outdated", func() {
+			By("Expect ObservabilityComponentsHealthy condition to be False")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
+				return garden.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ObservabilityComponentsHealthy),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("OutdatedStatus"),
+				WithMessageSubstrings("observed generation of managed resource"),
+			))
+		})
+
+		It("should set condition to True because all ManagedResource statuses are healthy", func() {
+			updateManagedResourceStatusToHealthy(managedResourceName)
+
+			By("Expect ObservabilityComponentsHealthy condition to be True")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
+				return garden.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ObservabilityComponentsHealthy),
+				WithStatus(gardencorev1beta1.ConditionTrue),
+				WithReason("ObservabilityComponentsRunning"),
+				WithMessageSubstrings("All observability components are healthy."),
+			))
+		})
+	})
 })
 
-func createDeployments(names []string) {
+func createDeployments(names []string, roleLabel, role string) {
 	for _, name := range names {
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: testNamespace.Name,
 				Labels: map[string]string{
-					testID:                      testRunID,
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+					testID:    testRunID,
+					roleLabel: role,
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To[int32](1),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 					Spec: corev1.PodSpec{
@@ -592,7 +543,7 @@ func updateETCDStatusToHealthy(name string) {
 	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed())
 
 	etcd.Status.ObservedGeneration = &etcd.Generation
-	etcd.Status.Ready = pointer.Bool(true)
+	etcd.Status.Ready = ptr.To(true)
 	etcd.Status.Conditions = []druidv1alpha1.Condition{
 		{Type: druidv1alpha1.ConditionTypeBackupReady, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}

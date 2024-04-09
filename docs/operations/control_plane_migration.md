@@ -26,8 +26,9 @@ The etcd backups will be copied over to the `BackupBucket` of the `Destination S
 
 For controlplane migration, operators with the necessary RBAC can use the [`shoots/binding`](../concepts/scheduler.md#shootsbinding-subresource) subresource to change the `.spec.seedName`, with the following commands:
 
-```
-export NAMESPACE=my-namespace
-export SHOOT_NAME=my-shoot
-kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME} | jq -c '.spec.seedName = "<destination-seed>"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
+```bash
+NAMESPACE=my-namespace
+SHOOT_NAME=my-shoot
+DEST_SEED_NAME=destination-seed
+kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME} | jq -c '.spec.seedName = "'${DEST_SEED_NAME}'"' | kubectl replace --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding -f - | jq -r '.spec.seedName'
 ```

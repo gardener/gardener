@@ -21,9 +21,11 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -48,15 +50,6 @@ const (
 	// LabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
 	LabelValueGardener = "gardener"
 )
-
-// SecretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
-// <withPrefix> is set then the name will be prefixed with 'managedresource-'.
-func SecretName(name string, withPrefix bool) string {
-	if withPrefix {
-		return SecretPrefix + name
-	}
-	return name
-}
 
 // New initiates a new ManagedResource object which can be reconciled.
 func New(client client.Client, namespace, name, class string, keepObjects *bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *builder.ManagedResource {
@@ -83,7 +76,7 @@ func New(client client.Client, namespace, name, class string, keepObjects *bool,
 func NewForShoot(c client.Client, namespace, name, origin string, keepObjects bool) *builder.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
-		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
+		labels         = map[string]string{LabelKeyOrigin: origin}
 	)
 
 	return New(c, namespace, name, "", &keepObjects, labels, injectedLabels, nil)
@@ -99,12 +92,22 @@ func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *buil
 	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, labels, nil, nil)
 }
 
-// NewSecret initiates a new Secret object which can be reconciled.
+// NewSecret initiates a new immutable Secret object which can be reconciled.
 func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *builder.Secret) {
-	secretName := SecretName(name, secretNameWithPrefix)
-	return secretName, builder.NewSecret(client).
+	secretName := secretName(name, secretNameWithPrefix)
+	return builder.NewSecret(client).
 		WithNamespacedName(namespace, secretName).
-		WithKeyValues(data)
+		WithKeyValues(data).
+		Unique()
+}
+
+// secretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
+// <withPrefix> is set then the name will be prefixed with 'managedresource-'.
+func secretName(name string, withPrefix bool) string {
+	if withPrefix {
+		return SecretPrefix + name
+	}
+	return name
 }
 
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
@@ -127,7 +130,32 @@ func CreateFromUnstructured(
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.Bool(false))
+	dataMap := map[string][]byte{}
+	if len(data) > 0 {
+		dataMap[name] = data
+	}
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, dataMap, &keepObjects, injectedLabels, ptr.To(false))
+}
+
+// Update updates a managed resource and its secret with the given name, class, key, and data in the given namespace.
+func Update(
+	ctx context.Context,
+	client client.Client,
+	namespace, name string,
+	labels map[string]string,
+	secretNameWithPrefix bool,
+	class string,
+	data map[string][]byte,
+	keepObjects *bool,
+	injectedLabels map[string]string,
+	forceOverwriteAnnotations *bool,
+) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
+		managedResource    = New(client, namespace, name, class, keepObjects, labels, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).CreateIfNotExists(false)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
@@ -161,6 +189,17 @@ func CreateForSeed(ctx context.Context, client client.Client, namespace, name st
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
+// CreateForSeedWithLabels deploys a ManagedResource CR for the seed's gardener-resource-manager and allows providing
+// additional labels.
+func CreateForSeedWithLabels(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName).WithLabels(labels)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
 // CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 // The origin is used to identify the creator of the managed resource. Gardener acts on resources
 // with "origin=gardener" label. External callers (extension controllers or other components)
@@ -169,6 +208,19 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name, 
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
 		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
+// CreateForShootWithLabels deploys a ManagedResource CR for the shoot's gardener-resource-manager. The origin is used
+// to identify the creator of the managed resource. Gardener acts on resources with "origin=gardener" label. External
+// callers (extension controllers or other components) of this function should provide their own unique origin value.
+// This function allows providing additional labels.
+func CreateForShootWithLabels(ctx context.Context, client client.Client, namespace, name, origin string, keepObjects bool, labels map[string]string, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForShoot(client, namespace, name, origin, keepObjects).WithSecretRef(secretName).WithLabels(labels)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)
@@ -186,20 +238,48 @@ func deployManagedResource(ctx context.Context, secret *builder.Secret, managedR
 	return nil
 }
 
-// Delete deletes the managed resource and its secret with the given name in the given namespace.
-func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
-	secretName := SecretName(name, secretNameWithPrefix)
+// Delete deletes the managed resource and its secrets with the given name in the given namespace.
+func Delete(ctx context.Context, c client.Client, namespace string, name string, secretNameWithPrefix bool) error {
+	// Always try to delete the secret with generated name.
+	// This is done in order to guarantee backwards compatibility with previous versions of this library
+	// when the underlying mananaged resource secrets were not immutable and not garbage collectable.
+	// For more details, please see https://github.com/gardener/gardener/pull/8116
+	secretName := secretName(name, secretNameWithPrefix)
 
-	if err := builder.NewManagedResource(client).
-		WithNamespacedName(namespace, name).
-		Delete(ctx); err != nil {
-		return fmt.Errorf("could not delete managed resource '%s/%s': %w", namespace, name, err)
+	mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	mrKey := client.ObjectKeyFromObject(mr)
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+
+	err := c.Get(ctx, mrKey, mr)
+	if err != nil && apierrors.IsNotFound(err) {
+		// just try to delete the secret with generated name
+		if err := client.IgnoreNotFound(c.Delete(ctx, secret)); err != nil {
+			return fmt.Errorf("could not delete secret '%s' of managed resource: %w", client.ObjectKeyFromObject(secret).String(), err)
+		}
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("could not get managed resource '%s': %w", mrKey.String(), err)
 	}
 
-	if err := builder.NewSecret(client).
-		WithNamespacedName(namespace, secretName).
-		Delete(ctx); err != nil {
-		return fmt.Errorf("could not delete secret '%s/%s' of managed resource: %w", namespace, secretName, err)
+	secretsToDelete := []*corev1.Secret{secret}
+	for _, secretRef := range mr.Spec.SecretRefs {
+		secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Name:      secretRef.Name,
+			Namespace: namespace,
+		}})
+	}
+
+	// Delete the secrets first so we do not lose reference to them
+	// in case the mr gets deleted and something fails immediately after that.
+	// Finalizers should prevent the deletion of the secrets before the managed resource is deleted.
+	for _, s := range secretsToDelete {
+		if err := client.IgnoreNotFound(c.Delete(ctx, s)); err != nil {
+			return fmt.Errorf("could not delete secret '%s' of managed resource: %w", client.ObjectKeyFromObject(s).String(), err)
+		}
+	}
+
+	if err := client.IgnoreNotFound(c.Delete(ctx, mr)); err != nil {
+		return fmt.Errorf("could not delete managed resource '%s': %w", mrKey.String(), err)
 	}
 
 	return nil
@@ -221,6 +301,15 @@ var IntervalWait = 2 * time.Second
 
 // WaitUntilHealthy waits until the given managed resource is healthy.
 func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name string) error {
+	return waitUntilHealthy(ctx, client, namespace, name, false)
+}
+
+// WaitUntilHealthyAndNotProgressing waits until the given managed resource is healthy and not progressing.
+func WaitUntilHealthyAndNotProgressing(ctx context.Context, client client.Client, namespace, name string) error {
+	return waitUntilHealthy(ctx, client, namespace, name, true)
+}
+
+func waitUntilHealthy(ctx context.Context, client client.Client, namespace, name string, andNotProgressing bool) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -235,6 +324,12 @@ func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name
 
 		if err := health.CheckManagedResource(obj); err != nil {
 			return retry.MinorError(fmt.Errorf("managed resource %s/%s is not healthy", namespace, name))
+		}
+
+		if andNotProgressing {
+			if err := health.CheckManagedResourceProgressing(obj); err != nil {
+				return retry.MinorError(fmt.Errorf("managed resource %s/%s is still progressing", namespace, name))
+			}
 		}
 
 		return retry.Ok()
@@ -314,16 +409,15 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, ptr.To(false), injectedLabels, &forceOverwriteAnnotations)
 }
 
-func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
-	var (
-		errorCodes                 []gardencorev1beta1.ErrorCode
-		configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
-	)
+// configurationProblemRegex is used to check if an error is caused by a bad managed resource configuration.
+var configurationProblemRegex = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
 
-	if configurationProblemRegexp.MatchString(err.Error()) {
+func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
+	var errorCodes []gardencorev1beta1.ErrorCode
+	if configurationProblemRegex.MatchString(err.Error()) {
 		errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 	}
 
@@ -338,7 +432,7 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 	}
 
 	for _, managedResource := range managedResourceList.Items {
-		if pointer.StringEqual(managedResource.Spec.Class, class) {
+		if ptr.Equal(managedResource.Spec.Class, class) {
 			return true, nil
 		}
 	}

@@ -19,15 +19,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 
-	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
 	mockutilcontext "github.com/gardener/gardener/pkg/utils/context/mock"
 	. "github.com/gardener/gardener/pkg/utils/retry"
 	mockretry "github.com/gardener/gardener/pkg/utils/retry/mock"
+	mockcontext "github.com/gardener/gardener/third_party/mock/go/context"
 )
 
 var _ = Describe("Retry", func() {
@@ -75,7 +75,7 @@ var _ = Describe("Retry", func() {
 		})
 
 		It("should return nil if no error was given", func() {
-			Expect(NewLastErrorAggregator().Error()).To(BeNil())
+			Expect(NewLastErrorAggregator().Error()).To(Succeed())
 		})
 	})
 
@@ -281,7 +281,7 @@ var _ = Describe("Retry", func() {
 			done, err := NotOk()
 
 			Expect(done).To(BeFalse())
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

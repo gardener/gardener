@@ -15,14 +15,14 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewNginxIngress returns a deployer for nginx-ingress-controller.
@@ -30,43 +30,45 @@ func NewNginxIngress(
 	c client.Client,
 	namespaceName string,
 	targetNamespace string,
-	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
 	config map[string]string,
 	loadBalancerAnnotations map[string]string,
 	loadBalancerSourceRanges []string,
 	priorityClassName string,
-	pspDisabled bool,
 	vpaEnabled bool,
 	clusterType component.ClusterType,
 	externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType,
 	ingressClass string,
+	wildcardIngressDomains []string,
+	istioIngressGatewayLabels map[string]string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressController, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	imageDefaultBackend, err := imageVector.FindImage(images.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageDefaultBackend, err := imagevector.ImageVector().FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
 	values := nginxingress.Values{
-		ImageController:          imageController.String(),
-		ImageDefaultBackend:      imageDefaultBackend.String(),
-		IngressClass:             ingressClass,
-		ConfigData:               config,
-		LoadBalancerAnnotations:  loadBalancerAnnotations,
-		LoadBalancerSourceRanges: loadBalancerSourceRanges,
-		PriorityClassName:        priorityClassName,
-		PSPDisabled:              pspDisabled,
-		VPAEnabled:               vpaEnabled,
-		TargetNamespace:          targetNamespace,
-		ClusterType:              clusterType,
-		ExternalTrafficPolicy:    externalTrafficPolicy,
+		KubernetesVersion:         kubernetesVersion,
+		ImageController:           imageController.String(),
+		ImageDefaultBackend:       imageDefaultBackend.String(),
+		IngressClass:              ingressClass,
+		ConfigData:                config,
+		LoadBalancerAnnotations:   loadBalancerAnnotations,
+		LoadBalancerSourceRanges:  loadBalancerSourceRanges,
+		PriorityClassName:         priorityClassName,
+		VPAEnabled:                vpaEnabled,
+		TargetNamespace:           targetNamespace,
+		ClusterType:               clusterType,
+		ExternalTrafficPolicy:     externalTrafficPolicy,
+		WildcardIngressDomains:    wildcardIngressDomains,
+		IstioIngressGatewayLabels: istioIngressGatewayLabels,
 	}
 
 	return nginxingress.New(c, namespaceName, values), nil

@@ -17,34 +17,18 @@ package routes
 import (
 	"net/http"
 	"net/http/pprof"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
-	profilingHandlers = map[string]http.HandlerFunc{
-		"/debug/pprof":         redirectTo("/debug/pprof/"),
-		"/debug/pprof/":        pprof.Index,
-		"/debug/pprof/profile": pprof.Profile,
-		"/debug/pprof/symbol":  pprof.Symbol,
-		"/debug/pprof/trace":   pprof.Trace,
+	// ProfilingHandlers is list of profiling endpoints.
+	ProfilingHandlers = map[string]http.Handler{
+		"/debug/pprof":         http.HandlerFunc(redirectTo("/debug/pprof/")),
+		"/debug/pprof/":        http.HandlerFunc(pprof.Index),
+		"/debug/pprof/profile": http.HandlerFunc(pprof.Profile),
+		"/debug/pprof/symbol":  http.HandlerFunc(pprof.Symbol),
+		"/debug/pprof/trace":   http.HandlerFunc(pprof.Trace),
 	}
 )
-
-// Profiling adds handlers for pprof under /debug/pprof.
-// This is similar to routes.Profiling from the API server library (uses the same paths).
-// But instead of adding handlers to a mux.PathRecorderMux, it allows adding it to a manager.Manager.
-type Profiling struct{}
-
-// AddToManager adds the profiling handlers to the given Manager.
-func (Profiling) AddToManager(mgr manager.Manager) error {
-	for path, handler := range profilingHandlers {
-		if err := mgr.AddMetricsExtraHandler(path, handler); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // redirectTo redirects request to a certain destination.
 func redirectTo(to string) func(http.ResponseWriter, *http.Request) {

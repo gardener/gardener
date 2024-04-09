@@ -19,12 +19,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -33,34 +32,33 @@ import (
 )
 
 const (
-	defaultCacheResyncPeriod = 6 * time.Hour
+	defaultCacheSyncPeriod = 6 * time.Hour
 )
 
 // NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used
 // for creating new controller-runtime clients with caches.
 func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, error) {
-	if err := setCacheOptionsDefaults(&options); err != nil {
-		return nil, err
-	}
+	setCacheOptionsDefaults(&options)
 
 	return cache.New(config, options)
 }
 
-func setCacheOptionsDefaults(options *cache.Options) error {
-	if options.Resync == nil {
-		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
+func setCacheOptionsDefaults(options *cache.Options) {
+	if options.SyncPeriod == nil {
+		options.SyncPeriod = ptr.To(defaultCacheSyncPeriod)
 	}
-
-	return nil
 }
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
-		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
+		httpClient, err := rest.HTTPClientFor(config)
+		if err != nil {
+			return fmt.Errorf("failed to get HTTP client for config: %w", err)
+		}
+
 		mapper, err := apiutil.NewDynamicRESTMapper(
 			config,
-			apiutil.WithLazyDiscovery,
-			apiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
+			httpClient,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
@@ -74,9 +72,7 @@ func setClientOptionsDefaults(config *rest.Config, options *client.Options) erro
 // AggregatorCacheFunc returns a `cache.NewCacheFunc` which creates a cache that holds different cache implementations depending on the objects' GVKs.
 func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.Object]cache.NewCacheFunc, scheme *runtime.Scheme) cache.NewCacheFunc {
 	return func(config *rest.Config, options cache.Options) (cache.Cache, error) {
-		if err := setCacheOptionsDefaults(&options); err != nil {
-			return nil, err
-		}
+		setCacheOptionsDefaults(&options)
 
 		fallbackCache, err := newCache(config, options)
 		if err != nil {

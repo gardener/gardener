@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
@@ -45,7 +44,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 			By("Upgrade Shoot (non-HA to HA with failure tolerance type 'node')")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 			defer cancel()
-			highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeNode)
+			highavailability.UpgradeAndVerify(ctx, f.ShootFramework, gardencorev1beta1.FailureToleranceTypeNode)
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)

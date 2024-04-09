@@ -85,6 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
 	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
@@ -198,7 +199,7 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
 	}
 
-	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerInstallation.Name, namespace.Name)
+	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerRegistration.Name, controllerInstallation.Name, namespace.Name)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
 	}
@@ -326,25 +327,21 @@ func (r *Reconciler) delete(
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err := r.SeedClientSet.Client().Delete(seedCtx, mr); err == nil {
-		log.Info("Deletion of ManagedResource is still pending", "managedResource", client.ObjectKeyFromObject(mr))
 
+	if err := client.IgnoreNotFound(managedresources.Delete(seedCtx, r.SeedClientSet.Client(), mr.Namespace, mr.Name, false)); err != nil {
+		log.Info("Deletion of ManagedResource and its secrets failed", "managedResource", client.ObjectKeyFromObject(mr))
+		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q and its secrets failed: %+v", controllerInstallation.Name, err))
+		return reconcile.Result{}, err
+	}
+
+	if err := r.SeedClientSet.Client().Get(seedCtx, client.ObjectKeyFromObject(mr), mr); err == nil {
+		log.Info("Deletion of ManagedResource is still pending", "managedResource", client.ObjectKeyFromObject(mr))
 		msg := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", msg)
 		return reconcile.Result{RequeueAfter: RequeueDurationWhenResourceDeletionStillPresent}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return reconcile.Result{}, err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerInstallation.Name,
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-	}
-	if err := r.SeedClientSet.Client().Delete(seedCtx, secret); client.IgnoreNotFound(err) != nil {
-		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
@@ -360,6 +357,15 @@ func (r *Reconciler) delete(
 	}
 
 	conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
+
+	gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Name:      v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name,
+		Namespace: gardenerutils.ComputeGardenNamespace(seed.Name),
+	}}
+	if err := r.GardenClient.Delete(gardenCtx, gardenClusterServiceAccount); client.IgnoreNotFound(err) != nil {
+		conditionInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ServiceAccount %q in garden cluster failed: %+v", client.ObjectKeyFromObject(gardenClusterServiceAccount), err))
+		return reconcile.Result{}, err
+	}
 
 	if controllerutil.ContainsFinalizer(controllerInstallation, finalizerName) {
 		log.Info("Removing finalizer")
@@ -432,9 +438,10 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
 }
 
-func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
+func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerRegistrationName, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
 	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
-		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName)
+		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName).
+		WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistrationName})
 
 	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
 }
@@ -498,6 +505,12 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 			obj, err := manifestReader.Read()
 			if err == io.EOF {
 				break
+			}
+			if err != nil {
+				return err
+			}
+			if obj == nil {
+				continue
 			}
 
 			if err := mutate(obj); err != nil {

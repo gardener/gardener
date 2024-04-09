@@ -120,14 +120,14 @@ func (r *reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if !controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.AddFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
 		}
 	}
@@ -157,14 +157,14 @@ func (r *reconciler) restore(ctx context.Context, log logr.Logger, be *extension
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if !controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.AddFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
 		}
 	}
@@ -199,7 +199,7 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 
 	log.Info("Starting the deletion of BackupEntry")
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
@@ -226,9 +226,9 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, be *extensions
 		return reconcile.Result{}, err
 	}
 
-	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}
@@ -258,14 +258,14 @@ func (r *reconciler) migrate(ctx context.Context, log logr.Logger, be *extension
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
 
-	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}

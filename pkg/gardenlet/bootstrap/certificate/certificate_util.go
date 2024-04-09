@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
@@ -47,8 +47,8 @@ func nextRotationDeadline(certificate tls.Certificate, validityConfig *config.Ku
 // try to rotate certificates at the same time for the rest of the lifetime
 func jitteryDuration(totalDuration float64, minPercentage, maxPercentage *int32) time.Duration {
 	var (
-		min = pointer.Int32Deref(minPercentage, 70)
-		max = pointer.Int32Deref(maxPercentage, 90)
+		min = ptr.Deref(minPercentage, 70)
+		max = ptr.Deref(maxPercentage, 90)
 
 		minFactor = 1 - float64(min)/100
 		maxFactor = float64(max-min) / 100

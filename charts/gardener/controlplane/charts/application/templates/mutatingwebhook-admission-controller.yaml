@@ -1,5 +1,5 @@
 {{- if .Values.global.admission.enabled }}
-apiVersion: {{ include "webhookadmissionregistration" . }}
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: gardener-admission-controller

@@ -15,20 +15,15 @@
 package helper
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"fmt"
-	"io"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 var validFileCodecIDs = map[extensionsv1alpha1.FileCodecID]struct{}{
-	extensionsv1alpha1.PlainFileCodecID:   {},
-	extensionsv1alpha1.B64FileCodecID:     {},
-	extensionsv1alpha1.GZIPFileCodecID:    {},
-	extensionsv1alpha1.GZIPB64FileCodecID: {},
+	extensionsv1alpha1.PlainFileCodecID: {},
+	extensionsv1alpha1.B64FileCodecID:   {},
 }
 
 // FileCodec is a codec to en- and decode data in cloud-init scripts with.j
@@ -42,8 +37,6 @@ var (
 	PlainFileCodec FileCodec = plainFileCodec{}
 	// B64FileCodec is the base64 FileCodec.
 	B64FileCodec FileCodec = b64FileCodec{}
-	// GZIPFileCodec is the gzip FileCodec.
-	GZIPFileCodec FileCodec = gzipFileCodec{}
 )
 
 type plainFileCodec struct{}
@@ -71,29 +64,6 @@ func (b64FileCodec) Decode(data []byte) ([]byte, error) {
 	return dst[:n], err
 }
 
-type gzipFileCodec struct{}
-
-func (gzipFileCodec) Encode(data []byte) ([]byte, error) {
-	var out bytes.Buffer
-	w := gzip.NewWriter(&out)
-	if _, err := w.Write(data); err != nil {
-		return nil, err
-	}
-	if err := w.Close(); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
-}
-
-func (gzipFileCodec) Decode(data []byte) ([]byte, error) {
-	r, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = r.Close() }()
-	return io.ReadAll(r)
-}
-
 // ParseFileCodecID tries to parse a string into a FileCodecID.
 func ParseFileCodecID(s string) (extensionsv1alpha1.FileCodecID, error) {
 	id := extensionsv1alpha1.FileCodecID(s)
@@ -106,7 +76,6 @@ func ParseFileCodecID(s string) (extensionsv1alpha1.FileCodecID, error) {
 var fileCodecIDToFileCodec = map[extensionsv1alpha1.FileCodecID]FileCodec{
 	extensionsv1alpha1.PlainFileCodecID: PlainFileCodec,
 	extensionsv1alpha1.B64FileCodecID:   B64FileCodec,
-	extensionsv1alpha1.GZIPFileCodecID:  GZIPFileCodec,
 }
 
 // FileCodecForID retrieves the FileCodec for the given FileCodecID.

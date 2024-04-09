@@ -18,14 +18,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -36,7 +36,6 @@ func NewKubeControllerManager(
 	runtimeNamespace string,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
@@ -48,11 +47,12 @@ func NewKubeControllerManager(
 	clusterSigningDuration *time.Duration,
 	controllerWorkers kubecontrollermanager.ControllerWorkers,
 	controllerSyncPeriods kubecontrollermanager.ControllerSyncPeriods,
+	managedResourceLabels map[string]string,
 ) (
 	kubecontrollermanager.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameKubeControllerManager, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeControllerManager, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +76,7 @@ func NewKubeControllerManager(
 			ClusterSigningDuration: clusterSigningDuration,
 			ControllerWorkers:      controllerWorkers,
 			ControllerSyncPeriods:  controllerSyncPeriods,
+			ManagedResourceLabels:  managedResourceLabels,
 		},
 	), nil
 }

@@ -22,7 +22,7 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
       - command: ["/gardener_apiserver_sshd/entrypoint.sh"]
-        image: alpine:3.17
+        image: alpine:3.19
         name: sshd
         volumeMounts:
         - name: gardener-apiserver-sshd
@@ -40,15 +40,15 @@ spec:
         - name: https
           containerPort: 6443
         - name: ssh
-          containerPort: 6222
+          containerPort: 443
       volumes:
       - name: gardener-apiserver-sshd
         configMap:
           name: gardener-apiserver-sshd
           defaultMode: 0700
       - name: gardener-apiserver-sshd-keys
-        configMap:
-          name: gardener-apiserver-sshd-keys
+        secret:
+          secretName: gardener-apiserver-sshd-keys
           defaultMode: 0600
 
 ---

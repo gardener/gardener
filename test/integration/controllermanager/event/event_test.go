@@ -72,7 +72,7 @@ var _ = Describe("Event controller tests", func() {
 			})
 
 			It("should not remove the event", func() {
-				Consistently(func(g Gomega) error {
+				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(shootEvent), shootEvent)
 				}).Should(Succeed())
 			})
@@ -84,7 +84,7 @@ var _ = Describe("Event controller tests", func() {
 			})
 
 			It("should not remove the event as this is shoot event", func() {
-				Consistently(func(g Gomega) error {
+				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(shootEvent), shootEvent)
 				}).Should(Succeed())
 			})
@@ -110,7 +110,7 @@ var _ = Describe("Event controller tests", func() {
 			})
 
 			It("should not remove the event", func() {
-				Consistently(func(g Gomega) error {
+				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(nonShootEvent), nonShootEvent)
 				}).Should(Succeed())
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Event controller tests", func() {
 			})
 
 			It("should remove the non shoot event", func() {
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(nonShootEvent), nonShootEvent)
 				}).Should(BeNotFoundError())
 			})

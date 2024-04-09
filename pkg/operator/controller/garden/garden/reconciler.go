@@ -17,28 +17,27 @@ package garden
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -48,8 +47,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-const finalizerName = "gardener.cloud/operator"
-
 // Reconciler reconciles Gardens.
 type Reconciler struct {
 	RuntimeClientSet      kubernetes.Interface
@@ -58,7 +55,6 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	Recorder              record.EventRecorder
 	Identity              *gardencorev1beta1.Gardener
-	ImageVector           imagevector.ImageVector
 	ComponentImageVectors imagevector.ComponentImageVectors
 	GardenClientMap       clientmap.ClientMap
 	GardenNamespace       string
@@ -82,9 +78,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
-	if err := r.updateStatusOperationStart(ctx, garden, conditionReconciled); err != nil {
-		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+	operationType := gardencorev1beta1.LastOperationTypeReconcile
+	if garden.DeletionTimestamp != nil {
+		operationType = gardencorev1beta1.LastOperationTypeDelete
+	}
+
+	if err := r.updateStatusOperationStart(ctx, garden, operationType); err != nil {
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
 	targetVersion, err := semver.NewVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
@@ -105,21 +105,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	)
 	if err != nil {
-		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
 	if garden.DeletionTimestamp != nil {
 		if result, err := r.delete(ctx, log, garden, secretsManager, targetVersion); err != nil {
-			return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+			return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 		}
 		return reconcile.Result{}, nil
 	}
 
 	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
-		return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
+	} else if result.Requeue {
+		return result, nil
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, conditionReconciled)
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
 }
 
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
@@ -136,48 +138,46 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
-func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
-	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, condition)
-	return r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch)
-}
-
-func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
-	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
-		log.Error(patchErr, "Could not patch status", "condition", condition)
-	}
-	return err
-}
-
 func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
-	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
-		for i := 0; i < 3; i++ {
-			patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
-			garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", fmt.Sprintf("Garden operation is currently being processed (%s (%d%%)).", strings.Join(stats.Running.StringList(), ", "), stats.ProgressPercent())))
-			if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
-				if apierrors.IsConflict(err) {
-					err = r.RuntimeClientSet.Client().Get(ctx, client.ObjectKeyFromObject(garden), garden)
-					if err == nil {
-						continue
-					}
-				}
-				log.Error(err, "Could not report reconciliation progress")
-			}
-			break
+	return flow.NewDelayingProgressReporter(clock.RealClock{}, func(ctx context.Context, stats *flow.Stats) {
+		patch := client.MergeFrom(garden.DeepCopy())
+
+		if garden.Status.LastOperation == nil {
+			garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 		}
-	})
+		garden.Status.LastOperation.Description = flow.MakeDescription(stats)
+		garden.Status.LastOperation.Progress = stats.ProgressPercent()
+		garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
+			log.Error(err, "Could not report reconciliation progress")
+		}
+	}, 5*time.Second)
 }
 
-func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed."))
-	garden.Status.Gardener = r.Identity
-	garden.Status.ObservedGeneration = garden.Generation
-
+func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
 	var (
 		now                           = metav1.NewTime(r.Clock.Now().UTC())
+		description                   string
 		mustRemoveOperationAnnotation bool
 	)
+
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Reconciliation of Garden cluster initialized."
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Deletion of Garden cluster in progress."
+	}
+
+	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       0,
+		Description:    description,
+		LastUpdateTime: now,
+	}
+	garden.Status.Gardener = r.Identity
+	garden.Status.ObservedGeneration = garden.Generation
 
 	switch garden.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.GardenerOperationReconcile:
@@ -188,6 +188,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		startRotationCA(garden, &now)
 		startRotationServiceAccountKey(garden, &now)
 		startRotationETCDEncryptionKey(garden, &now)
+		startRotationObservability(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
@@ -214,6 +215,10 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationETCDEncryptionKey(garden, &now)
+
+	case v1beta1constants.OperationRotateObservabilityCredentials:
+		mustRemoveOperationAnnotation = true
+		startRotationObservability(garden, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
@@ -229,10 +234,26 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	return nil
 }
 
-func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
+func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
+	var (
+		now         = metav1.NewTime(r.Clock.Now().UTC())
+		description string
+	)
 
-	now := metav1.NewTime(r.Clock.Now().UTC())
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Garden cluster has been successfully reconciled."
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Garden cluster has been successfully deleted."
+	}
+
+	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateSucceeded,
+		Progress:       100,
+		Description:    description,
+		LastUpdateTime: now,
+	}
 
 	switch helper.GetCARotationPhase(garden.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
@@ -282,12 +303,46 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		})
 	}
 
+	if helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials) {
+		helper.MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+			rotation.LastCompletionTime = &now
+		})
+	}
+
 	return r.RuntimeClientSet.Client().Status().Update(ctx, garden)
 }
 
-func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
-	_, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *operatorv1alpha1.Garden, err error, operationType gardencorev1beta1.LastOperationType) error {
+	patch := client.MergeFrom(garden.DeepCopy())
+
+	garden.Status.Gardener = r.Identity
+	if garden.Status.LastOperation == nil {
+		garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	garden.Status.LastOperation.Type = operationType
+	garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
+	garden.Status.LastOperation.Description = err.Error() + " Operation will be retried."
+	garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+	if err2 := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err2 != nil {
+		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
+	}
+
 	return err
+}
+
+func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+	if err != nil {
+		return err
+	}
+
+	if secretName := garden.Annotations[v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName]; secretName != genericTokenKubeconfigSecret.Name {
+		patch := client.MergeFrom(garden.DeepCopy())
+		metav1.SetMetaDataAnnotation(&garden.ObjectMeta, v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName, genericTokenKubeconfigSecret.Name)
+		return r.RuntimeClientSet.Client().Patch(ctx, garden, patch)
+	}
+	return nil
 }
 
 func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
@@ -296,6 +351,16 @@ func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsM
 		return nil
 	}
 	return client.IgnoreNotFound(r.RuntimeClientSet.Client().Delete(ctx, secret))
+}
+
+func (r *Reconciler) generateObservabilityIngressPassword(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	_, err := secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	return err
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
@@ -346,9 +411,15 @@ func completeRotationETCDEncryptionKey(garden *operatorv1alpha1.Garden, now *met
 	})
 }
 
+func startRotationObservability(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return append([]secretsutils.ConfigInterface{
-		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: pointer.Duration(30 * 24 * time.Hour)},
+		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
 	}, nonAutoRotatedCACertConfigurations()...)
 }
 
@@ -359,6 +430,7 @@ func nonAutoRotatedCACertConfigurations() []secretsutils.ConfigInterface {
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCAGardener, CommonName: "gardener", CertType: secretsutils.CACert},
 	}
 }
 
@@ -391,26 +463,37 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 		if gardenStatus.Credentials.Rotation.ETCDEncryptionKey != nil && gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
+			rotation[v1beta1constants.SecretNameGardenerETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
+		}
+
+		if gardenStatus.Credentials.Rotation.Observability != nil && gardenStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameObservabilityIngress] = gardenStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
 		}
 	}
 
 	return rotation
 }
 
-func conditionReasonPrefix(garden *operatorv1alpha1.Garden) string {
-	if garden.DeletionTimestamp != nil {
-		return "Deletion"
-	}
-	return "Reconciliation"
-}
-
 func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 	if settings != nil && settings.VerticalPodAutoscaler != nil {
-		return pointer.BoolDeref(settings.VerticalPodAutoscaler.Enabled, false)
+		return ptr.Deref(settings.VerticalPodAutoscaler.Enabled, false)
 	}
 	return false
 }
 
 func hvpaEnabled() bool {
 	return features.DefaultFeatureGate.Enabled(features.HVPA)
+}
+
+func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
+	if volume == nil || volume.MinimumSize == nil {
+		return size
+	}
+
+	quantity, err := resource.ParseQuantity(size)
+	if err == nil && quantity.Cmp(*volume.MinimumSize) < 0 {
+		return volume.MinimumSize.String()
+	}
+
+	return size
 }

@@ -25,7 +25,7 @@ title: 03 New Core Gardener Cloud APIs
 
 ## Summary
 
-In [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) we have proposed how to (re-)design Gardener to allow providers maintaining their provider-specific knowledge out of the core tree.
+In [GEP-1](./01-extensibility.md) we have proposed how to (re-)design Gardener to allow providers maintaining their provider-specific knowledge out of the core tree.
 Meanwhile, we have progressed a lot and are about to remove the [`CloudBotanist` interface](https://github.com/gardener/gardener/blob/de75a5bfcbedd16ba341ace0eb58be2a87049dcb/pkg/operation/cloudbotanist/types.go) entirely.
 The only missing aspect that will allow providers to really maintain their code out of the core is to design new APIs.
 

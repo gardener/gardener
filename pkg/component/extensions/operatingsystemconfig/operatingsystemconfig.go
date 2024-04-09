@@ -20,30 +20,33 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -77,7 +80,7 @@ type Interface interface {
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
-	// containing both the downloader and the original operating system config data.
+	// containing both the init and the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 }
 
@@ -90,14 +93,14 @@ type Values struct {
 	// Workers is the list of worker pools.
 	Workers []gardencorev1beta1.Worker
 
-	// DownloaderValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
-	DownloaderValues
+	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
+	InitValues
 	// OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
 	OriginalValues
 }
 
-// DownloaderValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
-type DownloaderValues struct {
+// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
+type InitValues struct {
 	// APIServerURL is the address (including https:// protocol prefix) to the kube-apiserver (from which the original
 	// cloud-config user data will be downloaded).
 	APIServerURL string
@@ -112,7 +115,7 @@ type OriginalValues struct {
 	// ClusterDomain is the Kubernetes cluster domain.
 	ClusterDomain string
 	// Images is a map containing the necessary container images for the systemd units (hyperkube and pause-container).
-	Images map[string]*imagevector.Image
+	Images map[string]*imagevectorutils.Image
 	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
 	// this configuration.
 	KubeletConfig *gardencorev1beta1.KubeletConfig
@@ -128,6 +131,10 @@ type OriginalValues struct {
 	ValiIngressHostName string
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
+	// SyncJitterPeriod is the duration of how the operating system config sync will be jittered on updates.
+	SyncJitterPeriod *metav1.Duration
+	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
+	PrimaryIPFamily gardencorev1beta1.IPFamily
 }
 
 // New creates a new instance of Interface.
@@ -174,23 +181,26 @@ type operatingSystemConfig struct {
 	oscs             map[string]*extensionsv1alpha1.OperatingSystemConfig
 }
 
-// OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud
-// config.
+// OperatingSystemConfigs contains operating system configs for the init script as well as for the original config.
 type OperatingSystemConfigs struct {
-	// Downloader is the data for the downloader script.
-	Downloader Data
-	// Original is the data for the to-be-downloaded cloud-config user data.
+	// Init is the data for the init script.
+	Init Data
+	// Original is the data for the to-be-downloaded original config.
 	Original Data
 }
 
 // Data contains the actual content, a command to load it and all units that shall be considered for restart on change.
 type Data struct {
+	// Object is the plain OperatingSystemConfig object.
+	Object *extensionsv1alpha1.OperatingSystemConfig
 	// Content is the actual cloud-config user data.
 	Content string
 	// Command is the command for reloading the cloud-config (in case a new version was downloaded).
 	Command *string
 	// Units is the list of systemd unit names.
 	Units []string
+	// Files is the list of file paths.
+	Files []string
 }
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
@@ -203,7 +213,7 @@ func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
 // namespace in the Seed and restore its state.
-func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1beta1.ShootState) error {
+func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
 	return o.reconcile(ctx, func(d deployer) error {
 		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
 	})
@@ -211,14 +221,14 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1beta1
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
 	if err := gardenerutils.
-		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
-		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
+		NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
+		WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).
 		WithTokenExpirationDuration("720h").
 		Reconcile(ctx, o.client); err != nil {
 		return err
 	}
 
-	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d, err := o.newDeployer(osc, worker, purpose)
 		if err != nil {
 			return err
@@ -254,9 +264,11 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				}
 
 				data := Data{
+					Object:  osc,
 					Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					Command: osc.Status.Command,
 					Units:   osc.Status.Units,
+					Files:   osc.Status.Files,
 				}
 
 				o.lock.Lock()
@@ -264,7 +276,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 				switch purpose {
 				case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-					o.workerNameToOSCs[worker.Name].Downloader = data
+					o.workerNameToOSCs[worker.Name].Init = data
 				case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
 					o.workerNameToOSCs[worker.Name].Original = data
 				default:
@@ -451,13 +463,13 @@ func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 }
 
 // WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
-// containing both the downloader as well as the original operating system config data.
+// containing both the init script and the original config.
 func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
 	return o.workerNameToOSCs
 }
 
 func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
-	criName := extensionsv1alpha1.CRINameDocker
+	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 	}
@@ -494,6 +506,16 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		return deployer{}, err
 	}
 
+	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
+	for imageName, image := range o.values.Images {
+		images[imageName] = image
+	}
+
+	images[imagevector.ImageNameHyperkube], err = imagevector.ImageVector().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
+	}
+
 	return deployer{
 		client:                  o.client,
 		osc:                     osc,
@@ -503,10 +525,11 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterCASecretName:     clusterCASecret.Name,
+		clusterCABundle:         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
-		images:                  o.values.Images,
+		images:                  images,
 		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
@@ -517,6 +540,8 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		valiIngressHostName:     o.values.ValiIngressHostName,
 		valitailEnabled:         o.values.ValitailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
+		oscSyncJitterPeriod:     o.values.SyncJitterPeriod,
+		primaryIPFamily:         o.values.PrimaryIPFamily,
 	}, nil
 }
 
@@ -558,16 +583,17 @@ type deployer struct {
 	worker  gardencorev1beta1.Worker
 	purpose extensionsv1alpha1.OperatingSystemConfigPurpose
 
-	// downloader values
+	// init values
 	apiServerURL string
 
 	// original values
 	caBundle                *string
 	clusterCASecretName     string
+	clusterCABundle         []byte
 	clusterDNSAddress       string
 	clusterDomain           string
 	criName                 extensionsv1alpha1.CRIName
-	images                  map[string]*imagevector.Image
+	images                  map[string]*imagevectorutils.Image
 	kubeletCABundle         []byte
 	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
 	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
@@ -578,12 +604,14 @@ type deployer struct {
 	valiIngressHostName     string
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
+	oscSyncJitterPeriod     *metav1.Duration
+	primaryIPFamily         gardencorev1beta1.IPFamily
 }
 
 // exposed for testing
 var (
-	// DownloaderConfigFn is a function for computing the cloud config downloader units and files.
-	DownloaderConfigFn = downloader.Config
+	// InitConfigFn is a function for computing the gardener-node-init units and files.
+	InitConfigFn = nodeinit.Config
 	// OriginalConfigFn is a function for computing the downloaded cloud config user data units and files.
 	OriginalConfigFn = original.Config
 )
@@ -595,77 +623,56 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		err   error
 	)
 
-	// The cloud-config-downloader unit is added regardless of the purpose of the OperatingSystemConfig:
-	// If the purpose is 'provision' then it is anyways the only unit that is being installed in this provisioning phase
-	// because it will download the original cloud config user data.
-	// If the purpose is 'reconcile' then its unit content as well as its configuration (certificates, etc.) is added
-	// as well so that it can be updated regularly (otherwise, these resources would only be created once during the
-	// initial VM bootstrapping phase and never touched again).
-	downloaderUnits, downloaderFiles, err := DownloaderConfigFn(d.key, d.apiServerURL, d.clusterCASecretName)
-	if err != nil {
-		return nil, err
+	componentsContext := components.Context{
+		Key:                     d.key,
+		CABundle:                d.caBundle,
+		ClusterDNSAddress:       d.clusterDNSAddress,
+		ClusterDomain:           d.clusterDomain,
+		CRIName:                 d.criName,
+		Images:                  d.images,
+		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+		KubeletCABundle:         d.kubeletCABundle,
+		KubeletConfigParameters: d.kubeletConfigParameters,
+		KubeletCLIFlags:         d.kubeletCLIFlags,
+		KubeletDataVolumeName:   d.kubeletDataVolumeName,
+		KubernetesVersion:       d.kubernetesVersion,
+		SSHPublicKeys:           d.sshPublicKeys,
+		SSHAccessEnabled:        d.sshAccessEnabled,
+		ValitailEnabled:         d.valitailEnabled,
+		ValiIngress:             d.valiIngressHostName,
+		APIServerURL:            d.apiServerURL,
+		Sysctls:                 d.worker.Sysctls,
+		OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
+		PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 	}
 
 	switch d.purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		units, files = downloaderUnits, downloaderFiles
-
-	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		units, files, err = OriginalConfigFn(components.Context{
-			CABundle:                d.caBundle,
-			ClusterDNSAddress:       d.clusterDNSAddress,
-			ClusterDomain:           d.clusterDomain,
-			CRIName:                 d.criName,
-			Images:                  d.images,
-			NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
-			KubeletCABundle:         d.kubeletCABundle,
-			KubeletConfigParameters: d.kubeletConfigParameters,
-			KubeletCLIFlags:         d.kubeletCLIFlags,
-			KubeletDataVolumeName:   d.kubeletDataVolumeName,
-			KubernetesVersion:       d.kubernetesVersion,
-			SSHPublicKeys:           d.sshPublicKeys,
-			SSHAccessEnabled:        d.sshAccessEnabled,
-			ValitailEnabled:         d.valitailEnabled,
-			ValiIngress:             d.valiIngressHostName,
-			APIServerURL:            d.apiServerURL,
-			Sysctls:                 d.worker.Sysctls,
-		})
+		units, files, err = InitConfigFn(
+			d.worker,
+			d.images[imagevector.ImageNameGardenerNodeAgent].String(),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, d.oscSyncJitterPeriod, nil),
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		// For backwards-compatibility with the OS extensions, we do not directly add the cloud-config-downloader unit
-		// but rather the systemd configuration file.
-		// See for more information:
-		// - https://github.com/gardener/gardener/pull/3449/
-		// - https://github.com/gardener/gardener-extension-os-gardenlinux/pull/24
-		var ccdUnitContent *string
-		for _, unit := range downloaderUnits {
-			if unit.Name == downloader.UnitName {
-				ccdUnitContent = unit.Content
-				break
+		// Add gardener-user and sshd-ensurer when SSH access for the node is enabled
+		if d.sshAccessEnabled {
+			for _, c := range []components.Component{gardeneruser.New(), sshdensurer.New()} {
+				cUnits, cFiles, err := c.Config(componentsContext)
+				if err != nil {
+					return nil, err
+				}
+				units = append(units, cUnits...)
+				files = append(files, cFiles...)
 			}
 		}
 
-		if ccdUnitContent != nil {
-			// We do not want to overwrite a valid Bootstraptoken with the tokenPlaceholder
-			for _, downloaderFile := range downloaderFiles {
-				if downloaderFile.Path == downloader.PathBootstrapToken {
-					continue
-				}
-				files = append(files, downloaderFile)
-			}
-
-			files = append(files, extensionsv1alpha1.File{
-				Path:        "/etc/systemd/system/" + downloader.UnitName,
-				Permissions: pointer.Int32(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(*ccdUnitContent)),
-					},
-				},
-			})
+	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
+		units, files, err = OriginalConfigFn(componentsContext)
+		if err != nil {
+			return nil, err
 		}
 
 	default:
@@ -693,16 +700,13 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			}
 		}
 
-		if d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-			d.osc.Spec.ReloadConfigFilePath = pointer.String(downloader.PathDownloadedCloudConfig)
-		}
-
 		return nil
 	})
 	return d.osc, err
 }
 
-// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI configuration.
+// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
+// configuration.
 func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
@@ -713,17 +717,17 @@ func Key(workerName string, kubernetesVersion *semver.Version, criConfig *garden
 		criName                     gardencorev1beta1.CRIName
 	)
 
-	if criConfig != nil && criConfig.Name != gardencorev1beta1.CRINameDocker {
+	if criConfig != nil {
 		criName = criConfig.Name
 	}
 
-	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
+	return fmt.Sprintf("gardener-node-agent-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
 	switch purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return "-" + machineImageName + "-downloader"
+		return "-" + machineImageName + "-init"
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
 		return "-" + machineImageName + "-original"
 	}

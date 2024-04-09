@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../hack/generate-crds.sh 10-crd- resources.gardener.cloud
+//go:generate ../../hack/generate-crds.sh -p 10-crd- resources.gardener.cloud
 
 // Package resource_manager contains example manifests for working on resource-manager.
 package resource_manager

@@ -28,11 +28,11 @@ type ResourceManagerConfiguration struct {
 	// SourceClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the source apiserver.
 	// +optional
-	SourceClientConnection SourceClientConnection `json:"sourceClientConnection"`
+	SourceClientConnection ClientConnection `json:"sourceClientConnection"`
 	// TargetClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the target apiserver.
 	// +optional
-	TargetClientConnection *TargetClientConnection `json:"targetClientConnection,omitempty"`
+	TargetClientConnection *ClientConnection `json:"targetClientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection"`
 	// Server defines the configuration of the HTTP server.
@@ -50,30 +50,13 @@ type ResourceManagerConfiguration struct {
 	Webhooks ResourceManagerWebhookConfiguration `json:"webhooks"`
 }
 
-// SourceClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the seed apiserver.
-type SourceClientConnection struct {
+// ClientConnection specifies the client connection settings to use when communicating with an API server.
+type ClientConnection struct {
 	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
-	// Namespace in which the ManagedResources should be observed (defaults to "all namespaces").
+	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
 	// +optional
-	Namespace *string `json:"namespace,omitempty"`
-	// CacheResyncPeriod specifies the duration how often the cache for the source cluster is resynced.
-	// +optional
-	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`
-}
-
-// TargetClientConnection specifies the client connection settings
-// for the proxy server to use when communicating with the shoot apiserver.
-type TargetClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
-	// Namespace in which controllers for the target clusters act on objects (defaults to "all namespaces").
-	// +optional
-	Namespace *string `json:"namespace,omitempty"`
-	// DisableCachedClient specifies whether the cache for the target cluster client should be disabled. If true, then
-	// each request is performed with a direct client.
-	// +optional
-	DisableCachedClient *bool `json:"disableCachedClient,omitempty"`
-	// CacheResyncPeriod specifies the duration how often the cache for the target cluster is resynced.
+	Namespaces []string `json:"namespaces,omitempty"`
+	// CacheResyncPeriod specifies the duration how often the cache for the cluster is resynced.
 	// +optional
 	CacheResyncPeriod *metav1.Duration `json:"cacheResyncPeriod,omitempty"`
 }
@@ -134,8 +117,6 @@ type ResourceManagerControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
 	// Node is the configuration for the node controller.
 	Node NodeControllerConfig `json:"node"`
-	// Secret is the configuration for the secret controller.
-	Secret SecretControllerConfig `json:"secret"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig `json:"tokenInvalidator"`
 	// TokenRequestor is the configuration for the token-requestor controller.
@@ -149,6 +130,8 @@ type KubeletCSRApproverControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
+	MachineNamespace string `json:"machineNamespace"`
 }
 
 // GarbageCollectorControllerConfig is the configuration for the garbage-collector controller.
@@ -213,13 +196,6 @@ type IngressControllerSelector struct {
 	Namespace string `json:"namespace"`
 	// PodSelector is the selector for the ingress controller pods.
 	PodSelector metav1.LabelSelector `json:"podSelector"`
-}
-
-// SecretControllerConfig is the configuration for the secret controller.
-type SecretControllerConfig struct {
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // TokenInvalidatorControllerConfig is the configuration for the token-invalidator controller.

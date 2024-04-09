@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istiod
+  namespace: test
+  annotations:
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15014,"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"port":10250,"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+  labels:
+    app: istiod
+    istio: pilot
+spec:
+  type: ClusterIP
+  ports:
+  - name: https-sds # mTLS with k8s-signed cert
+    port: 15012
+    protocol: TCP
+  - name: https-webhook # validation and injection
+    port: 443
+    protocol: TCP
+    targetPort: 10250
+  - name: metrics # prometheus metrics
+    port: 15014
+    protocol: TCP
+    targetPort: 15014
+  selector:
+    app: istiod
+    istio: pilot

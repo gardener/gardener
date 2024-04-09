@@ -10,4 +10,4 @@ In order to avoid that, extension controllers reconcile outside of the shoot's m
 This way extension controllers don't need to care about when the shoot maintenance time window happens.
 Gardener keeps control and decides when the shoot shall be reconciled/updated.
 
-Our [extension controller library](https://github.com/gardener/gardener/blob/master/extensions) provides all the required utilities to conveniently implement this behaviour.
+Our [extension controller library](../../extensions) provides all the required utilities to conveniently implement this behaviour.

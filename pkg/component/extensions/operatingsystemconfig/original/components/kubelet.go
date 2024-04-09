@@ -17,26 +17,18 @@ package components
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // ConfigurableKubeletCLIFlags is the set of configurable kubelet command line parameters.
-type ConfigurableKubeletCLIFlags struct {
-	ImagePullProgressDeadline *metav1.Duration
-}
+type ConfigurableKubeletCLIFlags struct{}
 
 // KubeletCLIFlagsFromCoreV1beta1KubeletConfig computes the ConfigurableKubeletCLIFlags based on the provided
 // gardencorev1beta1.KubeletConfig.
-func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(kubeletConfig *gardencorev1beta1.KubeletConfig) ConfigurableKubeletCLIFlags {
-	var out ConfigurableKubeletCLIFlags
-
-	if kubeletConfig != nil {
-		out.ImagePullProgressDeadline = kubeletConfig.ImagePullProgressDeadline
-	}
-
-	return out
+func KubeletCLIFlagsFromCoreV1beta1KubeletConfig(_ *gardencorev1beta1.KubeletConfig) ConfigurableKubeletCLIFlags {
+	return ConfigurableKubeletCLIFlags{}
 }
 
 // ConfigurableKubeletConfigParameters is the set of configurable kubelet config parameters.
@@ -89,7 +81,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 	if kubeletConfig != nil {
 		out.ContainerLogMaxFiles = kubeletConfig.ContainerLogMaxFiles
 		if val := kubeletConfig.ContainerLogMaxSize; val != nil {
-			out.ContainerLogMaxSize = pointer.String(val.String())
+			out.ContainerLogMaxSize = ptr.To(val.String())
 		}
 		out.CpuCFSQuota = kubeletConfig.CPUCFSQuota
 		out.CpuManagerPolicy = kubeletConfig.CPUManagerPolicy

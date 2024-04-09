@@ -29,25 +29,19 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-var (
-	// NewSeed is used to create a new `operation.Operation` instance.
-	NewSeed = defaultNewSeedObjectFunc
-	// NewHealthCheck is used to create a new Health check instance.
-	NewHealthCheck = defaultNewHealthCheck
-)
+// NewHealthCheck is used to create a new Health check instance.
+var NewHealthCheck = defaultNewHealthCheck
 
 // Reconciler reconciles Seed resources and executes health check operations.
 type Reconciler struct {
-	GardenClient   client.Client
-	SeedClient     client.Client
-	Config         config.SeedCareControllerConfiguration
-	Clock          clock.Clock
-	Namespace      *string
-	SeedName       string
-	LoggingEnabled bool
+	GardenClient client.Client
+	SeedClient   client.Client
+	Config       config.SeedCareControllerConfiguration
+	Clock        clock.Clock
+	Namespace    *string
+	SeedName     string
 }
 
 // Reconcile reconciles Seed resources and executes health check operations.
@@ -74,25 +68,25 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	log.V(1).Info("Starting seed care")
 
 	// Initialize conditions based on the current status.
-	conditionTypes := []gardencorev1beta1.ConditionType{gardencorev1beta1.SeedSystemComponentsHealthy}
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range conditionTypes {
-		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, cond))
-	}
+	seedConditions := NewSeedConditions(r.Clock, seed.Status)
 
 	// Trigger health check
-	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, r.SeedClient)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(
+		seed,
+		r.SeedClient,
+		r.Clock,
+		r.Namespace,
+		r.conditionThresholdsToProgressingMapping(),
+	).Check(
+		ctx,
+		seedConditions,
+	)
 
 	// Update Seed status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
+	if v1beta1helper.ConditionsNeedUpdate(seedConditions.ConvertToSlice(), updatedConditions) {
 		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
+		conditions := v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, seedConditions.ConditionTypes())
 
 		log.Info("Updating seed status conditions")
 		patch := client.StrategicMergeFrom(seed.DeepCopy())

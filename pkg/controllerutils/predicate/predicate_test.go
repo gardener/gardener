@@ -19,7 +19,7 @@ import (
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -492,11 +492,64 @@ var _ = Describe("Predicate", func() {
 			},
 
 			Entry("spec.seedName and status.seedName are nil", nil, nil, gomega.BeFalse()),
-			Entry("spec.seedName does not match and status.seedName is nil", pointer.String("otherSeed"), nil, gomega.BeFalse()),
-			Entry("spec.seedName and status.seedName do not match", pointer.String("otherSeed"), pointer.String("otherSeed"), gomega.BeFalse()),
-			Entry("spec.seedName is nil but status.seedName matches", nil, pointer.String("seed"), gomega.BeFalse()),
-			Entry("spec.seedName matches and status.seedName is nil", pointer.String("seed"), nil, gomega.BeTrue()),
-			Entry("spec.seedName does not match but status.seedName matches", pointer.String("otherSeed"), pointer.String("seed"), gomega.BeTrue()),
+			Entry("spec.seedName does not match and status.seedName is nil", ptr.To("otherSeed"), nil, gomega.BeFalse()),
+			Entry("spec.seedName and status.seedName do not match", ptr.To("otherSeed"), ptr.To("otherSeed"), gomega.BeFalse()),
+			Entry("spec.seedName is nil but status.seedName matches", nil, ptr.To("seed"), gomega.BeFalse()),
+			Entry("spec.seedName matches and status.seedName is nil", ptr.To("seed"), nil, gomega.BeTrue()),
+			Entry("spec.seedName does not match but status.seedName matches", ptr.To("otherSeed"), ptr.To("seed"), gomega.BeTrue()),
 		)
+	})
+
+	Describe("#ReconciliationFinishedSuccessfully", func() {
+		var lastOperation *gardencorev1beta1.LastOperation
+
+		BeforeEach(func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+		})
+
+		It("should return false because last operation is nil on new object", func() {
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is 'Delete' on old object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is 'Delete' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is not 'Processing' on old object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is not 'Succeeded' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return true because last operation type is 'Succeeded' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeTrue())
+		})
 	})
 })

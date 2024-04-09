@@ -17,7 +17,7 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"maps"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +25,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -64,10 +64,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&corev1.Service{}, targetCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(targetCluster.GetCache(), &corev1.Service{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.ServicePredicate()),
 		).
@@ -88,7 +88,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(networkPolicy, targetCluster.GetCache()),
+		source.Kind(targetCluster.GetCache(), networkPolicy),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
 		networkPolicyPredicate,
 	); err != nil {
@@ -97,7 +97,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 
 	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(
-			source.NewKindWithCache(&networkingv1.Ingress{}, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), &networkingv1.Ingress{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
 			r.IngressPredicate(),
 		); err != nil {
@@ -109,7 +109,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
 
 	return c.Watch(
-		source.NewKindWithCache(namespace, targetCluster.GetCache()),
+		source.Kind(targetCluster.GetCache(), namespace),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
@@ -135,8 +135,6 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 				oldService.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] != service.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] != service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] ||
-				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] ||
-				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] ||
 				fromPolicyAnnotationsChanged(oldService.Annotations, service.Annotations)
 		},
 	}
@@ -162,7 +160,7 @@ func fromPolicyAnnotationsChanged(oldAnnotations, newAnnotations map[string]stri
 	getPolicies(oldAnnotations, oldFromPolicies)
 	getPolicies(newAnnotations, newFromPolicies)
 
-	return !reflect.DeepEqual(oldFromPolicies, newFromPolicies)
+	return !maps.Equal(oldFromPolicies, newFromPolicies)
 }
 
 // IngressPredicate returns a predicate which filters UPDATE events on Ingresses such that only updates to the rules

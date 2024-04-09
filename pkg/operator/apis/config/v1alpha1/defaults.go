@@ -18,17 +18,12 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
-
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
-}
 
 // SetDefaults_OperatorConfiguration sets defaults for the configuration of the Gardener operator.
 func SetDefaults_OperatorConfiguration(obj *OperatorConfiguration) {
@@ -37,11 +32,6 @@ func SetDefaults_OperatorConfiguration(obj *OperatorConfiguration) {
 	}
 	if obj.LogFormat == "" {
 		obj.LogFormat = logger.FormatJSON
-	}
-
-	if obj.Controllers.Garden.ETCDConfig == nil {
-		obj.Controllers.Garden.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
-		gardenletv1alpha1.SetDefaults_ETCDConfig(obj.Controllers.Garden.ETCDConfig)
 	}
 }
 
@@ -97,11 +87,19 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 // SetDefaults_GardenControllerConfig sets defaults for the GardenControllerConfig object.
 func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(1)
+		obj.ConcurrentSyncs = ptr.To(1)
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 	}
+	if obj.ETCDConfig == nil {
+		obj.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
+	}
+
+	gardenletv1alpha1.SetDefaults_ETCDConfig(obj.ETCDConfig)
+	gardenletv1alpha1.SetDefaults_ETCDController(obj.ETCDConfig.ETCDController)
+	gardenletv1alpha1.SetDefaults_CustodianController(obj.ETCDConfig.CustodianController)
+	gardenletv1alpha1.SetDefaults_BackupCompactionController(obj.ETCDConfig.BackupCompactionController)
 }
 
 // SetDefaults_GardenCareControllerConfiguration sets defaults for the GardenCareControllerConfiguration object.

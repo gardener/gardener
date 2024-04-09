@@ -19,13 +19,16 @@ set -o nounset
 set -o pipefail
 
 # Usage:
-# generate-crds.sh <file-name-prefix> [<group> ...]
+# generate-crds.sh [<flags>] <group> [<group> ...]
 #     Generate manifests for all CRDs to the current working directory.
 #     Useful for development purposes.
 #
-#     <file-name-prefix> File name prefix for manifest files (e.g. '10-crd-')
-#     -l (Optional)      If -l argument is given then the generated CRDs will have label gardener.cloud/deletion-protected: "true"
-#     <group>            List of groups to generate (generate all if unset)
+#     -p <file-name-prefix>               File name prefix for manifest files (e.g. '10-crd-')
+#     -l (Optional)                       If this argument is given then the generated CRDs will have label gardener.cloud/deletion-protected: "true"
+#     -k (Optional)                       If this argument is given then the generated CRDs will have annotation resources.gardener.cloud/keep-object: "true"
+#     -r <reason> (Optional)              If this argument is given then the generated CRDs will have annotation api-approved.kubernetes.io: "<reason>"
+#     --allow-dangerous-types (Optional)  If this argument is given then the CRD generation will tolerate issues related to dangerous types.
+#     <group>                             List of groups to generate (generate all if unset)
 
 if ! command -v controller-gen &> /dev/null ; then
   >&2 echo "controller-gen not available"
@@ -33,9 +36,16 @@ if ! command -v controller-gen &> /dev/null ; then
 fi
 
 output_dir="$(pwd)"
-file_name_prefix="$1"
+output_dir_temp="$(mktemp -d)"
 add_deletion_protection_label=false
+add_keep_object_annotation=false
+k8s_io_api_approval_reason="unapproved, temporarily squatting"
 crd_options=""
+
+# setup virtual GOPATH
+source $(dirname $0)/vgopath-setup.sh
+
+export GO111MODULE=off
 
 get_group_package () {
   case "$1" in
@@ -51,11 +61,29 @@ get_group_package () {
   "druid.gardener.cloud")
     echo "github.com/gardener/etcd-druid/api/v1alpha1"
     ;;
-  "autoscaling.k8s.io")
+  "hvpaautoscaling.k8s.io")
     echo "github.com/gardener/hvpa-controller/api/v1alpha1"
     ;;
   "fluentbit.fluent.io")
     echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+    ;;
+  "monitoring.coreos.com_v1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+    ;;
+  "monitoring.coreos.com_v1beta1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1beta1"
+    ;;
+  "monitoring.coreos.com_v1alpha1")
+    echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+    ;;
+  "autoscaling.k8s.io")
+    echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+    ;;
+  "machine.sapcloud.io")
+    echo "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+    ;;
+  "cert.gardener.cloud")
+    echo "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
     ;;
   *)
     >&2 echo "unknown group $1"
@@ -68,8 +96,13 @@ generate_all_groups () {
   generate_group resources.gardener.cloud
   generate_group operator.gardener.cloud
   generate_group druid.gardener.cloud
+  generate_group hvpaautoscaling.k8s.io
   generate_group autoscaling.k8s.io
   generate_group fluentbit.fluent.io
+  generate_group monitoring.coreos.com_v1
+  generate_group monitoring.coreos.com_v1beta1
+  generate_group monitoring.coreos.com_v1alpha1
+  generate_group machine.sapcloud.io
 }
 
 generate_group () {
@@ -85,18 +118,44 @@ generate_group () {
     exit 1
   fi
 
-  # clean all generated files for this group to account for changed prefix or removed resources
-  if ls "$output_dir"/*${group}_*.yaml >/dev/null 2>&1; then
-    rm "$output_dir"/*${group}_*.yaml
+  generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
+
+  if [[ "$group" == "druid.gardener.cloud" ]]; then
+    # /scale subresource is intentionally removed from this CRD, although it is specified in the original CRD from
+    # etcd-druid, due to adverse interaction with VPA.
+    # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
+    # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
+    etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
+    etcd_api_types_file="${etcd_druid_dir}/api/v1alpha1/types_etcd.go"
+    # Create a local copy outside the mod cache path in order to patch the types file via sed.
+    etcd_api_types_backup="$(mktemp -d)/types_etcd.go"
+    cp "$etcd_api_types_file" "$etcd_api_types_backup"
+    chmod +w "$etcd_api_types_file" "$etcd_druid_dir/api/v1alpha1/"
+    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
+    sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
+    $generate
+  elif [[ "$group" == "autoscaling.k8s.io" ]]; then
+    # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
+    generator_output="$(mktemp -d)/controller-gen.log"
+    # As go list does not work with symlinks we need to manually construct the package paths to correctly
+    # generate v1beta2 CRDs.
+    package_path="${package_path};${package_path}beta2;"
+    generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
+    $generate &> "$generator_output" ||:
+    grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
+  else
+    $generate
   fi
 
-  controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir" output:stdout
+  local relevant_files=("$@")
+
+  sanitized_group_name="${group/hvpa/}"
+  sanitized_group_name="${sanitized_group_name%%_*}"
 
   while IFS= read -r crd; do
     crd_out="$output_dir/$file_name_prefix$(basename $crd)"
-    if [ "$crd" != "$crd_out" ]; then
-      mv "$crd" "$crd_out"
-    fi
+    mv "$crd" "$crd_out"
+    relevant_files+=("$(basename "$crd_out")")
 
     if $add_deletion_protection_label; then
       if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
@@ -106,42 +165,79 @@ generate_group () {
       fi
     fi
 
+    if $add_keep_object_annotation; then
+      sed -i '/^  annotations:.*/a\    resources.gardener.cloud/keep-object: "true"' "$crd_out"
+    fi
+
     # TODO(plkokanov): this is needed to add the `api-approved.kubernetes.io` annotaiton to resource from the *.k8s.io api group generated by controller-gen
     # Currently there is an issue open to do that automatically: https://github.com/kubernetes-sigs/controller-tools/issues/656
     if [[ ${group} =~ .*\.k8s\.io ]]; then
-      sed -i '/^  annotations:.*/a\    api-approved.kubernetes.io: unapproved, temporarily squatting' "$crd_out"
+      sed -i "/^  annotations:.*/a\    api-approved.kubernetes.io: $k8s_io_api_approval_reason" "$crd_out"
     fi
-  done < <(ls "$output_dir/${group}"_*.yaml)
+  done < <(ls "$output_dir_temp/$sanitized_group_name"_*.yaml)
+
+  # garbage collection - clean all generated files for this group to account for changed prefix or removed resources
+  local pattern=".*${group}_.*\.yaml"
+  if [[ "$group" == "autoscaling.k8s.io" ]]; then
+    pattern=".*${group}_v.*\.yaml"
+  fi
+
+  while IFS= read -r file; do
+    file_name=$(basename "$file")
+    delete_no_longer_needed_file=true
+
+    for relevant_file_name in "${relevant_files[@]}"; do
+      if [[ $file_name == "$relevant_file_name" ]] || [[ ! $file_name =~ $pattern ]]; then
+        delete_no_longer_needed_file=false
+        break
+      fi
+    done
+
+    if $delete_no_longer_needed_file; then
+      rm "$file"
+    fi
+  done < <(ls "$output_dir")
 }
 
-if [ -n "${2:-}" ]; then
-  if [ "${2}" == "-l" ]; then
-    add_deletion_protection_label=true
-    if [ -n "${3:-}" ]; then
-      while [ -n "${3:-}" ] ; do
-        generate_group "$3"
-        shift
-      done
-    else
-      generate_all_groups
-    fi
-  elif [ "${2}" == "-allow-dangerous-types" ]; then
-    crd_options=":allowDangerousTypes=true"
-    if [ -n "${3:-}" ]; then
-      while [ -n "${3:-}" ] ; do
-        generate_group "$3"
-        shift
-      done
-    else
-      generate_all_groups
-    fi
-  else
-    while [ -n "${2:-}" ] ; do
-      generate_group "$2"
+parse_flags() {
+  while test $# -gt 0; do
+    case "$1" in
+    -p)
+      file_name_prefix="$2"
       shift
-    done
-  fi
+      shift
+      ;;
+    -r)
+      k8s_io_api_approval_reason="$2"
+      shift
+      shift
+      ;;
+    -l)
+      add_deletion_protection_label=true
+      shift
+      ;;
+    -k)
+      add_keep_object_annotation=true
+      shift
+      ;;
+    --allow-dangerous-types)
+      crd_options=":allowDangerousTypes=true"
+      shift
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+    esac
+  done
+}
+
+parse_flags "$@"
+
+if [ -n "$args" ]; then
+  for group in "${args[@]}"; do
+    generate_group "$group"
+  done
 else
   generate_all_groups
 fi
-

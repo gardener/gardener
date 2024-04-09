@@ -1,0 +1,42 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: istio-ingressgateway
+  namespace: test-ingress
+  labels:
+    app.kubernetes.io/version: 1.19.3
+    app: istio-ingressgateway
+    foo: bar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istio-ingressgateway
+  minReplicas: <MIN_REPLICAS>
+  maxReplicas: <MAX_REPLICAS>
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        averageUtilization: 80
+        type: Utilization
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        averageUtilization: 80
+        type: Utilization
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 1800
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 1800
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 60

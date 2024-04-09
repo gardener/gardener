@@ -64,6 +64,7 @@ type Coder interface {
 // ExtractErrorCodes extracts all error codes from the given error by using errorsutils.Errors
 func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var codes []gardencorev1beta1.ErrorCode
+
 	for _, err := range errorsutils.Errors(err) {
 		var coder Coder
 		if errors.As(err, &coder) {
@@ -98,6 +99,7 @@ func (m *MultiErrorWithCodes) Append(err error) {
 		if m.errorCodeStr.Has(string(code)) {
 			continue
 		}
+
 		m.errorCodeStr.Insert(string(code))
 		m.codes = append(m.codes, code)
 	}

@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,11 +37,11 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/network"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#Network", func() {
@@ -53,6 +53,11 @@ var _ = Describe("#Network", func() {
 		networkPodMask     = 11
 		networkServiceIp   = "100.64.0.0"
 		networkServiceMask = 13
+
+		networkPodV6IP       = "2001:db8:1::"
+		networkPodV6Mask     = 48
+		networkServiceV6IP   = "2001:db8:3::"
+		networkServiceV6Mask = 108
 	)
 	var (
 		ctrl *gomock.Controller
@@ -69,6 +74,9 @@ var _ = Describe("#Network", func() {
 
 		networkPodCIDR     = fmt.Sprintf("%s/%d", networkPodIp, networkPodMask)
 		networkServiceCIDR = fmt.Sprintf("%s/%d", networkServiceIp, networkServiceMask)
+
+		networkPodV6CIDR     = fmt.Sprintf("%s/%d", networkPodV6IP, networkPodV6Mask)
+		networkServiceV6CIDR = fmt.Sprintf("%s/%d", networkServiceV6IP, networkServiceV6Mask)
 	)
 
 	BeforeEach(func() {
@@ -101,6 +109,7 @@ var _ = Describe("#Network", func() {
 			ProviderConfig: nil,
 			PodCIDR:        &podCIDR,
 			ServiceCIDR:    &serviceCIDR,
+			IPFamilies:     []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4},
 		}
 
 		empty = &extensionsv1alpha1.Network{
@@ -125,6 +134,7 @@ var _ = Describe("#Network", func() {
 				},
 				PodCIDR:     networkPodCIDR,
 				ServiceCIDR: networkServiceCIDR,
+				IPFamilies:  []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4},
 			},
 		}
 
@@ -136,7 +146,8 @@ var _ = Describe("#Network", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should create correct Network", func() {
+
+		testFunc := func() {
 			defer test.WithVars(
 				&network.TimeNow, mockNow.Do,
 			)()
@@ -150,6 +161,37 @@ var _ = Describe("#Network", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(DeepDerivativeEqual(expected))
+		}
+
+		Context("IPv4", func() {
+			It("should create correct Network", func() {
+				testFunc()
+			})
+		})
+
+		Context("IPv6", func() {
+			BeforeEach(func() {
+				podCIDR := net.IPNet{
+					IP:   net.ParseIP(networkPodV6IP),
+					Mask: net.CIDRMask(networkPodV6Mask, 128),
+				}
+				serviceCIDR := net.IPNet{
+					IP:   net.ParseIP(networkServiceV6IP),
+					Mask: net.CIDRMask(networkServiceV6Mask, 128),
+				}
+
+				values.PodCIDR = &podCIDR
+				values.ServiceCIDR = &serviceCIDR
+				values.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
+
+				expected.Spec.PodCIDR = networkPodV6CIDR
+				expected.Spec.ServiceCIDR = networkServiceV6CIDR
+				expected.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
+
+			})
+			It("should create correct Network", func() {
+				testFunc()
+			})
 		})
 	})
 
@@ -312,7 +354,7 @@ var _ = Describe("#Network", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})

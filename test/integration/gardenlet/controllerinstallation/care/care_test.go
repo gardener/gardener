@@ -79,9 +79,8 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 			By("Create ManagedResource")
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       controllerInstallation.Name,
-					Namespace:  gardenNamespace.Name,
-					Generation: 1,
+					Name:      controllerInstallation.Name,
+					Namespace: gardenNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{{

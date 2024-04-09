@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: delete-shoot
@@ -10,9 +11,9 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_deletion
+    go test -timeout=0 ./test/testmachinery/system/shoot_deletion
     --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
-  image: golang:1.20.6
+  image: golang:1.22.2

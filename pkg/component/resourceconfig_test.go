@@ -21,13 +21,16 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -79,9 +82,10 @@ var _ = Describe("ResourceConfig", func() {
 
 	Context("Deployment/Destruction", func() {
 		var (
-			ctx                 = context.TODO()
-			namespace           = "some-namespace"
-			managedResourceName = "managed-resource-name"
+			ctx                   = context.TODO()
+			namespace             = "some-namespace"
+			managedResourceName   = "managed-resource-name"
+			managedResourceLabels = map[string]string{"foo": "bar"}
 
 			clusterType  ClusterType
 			fakeClient   client.Client
@@ -119,41 +123,42 @@ var _ = Describe("ResourceConfig", func() {
 			Describe("#Deploy", func() {
 				It("should deploy the expected resources", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
+					expectedMr := &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
-							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+							Labels:          utils.MergeStringMaps(map[string]string{"gardener.cloud/role": "seed-system-component"}, managedResourceLabels),
 							ResourceVersion: "1",
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: pointer.String("seed"),
+							Class: ptr.To("seed"),
 							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResourceSecret.Name,
+								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
-					}))
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(managedResource).To(DeepEqual(expectedMr))
 
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecret.Data).To(HaveLen(3))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 			})
 
 			Describe("#Destroy", func() {
 				It("should destroy the expected resources", func() {
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 					Expect(DestroyResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, allResources)).To(Succeed())
@@ -172,16 +177,11 @@ var _ = Describe("ResourceConfig", func() {
 			Describe("#Deploy", func() {
 				It("should deploy the expected resources", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "ManagedResource",
-						},
+					expectedMr := &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            managedResourceName,
 							Namespace:       namespace,
@@ -191,15 +191,20 @@ var _ = Describe("ResourceConfig", func() {
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResourceSecret.Name,
+								Name: managedResource.Spec.SecretRefs[0].Name,
 							}},
-							KeepObjects: pointer.Bool(false),
+							KeepObjects: ptr.To(false),
 						},
-					}))
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(managedResource).To(DeepEqual(expectedMr))
 
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecret.Data).To(HaveLen(2))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj1), obj1)).To(Succeed())
 				})
@@ -207,8 +212,9 @@ var _ = Describe("ResourceConfig", func() {
 
 			Describe("#Destroy", func() {
 				It("should destroy the expected resources", func() {
-					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, registry, allResources)).To(Succeed())
+					Expect(DeployResourceConfigs(ctx, fakeClient, namespace, clusterType, managedResourceName, managedResourceLabels, registry, allResources)).To(Succeed())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj1), obj1)).To(Succeed())
 

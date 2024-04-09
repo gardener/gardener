@@ -17,12 +17,12 @@ package managedseedset_test
 import (
 	"context"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -31,8 +31,8 @@ import (
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -94,7 +94,7 @@ var _ = Describe("Replica", func() {
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
-							Domain: pointer.String("replica-name.example.com"),
+							Domain: ptr.To("replica-name.example.com"),
 						},
 					},
 				},
@@ -166,17 +166,11 @@ var _ = Describe("Replica", func() {
 				},
 			}
 		}
-		seed = func(deletionTimestamp *metav1.Time, gardenletReady, bootstrapped, backupBucketsReady, seedSystemComponentsHealthy bool) *gardencorev1beta1.Seed {
+		seed = func(deletionTimestamp *metav1.Time, gardenletReady, backupBucketsReady, seedSystemComponentsHealthy bool) *gardencorev1beta1.Seed {
 			var conditions []gardencorev1beta1.Condition
 			if gardenletReady {
 				conditions = append(conditions, gardencorev1beta1.Condition{
 					Type:   gardencorev1beta1.SeedGardenletReady,
-					Status: gardencorev1beta1.ConditionTrue,
-				})
-			}
-			if bootstrapped {
-				conditions = append(conditions, gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.SeedBootstrapped,
 					Status: gardencorev1beta1.ConditionTrue,
 				})
 			}
@@ -270,12 +264,11 @@ var _ = Describe("Replica", func() {
 				managedSeed(nil, true, false), seed, false)
 			Expect(replica.IsSeedReady()).To(Equal(seedReady))
 		},
-		Entry("should return false", seed(nil, false, false, false, false), false),
-		Entry("should return false", seed(nil, true, false, false, false), false),
-		Entry("should return true", seed(nil, true, true, false, true), true),
-		Entry("should return true", seed(nil, true, true, true, true), true),
-		Entry("should return false", seed(nil, true, true, true, false), false),
-		Entry("should return false", seed(&now, true, true, true, true), false),
+		Entry("should return false", seed(nil, false, false, false), false),
+		Entry("should return true", seed(nil, true, false, true), true),
+		Entry("should return true", seed(nil, true, true, true), true),
+		Entry("should return false", seed(nil, true, true, false), false),
+		Entry("should return false", seed(&now, true, true, true), false),
 	)
 
 	DescribeTable("#GetShootHealthStatus",
@@ -333,7 +326,7 @@ var _ = Describe("Replica", func() {
 						},
 						Spec: gardencorev1beta1.ShootSpec{
 							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.String(replicaName + ".example.com"),
+								Domain: ptr.To(replicaName + ".example.com"),
 							},
 						},
 					}))

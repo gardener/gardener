@@ -36,7 +36,7 @@ import (
 
 // HandlerBuilder contains information which are required to create an admission handler.
 type HandlerBuilder struct {
-	mutatorMap map[Mutator][]Type
+	actionMap  map[handlerAction][]Type
 	predicates []predicate.Predicate
 	scheme     *runtime.Scheme
 	logger     logr.Logger
@@ -45,24 +45,25 @@ type HandlerBuilder struct {
 // NewBuilder creates a new HandlerBuilder.
 func NewBuilder(mgr manager.Manager, logger logr.Logger) *HandlerBuilder {
 	return &HandlerBuilder{
-		mutatorMap: make(map[Mutator][]Type),
-		scheme:     mgr.GetScheme(),
-		logger:     logger.WithName("handler"),
+		actionMap: make(map[handlerAction][]Type),
+		scheme:    mgr.GetScheme(),
+		logger:    logger.WithName("handler"),
 	}
 }
 
 // WithMutator adds the given mutator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithMutator(mutator Mutator, types ...Type) *HandlerBuilder {
-	mutator = hybridMutator(mutator)
-	b.mutatorMap[mutator] = append(b.mutatorMap[mutator], types...)
+	mutatingAction := mutatingActionHandler(mutator)
+	b.actionMap[mutatingAction] = append(b.actionMap[mutatingAction], types...)
 
 	return b
 }
 
 // WithValidator adds the given validator for the given types to the HandlerBuilder.
 func (b *HandlerBuilder) WithValidator(validator Validator, types ...Type) *HandlerBuilder {
-	mutator := hybridValidator(validator)
-	b.mutatorMap[mutator] = append(b.mutatorMap[mutator], types...)
+	validatingAction := validatingActionHandler(validator)
+	b.actionMap[validatingAction] = append(b.actionMap[validatingAction], types...)
+
 	return b
 }
 
@@ -76,13 +77,13 @@ func (b *HandlerBuilder) WithPredicates(predicates ...predicate.Predicate) *Hand
 func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	h := &handler{
 		typesMap:   make(map[metav1.GroupVersionKind]client.Object),
-		mutatorMap: make(map[metav1.GroupVersionKind]Mutator),
+		actionMap:  make(map[metav1.GroupVersionKind]handlerAction),
 		predicates: b.predicates,
 		scheme:     b.scheme,
 		logger:     b.logger,
 	}
 
-	for m, t := range b.mutatorMap {
+	for m, t := range b.actionMap {
 		typesMap, err := buildTypesMap(b.scheme, objectsFromTypes(t))
 		if err != nil {
 			return nil, err
@@ -90,7 +91,7 @@ func (b *HandlerBuilder) Build() (admission.Handler, error) {
 		mutator := m
 		for gvk, obj := range typesMap {
 			h.typesMap[gvk] = obj
-			h.mutatorMap[gvk] = mutator
+			h.actionMap[gvk] = mutator
 		}
 	}
 	h.decoder = serializer.NewCodecFactory(b.scheme).UniversalDecoder()
@@ -98,9 +99,20 @@ func (b *HandlerBuilder) Build() (admission.Handler, error) {
 	return h, nil
 }
 
+type handlerAction interface {
+	do(ctx context.Context, new, old client.Object) error
+}
+
+// actionFunc is a func to be used directly as an implementation for handlerAction.
+type actionFunc func(ctx context.Context, new, old client.Object) error
+
+func (mf actionFunc) do(ctx context.Context, new, old client.Object) error {
+	return mf(ctx, new, old)
+}
+
 type handler struct {
+	actionMap  map[metav1.GroupVersionKind]handlerAction
 	typesMap   map[metav1.GroupVersionKind]client.Object
-	mutatorMap map[metav1.GroupVersionKind]Mutator
 	predicates []predicate.Predicate
 	decoder    runtime.Decoder
 	scheme     *runtime.Scheme
@@ -126,10 +138,10 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		}
 	}
 
-	mutator, ok := h.mutatorMap[ar.Kind]
+	mutator, ok := h.actionMap[ar.Kind]
 	if !ok {
 		// check if we can find an internal type
-		for gvk, m := range h.mutatorMap {
+		for gvk, m := range h.actionMap {
 			if gvk.Version == runtime.APIVersionInternal && gvk.Group == ar.Kind.Group && gvk.Kind == ar.Kind.Kind {
 				mutator = m
 				break
@@ -143,7 +155,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 	return handle(ctx, req, mutator, t, h.decoder, h.logger, h.predicates...)
 }
 
-func handle(ctx context.Context, req admission.Request, m Mutator, t client.Object, decoder runtime.Decoder, logger logr.Logger, predicates ...predicate.Predicate) admission.Response {
+func handle(ctx context.Context, req admission.Request, m handlerAction, t client.Object, decoder runtime.Decoder, logger logr.Logger, predicates ...predicate.Predicate) admission.Response {
 	ar := req.AdmissionRequest
 
 	// Decode object
@@ -172,7 +184,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 
 	// Process the resource
 	newObj := obj.DeepCopyObject().(client.Object)
-	if err = m.Mutate(ctx, newObj, oldObj); err != nil {
+	if err = m.do(ctx, newObj, oldObj); err != nil {
 		logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}

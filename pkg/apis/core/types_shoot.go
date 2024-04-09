@@ -106,6 +106,12 @@ type ShootSpec struct {
 	SystemComponents *SystemComponents
 	// ControlPlane contains general settings for the control plane of the shoot.
 	ControlPlane *ControlPlane
+	// SchedulerName is the name of the responsible scheduler which schedules the shoot.
+	// If not specified, the default scheduler takes over.
+	// This field is immutable.
+	SchedulerName *string
+	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
+	CloudProfile *CloudProfileReference
 }
 
 // GetProviderType gets the type of the provider.
@@ -147,7 +153,8 @@ type ShootStatus struct {
 	UID types.UID
 	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	ClusterIdentity *string
-	// List of addresses on which the Kube API server can be reached.
+	// List of addresses that are relevant to the shoot.
+	// These include the Kube API server address and also the service account issuer.
 	AdvertisedAddresses []ShootAdvertisedAddress
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	MigrationStartTime *metav1.Time
@@ -155,6 +162,10 @@ type ShootStatus struct {
 	Credentials *ShootCredentials
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	LastMaintenance *LastMaintenance
+	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
+	// Secrets are encrypted by default and are not part of the list.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	EncryptedResources []string
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -184,7 +195,7 @@ type ShootCredentialsRotation struct {
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	SSHKeypair *ShootSSHKeypairRotation
 	// Observability contains information about the observability credential rotation.
-	Observability *ShootObservabilityRotation
+	Observability *ObservabilityRotation
 	// ServiceAccountKey contains information about the service account key credential rotation.
 	ServiceAccountKey *ServiceAccountKeyRotation
 	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
@@ -224,8 +235,8 @@ type ShootSSHKeypairRotation struct {
 	LastCompletionTime *metav1.Time
 }
 
-// ShootObservabilityRotation contains information about the observability credential rotation.
-type ShootObservabilityRotation struct {
+// ObservabilityRotation contains information about the observability credential rotation.
+type ObservabilityRotation struct {
 	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
@@ -342,17 +353,22 @@ type DNS struct {
 	Domain *string
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
+	// Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
 	Providers []DNSProvider
 }
 
+// TODO(timuthy): Rework the 'DNSProvider' struct and deprecated fields in the scope of https://github.com/gardener/gardener/issues/9176.
+
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// TODO(timuthy): Remove this field with release v1.87.
-
 	// Domains contains information about which domains shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	Domains *DNSIncludeExclude
 	// Primary indicates that this DNSProvider is used for shoot related domains.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.
 	Primary *bool
 	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
@@ -362,10 +378,9 @@ type DNSProvider struct {
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
 	Type *string
-	// TODO(timuthy): Remove this field with release v1.87.
-
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
-	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	Zones *DNSIncludeExclude
 }
 
@@ -421,9 +436,6 @@ type HibernationSchedule struct {
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {
-	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot.
-	// Defaults to true for Kubernetes versions below v1.25. Unusable for Kubernetes versions v1.25 and higher.
-	AllowPrivilegedContainers *bool
 	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	ClusterAutoscaler *ClusterAutoscaler
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
@@ -475,6 +487,14 @@ type ClusterAutoscaler struct {
 	MaxGracefulTerminationSeconds *int32
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	IgnoreTaints []string
+	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
+	NewPodScaleUpDelay *metav1.Duration
+	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+	MaxEmptyBulkDelete *int32
+	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
+	IgnoreDaemonsetsUtilization *bool
+	// Verbosity allows CA to modify its log level.
+	Verbosity *int32
 }
 
 // ExpanderMode is type used for Expander values
@@ -520,6 +540,10 @@ type VerticalPodAutoscaler struct {
 	UpdaterInterval *metav1.Duration
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	RecommenderInterval *metav1.Duration
+	// TargetCPUPercentile is the usage percentile that will be used as a base for CPU target recommendation.
+	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
+	// (default: 0.9)
+	TargetCPUPercentile *float64
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -556,7 +580,7 @@ type KubeAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	WatchCacheSizes *WatchCacheSizes
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
-	Requests *KubeAPIServerRequests
+	Requests *APIServerRequests
 	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -564,7 +588,7 @@ type KubeAPIServerConfig struct {
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// Logging contains configuration settings for the log verbosity and access logging
-	Logging *KubeAPIServerLogging
+	Logging *APIServerLogging
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
@@ -573,24 +597,36 @@ type KubeAPIServerConfig struct {
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
 	DefaultUnreachableTolerationSeconds *int64
+	// EncryptionConfig contains customizable encryption configuration of the API server.
+	EncryptionConfig *EncryptionConfig
 }
 
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-type KubeAPIServerLogging struct {
+// APIServerLogging contains configuration for the logs level and http access logs
+type APIServerLogging struct {
 	// Verbosity is the kube-apiserver log verbosity level
 	Verbosity *int32
 	// HTTPAccessVerbosity is the kube-apiserver access logs level
 	HTTPAccessVerbosity *int32
 }
 
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-type KubeAPIServerRequests struct {
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type APIServerRequests struct {
 	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	MaxNonMutatingInflight *int32
 	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	MaxMutatingInflight *int32
+}
+
+// EncryptionConfig contains customizable encryption configuration of the API server.
+type EncryptionConfig struct {
+	// Resources contains the list of resources that shall be encrypted in addition to secrets.
+	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+	// Note that configuring a custom resource is only supported for versions >= 1.26.
+	// Wildcards are not supported for now.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	Resources []string
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -612,7 +648,6 @@ type ServiceAccountConfig struct {
 	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 	// These values are not used to generate new service account tokens. Only useful when service account tokens are also
 	// issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
-	// This field is only available for Kubernetes v1.22 or later.
 	AcceptedIssuers []string
 }
 
@@ -836,9 +871,6 @@ type KubeletConfig struct {
 	MaxPods *int32
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	PodPIDsLimit *int64
-	// ImagePullProgressDeadline describes the time limit under which if no pulling progress is made, the image pulling will be cancelled.
-	// Default: 1m
-	ImagePullProgressDeadline *metav1.Duration
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	FailSwapOn *bool
 	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
@@ -1052,7 +1084,7 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
 	// CRI contains configurations of CRI support of every machine in the worker pool.
-	// Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
+	// Defaults to a CRI with name `containerd`.
 	CRI *CRI
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	Kubernetes *WorkerKubernetes
@@ -1093,6 +1125,22 @@ type Worker struct {
 	MachineControllerManagerSettings *MachineControllerManagerSettings
 	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	Sysctls map[string]string
+	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
+	ClusterAutoscaler *ClusterAutoscalerOptions
+}
+
+// ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
+type ClusterAutoscalerOptions struct {
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed.
+	ScaleDownUtilizationThreshold *float64
+	// ScaleDownGpuUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) of gpu resources under which a node is being removed.
+	ScaleDownGpuUtilizationThreshold *float64
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down.
+	ScaleDownUnneededTime *metav1.Duration
+	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
+	ScaleDownUnreadyTime *metav1.Duration
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	MaxNodeProvisionTime *metav1.Duration
 }
 
 // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
@@ -1188,8 +1236,6 @@ type CRIName string
 const (
 	// CRINameContainerD is a constant for ContainerD CRI name.
 	CRINameContainerD CRIName = "containerd"
-	// CRINameDocker is a constant for Docker CRI name.
-	CRINameDocker CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime
@@ -1202,9 +1248,9 @@ type ContainerRuntime struct {
 
 var (
 	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.
-	DefaultWorkerMaxSurge = intstr.FromInt(1)
+	DefaultWorkerMaxSurge = intstr.FromInt32(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
-	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
 )
 
 // WorkersSettings contains settings for all workers.

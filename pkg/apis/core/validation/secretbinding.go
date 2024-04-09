@@ -69,7 +69,8 @@ func ValidateSecretBindingProvider(provider *core.SecretBindingProvider) field.E
 	return allErrs
 }
 
-func validateAuditPolicyConfigMapReference(ref *corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
+// ValidateAuditPolicyConfigMapReference validates the audit policy config map reference.
+func ValidateAuditPolicyConfigMapReference(ref *corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(ref.Name) == 0 {

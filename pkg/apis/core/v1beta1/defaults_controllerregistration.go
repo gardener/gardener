@@ -18,18 +18,18 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_ControllerResource sets default values for ControllerResource objects.
 func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
-		obj.Primary = pointer.Bool(true)
+		obj.Primary = ptr.To(true)
 	}
 
 	if obj.Kind == "Extension" {
 		if obj.GloballyEnabled == nil {
-			obj.GloballyEnabled = pointer.Bool(false)
+			obj.GloballyEnabled = ptr.To(false)
 		}
 
 		if obj.ReconcileTimeout == nil {
@@ -48,10 +48,12 @@ func SetDefaults_ControllerResourceLifecycle(obj *ControllerResourceLifecycle) {
 		afterKubeAPIServer := AfterKubeAPIServer
 		obj.Reconcile = &afterKubeAPIServer
 	}
+
 	if obj.Delete == nil {
 		beforeKubeAPIServer := BeforeKubeAPIServer
 		obj.Delete = &beforeKubeAPIServer
 	}
+
 	if obj.Migrate == nil {
 		beforeKubeAPIServer := BeforeKubeAPIServer
 		obj.Migrate = &beforeKubeAPIServer

@@ -18,14 +18,15 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,10 +50,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Util", func() {
@@ -427,7 +428,7 @@ var _ = Describe("Util", func() {
 
 				coreV1Client.AddReactor("create", "serviceaccounts", func(action testing.Action) (bool, runtime.Object, error) {
 					if action.GetSubresource() != "token" {
-						return false, nil, fmt.Errorf("subresource should be 'token'")
+						return false, nil, errors.New("subresource should be 'token'")
 					}
 
 					cAction, ok := action.(testing.CreateAction)

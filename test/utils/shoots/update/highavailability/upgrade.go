@@ -21,24 +21,27 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/test/framework"
 )
 
 // UpgradeAndVerify runs the HA control-plane upgrade tests for an existing shoot cluster.
 func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureToleranceType gardencorev1beta1.FailureToleranceType) {
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), false)
 	By("Update Shoot control plane to HA with failure tolerance type " + string(failureToleranceType))
 	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
@@ -54,6 +57,7 @@ func UpgradeAndVerify(ctx context.Context, f *framework.ShootFramework, failureT
 	By("Verify Shoot's control plane components")
 	verifyTopologySpreadConstraint(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
 	verifyEtcdAffinity(ctx, f.SeedClient, f.Shoot, f.ShootSeedNamespace())
+	verifyEnvoyFilterInIstioNamespace(ctx, f.SeedClient, f.ShootSeedNamespace(), true)
 }
 
 func verifyTopologySpreadConstraint(ctx context.Context, seedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, namespace string) {
@@ -167,8 +171,29 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
-			BackoffLimit: pointer.Int32(0),
+			BackoffLimit: ptr.To[int32](0),
 		},
 	}
 	return &job, c.Create(ctx, &job)
+}
+
+func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string, checkLabels bool) {
+	var filteredList []*istionetworkingv1alpha3.EnvoyFilter
+	CEventually(ctx, func(g Gomega) {
+		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
+		g.Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
+		filteredList = []*istionetworkingv1alpha3.EnvoyFilter{}
+		for _, filter := range envoyFilters.Items {
+			if filter.Name != shootName {
+				continue
+			}
+			// Old Gardener releases do not manage the envoy filter and hence we may end up with one managed and one unmanaged filter
+			if checkLabels && filter.Labels["resources.gardener.cloud/managed-by"] != "gardener" {
+				continue
+			}
+			filteredList = append(filteredList, filter)
+		}
+		g.Expect(filteredList).To(HaveLen(1))
+	}).Should(Succeed())
+	Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress"))
 }

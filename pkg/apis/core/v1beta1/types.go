@@ -18,6 +18,10 @@ const (
 	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
 	// status using Lease resources for each Seed
 	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
+	// GardenerShootIssuerNamespace is the namespace in which Gardenlet
+	// will sync service account issuer discovery documents
+	// of Shoot clusters which require managed issuer
+	GardenerShootIssuerNamespace = "gardener-system-shoot-issuer"
 )
 
 // IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.

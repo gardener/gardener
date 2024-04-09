@@ -17,6 +17,7 @@ package seed
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -27,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -42,6 +42,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.SeedVersion == nil {
+		var err error
+		r.SeedVersion, err = semver.NewVersion(r.SeedClientSet.Version())
+		if err != nil {
+			return err
+		}
+	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
@@ -50,9 +57,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
-	}
-	if r.ChartsPath == "" {
-		r.ChartsPath = charts.Path
 	}
 
 	if r.ClientCertificateExpirationTimestamp == nil {
@@ -69,8 +73,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
-		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.HasName(r.Config.SeedConfig.Name),

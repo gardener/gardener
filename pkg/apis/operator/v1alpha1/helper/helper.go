@@ -105,6 +105,41 @@ func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*ga
 	f(garden.Status.Credentials.Rotation.ETCDEncryptionKey)
 }
 
+// IsObservabilityRotationInitiationTimeAfterLastCompletionTime returns true when the lastInitiationTime in the
+// .status.credentials.rotation.observability field is newer than the lastCompletionTime. This is also true if the
+// lastCompletionTime is unset.
+func IsObservabilityRotationInitiationTimeAfterLastCompletionTime(credentials *operatorv1alpha1.Credentials) bool {
+	if credentials == nil ||
+		credentials.Rotation == nil ||
+		credentials.Rotation.Observability == nil ||
+		credentials.Rotation.Observability.LastInitiationTime == nil {
+		return false
+	}
+
+	return credentials.Rotation.Observability.LastCompletionTime == nil ||
+		credentials.Rotation.Observability.LastCompletionTime.Before(credentials.Rotation.Observability.LastInitiationTime)
+}
+
+// MutateObservabilityRotation mutates the .status.credentials.rotation.observability field based on the provided
+// mutation function. If the field is nil then it is initialized.
+func MutateObservabilityRotation(garden *operatorv1alpha1.Garden, f func(*gardencorev1beta1.ObservabilityRotation)) {
+	if f == nil {
+		return
+	}
+
+	if garden.Status.Credentials == nil {
+		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+	}
+	if garden.Status.Credentials.Rotation == nil {
+		garden.Status.Credentials.Rotation = &operatorv1alpha1.CredentialsRotation{}
+	}
+	if garden.Status.Credentials.Rotation.Observability == nil {
+		garden.Status.Credentials.Rotation.Observability = &gardencorev1beta1.ObservabilityRotation{}
+	}
+
+	f(garden.Status.Credentials.Rotation.Observability)
+}
+
 // HighAvailabilityEnabled returns true if the high-availability is enabled.
 func HighAvailabilityEnabled(garden *operatorv1alpha1.Garden) bool {
 	return garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil

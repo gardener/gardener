@@ -1,5 +1,5 @@
 {{- if .Values.global.admission.enabled }}
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-admission-controller
@@ -70,7 +70,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-admission-controller
-        image: {{ include "utils-templates.image" .Values.global.admission.image }}
+        image: {{ include "image" .Values.global.admission.image }}
         imagePullPolicy: {{ .Values.global.admission.image.pullPolicy }}
         args:
         - --config=/etc/gardener-admission-controller/config/config.yaml

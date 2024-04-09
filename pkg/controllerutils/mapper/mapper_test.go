@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper
+package mapper_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,8 +32,9 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
+	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 func TestHandler(t *testing.T) {
@@ -83,7 +84,7 @@ var _ = Describe("Controller Mapper", func() {
 		var mapper Mapper
 
 		BeforeEach(func() {
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, nil)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, nil)
 		})
 
 		It("should find all objects for the passed cluster", func() {
@@ -100,12 +101,12 @@ var _ = Describe("Controller Mapper", func() {
 		It("should find no objects for the passed cluster because predicates do not match", func() {
 			predicates := []predicate.Predicate{
 				predicate.Funcs{
-					GenericFunc: func(event event.GenericEvent) bool {
+					GenericFunc: func(_ event.GenericEvent) bool {
 						return false
 					},
 				},
 			}
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, predicates)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, predicates)
 
 			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
 

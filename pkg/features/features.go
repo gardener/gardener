@@ -58,24 +58,24 @@ const (
 	// alpha: v1.64.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 
-	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
+	// ShootForceDeletion allows force deletion of Shoots.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
-	// alpha: v1.70.0
-	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
+	// alpha: v1.81.0
+	// beta: v1.91.0
+	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
-	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the
-	// machine-controller-manager. If enabled, all registered provider extensions must support injecting the
-	// provider-specific MCM provider sidecar container into the deployment via the `controlplane` webhook.
-	// owner: @rfranzke @JensAc @mreiger
-	// alpha: v1.73.0
-	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
+	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
+	// nodes.
+	// owner: @timuthy @benedictweis
+	// alpha: v1.92.0
+	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 
-	// DisableScalingClassesForShoots disables assigning a ScalingClass to Shoots based on their maximum Node count
-	// All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this
-	// depend on the ScalingClass
-	// owner: @voelzmo, @andrerun
-	// alpha: v1.73.0
-	DisableScalingClassesForShoots featuregate.Feature = "DisableScalingClassesForShoots"
+	// ShootManagedIssuer enables the shoot managed issuer functionality described in GEP 24.
+	// If enabled it will force gardenlet to fail if shoot service account hostname is not configured.
+	// owner: @dimityrmirchev
+	// alpha: v1.93.0
+	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -101,16 +101,17 @@ const (
 // feature gate map for gardener-apiserver. Hence, we reuse it for all our components.
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
-var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
-	WorkerlessShoots:                   {Default: false, PreRelease: featuregate.Alpha},
-	MachineControllerManagerDeployment: {Default: false, PreRelease: featuregate.Alpha},
-	DisableScalingClassesForShoots:     {Default: false, PreRelease: featuregate.Alpha},
+// AllFeatureGates is the list of all feature gates.
+var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	HVPA:                            {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
+	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
+	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
@@ -118,7 +119,7 @@ func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]fe
 	out := make(map[featuregate.Feature]featuregate.FeatureSpec)
 
 	for _, fg := range featureGates {
-		if spec, ok := allFeatureGates[fg]; ok {
+		if spec, ok := AllFeatureGates[fg]; ok {
 			out[fg] = spec
 		}
 	}

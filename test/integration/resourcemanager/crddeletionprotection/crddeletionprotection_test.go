@@ -32,9 +32,9 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -108,14 +108,14 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 	testDeletionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
 			err := testClient.Delete(ctx, obj)
-			return string(apierrors.ReasonForError(err))
+			return err.Error()
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeleteCollectionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
 			err := testClient.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
-			return string(apierrors.ReasonForError(err))
+			return err.Error()
 		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 

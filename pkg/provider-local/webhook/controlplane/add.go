@@ -31,9 +31,6 @@ import (
 
 var (
 	logger = log.Log.WithName("local-controlplane-webhook")
-
-	// GardenletManagesMCM specifies whether the machine-controller-manager should be managed.
-	GardenletManagesMCM bool
 )
 
 // AddToManager creates a webhook and adds it to the manager.
@@ -50,6 +47,6 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			{Obj: &vpaautoscalingv1.VerticalPodAutoscaler{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
-		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(logger, GardenletManagesMCM), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
+		Mutator: genericmutator.NewMutator(mgr, NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

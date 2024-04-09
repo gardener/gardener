@@ -68,8 +68,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolUDP},
+				{Port: utils.IntStrPtrFromInt32(9053), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt32(9053), Protocol: &protocolUDP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{
@@ -89,9 +89,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt(8132), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(8443), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(9443), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt32(8132), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt32(8443), Protocol: &protocolTCP},
+				{Port: utils.IntStrPtrFromInt32(9443), Protocol: &protocolTCP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{

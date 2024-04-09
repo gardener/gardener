@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -85,6 +86,8 @@ type Values struct {
 	Values []string
 	// TTL is the time to live in seconds of the DNSRecord.
 	TTL *int64
+	// IPStack is the indication of the IP stack used for the DNSRecord. It can be ipv4, ipv6 or dual-stack.
+	IPStack string
 }
 
 // New creates a new instance that implements component.DeployMigrateWaiter.
@@ -149,6 +152,10 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			d.isTimestampInvalidOrAfterLastUpdateTime() {
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
+		}
+
+		if d.values.IPStack != "" {
+			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, gardenerutils.AnnotationKeyIPStack, d.values.IPStack)
 		}
 
 		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
@@ -305,9 +312,9 @@ func (d *dnsRecord) SetValues(values []string) {
 
 func (d *dnsRecord) valuesDontMatchDNSRecord() bool {
 	return d.values.SecretName != d.dnsRecord.Spec.SecretRef.Name ||
-		!pointer.StringEqual(d.values.Zone, d.dnsRecord.Spec.Zone) ||
+		!ptr.Equal(d.values.Zone, d.dnsRecord.Spec.Zone) ||
 		!reflect.DeepEqual(d.values.Values, d.dnsRecord.Spec.Values) ||
-		!pointer.Int64Equal(d.values.TTL, d.dnsRecord.Spec.TTL)
+		!ptr.Equal(d.values.TTL, d.dnsRecord.Spec.TTL)
 }
 
 func (d *dnsRecord) lastOperationNotSuccessful() bool {

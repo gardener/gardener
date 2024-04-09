@@ -15,11 +15,12 @@
 package shoot_test
 
 import (
+	"context"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
@@ -32,12 +33,13 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
-	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
 	var (
+		ctx = context.TODO()
 		log logr.Logger
 		cl  clock.Clock
 		cfg gardenletconfig.GardenletConfiguration
@@ -83,13 +85,13 @@ var _ = Describe("Add", func() {
 			}))
 			queue.EXPECT().AddAfter(req, duration)
 
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events", func() {
 			queue.EXPECT().Add(req)
 
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should forget the backoff and enqueue the object for Update events setting the deletionTimestamp", func() {
@@ -99,15 +101,15 @@ var _ = Describe("Add", func() {
 			objOld := obj.DeepCopy()
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: objOld}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: objOld}, queue)
 		})
 
 		It("should not enqueue the object for Delete events", func() {
-			hdlr.Delete(event.DeleteEvent{Object: obj}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: obj}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
 		})
 	})
 })

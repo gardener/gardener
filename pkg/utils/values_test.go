@@ -17,7 +17,7 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
 )
@@ -52,24 +52,24 @@ var _ = Describe("Values", func() {
 			Objects: []object{
 				{
 					Object: &object{
-						String: pointer.String("foo"),
+						String: ptr.To("foo"),
 					},
-					Int: pointer.Int32(42),
+					Int: ptr.To[int32](42),
 				},
 			},
-			Bool: pointer.Bool(true),
+			Bool: ptr.To(true),
 		}
 
 		objUpper = &objectUpperCase{
 			Objects: []objectUpperCase{
 				{
 					Object: &objectUpperCase{
-						String: pointer.String("foo"),
+						String: ptr.To("foo"),
 					},
-					Int: pointer.Int32(42),
+					Int: ptr.To[int32](42),
 				},
 			},
-			Bool: pointer.Bool(true),
+			Bool: ptr.To(true),
 		}
 
 		values = map[string]interface{}{
@@ -123,7 +123,7 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with lower-case keys - only the first letter should be changed", func() {
-			objUpper.BoolWithMe = pointer.Bool(true)
+			objUpper.BoolWithMe = ptr.To(true)
 			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
 			Expect(err).ToNot(HaveOccurred())
 			values["boolWithMe"] = true
@@ -135,20 +135,20 @@ var _ = Describe("Values", func() {
 				Objects: []objectUpperCase{
 					{
 						Object: &objectUpperCase{
-							String: pointer.String("foo"),
+							String: ptr.To("foo"),
 						},
 						Objects: []objectUpperCase{
 							{
-								Int: pointer.Int32(50),
+								Int: ptr.To[int32](50),
 								Object: &objectUpperCase{
-									String: pointer.String("bar"),
+									String: ptr.To("bar"),
 								},
 							},
 						},
-						Int: pointer.Int32(42),
+						Int: ptr.To[int32](42),
 					},
 				},
-				Bool: pointer.Bool(true),
+				Bool: ptr.To(true),
 			}
 
 			values = map[string]interface{}{
@@ -177,14 +177,14 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map removing entries with zero values", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: true})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(values))
 		})
 
 		It("should convert an object to a values map containing empty entries", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 
 			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: false})
 			Expect(err).ToNot(HaveOccurred())
@@ -193,37 +193,37 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an object to a values map with nested slices", func() {
-			obj.String = pointer.String("")
+			obj.String = ptr.To("")
 
 			obj = &object{
 				Objects: []object{
 					{
 						Object: &object{
-							String: pointer.String("one"),
+							String: ptr.To("one"),
 							Objects: []object{
 								{
-									String: pointer.String("two-l1"),
+									String: ptr.To("two-l1"),
 									Objects: []object{
 										{
-											String: pointer.String(""),
-											Int:    pointer.Int32(3),
+											String: ptr.To(""),
+											Int:    ptr.To[int32](3),
 										},
 									},
 								},
 								{
-									String: pointer.String("two-l2"),
+									String: ptr.To("two-l2"),
 									Objects: []object{
 										{
-											Int: pointer.Int32(4),
+											Int: ptr.To[int32](4),
 										},
 									},
 								},
 							},
 						},
-						Int: pointer.Int32(42),
+						Int: ptr.To[int32](42),
 					},
 				},
-				Bool: pointer.Bool(true),
+				Bool: ptr.To(true),
 			}
 
 			values = map[string]interface{}{

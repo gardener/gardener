@@ -16,6 +16,7 @@ package gardener_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,12 +26,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -286,7 +289,7 @@ var _ = Describe("Shoot", func() {
 			workerPool = gardencorev1beta1.Worker{
 				Name: "worker",
 				Machine: gardencorev1beta1.Machine{
-					Architecture: pointer.String("arm64"),
+					Architecture: ptr.To("arm64"),
 				},
 				SystemComponents: &gardencorev1beta1.WorkerSystemComponents{
 					Allow: true,
@@ -364,9 +367,9 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
-	Describe("#ComputeShootProjectSecretName", func() {
+	Describe("#ComputeShootProjectResourceName", func() {
 		It("should compute the expected name", func() {
-			Expect(ComputeShootProjectSecretName("foo", "bar")).To(Equal("foo.bar"))
+			Expect(ComputeShootProjectResourceName("foo", "bar")).To(Equal("foo.bar"))
 		})
 	})
 
@@ -396,6 +399,26 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("ca-client suffix", "baz.ca-client", "baz", true),
+	)
+
+	DescribeTable("#ComputeManagedShootIssuerSecretName",
+		func(projectName string, shootUID types.UID, expectedName string) {
+			Expect(ComputeManagedShootIssuerSecretName(projectName, shootUID)).To(Equal(expectedName))
+		},
+		Entry("test one", "foo", types.UID("123"), "foo--123"),
+		Entry("test two", "bar", types.UID("4-5"), "bar--4-5"),
+	)
+
+	DescribeTable("#IsShootProjectConfigMap",
+		func(name, expectedShootName string, expectedOK bool) {
+			shootName, ok := IsShootProjectConfigMap(name)
+			Expect(shootName).To(Equal(expectedShootName))
+			Expect(ok).To(Equal(expectedOK))
+		},
+		Entry("no suffix", "foo", "", false),
+		Entry("unrelated suffix", "foo.bar", "", false),
+		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
+		Entry("ca-cluster suffix", "baz.ca-cluster", "baz", true),
 	)
 
 	Describe("#NewShootAccessSecret", func() {
@@ -504,6 +527,12 @@ var _ = Describe("Shoot", func() {
 					validate()
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
+				})
+
+				It("should work w/ service account labels", func() {
+					accessSecret.WithServiceAccountLabels(map[string]string{"foo": "bar"})
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/labels", `{"foo":"bar"}`))
 				})
 			})
 
@@ -622,7 +651,7 @@ var _ = Describe("Shoot", func() {
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To[int32](420),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{
@@ -633,7 +662,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "kubeconfig",
 										Path: "kubeconfig",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 							{
@@ -645,7 +674,7 @@ var _ = Describe("Shoot", func() {
 										Key:  "token",
 										Path: "token",
 									}},
-									Optional: pointer.Bool(false),
+									Optional: ptr.To(false),
 								},
 							},
 						},
@@ -673,14 +702,14 @@ var _ = Describe("Shoot", func() {
 		It("returns the correct seed names of a Shoot", func() {
 			specSeedName, statusSeedName := GetShootSeedNames(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: pointer.String("spec"),
+					SeedName: ptr.To("spec"),
 				},
 				Status: gardencorev1beta1.ShootStatus{
-					SeedName: pointer.String("status"),
+					SeedName: ptr.To("status"),
 				},
 			})
-			Expect(specSeedName).To(Equal(pointer.String("spec")))
-			Expect(statusSeedName).To(Equal(pointer.String("status")))
+			Expect(specSeedName).To(Equal(ptr.To("spec")))
+			Expect(statusSeedName).To(Equal(ptr.To("status")))
 		})
 	})
 
@@ -709,6 +738,60 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			})).To(BeEmpty())
+		})
+
+		It("should return tolerations in order", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "b",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "a",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+				{
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true},
+					Taints: []corev1.Taint{
+						{
+							Key:    "c",
+							Value:  "someValue",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			})).To(HaveExactElements(
+				corev1.Toleration{
+					Key:      "a",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+				corev1.Toleration{
+					Key:      "b",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+				corev1.Toleration{
+					Key:      "c",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "someValue",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			))
 		})
 
 		It("should return tolerations when taints are defined for system worker group", func() {
@@ -873,7 +956,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Type:       &provider,
 									SecretName: &dnsSecretName,
-									Primary:    pointer.Bool(true),
+									Primary:    ptr.To(true),
 								},
 							},
 						},
@@ -937,7 +1020,7 @@ var _ = Describe("Shoot", func() {
 							Providers: []gardencorev1beta1.DNSProvider{
 								{
 									Type:    &provider,
-									Primary: pointer.Bool(true),
+									Primary: ptr.To(true),
 								},
 							},
 						},
@@ -1009,7 +1092,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:            extensionsv1alpha1.ExtensionResource,
 									Type:            extensionType2,
-									GloballyEnabled: pointer.Bool(true),
+									GloballyEnabled: ptr.To(true),
 								},
 							},
 						},
@@ -1048,14 +1131,14 @@ var _ = Describe("Shoot", func() {
 						},
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(networkingType),
+						Type: ptr.To(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: pointer.String(dnsProviderType3)},
+							{Type: ptr.To(dnsProviderType3)},
 						},
 					},
 				},
@@ -1065,7 +1148,7 @@ var _ = Describe("Shoot", func() {
 		It("should compute the correct list of required extensions", func() {
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.New(
+			Expect(result).To(BeEquivalentTo(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1087,7 +1170,7 @@ var _ = Describe("Shoot", func() {
 
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.New(
+			Expect(result).To(BeEquivalentTo(sets.New(
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
@@ -1105,12 +1188,12 @@ var _ = Describe("Shoot", func() {
 		It("should compute the correct list of required extensions (shoot explicitly disables globally enabled extension)", func() {
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
 				Type:     extensionType2,
-				Disabled: pointer.Bool(true),
+				Disabled: ptr.To(true),
 			})
 
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.New(
+			Expect(result).To(BeEquivalentTo(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1131,7 +1214,7 @@ var _ = Describe("Shoot", func() {
 
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.New(
+			Expect(result).To(BeEquivalentTo(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1152,8 +1235,8 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType1,
-									GloballyEnabled:     pointer.Bool(true),
-									WorkerlessSupported: pointer.Bool(false),
+									GloballyEnabled:     ptr.To(true),
+									WorkerlessSupported: ptr.To(false),
 								},
 							},
 						},
@@ -1164,8 +1247,8 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType2,
-									GloballyEnabled:     pointer.Bool(true),
-									WorkerlessSupported: pointer.Bool(true),
+									GloballyEnabled:     ptr.To(true),
+									WorkerlessSupported: ptr.To(true),
 								},
 							},
 						},
@@ -1176,7 +1259,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:            extensionsv1alpha1.ExtensionResource,
 									Type:            extensionType3,
-									GloballyEnabled: pointer.Bool(true),
+									GloballyEnabled: ptr.To(true),
 								},
 							},
 						},
@@ -1186,7 +1269,7 @@ var _ = Describe("Shoot", func() {
 
 			result := ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
-			Expect(result).To(Equal(sets.New(
+			Expect(result).To(BeEquivalentTo(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1202,4 +1285,81 @@ var _ = Describe("Shoot", func() {
 			Expect(ExtensionsID("foo", "bar")).To(Equal("foo/bar"))
 		})
 	})
+
+	Describe("#ComputeTechnicalID", func() {
+		var (
+			projectName string
+			shoot       *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			projectName = "project-a"
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			}
+		})
+
+		It("should return the ID from status", func() {
+			shoot.Status = gardencorev1beta1.ShootStatus{
+				TechnicalID: "some-id",
+			}
+
+			Expect(ComputeTechnicalID(projectName, shoot)).To(Equal("some-id"))
+		})
+
+		It("should calculate a new ID", func() {
+			Expect(ComputeTechnicalID(projectName, shoot)).To(Equal(fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)))
+		})
+	})
+
+	Describe("#GetShootConditionTypes", func() {
+		It("should return all shoot condition types", func() {
+			Expect(GetShootConditionTypes(false)).To(HaveExactElements(
+				gardencorev1beta1.ConditionType("APIServerAvailable"),
+				gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
+				gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+				gardencorev1beta1.ConditionType("EveryNodeReady"),
+				gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+			))
+		})
+
+		It("should return all shoot condition types for workerless shoot", func() {
+			Expect(GetShootConditionTypes(true)).To(HaveExactElements(
+				gardencorev1beta1.ConditionType("APIServerAvailable"),
+				gardencorev1beta1.ConditionType("ControlPlaneHealthy"),
+				gardencorev1beta1.ConditionType("ObservabilityComponentsHealthy"),
+				gardencorev1beta1.ConditionType("SystemComponentsHealthy"),
+			))
+		})
+	})
+
+	Describe("#DefaultGVKsForEncryption", func() {
+		It("should return all default GroupVersionKinds", func() {
+			Expect(DefaultGVKsForEncryption()).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			))
+		})
+	})
+
+	Describe("#DefaultResourcesForEncryption", func() {
+		It("should return all default resources", func() {
+			Expect(DefaultResourcesForEncryption().UnsortedList()).To(ConsistOf(
+				"secrets",
+			))
+		})
+	})
+
+	DescribeTable("#GetIPStackForShoot",
+		func(shoot *gardencorev1beta1.Shoot, expectedResult string) {
+			Expect(GetIPStackForShoot(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("default shoot", &gardencorev1beta1.Shoot{}, "ipv4"),
+		Entry("ipv4 shoot", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}}}}, "ipv4"),
+		Entry("ipv6 shoot", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}}}}, "ipv6"),
+		Entry("dual-stack shoot (ipv4 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
+		Entry("dual-stack shoot (ipv6 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
+	)
 })

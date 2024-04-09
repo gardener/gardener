@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package certificatesigningrequest
+package certificatesigningrequest_test
 
 import (
 	"context"
@@ -20,9 +20,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509/pkix"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,8 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Reconciler", func() {

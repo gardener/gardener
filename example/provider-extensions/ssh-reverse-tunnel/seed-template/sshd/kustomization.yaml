@@ -4,10 +4,8 @@ kind: Kustomization
 resources:
 - ../../../base/sshd
 
-configMapGenerator:
-- name: gardener-apiserver-sshd-keys
-  namespace: relay
-  files:
+secretGenerator:
+- files:
   - host-keys/authorized_keys
   - host-keys/ssh_host_ecdsa_key
   - host-keys/ssh_host_ecdsa_key.pub
@@ -15,3 +13,5 @@ configMapGenerator:
   - host-keys/ssh_host_ed25519_key.pub
   - host-keys/ssh_host_rsa_key
   - host-keys/ssh_host_rsa_key.pub
+  name: gardener-apiserver-sshd-keys
+  namespace: relay

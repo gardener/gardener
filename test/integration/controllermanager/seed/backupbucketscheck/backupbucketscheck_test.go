@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -75,10 +75,10 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 				Networks: gardencorev1beta1.SeedNetworks{
 					Pods:     "10.0.0.0/16",
 					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
+					Nodes:    ptr.To("10.2.0.0/16"),
 					ShootDefaults: &gardencorev1beta1.ShootNetworks{
-						Pods:     pointer.String("100.128.0.0/11"),
-						Services: pointer.String("100.72.0.0/13"),
+						Pods:     ptr.To("100.128.0.0/11"),
+						Services: ptr.To("100.72.0.0/13"),
 					},
 				},
 			},
@@ -122,8 +122,8 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		createBackupBucket(bb1, seed)
-		createBackupBucket(bb2, seed)
+		createBackupBucket(bb1)
+		createBackupBucket(bb2)
 
 		By("Wait until BackupBucketsReady condition is set to True")
 		Eventually(func(g Gomega) {
@@ -193,7 +193,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 	})
 })
 
-func createBackupBucket(backupBucket *gardencorev1beta1.BackupBucket, seed *gardencorev1beta1.Seed) {
+func createBackupBucket(backupBucket *gardencorev1beta1.BackupBucket) {
 	By("Create BackupBucket")
 	Expect(testClient.Create(ctx, backupBucket)).To(Succeed(), backupBucket.Name+" should be created")
 	log.Info("Created BackupBucket for test", "backupBucket", client.ObjectKeyFromObject(backupBucket))

@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,12 +33,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
@@ -61,7 +61,6 @@ type Reconciler struct {
 	ShootClientMap        clientmap.ClientMap
 	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
-	ImageVector           imagevector.ImageVector
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
 	SeedName              string
@@ -95,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
-	if pointer.StringDeref(shoot.Spec.SeedName, "") != r.SeedName {
+	if ptr.Deref(shoot.Spec.SeedName, "") != r.SeedName {
 		return reconcile.Result{}, nil
 	}
 
@@ -103,39 +102,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	defer cancel()
 
 	// Initialize conditions based on the current status.
-	conditionTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.ShootAPIServerAvailable,
-		gardencorev1beta1.ShootControlPlaneHealthy,
-		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootSystemComponentsHealthy,
-	}
+	shootConditions := NewShootConditions(r.Clock, shoot)
 
-	if !v1beta1helper.IsWorkerless(shoot) {
-		conditionTypes = append(conditionTypes,
-			gardencorev1beta1.ShootEveryNodeReady,
-		)
-	}
-
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range conditionTypes {
-		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))
-	}
-
-	// Initialize constraints
-	constraintTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.ShootHibernationPossible,
-		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
-		gardencorev1beta1.ShootCACertificateValiditiesAcceptable,
-		gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks,
-	}
-	var constraints []gardencorev1beta1.Condition
-	for _, constr := range constraintTypes {
-		constraints = append(constraints, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Constraints, constr))
-	}
+	// Initialize constraints based on the current status.
+	shootConstraints := NewShootConstraints(r.Clock, shoot)
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := gardenerutils.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
+		secrets, err := gardenerutils.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName), true, features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
 		}
@@ -152,11 +126,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.Identity,
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
-		r.ImageVector,
 		shoot,
 	)
 	if err != nil {
-		if err := r.patchStatusToUnknown(ctx, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
+		if err := r.patchStatusToUnknown(ctx, shoot, "Precondition failed: operation could not be initialized", shootConditions.ConvertToSlice(), shootConstraints.ConvertToSlice()); err != nil {
 			log.Error(err, "Error when trying to update the shoot status after failed operation initialization")
 		}
 		return reconcile.Result{}, err
@@ -171,36 +144,47 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := NewHealthCheck(o, initializeShootClients, r.Clock)
-			updatedConditions = shootHealth.Check(
-				ctx,
+			updatedConditions = NewHealthCheck(
+				log,
+				o.Shoot,
+				o.Seed,
+				r.SeedClientSet,
+				r.GardenClient,
+				initializeShootClients,
+				r.Clock,
+				&r.Config,
 				r.conditionThresholdsToProgressingMapping(),
+			).Check(
+				ctx,
 				staleExtensionHealthCheckThreshold,
-				conditions,
+				shootConditions,
 			)
 			return nil
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := NewConstraintCheck(clock.RealClock{}, o, initializeShootClients)
-			updatedConstraints = constraint.Check(
+			updatedConstraints = NewConstraintCheck(
+				log,
+				o.Shoot,
+				r.SeedClientSet.Client(),
+				initializeShootClients,
+				clock.RealClock{},
+			).Check(
 				ctx,
-				constraints,
+				shootConstraints,
 			)
 			return nil
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := NewGarbageCollector(o, initializeShootClients)
-			garbageCollector.Collect(ctx)
+			NewGarbageCollector(o, initializeShootClients).Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
 		// Trigger webhook remediation
 		func(ctx context.Context) error {
-			if pointer.BoolDeref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
-				webhookRemediator := NewWebhookRemediator(o, initializeShootClients)
-				_ = webhookRemediator.Remediate(ctx)
+			if ptr.Deref(r.Config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
+				_ = NewWebhookRemediator(log, shoot, initializeShootClients).Remediate(ctx)
 				// errors during webhook remediation are only being logged and do not cause the care operation to fail
 			}
 			return nil
@@ -210,12 +194,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Update Shoot status (conditions, constraints) if necessary
-	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) || v1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+	if v1beta1helper.ConditionsNeedUpdate(shootConditions.ConvertToSlice(), updatedConditions) ||
+		v1beta1helper.ConditionsNeedUpdate(shootConstraints.ConvertToSlice(), updatedConstraints) {
 		log.V(1).Info("Updating status conditions and constraints")
 		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
-		constraints = v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
+		conditions := v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, shootConditions.ConditionTypes())
+		constraints := v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, shootConstraints.ConstraintTypes())
 
 		if err := r.patchStatus(ctx, shoot, conditions, constraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status")

@@ -31,12 +31,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "CustomVerbAuthorizer"
-
 	// CustomVerbModifyProjectTolerationsWhitelist is a constant for the custom verb that allows modifying the
 	// `.spec.tolerations.whitelist` field in `Project` resources.
 	CustomVerbModifyProjectTolerationsWhitelist = "modify-spec-tolerations-whitelist"
@@ -47,7 +45,7 @@ const (
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, NewFactory)
+	plugins.Register(plugin.PluginNameCustomVerbAuthorizer, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.

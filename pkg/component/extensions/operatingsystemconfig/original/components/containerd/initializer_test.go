@@ -17,7 +17,7 @@ package containerd_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -36,7 +36,7 @@ var _ = Describe("Initializer", func() {
 				"pause-container": {
 					Name:       "pause-container",
 					Repository: pauseContainerImageRepo,
-					Tag:        pointer.String(pauseContainerImageTag),
+					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}
 		)
@@ -53,9 +53,9 @@ var _ = Describe("Initializer", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-initializer.service",
-					Command: pointer.String("start"),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+					Command: ptr.To(extensionsv1alpha1.CommandStart),
+					Enable:  ptr.To(true),
+					Content: ptr.To(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target
@@ -68,7 +68,7 @@ ExecStart=/opt/bin/init-containerd`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/opt/bin/init-containerd",
-					Permissions: pointer.Int32(744),
+					Permissions: ptr.To[int32](744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -78,7 +78,7 @@ ExecStart=/opt/bin/init-containerd`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To[int32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: `[Unit]
@@ -107,6 +107,24 @@ fi
 sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
 pause_image=` + pauseContainerImageRepo + `:` + pauseContainerImageTag + `
 sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
+
+# create and configure registry hosts directory
+CONFIG_PATH=/etc/containerd/certs.d
+mkdir -p "$CONFIG_PATH"
+if ! grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry]' "$FILE"; then
+  echo "CRI registry section not found. Adding CRI registry section with config_path = \"$CONFIG_PATH\" in $FILE."
+  cat <<EOF >> $FILE
+[plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed
+  config_path = "/etc/containerd/certs.d"
+EOF
+else
+  if grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed' "$FILE"; then
+    echo "CRI registry section is already gardener managed. Nothing to do."
+  else
+    echo "CRI registry section is not gardener managed. Setting config_path = \"$CONFIG_PATH\" in $FILE."
+    sed --null-data --in-place 's/\(\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\]\)\n\(\s*config_path\s*=\s*\)""\n/\1 \# gardener-managed\n\2"\/etc\/containerd\/certs.d"\n/' "$FILE"
+  fi
+fi
 
 # allow to import custom configuration files
 CUSTOM_CONFIG_DIR=/etc/containerd/conf.d

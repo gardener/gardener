@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -229,7 +229,7 @@ var _ = Describe("Generate", func() {
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
-				Expect(secretInfos.old.obj).To(Equal(withoutTypeMeta(secret)))
+				Expect(secretInfos.old.obj).To(Equal(secret))
 				Expect(secretInfos.bundle).To(BeNil())
 			})
 
@@ -273,7 +273,7 @@ var _ = Describe("Generate", func() {
 				secretInfos, found := m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
-				Expect(secretInfos.old.obj).To(Equal(withoutTypeMeta(secret)))
+				Expect(secretInfos.old.obj).To(Equal(secret))
 				Expect(secretInfos.bundle).To(BeNil())
 
 				By("Generate secret again after given duration")
@@ -358,7 +358,7 @@ var _ = Describe("Generate", func() {
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
 				Expect(secretInfos.old).To(BeNil())
-				Expect(secretInfos.bundle.obj).To(Equal(withTypeMeta(&secretList.Items[0])))
+				Expect(secretInfos.bundle.obj).To(Equal(&secretList.Items[0]))
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
@@ -449,7 +449,7 @@ var _ = Describe("Generate", func() {
 				secretInfos, found = m.getFromStore(name)
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(newSecret))
-				Expect(secretInfos.old.obj).To(Equal(withoutTypeMeta(secret)))
+				Expect(secretInfos.old.obj).To(Equal(secret))
 				Expect(secretInfos.bundle.obj).NotTo(PointTo(Equal(oldBundleSecret)))
 			})
 		})
@@ -554,7 +554,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, newServerSecret)
 
 				By("Verify server secret is still the same")
-				Expect(newServerSecret).To(Equal(withTypeMeta(serverSecret)))
+				Expect(newServerSecret).To(Equal(serverSecret))
 			})
 
 			It("should regenerate the server cert when the CA rotates and the 'UseCurrentCA' option is set", func() {
@@ -653,7 +653,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("Generate new control plane secret")
-				serverConfig.Validity = pointer.Duration(1337 * time.Minute)
+				serverConfig.Validity = ptr.To(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretsutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,
@@ -721,7 +721,7 @@ var _ = Describe("Generate", func() {
 			BeforeEach(func() {
 				config = &secretsutils.RSASecretConfig{
 					Name: name,
-					Bits: 2048,
+					Bits: 3072,
 				}
 			})
 
@@ -729,7 +729,7 @@ var _ = Describe("Generate", func() {
 				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(secret.Name).To(Equal(name + "-16163da7"))
+				Expect(secret.Name).To(Equal(name + "-c34363f0"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Find created bundle secret")
@@ -746,7 +746,7 @@ var _ = Describe("Generate", func() {
 				Expect(found).To(BeTrue())
 				Expect(secretInfos.current.obj).To(Equal(secret))
 				Expect(secretInfos.old).To(BeNil())
-				Expect(secretInfos.bundle.obj).To(Equal(withTypeMeta(&secretList.Items[0])))
+				Expect(secretInfos.bundle.obj).To(Equal(&secretList.Items[0]))
 			})
 
 			It("should generate a new RSA private key secret but no bundle since it's used for SSH", func() {
@@ -755,7 +755,7 @@ var _ = Describe("Generate", func() {
 				By("Generate new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(secret.Name).To(Equal(name + "-fc4f9932"))
+				Expect(secret.Name).To(Equal(name + "-c0d53d4a"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("Verify internal store reflects changes")
@@ -836,17 +836,5 @@ func expectSecretWasCreated(ctx context.Context, fakeClient client.Client, secre
 	foundSecret := &corev1.Secret{}
 	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
-	Expect(foundSecret).To(Equal(withTypeMeta(secret)))
-}
-
-func withTypeMeta(obj *corev1.Secret) *corev1.Secret {
-	secret := obj.DeepCopy()
-	secret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
-	return secret
-}
-
-func withoutTypeMeta(obj *corev1.Secret) *corev1.Secret {
-	secret := obj.DeepCopy()
-	secret.TypeMeta = metav1.TypeMeta{}
-	return secret
+	Expect(foundSecret).To(Equal(secret))
 }

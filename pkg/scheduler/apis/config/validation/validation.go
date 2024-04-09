@@ -15,6 +15,7 @@
 package validation
 
 import (
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -26,7 +27,7 @@ import (
 func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateStrategy(config.Schedulers.Shoot.Strategy, field.NewPath("schedulers", "shoot", "strategy"))...)
+	allErrs = append(allErrs, validateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
 
 	if config.LogLevel != "" {
 		if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
@@ -43,6 +44,24 @@ func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field
 	return allErrs
 }
 
+// validateSchedulerControllerConfiguration validates the scheduler controller configuration.
+func validateSchedulerControllerConfiguration(schedulers schedulerconfig.SchedulerControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+	)
+
+	if schedulers.BackupBucket != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(schedulers.BackupBucket.ConcurrentSyncs), fldPath.Child("backupBucket", "concurrentSyncs"))...)
+	}
+
+	if schedulers.Shoot != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(schedulers.Shoot.ConcurrentSyncs), fldPath.Child("shoot", "concurrentSyncs"))...)
+		allErrs = append(allErrs, validateStrategy(schedulers.Shoot.Strategy, fldPath.Child("shoot", "strategy"))...)
+	}
+
+	return allErrs
+}
+
 func validateStrategy(strategy schedulerconfig.CandidateDeterminationStrategy, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs             = field.ErrorList{}
@@ -51,6 +70,7 @@ func validateStrategy(strategy schedulerconfig.CandidateDeterminationStrategy, f
 
 	for _, s := range schedulerconfig.Strategies {
 		supportedStrategies = append(supportedStrategies, string(s))
+
 		if s == strategy {
 			return allErrs
 		}

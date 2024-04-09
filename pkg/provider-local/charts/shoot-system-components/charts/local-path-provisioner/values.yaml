@@ -1,0 +1,3 @@
+images:
+  local-path-provisioner: image-repository:image-tag
+  local-path-helper: image-repository:image-tag

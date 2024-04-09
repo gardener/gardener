@@ -1,4 +1,6 @@
 ---
+title: Architecture
+description: The concepts behind the Gardener architecture
 categories:
   - Users
 ---

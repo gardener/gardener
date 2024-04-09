@@ -36,35 +36,34 @@ var shootCreationCfg *ShootCreationConfig
 type ShootCreationConfig struct {
 	GardenerConfig *GardenerConfig
 
-	shootKubeconfigPath           string
-	seedKubeconfigPath            string
-	testShootName                 string
-	testShootPrefix               string
-	shootMachineImageName         string
-	shootMachineType              string
-	shootMachineImageVersion      string
-	cloudProfile                  string
-	seedName                      string
-	shootRegion                   string
-	secretBinding                 string
-	shootProviderType             string
-	shootK8sVersion               string
-	externalDomain                string
-	workerZone                    string
-	networkingType                string
-	networkingPods                string
-	networkingServices            string
-	networkingNodes               string
-	startHibernatedFlag           string
-	startHibernated               bool
-	allowPrivilegedContainersFlag string
-	allowPrivilegedContainers     *bool
-	infrastructureProviderConfig  string
-	controlPlaneProviderConfig    string
-	networkingProviderConfig      string
-	workersConfig                 string
-	shootYamlPath                 string
-	shootAnnotations              string
+	shootKubeconfigPath          string
+	seedKubeconfigPath           string
+	testShootName                string
+	testShootPrefix              string
+	shootMachineImageName        string
+	shootMachineType             string
+	shootMachineImageVersion     string
+	cloudProfile                 string
+	seedName                     string
+	shootRegion                  string
+	secretBinding                string
+	shootProviderType            string
+	shootK8sVersion              string
+	externalDomain               string
+	workerZone                   string
+	networkingType               string
+	networkingPods               string
+	networkingServices           string
+	networkingNodes              string
+	startHibernatedFlag          string
+	startHibernated              bool
+	infrastructureProviderConfig string
+	controlPlaneProviderConfig   string
+	networkingProviderConfig     string
+	workersConfig                string
+	shootYamlPath                string
+	shootAnnotations             string
+	controlPlaneFailureTolerance string
 }
 
 // ShootCreationFramework represents the shoot test framework that includes
@@ -148,14 +147,6 @@ func validateShootCreationConfig(cfg *ShootCreationConfig) {
 			ginkgo.Fail("startHibernated is not a boolean value")
 		}
 		cfg.startHibernated = parsedBool
-	}
-
-	if StringSet(cfg.allowPrivilegedContainersFlag) {
-		parsedBool, err := strconv.ParseBool(cfg.allowPrivilegedContainersFlag)
-		if err != nil {
-			ginkgo.Fail("allowPrivilegedContainers is not a boolean value")
-		}
-		cfg.allowPrivilegedContainers = &parsedBool
 	}
 
 	if StringSet(cfg.infrastructureProviderConfig) {
@@ -283,14 +274,6 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.startHibernated = overwrite.startHibernated
 	}
 
-	if StringSet(overwrite.allowPrivilegedContainersFlag) {
-		base.allowPrivilegedContainersFlag = overwrite.allowPrivilegedContainersFlag
-	}
-
-	if overwrite.allowPrivilegedContainers != nil {
-		base.allowPrivilegedContainers = overwrite.allowPrivilegedContainers
-	}
-
 	if StringSet(overwrite.infrastructureProviderConfig) {
 		base.infrastructureProviderConfig = overwrite.infrastructureProviderConfig
 	}
@@ -305,6 +288,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 
 	if StringSet(overwrite.workersConfig) {
 		base.workersConfig = overwrite.workersConfig
+	}
+
+	if StringSet(overwrite.controlPlaneFailureTolerance) {
+		base.controlPlaneFailureTolerance = overwrite.controlPlaneFailureTolerance
 	}
 
 	if StringSet(overwrite.shootYamlPath) {
@@ -341,7 +328,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.networkingServices, "networking-services", "", "the spec.networking.services to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.startHibernatedFlag, "start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
-	flag.StringVar(&newCfg.allowPrivilegedContainersFlag, "allow-privileged-containers", "", "the spec.kubernetes.allowPrivilegedContainers to use for this shoot. Optional, defaults to true.")
+	flag.StringVar(&newCfg.controlPlaneFailureTolerance, "control-plane-failure-tolerance", "", "the .spec.controlPlane.HighAvailability.FailureTolerance.FailureToleranceType to use for this shoot. Optional, defaults to no failure tolerance")
 
 	if newCfg.networkingType == "" {
 		newCfg.networkingType = "calico"
@@ -425,16 +412,6 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	} else {
 		if err := DownloadAdminKubeconfigForShoot(ctx, shootFramework.GardenClient, shootFramework.Shoot, f.Config.shootKubeconfigPath); err != nil {
 			return fmt.Errorf("failed downloading shoot kubeconfig: %w", err)
-		}
-	}
-
-	if f.Config.seedKubeconfigPath == "" {
-		f.Logger.Info("Seed kubeconfig path is not specified, skipping downloading the static token kubeconfig for the Seed")
-	} else if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
-		f.Logger.Info("Seed does not have secretRef set, skipping constructing seed client")
-	} else {
-		if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
-			return fmt.Errorf("failed downloading seed kubeconfig: %w", err)
 		}
 	}
 

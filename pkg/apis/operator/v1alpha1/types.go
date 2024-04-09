@@ -16,8 +16,10 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,7 +29,13 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Cluster,shortName="grdn"
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Reconciled",type=string,JSONPath=`.status.conditions[?(@.type=="Reconciled")].status`,description="Indicates whether the garden has been reconciled."
+// +kubebuilder:printcolumn:name="K8S Version",type=string,JSONPath=`.spec.virtualCluster.kubernetes.version`,description="Kubernetes version of virtual cluster."
+// +kubebuilder:printcolumn:name="Gardener Version",type=string,JSONPath=`.status.gardener.version`,description="Version of the Gardener components."
+// +kubebuilder:printcolumn:name="Last Operation",type=string,JSONPath=`.status.lastOperation.state`,description="Status of the last operation"
+// +kubebuilder:printcolumn:name="Runtime",type=string,JSONPath=`.status.conditions[?(@.type=="RuntimeComponentsHealthy")].status`,description="Indicates whether the components related to the runtime cluster are healthy."
+// +kubebuilder:printcolumn:name="Virtual",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualComponentsHealthy")].status`,description="Indicates whether the components related to the virtual cluster are healthy."
+// +kubebuilder:printcolumn:name="API Server",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualGardenAPIServerAvailable")].status`,description="Indicates whether the API server of the virtual cluster is available."
+// +kubebuilder:printcolumn:name="Observability",type=string,JSONPath=`.status.conditions[?(@.type=="ObservabilityComponentsHealthy")].status`,description="Indicates whether the observability components related to the runtime cluster are healthy."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 
 // Garden describes a list of gardens.
@@ -63,8 +71,8 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
-	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
-	Ingress gardencorev1beta1.Ingress `json:"ingress"`
+	// Ingress configures Ingress specific settings for the Garden cluster.
+	Ingress Ingress `json:"ingress"`
 	// Networking defines the networking configuration of the runtime cluster.
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
@@ -72,6 +80,20 @@ type RuntimeCluster struct {
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+	// Volume contains settings for persistent volumes created in the runtime cluster.
+	// +optional
+	Volume *Volume `json:"volume,omitempty"`
+}
+
+// Ingress configures the Ingress specific settings of the runtime cluster.
+type Ingress struct {
+	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
+	// to construct ingress URLs for system applications running in runtime cluster.
+	// +kubebuilder:validation:MinItems=1
+	// +optional
+	Domains []string `json:"domains,omitempty"`
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
+	Controller gardencorev1beta1.IngressController `json:"controller"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
@@ -147,6 +169,13 @@ type SettingTopologyAwareRouting struct {
 	Enabled bool `json:"enabled"`
 }
 
+// Volume contains settings for persistent volumes created in the runtime cluster.
+type Volume struct {
+	// MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.
+	// +optional
+	MinimumSize *resource.Quantity `json:"minimumSize,omitempty"`
+}
+
 // VirtualCluster contains configuration for the virtual cluster.
 type VirtualCluster struct {
 	// ControlPlane holds information about the general settings for the control plane of the virtual cluster.
@@ -157,6 +186,8 @@ type VirtualCluster struct {
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
+	// Gardener contains the configuration options for the Gardener control plane components.
+	Gardener Gardener `json:"gardener"`
 	// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
 	// cluster.
 	Kubernetes Kubernetes `json:"kubernetes"`
@@ -168,12 +199,9 @@ type VirtualCluster struct {
 
 // DNS holds information about DNS settings.
 type DNS struct {
-	// Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
-	// TODO(timuthy): Drop this after v1.74 has been released.
-	// +optional
-	Domain *string `json:"domain,omitempty"`
 	// Domains are the external domains of the virtual garden cluster.
 	// The first given domain in this list is immutable.
+	// +kubebuilder:validation:MinItems=1
 	// +optional
 	Domains []string `json:"domains,omitempty"`
 }
@@ -226,7 +254,7 @@ type Backup struct {
 	BucketName string `json:"bucketName"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
-	SecretRef corev1.SecretReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // Maintenance contains information about the time window for maintenance operations.
@@ -270,9 +298,6 @@ type KubeAPIServerConfig struct {
 	// Authentication contains settings related to authentication.
 	// +optional
 	Authentication *Authentication `json:"authentication,omitempty"`
-	// Authorization contains settings related to authorization.
-	// +optional
-	Authorization *Authorization `json:"authorization,omitempty"`
 	// ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
 	// etcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from
 	// this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.
@@ -324,35 +349,6 @@ type AuthenticationWebhook struct {
 	Version *string `json:"version,omitempty"`
 }
 
-// Authorization contains settings related to authorization.
-type Authorization struct {
-	// Webhook contains settings related to an authorization webhook configuration.
-	// +optional
-	Webhook *AuthorizationWebhook `json:"webhook,omitempty"`
-}
-
-// AuthorizationWebhook contains settings related to an authorization webhook configuration.
-type AuthorizationWebhook struct {
-	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
-	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
-	// +optional
-	CacheAuthorizedTTL *metav1.Duration `json:"cacheAuthorizedTTL,omitempty"`
-	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
-	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
-	// +optional
-	CacheUnauthorizedTTL *metav1.Duration `json:"cacheUnauthorizedTTL,omitempty"`
-	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
-	// +kubebuilder:validation:MinLength=1
-	KubeconfigSecretName string `json:"kubeconfigSecretName"`
-	// Version is the API version to send and expect from the webhook.
-	// +kubebuilder:default=v1beta1
-	// +kubebuilder:validation:Enum=v1beta1;v1
-	// +optional
-	Version *string `json:"version,omitempty"`
-}
-
 // GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.
 type GroupResource struct {
 	// Group is the API group name.
@@ -398,6 +394,138 @@ type KubeControllerManagerConfig struct {
 	CertificateSigningDuration *metav1.Duration `json:"certificateSigningDuration,omitempty"`
 }
 
+// Gardener contains the configuration settings for the Gardener components.
+type Gardener struct {
+	// ClusterIdentity is the identity of the garden cluster. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	ClusterIdentity string `json:"clusterIdentity"`
+	// APIServer contains configuration settings for the gardener-apiserver.
+	// +optional
+	APIServer *GardenerAPIServerConfig `json:"gardenerAPIServer,omitempty"`
+	// AdmissionController contains configuration settings for the gardener-admission-controller.
+	// +optional
+	AdmissionController *GardenerAdmissionControllerConfig `json:"gardenerAdmissionController,omitempty"`
+	// ControllerManager contains configuration settings for the gardener-controller-manager.
+	// +optional
+	ControllerManager *GardenerControllerManagerConfig `json:"gardenerControllerManager,omitempty"`
+	// Scheduler contains configuration settings for the gardener-scheduler.
+	// +optional
+	Scheduler *GardenerSchedulerConfig `json:"gardenerScheduler,omitempty"`
+}
+
+// GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
+type GardenerAPIServerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
+	// and, if desired, the corresponding configuration.
+	// +optional
+	AdmissionPlugins []gardencorev1beta1.AdmissionPlugin `json:"admissionPlugins,omitempty"`
+	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
+	// +optional
+	AuditConfig *gardencorev1beta1.AuditConfig `json:"auditConfig,omitempty"`
+	// AuditWebhook contains settings related to an audit webhook configuration.
+	// +optional
+	AuditWebhook *AuditWebhook `json:"auditWebhook,omitempty"`
+	// Logging contains configuration for the log level and HTTP access logs.
+	// +optional
+	Logging *gardencorev1beta1.APIServerLogging `json:"logging,omitempty"`
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	// +optional
+	Requests *gardencorev1beta1.APIServerRequests `json:"requests,omitempty"`
+	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+	// Configuring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests
+	// and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's
+	// capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+	// might happen that controller watches are permanently stopped with `too old resource version` errors.
+	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
+	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
+	// +optional
+	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes `json:"watchCacheSizes,omitempty"`
+	// EncryptionConfig contains customizable encryption configuration of the Gardener API server.
+	// +optional
+	EncryptionConfig *gardencorev1beta1.EncryptionConfig `json:"encryptionConfig,omitempty"`
+}
+
+// GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.
+type GardenerAdmissionControllerConfig struct {
+	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+	// ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.
+	// +optional
+	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
+}
+
+// ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
+type ResourceAdmissionConfiguration struct {
+	// Limits contains configuration for resources which are subjected to size limitations.
+	Limits []ResourceLimit `json:"limits"`
+	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
+	// +optional
+	UnrestrictedSubjects []rbacv1.Subject `json:"unrestrictedSubjects,omitempty"`
+	// OperationMode specifies the mode the webhooks operates in. Allowed values are "block" and "log". Defaults to "block".
+	// +optional
+	OperationMode *ResourceAdmissionWebhookMode `json:"operationMode,omitempty"`
+}
+
+// ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.
+type ResourceAdmissionWebhookMode string
+
+// ResourceLimit contains settings about a kind and the size each resource should have at most.
+type ResourceLimit struct {
+	// APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
+	// +optional
+	APIGroups []string `json:"apiGroups,omitempty"`
+	// APIVersions is the version of the resource. WildcardAll represents all versions.
+	// +optional
+	APIVersions []string `json:"apiVersions,omitempty"`
+	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
+	Resources []string `json:"resources"`
+	// Size specifies the imposed limit.
+	Size resource.Quantity `json:"size"`
+}
+
+// GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.
+type GardenerControllerManagerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
+	// specified.
+	// +optional
+	DefaultProjectQuotas []ProjectQuotaConfiguration `json:"defaultProjectQuotas,omitempty"`
+	// LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+}
+
+// ProjectQuotaConfiguration defines quota configurations.
+type ProjectQuotaConfiguration struct {
+	// Config is the quota specification used for the project set-up.
+	// Only v1.ResourceQuota resources are supported.
+	Config runtime.RawExtension `json:"config"`
+	// ProjectSelector is an optional setting to select the projects considered for quotas.
+	// Defaults to empty LabelSelector, which matches all projects.
+	// +optional
+	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
+}
+
+// GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
+type GardenerSchedulerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+}
+
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Garden.
@@ -405,11 +533,19 @@ type GardenStatus struct {
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions.
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
+	// LastOperation holds information about the last operation on the Garden.
+	// +optional
+	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
+	// EncryptedResources is the list of resources which are currently encrypted in the virtual garden by the virtual kube-apiserver.
+	// Resources which are encrypted by default will not appear here.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config for more details.
+	// +optional
+	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
 
 // Credentials contains information about the virtual garden cluster credentials.
@@ -430,17 +566,20 @@ type CredentialsRotation struct {
 	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
 	// +optional
 	ETCDEncryptionKey *gardencorev1beta1.ETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty"`
+	// Observability contains information about the observability credential rotation.
+	// +optional
+	Observability *gardencorev1beta1.ObservabilityRotation `json:"observability,omitempty"`
 }
 
 const (
-	// GardenReconciled is a constant for a condition type indicating that the garden has been reconciled.
-	GardenReconciled gardencorev1beta1.ConditionType = "Reconciled"
 	// RuntimeComponentsHealthy is a constant for a condition type indicating the runtime components health.
 	RuntimeComponentsHealthy gardencorev1beta1.ConditionType = "RuntimeComponentsHealthy"
 	// VirtualComponentsHealthy is a constant for a condition type indicating the virtual garden components health.
 	VirtualComponentsHealthy gardencorev1beta1.ConditionType = "VirtualComponentsHealthy"
 	// VirtualGardenAPIServerAvailable is a constant for a condition type indicating that the virtual garden's API server is available.
 	VirtualGardenAPIServerAvailable gardencorev1beta1.ConditionType = "VirtualGardenAPIServerAvailable"
+	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
+	ObservabilityComponentsHealthy gardencorev1beta1.ConditionType = v1beta1constants.ObservabilityComponentsHealthy
 )
 
 // AvailableOperationAnnotations is the set of available operation annotations for Garden resources.
@@ -452,6 +591,10 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 	v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+	v1beta1constants.OperationRotateObservabilityCredentials,
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
 )
+
+// FinalizerName is the name of the finalizer used by gardener-operator.
+const FinalizerName = "gardener.cloud/operator"

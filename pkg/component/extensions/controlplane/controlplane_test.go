@@ -20,15 +20,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -37,11 +37,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("ControlPlane", func() {
@@ -133,10 +133,6 @@ var _ = Describe("ControlPlane", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.ControlPlaneResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -165,10 +161,6 @@ var _ = Describe("ControlPlane", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.ControlPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.ControlPlaneResource,
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name + "-exposure",
 					Namespace: namespace,
@@ -398,7 +390,7 @@ var _ = Describe("ControlPlane", func() {
 						{
 							Name:    &name,
 							Kind:    extensionsv1alpha1.ControlPlaneResource,
-							Purpose: pointer.String(string(purpose)),
+							Purpose: ptr.To(string(purpose)),
 							State:   state,
 						},
 					},
@@ -427,7 +419,7 @@ var _ = Describe("ControlPlane", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})
@@ -470,14 +462,14 @@ var _ = Describe("ControlPlane", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})
 
 			// restore state
 			shootState.Spec.Extensions[0].Name = &obj.Name
-			shootState.Spec.Extensions[0].Purpose = pointer.String(string(values.Purpose))
+			shootState.Spec.Extensions[0].Purpose = ptr.To(string(values.Purpose))
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, expectedWithState, obj, types.MergePatchType)

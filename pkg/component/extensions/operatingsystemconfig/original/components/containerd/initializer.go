@@ -19,14 +19,14 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
-	"k8s.io/utils/pointer"
+	"github.com/Masterminds/sprig/v3"
+	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
 )
 
 var (
@@ -67,7 +67,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	var script bytes.Buffer
 	if err := tplInitializer.Execute(&script, map[string]interface{}{
 		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
-		"pauseContainerImage": ctx.Images[images.ImageNamePauseContainer],
+		"pauseContainerImage": ctx.Images[imagevector.ImageNamePauseContainer],
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -75,9 +75,9 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:    unitNameInitializer,
-				Command: pointer.String("start"),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Enable:  ptr.To(true),
+				Content: ptr.To(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target
@@ -90,7 +90,7 @@ ExecStart=` + pathScript),
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathScript,
-				Permissions: pointer.Int32(744),
+				Permissions: ptr.To[int32](744),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -100,7 +100,7 @@ ExecStart=` + pathScript),
 			},
 			{
 				Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-				Permissions: pointer.Int32(0644),
+				Permissions: ptr.To[int32](0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: `[Unit]

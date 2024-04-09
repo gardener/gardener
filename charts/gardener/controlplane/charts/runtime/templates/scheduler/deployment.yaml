@@ -1,5 +1,5 @@
 {{- if .Values.global.scheduler.enabled }}
-apiVersion: {{ include "deploymentversion" . }}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gardener-scheduler
@@ -69,7 +69,7 @@ spec:
       {{- end }}
       containers:
       - name: gardener-scheduler
-        image: {{ include "utils-templates.image" .Values.global.scheduler.image }}
+        image: {{ include "image" .Values.global.scheduler.image }}
         imagePullPolicy: {{ .Values.global.scheduler.image.pullPolicy }}
         args:
         - --config=/etc/gardener-scheduler/config/schedulerconfiguration.yaml

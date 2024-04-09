@@ -26,17 +26,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ControllerRegistrationResources"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, NewFactory)
+	plugins.Register(plugin.PluginNameControllerRegistrationResources, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.
@@ -52,7 +48,7 @@ type Resources struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreClientset(&Resources{})
+	_ = admissioninitializer.WantsCoreClientSet(&Resources{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -70,8 +66,8 @@ func (r *Resources) AssignReadyFunc(f admission.ReadyFunc) {
 	r.SetReadyFunc(f)
 }
 
-// SetInternalCoreClientset gets the clientset from the Kubernetes client.
-func (r *Resources) SetInternalCoreClientset(c gardencoreclientset.Interface) {
+// SetCoreClientSet gets the clientset from the Kubernetes client.
+func (r *Resources) SetCoreClientSet(c gardencoreclientset.Interface) {
 	r.coreClient = c
 }
 
@@ -111,7 +107,7 @@ func (r *Resources) Validate(ctx context.Context, a admission.Attributes, _ admi
 	}
 
 	// Live lookup to prevent missing any data
-	controllerRegistrationList, err := r.coreClient.Core().ControllerRegistrations().List(ctx, metav1.ListOptions{})
+	controllerRegistrationList, err := r.coreClient.CoreV1beta1().ControllerRegistrations().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

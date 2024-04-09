@@ -164,6 +164,6 @@ In the first case, we will probably need a proxy for the proxy-server that knows
 - API server proxy can be utilized to invert the connection (only for clusters >= 1.18, for older clusters the old VPN solution will remain).
 - This is achieved by utilizing the `--egress-selector-config-file` flag on the api-server.
 - For monitoring endpoints, the proxy subresources would be the preferable methods to go, but in the future we can also support sidecar proxies that can communicate with the proxy-server.
-- For directing traffic to the correct proxy-server, we will re-use the SNI proxy along with the load-balancer from [the shoot API server via SNI GEP](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md).
+- For directing traffic to the correct proxy-server, we will re-use the SNI proxy along with the load-balancer from [the shoot API server via SNI GEP](./08-shoot-apiserver-via-sni.md).
 
 

@@ -7,18 +7,12 @@ resources:
 - project.yaml
 - secret-backup.yaml
 - secretbinding.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.25.0/example/controller-registration.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.34.1/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.32.2/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.39.0/example/controller-registration.yaml
 
-patchesStrategicMerge:
-- patch-controller-registrations.yaml
 
 patches:
-- target:
-    group: core.gardener.cloud
-    kind: ControllerRegistration
-    name: provider-local
-  patch: |
+- patch: |
     - op: add
       path: /spec/resources/-
       value:
@@ -35,3 +29,15 @@ patches:
         kind: Extension
         type: local-ext-shoot
         workerlessSupported: true
+    - op: add
+      path: /spec/resources/-
+      value:
+        kind: Extension
+        type: local-ext-shoot-after-worker
+        lifecycle:
+          reconcile: AfterWorker
+  target:
+    group: core.gardener.cloud
+    kind: ControllerRegistration
+    name: provider-local
+- path: patch-controller-registrations.yaml

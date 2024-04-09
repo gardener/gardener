@@ -3,8 +3,6 @@ kind: Kustomization
 
 namespace: registry
 
-commonLabels:
-  app: registry
 
 resources:
 - namespace.yaml
@@ -14,3 +12,8 @@ resources:
 - k8s
 - localhost
 - quay
+- europe-docker-pkg-dev
+labels:
+- includeSelectors: true
+  pairs:
+    app: registry

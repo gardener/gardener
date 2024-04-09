@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -79,10 +79,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&corev1.Namespace{}, runtimeCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(runtimeCluster.GetCache(), &corev1.Namespace{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&corev1.Endpoints{}, runtimeCluster.GetCache()),
+		source.Kind(runtimeCluster.GetCache(), &corev1.Endpoints{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsKubernetesEndpoint(),
 	); err != nil {
@@ -100,7 +100,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, runtimeCluster.GetCache()),
+		source.Kind(runtimeCluster.GetCache(), &networkingv1.NetworkPolicy{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 		r.NetworkPolicyPredicate(),
 	); err != nil {

@@ -49,7 +49,7 @@ var _ = Describe("Static Token Secrets", func() {
 				staticToken, ok := obj.(*StaticToken)
 				Expect(ok).To(BeTrue())
 
-				Expect(len(staticToken.Tokens)).To(Equal(1))
+				Expect(staticToken.Tokens).To(HaveLen(1))
 				Expect(staticToken.Tokens[0].Token).ToNot(Equal(""))
 				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[username].Username))
 				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[username].UserID))

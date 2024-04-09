@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"slices"
 	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -43,7 +44,6 @@ type Reconciler struct {
 	TargetClient       client.Client
 	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
 	Config             config.KubeletCSRApproverControllerConfig
-	SourceNamespace    string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -124,7 +124,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 		return "common name in CSR does not match username", false, nil
 	}
 
-	if len(x509cr.Subject.Organization) != 1 || !utils.ValueExists(user.NodesGroup, x509cr.Subject.Organization) {
+	if len(x509cr.Subject.Organization) != 1 || !slices.Contains(x509cr.Subject.Organization, user.NodesGroup) {
 		return "organization in CSR does not match nodes group", false, nil
 	}
 
@@ -139,12 +139,12 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
-	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.SourceNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
+	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.Config.MachineNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
 		return "", false, err
 	}
 
 	if length := len(machineList.Items); length != 1 {
-		return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", r.SourceNamespace, node.Name, length), false, nil
+		return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", r.Config.MachineNamespace, node.Name, length), false, nil
 	}
 
 	var (

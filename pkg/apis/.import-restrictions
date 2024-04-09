@@ -5,7 +5,7 @@ rules:
   - k8s.io/api
   - k8s.io/klog
   - k8s.io/utils/clock
-  - k8s.io/utils/pointer
+  - k8s.io/utils/ptr
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis

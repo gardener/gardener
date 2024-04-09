@@ -46,6 +46,9 @@ type Reconciler struct {
 	Clock           clock.Clock
 	GardenClientMap clientmap.ClientMap
 	GardenNamespace string
+
+	registerManagedResourceWatchFunc func() error
+	managedResourceWatchRegistered   bool
 }
 
 // Reconcile reconciles Garden resources and executes health check operations.
@@ -66,38 +69,47 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	if !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
+		if err := r.registerManagedResourceWatchFunc(); err != nil {
+			log.Error(err, "Failed registering watch for resources.gardener.cloud/v1alpha1.ManagedResource now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
+		} else {
+			r.managedResourceWatchRegistered = true
+		}
+	}
+
 	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.GardenCare.SyncPeriod.Duration)
 	defer cancel()
 
 	log.V(1).Info("Starting garden care")
 
 	// Initialize conditions based on the current status.
-	conditionTypes := []gardencorev1beta1.ConditionType{
-		operatorv1alpha1.VirtualGardenAPIServerAvailable,
-		operatorv1alpha1.RuntimeComponentsHealthy,
-		operatorv1alpha1.VirtualComponentsHealthy,
-	}
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range conditionTypes {
-		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, cond))
-	}
+	gardenConditions := NewGardenConditions(r.Clock, garden.Status)
 
 	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
 	if err != nil {
 		log.V(1).Info("Could not get garden client", "error", err)
 	}
 
-	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, gardenClientSet, r.Clock, r.GardenNamespace).CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(
+		garden,
+		r.RuntimeClient,
+		gardenClientSet,
+		r.Clock,
+		r.conditionThresholdsToProgressingMapping(),
+		r.GardenNamespace,
+	).Check(
+		ctx,
+		gardenConditions,
+	)
 
 	// Update Garden status conditions if necessary
-	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
+	if v1beta1helper.ConditionsNeedUpdate(gardenConditions.ConvertToSlice(), updatedConditions) {
+		log.Info("Updating garden status conditions")
+		patch := client.MergeFrom(garden.DeepCopy())
 		// Rebuild garden conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, conditionTypes)
+		garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
 
-		log.Info("Updating garden status conditions")
-		patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-		garden.Status.Conditions = conditions
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, garden, patch); err != nil {
 			log.Error(err, "Could not update garden status")
 			return reconcile.Result{}, err

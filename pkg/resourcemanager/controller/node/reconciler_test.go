@@ -18,10 +18,10 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -33,16 +33,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/node"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var (
@@ -350,7 +349,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(AllCSINodeDriversAreReady(log, recorder, node, requiredDrivers, nil)).To(BeFalse())
 			// note that the order if driver names can vary, therefore we only
-			// check that there are exactly two occurences of *.driver.example.com
+			// check that there are exactly two occurrences of *.driver.example.com
 			Eventually(logBuffer).Should(gbytes.Say(`Unready required CSI drivers.+(?:foo|bar)\.driver\.example\.com\"\,\"(?:foo|bar)\.driver\.example\.com\"\]`))
 		})
 
@@ -368,7 +367,7 @@ var _ = Describe("Reconciler", func() {
 			ctx  context.Context
 			node *corev1.Node
 
-			c runtimeclient.Client
+			c client.Client
 		)
 
 		BeforeEach(func() {
@@ -394,7 +393,7 @@ var _ = Describe("Reconciler", func() {
 		It("should remove the critical-components-not-ready taint if it's the only taint", func() {
 			Expect(RemoveTaint(ctx, c, node)).To(Succeed())
 
-			Expect(c.Get(ctx, runtimeclient.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Spec.Taints).To(BeEmpty())
 		})
 
@@ -417,7 +416,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(RemoveTaint(ctx, c, node)).To(Succeed())
 
-			Expect(c.Get(ctx, runtimeclient.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Spec.Taints).To(HaveLen(2))
 			Expect(node.Spec.Taints).To(Equal([]corev1.Taint{
 				{

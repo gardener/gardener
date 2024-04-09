@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
 		return r.migrate(ctx, log, ex)
 	case ex.DeletionTimestamp != nil:
-		return r.delete(ctx, log, ex)
+		return r.delete(ctx, log, ex, cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot))
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, ex, operationType)
 	default:
@@ -143,7 +143,7 @@ func (r *reconciler) reconcile(
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
+func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension, forceDelete bool) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
 		log.Info("Deleting Extension causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
@@ -154,7 +154,13 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, ex *extensions
 	}
 
 	log.Info("Starting the deletion of Extension")
-	if err := r.actuator.Delete(ctx, log, ex); err != nil {
+	var err error
+	if forceDelete {
+		err = r.actuator.ForceDelete(ctx, log, ex)
+	} else {
+		err = r.actuator.Delete(ctx, log, ex)
+	}
+	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the Extension")
 		return reconcilerutils.ReconcileErr(err)
 	}

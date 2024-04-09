@@ -71,6 +71,7 @@ func (c *cidrPath) ValidateSubset(subsets ...CIDR) field.ErrorList {
 	if c.ParseError != nil {
 		return allErrs
 	}
+
 	for _, subset := range subsets {
 		if subset == nil || c == subset || !subset.Parse() {
 			continue
@@ -80,6 +81,7 @@ func (c *cidrPath) ValidateSubset(subsets ...CIDR) field.ErrorList {
 			allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must be a subset of %q (%q)", c.fieldPath.String(), c.cidr)))
 		}
 	}
+
 	return allErrs
 }
 
@@ -88,6 +90,7 @@ func (c *cidrPath) ValidateOverlap(subsets ...CIDR) field.ErrorList {
 	if c.ParseError != nil {
 		return allErrs
 	}
+
 	for _, subset := range subsets {
 		if subset == nil || c == subset || !subset.Parse() {
 			continue
@@ -100,6 +103,7 @@ func (c *cidrPath) ValidateOverlap(subsets ...CIDR) field.ErrorList {
 
 		allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must overlap with %q (%q)", c.fieldPath.String(), c.cidr)))
 	}
+
 	return allErrs
 }
 
@@ -108,6 +112,7 @@ func (c *cidrPath) ValidateNotOverlap(subsets ...CIDR) field.ErrorList {
 	if c.ParseError != nil {
 		return allErrs
 	}
+
 	for _, subset := range subsets {
 		if subset == nil || c == subset || !subset.Parse() {
 			continue
@@ -120,6 +125,7 @@ func (c *cidrPath) ValidateNotOverlap(subsets ...CIDR) field.ErrorList {
 
 		allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must not overlap with %q (%q)", c.fieldPath.String(), c.cidr)))
 	}
+
 	return allErrs
 }
 

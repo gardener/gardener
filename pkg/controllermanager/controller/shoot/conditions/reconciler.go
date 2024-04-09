@@ -27,6 +27,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -59,16 +60,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Build new shoot conditions
-	// First remove all existing seed conditions and then add the current seed conditions
-	// if the shoot is still registered as seed
-	seedConditionTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.SeedBackupBucketsReady,
-		gardencorev1beta1.SeedBootstrapped,
-		gardencorev1beta1.SeedExtensionsReady,
-		gardencorev1beta1.SeedGardenletReady,
-		gardencorev1beta1.SeedSystemComponentsHealthy,
-	}
-	conditions := v1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
+	// First remove all existing seed conditions and then add the current seed conditions if the shoot is still registered as seed.
+	// The list of shoot conditions is well known (see contract https://github.com/gardener/gardener/blob/master/docs/extensions/shoot-health-status-conditions.md)
+	// as opposed to seed conditions. Thus, subtract all shoot conditions to filter out the seed conditions.
+	shootConditions := gardenerutils.GetShootConditionTypes(false)
+
+	conditions := v1beta1helper.RetainConditions(shoot.Status.Conditions, shootConditions...)
 	if seed != nil {
 		conditions = v1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
 	}

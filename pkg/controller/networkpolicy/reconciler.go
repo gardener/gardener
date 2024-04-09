@@ -28,23 +28,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	corednsconstants "github.com/gardener/gardener/pkg/component/coredns/constants"
-	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
+	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
@@ -61,6 +64,8 @@ type Reconciler struct {
 
 // RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
 type RuntimeNetworkConfig struct {
+	// IPFamilies specifies the IP protocol versions used in the runtime cluster.
+	IPFamilies []gardencore.IPFamily
 	// Nodes is the CIDR of the node network.
 	Nodes *string
 	// Pods is the CIDR of the pod network.
@@ -69,6 +74,23 @@ type RuntimeNetworkConfig struct {
 	Services string
 	// BlockCIDRs is a list of network addresses that should be blocked.
 	BlockCIDRs []string
+}
+
+// getBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock. `ipFamily` should match the
+// IP family of the IPBlock.CIDR value. The resulting list still needs to be filtered for subsets of IPBlock.CIDR.
+func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencore.IPFamily) []string {
+	// NB: BlockCIDRs can contain both IPv4 and IPv6 CIDRs.
+	var peers = append([]string(nil), r.BlockCIDRs...)
+
+	if len(r.IPFamilies) == 1 && r.IPFamilies[0] == ipFamily {
+		peers = append(peers, r.Pods, r.Services)
+
+		if v := r.Nodes; v != nil {
+			peers = append(peers, *v)
+		}
+	}
+
+	return peers
 }
 
 // Reconcile reconciles namespace in order to create some central network policies.
@@ -111,6 +133,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 			}
+
 			continue
 		}
 
@@ -174,6 +197,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			namespaceSelectors: append([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}),
 			}, r.additionalNamespaceLabelSelectors...),
@@ -256,6 +280,11 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 		return err
 	}
 
+	egressRules, err := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...)
+	if err != nil {
+		return err
+	}
+
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
 		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress traffic from pods labeled with '%s=%s' to the endpoints in the default namespace of the kube-apiserver "+
@@ -264,7 +293,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{labelKey: v1beta1constants.LabelNetworkPolicyAllowed}},
-			Egress:      helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...),
+			Egress:      egressRules,
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
@@ -272,6 +301,26 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	peersV4, err := networkPolicyPeersWithExceptions([]string{"0.0.0.0/0"}, append(
+		toCIDRStrings(allPrivateNetworkBlocksV4()...),
+		r.RuntimeNetworks.BlockCIDRs...,
+	)...)
+	if err != nil {
+		return err
+	}
+
+	peersV6, err := networkPolicyPeersWithExceptions([]string{"::/0"}, append(
+		toCIDRStrings(allPrivateNetworkBlocksV6()...),
+		// In IPv4, all cluster networks are contained in the private IPv4 blocks.
+		// In IPv6 however, cluster networks might be "public" (e.g., if using prefix delegation from provider).
+		// As this NetworkPolicy should only allow communication with public networks *outside* the cluster,
+		// we exclude the cluster networks.
+		r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)...,
+	)...)
+	if err != nil {
+		return err
+	}
+
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
 		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress from pods labeled with '%s=%s' to all public network IPs, except for private networks (RFC1918), "+
@@ -282,17 +331,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
 			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{{
-					IPBlock: &networkingv1.IPBlock{
-						CIDR: "0.0.0.0/0",
-						Except: append([]string{
-							private8BitBlock().String(),
-							private12BitBlock().String(),
-							private16BitBlock().String(),
-							carrierGradeNATBlock().String(),
-						}, r.RuntimeNetworks.BlockCIDRs...),
-					},
-				}},
+				To: append(peersV4, peersV6...),
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -326,14 +365,8 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	blockedNetworkPeers := append([]string{
-		r.RuntimeNetworks.Pods,
-		r.RuntimeNetworks.Services,
-	}, r.RuntimeNetworks.BlockCIDRs...)
-
-	if v := r.RuntimeNetworks.Nodes; v != nil {
-		blockedNetworkPeers = append(blockedNetworkPeers, *v)
-	}
+	blockedNetworkPeersV4 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv4)
+	blockedNetworkPeersV6 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)
 
 	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
 		cluster := &extensionsv1alpha1.Cluster{}
@@ -347,19 +380,31 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 		}
 
 		if shoot.Spec.Networking != nil {
+			var shootNetworks []string
 			if v := shoot.Spec.Networking.Nodes; v != nil {
-				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+				shootNetworks = append(shootNetworks, *v)
 			}
 			if v := shoot.Spec.Networking.Pods; v != nil {
-				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+				shootNetworks = append(shootNetworks, *v)
 			}
 			if v := shoot.Spec.Networking.Services; v != nil {
-				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+				shootNetworks = append(shootNetworks, *v)
+			}
+
+			if gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) {
+				blockedNetworkPeersV4 = append(blockedNetworkPeersV4, shootNetworks...)
+			} else {
+				blockedNetworkPeersV6 = append(blockedNetworkPeersV6, shootNetworks...)
 			}
 		}
 	}
 
-	privateNetworkPeers, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocks(), blockedNetworkPeers...)
+	privateNetworkPeersV4, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocksV4(), blockedNetworkPeersV4...)
+	if err != nil {
+		return err
+	}
+
+	privateNetworkPeersV6, err := toNetworkPolicyPeersWithExceptions(allPrivateNetworkBlocksV6(), blockedNetworkPeersV6...)
 	if err != nil {
 		return err
 	}
@@ -372,7 +417,10 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
-			Egress:      []networkingv1.NetworkPolicyEgressRule{{To: privateNetworkPeers}},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{To: privateNetworkPeersV4},
+				{To: privateNetworkPeersV6},
+			},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
@@ -429,9 +477,13 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 		return err
 	}
 
-	runtimeDNSServerAddress, err := common.ComputeOffsetIP(runtimeServiceCIDR, 10)
+	runtimeDNSServerAddress, err := utils.ComputeOffsetIP(runtimeServiceCIDR, 10)
 	if err != nil {
 		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+	}
+	runtimeDNSServerAddressBitLen, err := netutils.GetBitLen(runtimeDNSServerAddress.String())
+	if err != nil {
+		return fmt.Errorf("cannot get bit len: %w", err)
 	}
 
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
@@ -475,21 +527,22 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					// required for node local dns feature, allows egress traffic to CoreDNS
 					{
 						IPBlock: &networkingv1.IPBlock{
-							CIDR: fmt.Sprintf("%s/32", runtimeDNSServerAddress),
+							CIDR: fmt.Sprintf("%s/%d", runtimeDNSServerAddress, runtimeDNSServerAddressBitLen),
 						},
 					},
 					// required for node local dns feature, allows egress traffic to node local dns cache
 					{
 						IPBlock: &networkingv1.IPBlock{
+							// node local dns feature is only supported for shoots with IPv4 single-stack networking
 							CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
 						},
 					},
 				},
 				Ports: []networkingv1.NetworkPolicyPort{
-					{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServiceServer)},
-					{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServiceServer)},
-					{Protocol: utils.ProtocolPtr(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServer)},
-					{Protocol: utils.ProtocolPtr(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt(corednsconstants.PortServer)},
+					{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(corednsconstants.PortServiceServer)},
+					{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(corednsconstants.PortServiceServer)},
+					{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(corednsconstants.PortServer)},
+					{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(corednsconstants.PortServer)},
 				},
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},

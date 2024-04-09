@@ -15,8 +15,6 @@
 package admissionpluginsecret
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -30,9 +28,9 @@ const (
 )
 
 // AddToManager adds Handler to the given manager.
-func (h *Handler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (h *Handler) AddToManager(mgr manager.Manager) error {
 	webhook := admission.
-		WithCustomValidator(&corev1.Secret{}, h).
+		WithCustomValidator(mgr.GetScheme(), &corev1.Secret{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+data:
+
+  # Configuration file for the mesh networks to be used by the Split Horizon EDS.
+  meshNetworks: |-
+    networks: {}
+
+  mesh: |-
+    accessLogFile: "/dev/stdout"
+
+    ingressControllerMode: "OFF"
+
+    # Disable the advertisement of services and endpoints which are not explicitly marked in
+    # ` + "`" + `exportTo` + "`" + `. Improves security and isolation.
+    # Refer to https://istio.io/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig
+    defaultServiceExportTo: ["~"]
+    defaultVirtualServiceExportTo: ["~"]
+    defaultDestinationRuleExportTo: ["~"]
+
+    defaultConfig:
+      discoveryAddress: istiod.{{ .Release.Namespace }}.svc:15012
+
+    defaultProviders:
+      metrics:
+      - prometheus
+    enablePrometheusMerge: true
+
+    rootNamespace: {{ .Release.Namespace }}
+    trustDomain: cluster.local

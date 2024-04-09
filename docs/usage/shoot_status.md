@@ -54,7 +54,7 @@ the overall request might still fail as there is overhead in communication with 
 
 Generally, it's [best practice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
 
-As an effort to correct this common problem, the webhook remediator has been created. This is enabled by setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the `gardenlet`'s configuration. This feature simply checks whether webhook configurations in shoot clusters match a set of rules described [here](../../pkg/operation/botanist/matchers/matcher.go). If at least one of the rules matches, it will change set `status=False` for the `.status.constraints` of type `HibernationPossible` and `MaintenancePreconditionsSatisfied` in the `Shoot` resource. In addition, the `failurePolicy` in the affected webhook configurations will be set from `Fail` to `Ignore`. Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed/adapted according to the rules and best practices.
+As an effort to correct this common problem, the webhook remediator has been created. This is enabled by setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the `gardenlet`'s configuration. This feature simply checks whether webhook configurations in shoot clusters match a set of rules described [here](../../pkg/gardenlet/operation/botanist/matchers/matcher.go). If at least one of the rules matches, it will change set `status=False` for the `.status.constraints` of type `HibernationPossible` and `MaintenancePreconditionsSatisfied` in the `Shoot` resource. In addition, the `failurePolicy` in the affected webhook configurations will be set from `Fail` to `Ignore`. Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed/adapted according to the rules and best practices.
 
 In most cases, you can avoid this by simply excluding the `kube-system` namespace from your webhook via the `namespaceSelector`:
 ```yaml
@@ -78,7 +78,6 @@ webhooks:
 However, some other resources (some of them cluster-scoped) might still trigger the remediator, namely:
 - endpoints
 - nodes
-- podsecuritypolicies
 - clusterroles
 - clusterrolebindings
 - customresourcedefinitions
@@ -113,7 +112,7 @@ However, if it's visible, then you should consider upgrading the existing object
 
 ### Last Operation
 
-The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate`, and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending`, and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#retry-failed-operation)).
+The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate`, and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending`, and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](./shoot_operations.md#retry-failed-operation)).
 
 ### Last Errors
 
@@ -121,19 +120,24 @@ The Shoot status also contains information about the last occurred error(s) (if 
 
 ### Error Codes
 
-Known error codes are:
+Known error codes and their classification are:
 
-- `ERR_INFRA_UNAUTHENTICATED` - Indicates that the last error occurred due to the client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code.
-- `ERR_INFRA_UNAUTHORIZED` - Indicates that the last error occurred due to the server understanding the request but refusing to authorize it. It is classified as a non-retryable error code.
-- `ERR_INFRA_QUOTA_EXCEEDED` - Indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code.
-- `ERR_INFRA_RATE_LIMITS_EXCEEDED` - Indicates that the last error occurred due to exceeded infrastructure request rate limits.
-- `ERR_INFRA_DEPENDENCIES` - Indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code.
-- `ERR_RETRYABLE_INFRA_DEPENDENCIES` - Indicates that the last error occurred due to dependent objects on the infrastructure level, but the operation should be retried.
-- `ERR_INFRA_RESOURCES_DEPLETED` - Indicates that the last error occurred due to depleted resource in the infrastructure.
-- `ERR_CLEANUP_CLUSTER_RESOURCES` - Indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
-- `ERR_CONFIGURATION_PROBLEM` - Indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code.
-- `ERR_RETRYABLE_CONFIGURATION_PROBLEM` - Indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time.
-- `ERR_PROBLEMATIC_WEBHOOK` - Indicates that the last error occurred due to a webhook not following the [Kubernetes best practices](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
+| Error code                            | User error | Description                                                                                         |
+| ------------------------------------- | :--------: | --------------------------------------------------------------------------------------------------- |
+| `ERR_INFRA_UNAUTHENTICATED`           | true       | Indicates that the last error occurred due to the client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code. |
+| `ERR_INFRA_UNAUTHORIZED`              | true       | Indicates that the last error occurred due to the server understanding the request but refusing to authorize it. It is classified as a non-retryable error code. |
+| `ERR_INFRA_QUOTA_EXCEEDED`            | true       | Indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code. |
+| `ERR_INFRA_RATE_LIMITS_EXCEEDED`      | false      | Indicates that the last error occurred due to exceeded infrastructure request rate limits. |
+| `ERR_INFRA_DEPENDENCIES`              | true       | Indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code. |
+| `ERR_RETRYABLE_INFRA_DEPENDENCIES`    | false      | Indicates that the last error occurred due to dependent objects on the infrastructure level, but the operation should be retried. |
+| `ERR_INFRA_RESOURCES_DEPLETED`        | true       | Indicates that the last error occurred due to depleted resource in the infrastructure. |
+| `ERR_CLEANUP_CLUSTER_RESOURCES`       | true       | Indicates that the last error occurred due to resources in the cluster that are stuck in deletion. |
+| `ERR_CONFIGURATION_PROBLEM`           | true       | Indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code. |
+| `ERR_RETRYABLE_CONFIGURATION_PROBLEM` | true       | Indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time. |
+| `ERR_PROBLEMATIC_WEBHOOK`             | true       | Indicates that the last error occurred due to a webhook not following the [Kubernetes best practices](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings). |
+
+**Please note:** Errors classified as `User error: true` do not require a Gardener operator to resolve but can be remediated by the user (e.g. by refreshing expired infrastructure credentials).
+Even though `ERR_INFRA_RATE_LIMITS_EXCEEDED` and `ERR_RETRYABLE_INFRA_DEPENDENCIES` is mentioned as User error: false` operator can't provide any resolution because it is related to cloud provider issue.
 
 ### Status Label
 

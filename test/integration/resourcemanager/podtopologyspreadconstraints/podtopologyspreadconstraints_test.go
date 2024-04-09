@@ -127,7 +127,7 @@ var _ = Describe("PodTopologySpreadConstraints tests", func() {
 					Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-					Expect(pod.Spec.TopologySpreadConstraints).To(Equal(tsc))
+					Expect(pod.Spec.TopologySpreadConstraints).To(BeEquivalentTo(tsc))
 				})
 			})
 
@@ -140,7 +140,7 @@ var _ = Describe("PodTopologySpreadConstraints tests", func() {
 					Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-					Expect(pod.Spec.TopologySpreadConstraints).To(Equal(tsc))
+					Expect(pod.Spec.TopologySpreadConstraints).To(BeEquivalentTo(tsc))
 				})
 			})
 		})

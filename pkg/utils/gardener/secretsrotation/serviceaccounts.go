@@ -63,7 +63,6 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 
 	for _, obj := range serviceAccountList.Items {
 		serviceAccount := obj
-		log := log.WithValues("serviceAccount", client.ObjectKeyFromObject(&serviceAccount))
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			if len(serviceAccount.Secrets) == 0 {
@@ -94,8 +93,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 			}
 
 			if err := c.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
-				log.Error(err, "Error creating new ServiceAccount secret")
-				return err
+				return fmt.Errorf("error creating new ServiceAccount secret: %w", err)
 			}
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -144,7 +142,6 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 
 	for _, obj := range serviceAccountList.Items {
 		serviceAccount := obj
-		log := log.WithValues("serviceAccount", client.ObjectKeyFromObject(&serviceAccount))
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
@@ -183,8 +180,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 			}
 
 			if err := kubernetesutils.DeleteObjects(ctx, c, secretsToDelete...); err != nil {
-				log.Error(err, "Error deleting old ServiceAccount secrets")
-				return err
+				return fmt.Errorf("error deleting old ServiceAccount secrets: %w", err)
 			}
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)

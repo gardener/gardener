@@ -54,19 +54,19 @@ func ValidateBackupEntrySpec(spec *core.BackupEntrySpec, fldPath *field.Path) fi
 }
 
 // ValidateBackupEntrySpecUpdate validates the specification of a BackupEntry object.
-func ValidateBackupEntrySpecUpdate(newSpec, oldSpec *core.BackupEntrySpec, fldPath *field.Path) field.ErrorList {
+func ValidateBackupEntrySpecUpdate(_, _ *core.BackupEntrySpec, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
 // ValidateBackupEntryStatusUpdate validates the status field of a BackupEntry object.
-func ValidateBackupEntryStatusUpdate(newBackupEntry, oldBackupEntry *core.BackupEntry) field.ErrorList {
+func ValidateBackupEntryStatusUpdate(_, _ *core.BackupEntry) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-func validateBackupEntryName(name string, prefix bool) []string {
+func validateBackupEntryName(_ string, _ bool) []string {
 	return []string{}
 }

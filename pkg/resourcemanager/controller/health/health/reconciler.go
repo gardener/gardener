@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Check responsibility
-	if _, responsible := r.ClassFilter.Active(mr); !responsible {
+	if responsible := r.ClassFilter.Responsible(mr); !responsible {
 		log.Info("Stopping health checks as the responsibility changed")
 		return reconcile.Result{}, nil
 	}
@@ -148,7 +148,6 @@ func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 			}
 
 			return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
-
 		}
 
 		if checked, err := utils.CheckHealth(obj); err != nil {

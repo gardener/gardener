@@ -16,7 +16,7 @@ package csrapprover
 
 import (
 	certificatesv1 "k8s.io/api/certificates/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -45,10 +45,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Watches(
-			source.NewKindWithCache(&certificatesv1.CertificateSigningRequest{}, targetCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(targetCluster.GetCache(), &certificatesv1.CertificateSigningRequest{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),

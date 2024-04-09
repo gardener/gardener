@@ -17,22 +17,17 @@ spec:
         app: {{ .AppLabel }}
     spec:
       containers:
-      - image: eu.gcr.io/gardener-project/3rd/curlimages/curl:7.70.0
-        name: net-curl
+      - name: pause
+        image: registry.k8s.io/e2e-test-images/agnhost:2.40
         args:
-          - /bin/sh
-          - -c
-          - |-
-            while true; do
-              sleep 3600;
-            done
+        - pause
       - name: logger
         image: registry.k8s.io/e2e-test-images/agnhost:2.40
         args:
-          - logs-generator
-          - --logtostderr
-          - --log-lines-total={{ .LogsCount }}
-          - --run-duration={{ .LogsDuration }}
+        - logs-generator
+        - --logtostderr
+        - --log-lines-total={{ .LogsCount }}
+        - --run-duration={{ .LogsDuration }}
       securityContext:
         fsGroup: 65532
         runAsUser: 65532

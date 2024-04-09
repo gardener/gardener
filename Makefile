@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REGISTRY                                   := eu.gcr.io/gardener-project/gardener
+REGISTRY                                   := europe-docker.pkg.dev/gardener-project/snapshots/gardener
 APISERVER_IMAGE_REPOSITORY                 := $(REGISTRY)/apiserver
 CONTROLLER_MANAGER_IMAGE_REPOSITORY        := $(REGISTRY)/controller-manager
 SCHEDULER_IMAGE_REPOSITORY                 := $(REGISTRY)/scheduler
 ADMISSION_IMAGE_REPOSITORY                 := $(REGISTRY)/admission-controller
 RESOURCE_MANAGER_IMAGE_REPOSITORY          := $(REGISTRY)/resource-manager
+NODE_AGENT_IMAGE_REPOSITORY                := $(REGISTRY)/node-agent
 OPERATOR_IMAGE_REPOSITORY                  := $(REGISTRY)/operator
 GARDENLET_IMAGE_REPOSITORY                 := $(REGISTRY)/gardenlet
 EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY  := $(REGISTRY)/extensions/provider-local
@@ -42,8 +43,10 @@ SEED_NAME                                  := provider-extensions
 SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 DEV_SETUP_WITH_WEBHOOKS                    := false
 IPFAMILY                                   := ipv4
-PARALLEL_E2E_TESTS                         := 15
+PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
+DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
+PRINT_HELP ?=
 
 ifneq ($(SEED_NAME),provider-extensions)
 	SEED_KUBECONFIG := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig-$(SEED_NAME)
@@ -67,7 +70,6 @@ TOOLS_DIR := hack/tools
 include hack/tools.mk
 
 LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
-GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 
 #########################################
 # Rules for local development scenarios #
@@ -95,6 +97,7 @@ docker-images:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(SCHEDULER_IMAGE_REPOSITORY):latest                -f Dockerfile --target scheduler .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(ADMISSION_IMAGE_REPOSITORY):latest                -f Dockerfile --target admission-controller .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(NODE_AGENT_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)               -t $(NODE_AGENT_IMAGE_REPOSITORY):latest               -f Dockerfile --target node-agent .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(OPERATOR_IMAGE_REPOSITORY):latest                 -f Dockerfile --target operator .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
@@ -106,6 +109,7 @@ docker-push:
 	@if ! docker images $(SCHEDULER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(SCHEDULER_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(ADMISSION_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(ADMISSION_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(RESOURCE_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(RESOURCE_MANAGER_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
+	@if ! docker images $(NODE_AGENT_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(NODE_AGENT_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(GARDENLET_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(GARDENLET_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@docker push $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
@@ -118,6 +122,8 @@ docker-push:
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(ADMISSION_IMAGE_REPOSITORY):latest; fi
 	@docker push $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest; fi
+	@docker push $(NODE_AGENT_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(NODE_AGENT_IMAGE_REPOSITORY):latest; fi
 	@docker push $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(GARDENLET_IMAGE_REPOSITORY):latest; fi
 	@docker push $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
@@ -127,12 +133,10 @@ docker-push:
 # Rules for verification, formatting, linting, testing and cleaning #
 #####################################################################
 
-.PHONY: revendor
-revendor:
+.PHONY: tidy
+tidy:
 	@GO111MODULE=on go mod tidy
-	@GO111MODULE=on go mod vendor
 	@cd $(LOGCHECK_DIR); go mod tidy
-	@cd $(GOMEGACHECK_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -146,58 +150,72 @@ add-license-headers: $(GO_ADD_LICENSE)
 check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
+.PHONY: check-plutono-dashboards
+check-plutono-dashboards:
+	@hack/check-plutono-dashboards.sh
+
 .PHONY: check
-check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(YQ) $(VGOPATH) logcheck-symlinks
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
-	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
+	@VGOPATH=$(VGOPATH) hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 
 	@echo "> Check $(LOGCHECK_DIR)"
 	@cd $(LOGCHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
 	@cd $(LOGCHECK_DIR); go vet ./...
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l .
 
-	@echo "> Check $(GOMEGACHECK_DIR)"
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
-	@cd $(GOMEGACHECK_DIR); go vet ./...
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l .
-
 	@hack/check-charts.sh ./charts
 	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
+	@hack/check-plutono-dashboards.sh
 
-tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
+.PHONY: logcheck-symlinks
+logcheck-symlinks:
+	@LOGCHECK_DIR=$(LOGCHECK_DIR) ./hack/generate-logcheck-symlinks.sh
 
+tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YQ) $(VGOPATH)
+
+define GENERATE_HELP_INFO
+# Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_DIRS="<folders>"]
+#
+# Options:
+#   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck monitoring-docs")
+#   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups
+#                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups
+#                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups provider_local_groups extensions_config_groups")
+#   MANIFESTS_DIRS    - Specify which directories to run the 'manifests' target in, not applicable for other targets (Default directories are "charts cmd example extensions imagevector pkg plugin test")
+#   MODE              - Specify the mode for the 'manifests' (default=parallel) or 'codegen' (default=sequential) target (e.g., "parallel" or "sequential")
+#
+# Examples:
+#   make generate
+#   make generate WHAT="codegen protobuf"
+#   make generate WHAT="codegen protobuf" MODE="sequential"
+#   make generate WHAT="manifests" MANIFESTS_DIRS="pkg/component plugin" MODE="sequential"
+#   make generate WHAT="codegen" CODEGEN_GROUPS="core_groups extensions_groups"
+#   make generate WHAT="codegen manifests" CODEGEN_GROUPS="operator_groups controllermanager_groups" MANIFESTS_DIRS="charts extensions/pkg"
+#
+endef
+export GENERATE_HELP_INFO
 .PHONY: generate
+ifeq ($(PRINT_HELP),y)
+generate:
+	@echo "$$GENERATE_HELP_INFO"
+else
 generate: tools-for-generate
-	@hack/update-protobuf.sh
-	@hack/update-codegen.sh
-	@hack/generate-parallel.sh charts cmd example extensions pkg plugin test
-	@cd $(LOGCHECK_DIR); go generate ./...
-	@cd $(GOMEGACHECK_DIR); go generate ./...
-	@hack/generate-monitoring-docs.sh
+	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n"
+	@REPO_ROOT=$(REPO_ROOT) VGOPATH=$(VGOPATH) LOGCHECK_DIR=$(LOGCHECK_DIR) hack/generate.sh --what "$(WHAT)" --codegen-groups "$(CODEGEN_GROUPS)" --manifests-dirs "$(MANIFESTS_DIRS)" --mode "$(MODE)"
 	$(MAKE) format
-
-.PHONY: generate-sequential
-generate-sequential: tools-for-generate
-	@hack/update-protobuf.sh
-	@hack/update-codegen.sh
-	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./test/...
-	@cd $(LOGCHECK_DIR); go generate ./...
-	@cd $(GOMEGACHECK_DIR); go generate ./...
-	@hack/generate-monitoring-docs.sh
-	$(MAKE) format
+endif
 
 .PHONY: format
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
-	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
-test: $(REPORT_COLLECTOR) $(PROMTOOL)
+test: $(REPORT_COLLECTOR) $(PROMTOOL) logcheck-symlinks
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
-	@cd $(GOMEGACHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
 test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
@@ -222,10 +240,6 @@ check-vulnerabilities: $(GO_VULN_CHECK)
 .PHONY: test-prometheus
 test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh
-
-.PHONY: check-docforge
-check-docforge: $(DOCFORGE)
-	@./hack/check-docforge.sh
 
 .PHONY: verify
 verify: check format test test-integration test-prometheus
@@ -272,10 +286,18 @@ kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
 kind-ha-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
-kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) --path-cluster-values $(CLUSTER_VALUES) $(ADDITIONAL_PARAMETERS)
+kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+	./hack/kind-up.sh \
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG) \
+		--path-cluster-values $(CLUSTER_VALUES) \
+		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
+		$(ADDITIONAL_PARAMETERS)
 kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-multi-zone-down: $(KIND)
-	./hack/kind-down.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) $(ADDITIONAL_PARAMETERS)
+	./hack/kind-down.sh \
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG) \
+		$(ADDITIONAL_PARAMETERS)
 
 kind-extensions-up: $(KIND) $(KUBECTL)
 	REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
@@ -284,11 +306,17 @@ kind-extensions-down: $(KIND)
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
+kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
+	./hack/kind-up.sh \
+		--cluster-name gardener-operator-local \
+		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig \
+		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
+		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-operator-local --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
+	./hack/kind-down.sh \
+		--cluster-name gardener-operator-local \
+		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator
 
@@ -297,6 +325,7 @@ export SKAFFOLD_BUILD_CONCURRENCY = 0
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export GARDENER_VERSION = $(VERSION)
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
@@ -375,9 +404,9 @@ test-e2e-local-migration: $(GINKGO)
 test-e2e-local-migration-ha-single-zone: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration" ./test/e2e/gardener/...
 test-e2e-local-ha-single-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-node)" ./test/e2e/gardener/...
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && upgrade-to-node)" ./test/e2e/gardener/...
 test-e2e-local-ha-multi-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "simple || (high-availability && upgrade-to-zone)" ./test/e2e/gardener/...
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && upgrade-to-zone)" ./test/e2e/gardener/...
 test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
 

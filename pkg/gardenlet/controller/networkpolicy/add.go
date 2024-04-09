@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // SeedIsGardenCheckInterval is the interval how often it should be checked whether the seed cluster has been registered
@@ -53,7 +53,7 @@ func AddToManager(
 	networks gardencore.SeedNetworks,
 	resolver hostnameresolver.HostResolver,
 ) error {
-	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
+	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
 	if err != nil {
 		return fmt.Errorf("failed checking whether the seed is the garden cluster: %w", err)
 	}
@@ -66,6 +66,7 @@ func AddToManager(
 		AdditionalNamespaceSelectors: cfg.AdditionalNamespaceSelectors,
 		Resolver:                     resolver,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+			IPFamilies: networks.IPFamilies,
 			Pods:       networks.Pods,
 			Services:   networks.Services,
 			Nodes:      networks.Nodes,
@@ -75,7 +76,7 @@ func AddToManager(
 
 	reconciler.WatchRegisterers = append(reconciler.WatchRegisterers, func(c controller.Controller) error {
 		return c.Watch(
-			source.NewKindWithCache(&extensionsv1alpha1.Cluster{}, seedCluster.GetCache()),
+			source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.Cluster{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
 			ClusterPredicate(),
 		)
@@ -86,13 +87,13 @@ func AddToManager(
 	}
 
 	// At this point, the seed is not the garden cluster at the same time. However, this could change during the runtime
-	// of gardenlet. If so, gardener-operator will take over responsiblity of the NetworkPolicy management and will run
+	// of gardenlet. If so, gardener-operator will take over responsibility of the NetworkPolicy management and will run
 	// this controller. Since there is no way to stop a controller after it started, we cancel the manager context in
 	// case the seed is registered as garden during runtime. This way, gardenlet will restart and not add the controller
 	// again.
 	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		wait.Until(func() {
-			seedIsGarden, err = gardenerutils.SeedIsGarden(ctx, seedCluster.GetClient())
+			seedIsGarden, err = gardenletutils.SeedIsGarden(ctx, seedCluster.GetClient())
 			if err != nil {
 				mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is the garden cluster at the same time")
 				return
@@ -138,12 +139,12 @@ func ClusterPredicate() predicate.Predicate {
 
 			if v1beta1helper.IsWorkerless(shoot) {
 				// if the shoot has networking field set and the old shoot has nil, then we cannot compare services, so return true right away
-				return oldShoot.Spec.Networking == nil || !pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
+				return oldShoot.Spec.Networking == nil || !ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
 			}
 
-			return !pointer.StringEqual(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
-				!pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
-				!pointer.StringEqual(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
+			return !ptr.Equal(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
+				!ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
+				!ptr.Equal(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
 		},
 		CreateFunc:  func(event.CreateEvent) bool { return false },
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },

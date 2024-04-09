@@ -17,17 +17,25 @@ package validation_test
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/component-base/featuregate"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var _ = Describe("Validation Tests", func() {
@@ -41,6 +49,9 @@ var _ = Describe("Validation Tests", func() {
 				},
 				Spec: operatorv1alpha1.GardenSpec{
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
@@ -48,10 +59,13 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
-							Domain: pointer.String("foo.bar.com"),
+							Domains: []string{"foo.bar.com"},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
+							},
 						},
 						Networking: operatorv1alpha1.Networking{
 							Services: "10.4.0.0/16",
@@ -85,11 +99,20 @@ var _ = Describe("Validation Tests", func() {
 				Entry("complete ServiceAccount key rotation", "rotate-serviceaccount-key-complete"),
 				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
 				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
+				Entry("start Observability key rotation", "rotate-observability-credentials"),
 			)
 
 			DescribeTable("starting rotation of all credentials",
-				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+						KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+							EncryptionConfig: kubeAPIEncryptionConfig,
+						},
+					}
+					garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+						EncryptionConfig: gardenerEncryptionConfig,
+					}
 					garden.Status = status
 
 					matcher := BeEmpty()
@@ -100,7 +123,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -111,7 +134,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -120,7 +143,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -129,7 +152,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -138,7 +161,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -147,7 +170,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -156,7 +179,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -165,7 +188,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -174,7 +197,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -183,7 +206,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -192,7 +215,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("sa rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -201,7 +224,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("etcd key rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -210,7 +233,26 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "projects.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"deployments.apps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud"}},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start rotation of all credentials because a previous encryption configuration change is currently being rolled out"),
+					}))),
+				),
+				Entry("when spec encrypted resources and status encrypted resources are equal", true,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
+				),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -597,8 +639,18 @@ var _ = Describe("Validation Tests", func() {
 			)
 
 			DescribeTable("starting ETCD encryption key rotation",
-				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+				func(allowed bool, status operatorv1alpha1.GardenStatus, kubeAPIEncryptionConfig, gardenerEncryptionConfig *gardencorev1beta1.EncryptionConfig, extraMatchers ...gomegatypes.GomegaMatcher) {
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+
+					garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+						KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+							EncryptionConfig: kubeAPIEncryptionConfig,
+						},
+					}
+					garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+						EncryptionConfig: gardenerEncryptionConfig,
+					}
+
 					garden.Status = status
 
 					matcher := BeEmpty()
@@ -609,7 +661,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
@@ -620,7 +672,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -629,7 +681,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is complete", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -638,7 +690,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
 				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -647,7 +699,26 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
-				}),
+				}, nil, nil),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "projects.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"deployments.apps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud"}},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start ETCD encryption key rotation because a previous encryption configuration change is currently being rolled out"),
+					}))),
+				),
+				Entry("when spec encrypted resources and status encrypted resources are equal", true,
+					operatorv1alpha1.GardenStatus{
+						EncryptedResources: []string{"configmaps", "daemonsets.apps", "projects.core.gardener.cloud", "shoots.core.gardener.cloud"},
+					},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"daemonsets.apps", "configmaps"}},
+					&gardencorev1beta1.EncryptionConfig{Resources: []string{"shoots.core.gardener.cloud", "projects.core.gardener.cloud"}},
+				),
 			)
 
 			DescribeTable("completing ETCD encryption key rotation",
@@ -784,30 +855,45 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(BeEmpty())
 				})
 			})
-		})
 
-		Context("virtual cluster", func() {
-			Context("DNS", func() {
-				It("should complain about that no domain is configured", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = nil
-					garden.Spec.VirtualCluster.DNS.Domains = nil
+			Context("Ingress", func() {
+				It("should complain about invalid ingress domain names", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeRequired),
-							"Field": Equal("spec.virtualCluster.dns.domains"),
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
 						})),
 					))
 				})
 
+				It("should complain about duplicate ingress domain names in 'domains'", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domains = []string{
+						"example.com",
+						"foo.bar",
+						"example.com",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[2]"),
+						})),
+					))
+				})
+			})
+		})
+
+		Context("virtual cluster", func() {
+			Context("DNS", func() {
 				It("should complain about invalid domain name in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = pointer.String(",,,")
 					garden.Spec.VirtualCluster.DNS.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
+							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
 						})),
 					))
 				})
@@ -826,24 +912,9 @@ var _ = Describe("Validation Tests", func() {
 						})),
 					))
 				})
-
-				It("should complain about duplicate domain names in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-					garden.Spec.VirtualCluster.DNS.Domains = []string{
-						"example.com",
-						"foo.bar",
-					}
-
-					Expect(ValidateGarden(garden)).To(ContainElements(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeDuplicate),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
-						})),
-					))
-				})
 			})
 
-			Context("networking", func() {
+			Context("Networking", func() {
 				It("should complain about an invalid service CIDR", func() {
 					garden.Spec.VirtualCluster.Networking.Services = "not-parseable-cidr"
 
@@ -880,6 +951,664 @@ var _ = Describe("Validation Tests", func() {
 					}))))
 				})
 			})
+
+			Context("Gardener", func() {
+				Context("APIServer", func() {
+					BeforeEach(func() {
+						garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{}
+					})
+
+					Context("Feature gates", func() {
+						It("should complain when non-existing feature gates were configured", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.FeatureGates = map[string]bool{"Foo": true}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.Foo"),
+							}))))
+						})
+
+						It("should complain when invalid feature gates were configured", func() {
+							features.AllFeatureGates["Foo"] = featuregate.FeatureSpec{LockToDefault: true, Default: false}
+							DeferCleanup(func() {
+								delete(features.AllFeatureGates, "Foo")
+							})
+
+							garden.Spec.VirtualCluster.Gardener.APIServer = &operatorv1alpha1.GardenerAPIServerConfig{
+								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+									FeatureGates: map[string]bool{"Foo": true},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.Foo"),
+							}))))
+						})
+					})
+
+					Context("Admission plugins", func() {
+						It("should allow not specifying admission plugins", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = nil
+
+							Expect(ValidateGarden(garden)).To(BeEmpty())
+						})
+
+						It("should forbid specifying admission plugins without a name", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: ""}}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeRequired),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[0].name"),
+							}))))
+						})
+
+						It("should forbid specifying non-existing admission plugin", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: "Foo"}}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeNotSupported),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[0].name"),
+							}))))
+						})
+					})
+
+					Context("AuditConfig", func() {
+						It("should allow nil AuditConfig", func() {
+							Expect(ValidateGarden(garden)).To(BeEmpty())
+						})
+
+						It("should forbid empty name", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.AuditConfig = &gardencorev1beta1.AuditConfig{
+								AuditPolicy: &gardencorev1beta1.AuditPolicy{
+									ConfigMapRef: &corev1.ObjectReference{},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeRequired),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name"),
+							}))))
+						})
+					})
+
+					Context("EncryptionConfig", func() {
+						It("should deny specifying duplicate resources", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"shoots.core.gardener.cloud", "shoots.core.gardener.cloud"},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeDuplicate),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"BadValue": Equal("shoots.core.gardener.cloud"),
+								})),
+							))
+						})
+
+						It("should deny specifying resources encrypted by default", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{
+									"controllerdeployments.core.gardener.cloud",
+									"controllerregistrations.core.gardener.cloud",
+									"internalsecrets.core.gardener.cloud",
+									"shootstates.core.gardener.cloud",
+									"shoots.core.gardener.cloud",
+									"secretbindings.core.gardener.cloud",
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElements(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
+									"Detail": Equal("\"controllerdeployments.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"Detail": Equal("\"controllerregistrations.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
+									"Detail": Equal("\"internalsecrets.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
+									"Detail": Equal("\"shootstates.core.gardener.cloud\" are always encrypted"),
+								})),
+							))
+						})
+
+						It("should deny specifying resources which are not served by gardener-apiserver", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"shoots.core.gardener.cloud",
+									"bastions.operations.gardener.cloud",
+									"ingresses.networking.io",
+									"foo.gardener.cloud",
+									"configmaps",
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
+									"BadValue": Equal("ingresses.networking.io"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
+									"BadValue": Equal("foo.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[4]"),
+									"BadValue": Equal("configmaps"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+								})),
+							))
+						})
+
+						It("should deny specifying wildcard resources", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"*.core.gardener.cloud", "*.operations.gardener.cloud"},
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeInvalid),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
+									"Detail": Equal("wildcards are not supported"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeInvalid),
+									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
+									"Detail": Equal("wildcards are not supported"),
+								})),
+							))
+						})
+					})
+
+					Context("Watch cache sizes", func() {
+						var negativeSize int32 = -1
+
+						DescribeTable("watch cache size validation",
+							func(sizes *gardencorev1beta1.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
+								garden.Spec.VirtualCluster.Gardener.APIServer.WatchCacheSizes = sizes
+								Expect(ValidateGarden(garden)).To(matcher)
+							},
+
+							Entry("valid (unset)", nil, BeEmpty()),
+							Entry("valid (fields unset)", &gardencorev1beta1.WatchCacheSizes{}, BeEmpty()),
+							Entry("valid (default=0)", &gardencorev1beta1.WatchCacheSizes{
+								Default: ptr.To[int32](0),
+							}, BeEmpty()),
+							Entry("valid (default>0)", &gardencorev1beta1.WatchCacheSizes{
+								Default: ptr.To[int32](42),
+							}, BeEmpty()),
+							Entry("invalid (default<0)", &gardencorev1beta1.WatchCacheSizes{
+								Default: ptr.To(negativeSize),
+							}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+							)),
+
+							// APIGroup unset (core group)
+							Entry("valid (core/secrets=0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									Resource:  "secrets",
+									CacheSize: 0,
+								}},
+							}, BeEmpty()),
+							Entry("valid (core/secrets=>0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									Resource:  "secrets",
+									CacheSize: 42,
+								}},
+							}, BeEmpty()),
+							Entry("invalid (core/secrets=<0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									Resource:  "secrets",
+									CacheSize: negativeSize,
+								}},
+							}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+							)),
+							Entry("invalid (core/resource empty)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									Resource:  "",
+									CacheSize: 42,
+								}},
+							}, ConsistOf(
+								field.Required(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].resource"), "must not be empty"),
+							)),
+
+							// APIGroup set
+							Entry("valid (apps/deployments=0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									APIGroup:  ptr.To("apps"),
+									Resource:  "deployments",
+									CacheSize: 0,
+								}},
+							}, BeEmpty()),
+							Entry("valid (apps/deployments=>0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									APIGroup:  ptr.To("apps"),
+									Resource:  "deployments",
+									CacheSize: 42,
+								}},
+							}, BeEmpty()),
+							Entry("invalid (apps/deployments=<0)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									APIGroup:  ptr.To("apps"),
+									Resource:  "deployments",
+									CacheSize: negativeSize,
+								}},
+							}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+							)),
+							Entry("invalid (apps/resource empty)", &gardencorev1beta1.WatchCacheSizes{
+								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
+									Resource:  "",
+									CacheSize: 42,
+								}},
+							}, ConsistOf(
+								field.Required(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].resource"), "must not be empty"),
+							)),
+						)
+					})
+
+					Context("Logging", func() {
+						var negativeSize int32 = -1
+
+						DescribeTable("Logging validation",
+							func(loggingConfig *gardencorev1beta1.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
+								garden.Spec.VirtualCluster.Gardener.APIServer.Logging = loggingConfig
+								Expect(ValidateGarden(garden)).To(matcher)
+							},
+
+							Entry("valid (unset)", nil, BeEmpty()),
+							Entry("valid (fields unset)", &gardencorev1beta1.APIServerLogging{}, BeEmpty()),
+							Entry("valid (verbosity=0)", &gardencorev1beta1.APIServerLogging{
+								Verbosity: ptr.To[int32](0),
+							}, BeEmpty()),
+							Entry("valid (httpAccessVerbosity=0)", &gardencorev1beta1.APIServerLogging{
+								HTTPAccessVerbosity: ptr.To[int32](0),
+							}, BeEmpty()),
+							Entry("valid (verbosity>0)", &gardencorev1beta1.APIServerLogging{
+								Verbosity: ptr.To[int32](3),
+							}, BeEmpty()),
+							Entry("valid (httpAccessVerbosity>0)", &gardencorev1beta1.APIServerLogging{
+								HTTPAccessVerbosity: ptr.To[int32](3),
+							}, BeEmpty()),
+							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
+								Verbosity: ptr.To(negativeSize),
+							}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+							)),
+							Entry("invalid (httpAccessVerbosity<0)", &gardencorev1beta1.APIServerLogging{
+								HTTPAccessVerbosity: ptr.To(negativeSize),
+							}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+							)),
+						)
+					})
+
+					Context("Requests", func() {
+						It("should not allow too high values for max inflight requests fields", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
+								MaxNonMutatingInflight: ptr.To[int32](123123123),
+								MaxMutatingInflight:    ptr.To[int32](412412412),
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxNonMutatingInflight"),
+							})), PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxMutatingInflight"),
+							}))))
+						})
+
+						It("should not allow negative values for max inflight requests fields", func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
+								MaxNonMutatingInflight: ptr.To(int32(-1)),
+								MaxMutatingInflight:    ptr.To(int32(-1)),
+							}
+
+							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxNonMutatingInflight"),
+							})), PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxMutatingInflight"),
+							}))))
+						})
+					})
+				})
+
+				Context("AdmissionController", func() {
+					It("should allow the configuration being set to nil", func() {
+						garden.Spec.VirtualCluster.Gardener.AdmissionController = nil
+
+						Expect(ValidateGarden(garden)).To(BeEmpty())
+					})
+
+					It("should allow the configuration being empty", func() {
+						garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{}
+
+						Expect(ValidateGarden(garden)).To(BeEmpty())
+					})
+
+					Context("Resource Admission Configuration", func() {
+						Context("Operation mode", func() {
+							test := func(mode string) field.ErrorList {
+								var (
+									admissionConfig *operatorv1alpha1.ResourceAdmissionConfiguration
+									operationMode   = operatorv1alpha1.ResourceAdmissionWebhookMode(mode)
+								)
+
+								if mode != "" {
+									admissionConfig = &operatorv1alpha1.ResourceAdmissionConfiguration{
+										OperationMode: &operationMode,
+									}
+								}
+
+								garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+									ResourceAdmissionConfiguration: admissionConfig,
+								}
+
+								return ValidateGarden(garden)
+							}
+
+							It("should allow no mode", func() {
+								Expect(test("")).To(BeEmpty())
+							})
+
+							It("should allow blocking mode", func() {
+								Expect(test("block")).To(BeEmpty())
+							})
+
+							It("should allow logging mode", func() {
+								Expect(test("log")).To(BeEmpty())
+							})
+
+							It("should deny non existing mode", func() {
+								Expect(test("foo")).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.mode"),
+								}))))
+							})
+						})
+
+						Context("Limits validation", func() {
+							var (
+								apiGroups = []string{"core.gardener.cloud"}
+								versions  = []string{"v1beta1", "v1alpha1"}
+								resources = []string{"shoot"}
+								size      = "1Ki"
+
+								test = func(apiGroups []string, versions []string, resources []string, size string) field.ErrorList {
+									s, err := resource.ParseQuantity(size)
+									utilruntime.Must(err)
+
+									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+										ResourceAdmissionConfiguration: &operatorv1alpha1.ResourceAdmissionConfiguration{
+											Limits: []operatorv1alpha1.ResourceLimit{
+												{
+													APIGroups:   apiGroups,
+													APIVersions: versions,
+													Resources:   resources,
+													Size:        s,
+												},
+											},
+										},
+									}
+
+									return ValidateGarden(garden)
+								}
+							)
+
+							It("should allow request", func() {
+								Expect(test(apiGroups, versions, resources, size)).To(BeEmpty())
+							})
+
+							It("should deny empty apiGroup", func() {
+								Expect(test(nil, versions, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].apiGroups"),
+								}))))
+							})
+
+							It("should allow apiGroup w/ zero length", func() {
+								Expect(test([]string{""}, versions, resources, size)).To(BeEmpty())
+							})
+
+							It("should deny empty versions", func() {
+								Expect(test(apiGroups, nil, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].versions"),
+								}))))
+							})
+
+							It("should deny versions w/ zero length", func() {
+								Expect(test(apiGroups, []string{""}, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].versions[0]"),
+								}))))
+							})
+
+							It("should deny empty resources", func() {
+								Expect(test(apiGroups, versions, nil, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources"),
+								}))))
+							})
+
+							It("should deny resources w/ zero length", func() {
+								Expect(test(apiGroups, versions, []string{""}, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources[0]"),
+								}))))
+							})
+
+							It("should deny invalid size", func() {
+								Expect(test(apiGroups, versions, resources, "-1k")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].size"),
+								}))))
+							})
+
+							It("should deny invalid size and resources w/ zero length", func() {
+								Expect(test(apiGroups, versions, []string{resources[0], ""}, "-1k")).To(ConsistOf(
+									PointTo(MatchFields(IgnoreExtras, Fields{
+										"Type":  Equal(field.ErrorTypeInvalid),
+										"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].size"),
+									})),
+									PointTo(MatchFields(IgnoreExtras, Fields{
+										"Type":  Equal(field.ErrorTypeInvalid),
+										"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources[1]"),
+									}))))
+							})
+						})
+
+						Context("User configuration validation", func() {
+							var (
+								userName       = "admin"
+								namespace      = "default"
+								emptyNamespace = ""
+
+								test = func(kind string, name string, namespace string, apiGroup string) field.ErrorList {
+									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+										ResourceAdmissionConfiguration: &operatorv1alpha1.ResourceAdmissionConfiguration{
+											UnrestrictedSubjects: []rbacv1.Subject{
+												{
+													Kind:      kind,
+													Name:      name,
+													Namespace: namespace,
+													APIGroup:  apiGroup,
+												},
+											},
+										},
+									}
+
+									return ValidateGarden(garden)
+								}
+							)
+
+							It("should allow request for user", func() {
+								Expect(test(rbacv1.UserKind, userName, emptyNamespace, rbacv1.GroupName)).To(BeEmpty())
+							})
+
+							It("should allow request for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, emptyNamespace, rbacv1.GroupName)).To(BeEmpty())
+							})
+
+							It("should allow request for service account", func() {
+								Expect(test(rbacv1.ServiceAccountKind, userName, namespace, "")).To(BeEmpty())
+							})
+
+							It("should deny invalid apiGroup for user", func() {
+								Expect(test(rbacv1.UserKind, userName, emptyNamespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid apiGroup for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, emptyNamespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid apiGroup for service account", func() {
+								Expect(test(rbacv1.ServiceAccountKind, userName, namespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid namespace setting for user", func() {
+								Expect(test(rbacv1.UserKind, userName, namespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].namespace"),
+								}))))
+							})
+
+							It("should deny invalid namespace setting for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, namespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].namespace"),
+								}))))
+							})
+
+							It("should deny invalid kind", func() {
+								Expect(test("invalidKind", userName, emptyNamespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].kind"),
+								}))))
+							})
+
+							It("should deny empty name", func() {
+								Expect(test(rbacv1.UserKind, "", emptyNamespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].name"),
+								}))))
+							})
+						})
+					})
+				})
+
+				Context("ControllerManager", func() {
+					Context("Feature gates", func() {
+						It("should complain when non-existing feature gates were configured", func() {
+							garden.Spec.VirtualCluster.Gardener.ControllerManager = &operatorv1alpha1.GardenerControllerManagerConfig{
+								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+									FeatureGates: map[string]bool{"Foo": true},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.featureGates.Foo"),
+							}))))
+						})
+
+						It("should complain when invalid feature gates were configured", func() {
+							features.AllFeatureGates["Foo"] = featuregate.FeatureSpec{LockToDefault: true, Default: false}
+							DeferCleanup(func() {
+								delete(features.AllFeatureGates, "Foo")
+							})
+
+							garden.Spec.VirtualCluster.Gardener.ControllerManager = &operatorv1alpha1.GardenerControllerManagerConfig{
+								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+									FeatureGates: map[string]bool{"Foo": true},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.featureGates.Foo"),
+							}))))
+						})
+					})
+
+					Context("Default Project Quotas", func() {
+						It("should complain when invalid label selectors were specified", func() {
+							garden.Spec.VirtualCluster.Gardener.ControllerManager = &operatorv1alpha1.GardenerControllerManagerConfig{
+								DefaultProjectQuotas: []operatorv1alpha1.ProjectQuotaConfiguration{{
+									ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"-": "!"}},
+								}},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeInvalid),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.defaultProjectQuotas[0].projectSelector.matchLabels"),
+							}))))
+						})
+					})
+				})
+
+				Context("Scheduler", func() {
+					Context("Feature gates", func() {
+						It("should complain when non-existing feature gates were configured", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+									FeatureGates: map[string]bool{"Foo": true},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
+							}))))
+						})
+
+						It("should complain when invalid feature gates were configured", func() {
+							features.AllFeatureGates["Foo"] = featuregate.FeatureSpec{LockToDefault: true, Default: false}
+							DeferCleanup(func() {
+								delete(features.AllFeatureGates, "Foo")
+							})
+
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+									FeatureGates: map[string]bool{"Foo": true},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeForbidden),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
+							}))))
+						})
+					})
+				})
+			})
 		})
 	})
 
@@ -892,80 +1621,91 @@ var _ = Describe("Validation Tests", func() {
 					Name: "garden",
 				},
 				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Ingress: operatorv1alpha1.Ingress{
+							Domains: []string{"ingress.bar.com"},
+						},
+						Networking: operatorv1alpha1.RuntimeNetworking{
+							Pods:     "10.1.0.0/16",
+							Services: "10.2.0.0/16",
+						},
+					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.27.0",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+								},
+							},
+						},
+						Networking: operatorv1alpha1.Networking{
+							Services: "10.4.0.0/16",
 						},
 					},
 				},
 			}
+
 			newGarden = oldGarden.DeepCopy()
+		})
+
+		Context("runtime cluster", func() {
+			Context("ingress", func() {
+				It("should allow update if nothing changes", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should allow adding a domain", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should allow removing any domain but first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": ContainSubstring("domain"),
+					}))))
+				})
+
+				It("should forbid removing the first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+					}))))
+				})
+
+				It("should forbid changing the first entry", func() {
+					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+					newGarden.Spec.RuntimeCluster.Ingress.Domains = []string{"example2.com", "foo.bar", "bar.foo"}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
+					}))))
+				})
+			})
 		})
 
 		Context("virtual cluster", func() {
 			Context("dns", func() {
-				Context("when 'domain' is migrated to 'domains' field", func() {
-					It("should allow the update when domain equals to the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Field": ContainSubstring("domain"),
-						}))))
-					})
-
-					It("should deny the update when domain is not found in the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"foo.bar",
-							"example.com",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
-						}))))
-					})
-
-					It("should deny the update when domain is not specified anymore", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"foo.bar",
-						}
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
-						}))))
-					})
-				})
-
-				Context("when 'domains' is migrated to 'domain' field", func() {
-					It("should deny the update", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = nil
-						newGarden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
-
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.virtualCluster.dns.domain"),
-						}))))
-					})
-				})
-
 				Context("when domains are modified", func() {
 					It("should allow update if nothing changes", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -973,13 +1713,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should allow adding a domain", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -987,15 +1722,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should allow removing any domain but first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
@@ -1003,14 +1731,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should forbid removing the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
@@ -1019,16 +1741,8 @@ var _ = Describe("Validation Tests", func() {
 					})
 
 					It("should forbid changing the first entry", func() {
-						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example.com",
-							"foo.bar",
-							"bar.foo",
-						}
-						newGarden.Spec.VirtualCluster.DNS.Domains = []string{
-							"example2.com",
-							"foo.bar",
-							"bar.foo",
-						}
+						oldGarden.Spec.VirtualCluster.DNS.Domains = []string{"example.com", "foo.bar", "bar.foo"}
+						newGarden.Spec.VirtualCluster.DNS.Domains = []string{"example2.com", "foo.bar", "bar.foo"}
 
 						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
@@ -1060,6 +1774,112 @@ var _ = Describe("Validation Tests", func() {
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.kubernetes.version"),
 					}))))
+				})
+
+				Context("encryptionConfig", func() {
+					It("should deny changing items if the current resources in the status do not match the current spec", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed because a previous encryption configuration change is currently being rolled out"),
+							})),
+						))
+					})
+
+					It("should deny changing items during ETCD Encryption Key rotation", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+						newGarden.Status.EncryptedResources = append(oldResources, oldGardenerResources...)
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+
+						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+							Rotation: &operatorv1alpha1.CredentialsRotation{
+								ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+									Phase: gardencorev1beta1.RotationPreparing,
+								},
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+							})),
+							PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources"),
+								"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+							})),
+						))
+					})
+
+					It("should allow changing items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+						oldResources := []string{"resource.custom.io", "deployments.apps"}
+						oldGardenerResources := []string{"shoots.core.gardener.cloud", "bastions.operations.gardener.cloud"}
+						oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+							Resources: oldResources,
+						}
+						oldGarden.Spec.VirtualCluster.Gardener = operatorv1alpha1.Gardener{
+							APIServer: &operatorv1alpha1.GardenerAPIServerConfig{
+								EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+									Resources: oldGardenerResources,
+								},
+							},
+						}
+						newGarden.Status.EncryptedResources = append(oldResources, oldGardenerResources...)
+
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
+						newGarden.Status.Credentials = nil
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+
+						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+							Rotation: &operatorv1alpha1.CredentialsRotation{
+								ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+									Phase: gardencorev1beta1.RotationCompleted,
+								},
+							},
+						}
+
+						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+					})
 				})
 			})
 		})

@@ -26,26 +26,22 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ExtensionLabels"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, NewFactory)
+	plugins.Register(plugin.PluginNameExtensionLabels, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.
@@ -56,13 +52,13 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // ExtensionLabels contains the admission handler
 type ExtensionLabels struct {
 	*admission.Handler
-	backupBucketLister           gardencorelisters.BackupBucketLister
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
+	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
+	controllerRegistrationLister gardencorev1beta1listers.ControllerRegistrationLister
 	readyFunc                    admission.ReadyFunc
 }
 
 var (
-	_          = admissioninitializer.WantsInternalCoreInformerFactory(&ExtensionLabels{})
+	_          = admissioninitializer.WantsCoreInformerFactory(&ExtensionLabels{})
 	readyFuncs []admission.ReadyFunc
 )
 
@@ -79,11 +75,11 @@ func (e *ExtensionLabels) AssignReadyFunc(f admission.ReadyFunc) {
 	e.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory sets the external garden core informer factory.
-func (e *ExtensionLabels) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
+// SetCoreInformerFactory sets the garden core informer factory.
+func (e *ExtensionLabels) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
-	controllerRegistrationInformer := f.Core().InternalVersion().ControllerRegistrations()
+	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 
 	readyFuncs = append(readyFuncs,
@@ -219,7 +215,7 @@ func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
 	}
 }
 
-func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) {
+func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) {
 	for extensionType := range getEnabledExtensionsForShoot(shoot, controllerRegistrations) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
@@ -233,6 +229,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.C
 			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix+pool.Machine.Image.Name, "true")
 		}
 	}
+
 	if shoot.Spec.DNS != nil {
 		for _, provider := range shoot.Spec.DNS.Providers {
 			if provider.Type == nil || *provider.Type == core.DNSUnmanaged {
@@ -241,20 +238,22 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.C
 			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+*provider.Type, "true")
 		}
 	}
+
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")
+
 	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+*shoot.Spec.Networking.Type, "true")
 	}
 }
 
-func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.Set[string] {
+func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
 	enabledExtensions := sets.New[string]()
 
 	// add globally enabled extensions
 	for _, reg := range controllerRegistrations {
 		for _, resource := range reg.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) {
-				if helper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) {
+				if gardencorehelper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
 				enabledExtensions.Insert(resource.Type)
@@ -263,7 +262,7 @@ func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*
 	}
 
 	for _, extension := range shoot.Spec.Extensions {
-		if pointer.BoolDeref(extension.Disabled, false) {
+		if ptr.Deref(extension.Disabled, false) {
 			// remove explicitly disabled extensions
 			enabledExtensions.Delete(extension.Type)
 			continue
@@ -284,7 +283,7 @@ func addMetaDataLabelsBackupBucket(backupBucket *core.BackupBucket) {
 	metav1.SetMetaDataLabel(&backupBucket.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 
-func addMetaDataLabelsBackupEntry(backupEntry *core.BackupEntry, backupBucket *core.BackupBucket) {
+func addMetaDataLabelsBackupEntry(backupEntry *core.BackupEntry, backupBucket *gardencorev1beta1.BackupBucket) {
 	metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 

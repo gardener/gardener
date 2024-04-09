@@ -11,9 +11,7 @@ Generally, there are provider-specific `MachineClass` objects (`AWSMachineClass`
 A machine class describes **where** and **how** to create virtual machines (in which networks, region, availability zone, SSH key, user-data for bootstrapping, etc.), while a `Machine` results in an actual virtual machine.
 You can read up [more information](https://github.com/gardener/machine-controller-manager) in the machine-controller-manager's [repository](https://github.com/gardener/machine-controller-manager).
 
-The `gardenlet` has a feature gate `MachineControllerManagerDeployment` which controls whether it is deploying the `machine-controller-manager`.
-If set to `true`, provider extensions only have to inject their specific out-of-tree `machine-controller-manager` sidecar container into the `Deployment`.
-If set to `false`, provider extensions have to take care of th full deployment (including the generic `machine-controller-manager` container).
+The `gardenlet` deploys the `machine-controller-manager`, hence, provider extensions only have to inject their specific out-of-tree `machine-controller-manager` sidecar container into the `Deployment`.
 
 ## What needs to be implemented to support a new worker provider?
 
@@ -98,6 +96,12 @@ spec:
       - ReadonlyFilesystem
       - DiskPressure
       - KernelDeadlock
+    clusterAutoscaler:
+      scaleDownUtilizationThreshold: 0.5
+      scaleDownGpuUtilizationThreshold: 0.5
+      scaleDownUnneededTime: 30m
+      scaleDownUnreadyTime: 1h
+      maxNodeProvisionTime: 15m
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
@@ -117,7 +121,9 @@ The `spec.pools[].nodeTemplate.capacity` field contains the resource information
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
-When observing such a resource, the controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster (only if `gardenlet`'s `MachineControllerManagerDeployment` feature gate is disabled). If the feature gate is enabled, the controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
+The `spec.pools[].clusterAutoscaler` field contains `cluster-autoscaler` settings that are to be applied only to specific worker group. `cluster-autoscaler` expects to find these settings as annotations on the `MachineDeployment`, and so providers must pass these values to the corresponding `MachineDeployment` via annotations. The keys for these annotations can be found [here](https://github.com/gardener/gardener/blob/master/pkg/apis/extensions/v1alpha1/types_worker.go) and the values for the corresponding annotations should be the same as what is passed into the field. Providers can use the helper function [`extensionsv1alpha1helper.GetMachineDeploymentClusterAutoscalerAnnotations`](https://github.com/gardener/gardener/blob/master/pkg/apis/extensions/v1alpha1/helper/helper.go#L73) that returns the annotation map to be used.
+
+The controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
 
 After that, it must compute the desired machine classes and the desired machine deployments.
 Typically, one class maps to one deployment, and one class/deployment is created per availability zone.
@@ -310,8 +316,8 @@ You can take a look at the below referenced example implementation for the AWS p
 
 All of the described behaviour is mostly the same for every provider.
 The only difference is maybe the version/configuration of the provider-specific `machine-controller-manager` sidecar container, and the machine class specification itself.
-You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
-Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
+You can take a look at our [extension library](../../extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
+Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/nodemanagement/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
 
@@ -327,6 +333,6 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 ## References and Additional Resources
 
 * [`Worker` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_worker.go)
-* [Extension Controller Library](https://github.com/gardener/gardener/blob/master/extensions)
+* [Extension Controller Library](../../extensions/)
 * [Generic Worker Controller](../../extensions/pkg/controller/worker)
 * [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker)

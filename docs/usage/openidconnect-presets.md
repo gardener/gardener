@@ -92,7 +92,6 @@ metadata:
     oidc: enabled
 spec:
   kubernetes:
-    allowPrivilegedContainers: true
     version: 1.20.2
 ```
 
@@ -235,7 +234,6 @@ metadata:
     oidc: enabled
 spec:
   kubernetes:
-    allowPrivilegedContainers: true
     version: 1.20.2
 ```
 

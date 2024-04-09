@@ -5,9 +5,8 @@ resources:
 - sshd_deployment.yaml
 
 configMapGenerator:
-- name: gardener-apiserver-sshd
-  namespace: relay
-  files:
+- files:
   - files/sshd_config
   - files/entrypoint.sh
-
+  name: gardener-apiserver-sshd
+  namespace: relay

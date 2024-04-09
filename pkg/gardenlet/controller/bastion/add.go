@@ -20,7 +20,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -58,11 +58,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		Watches(
-			source.NewKindWithCache(&operationsv1alpha1.Bastion{}, gardenCluster.GetCache()),
+		WatchesRawSource(
+			source.Kind(gardenCluster.GetCache(), &operationsv1alpha1.Bastion{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
@@ -72,14 +72,14 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.Bastion{}, seedCluster.GetCache()),
+		source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.Bastion{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionsBastionToOperationsBastion), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 	)
 }
 
 // MapExtensionsBastionToOperationsBastion  is a mapper.MapFunc for mapping extensions Bastion in the seed cluster to operations Bastion in the project namespace.
-func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
 	if err != nil {
 		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", obj.GetNamespace())

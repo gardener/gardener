@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: shoot-kubernetes-update-test
@@ -12,11 +13,11 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_update
+    go test -timeout=0 ./test/testmachinery/system/shoot_update
     --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color -verbose=debug
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
     -version=$K8S_VERSION
     -version-worker-pools=$K8S_VERSION_WORKER_POOLS
-  image: golang:1.20.6
+  image: golang:1.22.2

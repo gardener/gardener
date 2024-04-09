@@ -1,0 +1,270 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: metering
+spec:
+  groups:
+  - name: metering.rules
+    rules:
+
+  # - _namespace_to_shoot_uid
+  # - _year_month
+  # - _namespace_to_shoot_uid_and_date
+  # - _pod_to_daemonset
+  # - _pod_to_statefulset
+  # - _pod_to_replicaset
+  # - _replicaset_to_deployment
+  # - _pod_to_deployment
+  # - _pod_to_other
+  # - _pod_to_owner
+
+    - record: _namespace_to_shoot_uid
+      expr: |2
+          count by (namespace, shoot_uid) (
+            label_replace(
+              kube_namespace_annotations,
+              "shoot_uid",
+              "$1",
+              "annotation_shoot_gardener_cloud_uid",
+              "(.*)"
+            )
+          )
+        *
+          0
+
+    - record: _year_month
+      expr: |2
+          count_values without () (
+            "year",
+            year(timestamp(count_values without () ("month", month(timestamp(vector(0))))))
+          )
+        *
+          0
+
+    - record: _namespace_to_shoot_uid_and_date
+      expr: |
+        _namespace_to_shoot_uid + on() group_left(year, month) _year_month
+
+    - record: _pod_to_daemonset
+      expr: |
+        count by (namespace, pod, owner_name) (kube_pod_owner{owner_kind="DaemonSet"})
+
+    - record: _pod_to_statefulset
+      expr: |
+        count by (namespace, pod, owner_name) (kube_pod_owner{owner_kind="StatefulSet"})
+
+    - record: _pod_to_replicaset
+      expr: |
+        count by (namespace, pod, replicaset) (
+          label_replace(kube_pod_owner{owner_kind="ReplicaSet"}, "replicaset", "$1", "owner_name", "(.*)")
+        )
+
+    - record: _replicaset_to_deployment
+      expr: |
+        count by (namespace, replicaset, owner_name) (kube_replicaset_owner{owner_kind="Deployment"})
+
+    - record: _pod_to_deployment
+      expr: |
+        count by (namespace, pod, owner_name) (
+          _pod_to_replicaset + on (namespace, replicaset) group_left (owner_name) _replicaset_to_deployment
+        )
+
+    - record: _pod_to_other
+      expr: |
+        count by (namespace, pod, owner_name) (
+          kube_pod_owner{owner_kind!~"DaemonSet|StatefulSet|ReplicaSet"}
+        )
+
+    - record: _pod_to_owner
+      expr: |2
+          count by (namespace, pod, owner) (
+            label_replace(
+              _pod_to_statefulset or _pod_to_daemonset or _pod_to_deployment or _pod_to_other,
+              "owner",
+              "$1",
+              "owner_name",
+              "(.*)"
+            )
+          )
+        *
+          0
+
+  # - metering  :cpu_usage                 :sum_by_namespace
+  # - metering  :cpu_requests              :sum_by_namespace
+  # - metering  :memory_usage              :sum_by_namespace
+  # - metering  :working_set_memory        :sum_by_namespace
+  # - metering  :memory_requests           :sum_by_namespace
+  # - metering  :network_transmit          :sum_by_namespace
+  # - metering  :network_receive           :sum_by_namespace
+  # - metering  :persistent_volume_claims  :sum_by_namespace
+  # - metering  :persistent_volume_usage   :sum_by_namespace
+
+    - record: metering:cpu_usage:sum_by_namespace
+      expr: |2
+              sum by (namespace) (rate(container_cpu_usage_seconds_total[5m]))
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:cpu_requests:sum_by_namespace
+      expr: |2
+              sum by (namespace) (kube_pod_container_resource_requests{resource="cpu",unit="core"})
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:memory_usage:sum_by_namespace
+      expr: |2
+              sum by (namespace) (container_memory_usage_bytes)
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:working_set_memory:sum_by_namespace
+      expr: |2
+              sum by (namespace) (container_memory_working_set_bytes)
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:memory_requests:sum_by_namespace
+      expr: |2
+              sum by (namespace) (kube_pod_container_resource_requests{resource="memory",unit="byte"})
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:network_transmit:sum_by_namespace
+      expr: |2
+              sum by (namespace) (rate(container_network_transmit_bytes_total{host_network=""}[5m]))
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:network_receive:sum_by_namespace
+      expr: |2
+              sum by (namespace) (rate(container_network_receive_bytes_total{host_network=""}[5m]))
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:persistent_volume_claims:sum_by_namespace
+      expr: |2
+              sum by (namespace) (kube_persistentvolumeclaim_resource_requests_storage_bytes)
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+    - record: metering:persistent_volume_usage:sum_by_namespace
+      expr: |2
+              sum by (namespace) (max by(namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes))
+            + on (namespace) group_right
+              _namespace_to_shoot_uid_and_date
+          or
+            _namespace_to_shoot_uid_and_date
+
+  # - metering  :cpu_usage                 :sum_by_namespace_owner_container
+  # - metering  :cpu_requests              :sum_by_namespace_owner_container
+  # - metering  :memory_usage              :sum_by_namespace_owner_container
+  # - metering  :working_set_memory        :sum_by_namespace_owner_container
+  # - metering  :memory_requests           :sum_by_namespace_owner_container
+  # - metering  :network_transmit          :sum_by_namespace_owner
+  # - metering  :network_receive           :sum_by_namespace_owner
+  # - metering  :persistent_volume_claims  :sum_by_namespace_owner
+  # - metering  :persistent_volume_usage   :sum_by_namespace_owner
+
+    - record: metering:cpu_usage:sum_by_namespace_owner_container
+      expr: |2
+          sum by (namespace, owner, container) (
+            rate(container_cpu_usage_seconds_total[5m]) + on (namespace, pod) group_left (owner) _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:cpu_requests:sum_by_namespace_owner_container
+      expr: |2
+          sum by (namespace, owner, container) (
+              kube_pod_container_resource_requests{resource="cpu",unit="core"}
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:memory_usage:sum_by_namespace_owner_container
+      expr: |2
+          sum by (namespace, owner, container) (
+            container_memory_usage_bytes + on (namespace, pod) group_left (owner) _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:working_set_memory:sum_by_namespace_owner_container
+      expr: |2
+          sum by (namespace, owner, container) (
+            container_memory_working_set_bytes + on (namespace, pod) group_left (owner) _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:memory_requests:sum_by_namespace_owner_container
+      expr: |2
+          sum by (namespace, owner, container) (
+              kube_pod_container_resource_requests{resource="memory",unit="byte"}
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:network_transmit:sum_by_namespace_owner
+      expr: |2
+          sum by (namespace, owner) (
+              rate(container_network_transmit_bytes_total{host_network=""}[5m])
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:network_receive:sum_by_namespace_owner
+      expr: |2
+          sum by (namespace, owner) (
+              rate(container_network_receive_bytes_total{host_network=""}[5m])
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:persistent_volume_claims:sum_by_namespace_owner
+      expr: |2
+          sum by (namespace, owner) (
+                  kube_persistentvolumeclaim_resource_requests_storage_bytes
+                + on (namespace, persistentvolumeclaim) group_right
+                  kube_pod_spec_volumes_persistentvolumeclaims_info * 0
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid
+
+    - record: metering:persistent_volume_usage:sum_by_namespace_owner
+      expr: |2
+          sum by (namespace, owner) (
+                  max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)
+                + on (namespace, persistentvolumeclaim) group_right
+                  kube_pod_spec_volumes_persistentvolumeclaims_info * 0
+            + on (namespace, pod) group_left (owner)
+              _pod_to_owner
+          )
+        + on (namespace) group_left (shoot_uid)
+          _namespace_to_shoot_uid

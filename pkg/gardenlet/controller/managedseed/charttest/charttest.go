@@ -16,6 +16,7 @@ package charttest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,7 +37,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -94,7 +95,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 		kubernetesutils.Key(priorityClass.Name),
 		priorityClass,
 	)).ToNot(HaveOccurred())
-	Expect(priorityClass.GlobalDefault).To(Equal(false))
+	Expect(priorityClass.GlobalDefault).To(BeFalse())
 	Expect(priorityClass.Value).To(Equal(int32(999998950)))
 }
 
@@ -107,7 +108,7 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 }
 
 // ValidateGardenletChartRBAC validates the RBAC resources of the Gardenlet chart.
-func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, featureGates map[string]bool) {
+func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string) {
 	// ClusterRoles
 	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
 	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels)
@@ -181,18 +182,8 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{""},
-				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"delete", "patch"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups: []string{""},
 				Resources: []string{"endpoints", "persistentvolumes"},
-				Verbs:     []string{"get", "list", "watch"},
+				Verbs:     []string{"get", "list", "watch", "patch"},
 			},
 			{
 				APIGroups: []string{""},
@@ -222,24 +213,18 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{""},
 				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"get", "list", "watch", "patch", "update"},
+				Verbs:     []string{"get", "list", "watch", "patch", "update", "create"},
 			},
 			{
 				APIGroups:     []string{""},
 				Resources:     []string{"persistentvolumeclaims"},
-				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "prometheus-db-prometheus-0", "prometheus-db-seed-prometheus-0", "prometheus-db-aggregate-prometheus-0"},
 				Verbs:         []string{"delete"},
 			},
 			{
 				APIGroups: []string{"admissionregistration.k8s.io"},
 				Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-			},
-			{
-				APIGroups:     []string{"admissionregistration.k8s.io"},
-				Resources:     []string{"mutatingwebhookconfigurations"},
-				ResourceNames: []string{"vpa-webhook-config-seed"},
-				Verbs:         []string{"get", "delete", "update"},
 			},
 			{
 				APIGroups: []string{"apiextensions.k8s.io"},
@@ -300,7 +285,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{"autoscaling.k8s.io"},
 				Resources:     []string{"hvpas"},
-				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali", "loki"},
+				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali"},
 				Verbs:         []string{"delete", "patch", "update"},
 			},
 			{
@@ -392,8 +377,13 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"machine.sapcloud.io"},
-				Resources: []string{"machinedeployments", "machines"},
-				Verbs:     []string{"list", "watch", "get"},
+				Resources: []string{"machineclasses", "machinedeployments", "machinesets", "machines"},
+				Verbs:     []string{"list", "watch", "get", "patch", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"monitoring.coreos.com"},
+				Resources: []string{"servicemonitors"},
+				Verbs:     []string{"list", "watch", "get", "create", "patch", "update", "delete"},
 			},
 		},
 	}
@@ -613,8 +603,9 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 }
 
 // ValidateGardenletChartPodDisruptionBudget validates the PodDisruptionBudget of the Gardenlet chart.
-func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32) {
-	maxUnavailable := intstr.FromInt(1)
+func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32, k8sGreaterEquals126 bool) {
+	maxUnavailable := intstr.FromInt32(1)
+	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -627,7 +618,11 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 		},
 	}
 
-	if pointer.Int32Deref(replicaCount, 2) < 2 {
+	if k8sGreaterEquals126 {
+		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+	}
+
+	if ptr.Deref(replicaCount, 2) < 2 {
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
 		return
 	}
@@ -638,7 +633,7 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 
 	Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(Succeed())
 	Expect(pdb.Labels).To(DeepEqual(expectedPodDisruptionBudget.Labels))
-	Expect(pdb.Spec.Selector.MatchLabels).To(DeepEqual(expectedPodDisruptionBudget.Spec.Selector.MatchLabels))
+	Expect(pdb.Spec).To(DeepEqual(expectedPodDisruptionBudget.Spec))
 }
 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
@@ -656,11 +651,10 @@ func ComputeExpectedGardenletConfiguration(
 		five   = 5
 		twenty = 20
 
-		logLevelInfo              = "info"
-		logFormatJson             = "json"
-		lockObjectName            = "gardenlet-leader-election"
-		lockObjectNamespace       = "garden"
-		defaultCentralValiStorage = resource.MustParse("100Gi")
+		logLevelInfo        = "info"
+		logFormatJson       = "json"
+		lockObjectName      = "gardenlet-leader-election"
+		lockObjectNamespace = "garden"
 	)
 
 	config := gardenletv1alpha1.GardenletConfiguration{
@@ -674,8 +668,8 @@ func ComputeExpectedGardenletConfiguration(
 				Burst: 130,
 			},
 			KubeconfigValidity: &gardenletv1alpha1.KubeconfigValidity{
-				AutoRotationJitterPercentageMin: pointer.Int32(70),
-				AutoRotationJitterPercentageMax: pointer.Int32(90),
+				AutoRotationJitterPercentageMin: ptr.To[int32](70),
+				AutoRotationJitterPercentageMax: ptr.To[int32](90),
 			},
 		},
 		SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
@@ -705,12 +699,12 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
-				LeaseResyncSeconds:       pointer.Int32(2),
-				LeaseResyncMissThreshold: pointer.Int32(10),
+				LeaseResyncSeconds:       ptr.To[int32](2),
+				LeaseResyncMissThreshold: ptr.To[int32](10),
 			},
 			Shoot: &gardenletv1alpha1.ShootControllerConfiguration{
-				ReconcileInMaintenanceOnly: pointer.Bool(false),
-				RespectSyncPeriodOverwrite: pointer.Bool(false),
+				ReconcileInMaintenanceOnly: ptr.To(false),
+				RespectSyncPeriodOverwrite: ptr.To(false),
 				ConcurrentSyncs:            &twenty,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Hour,
@@ -718,11 +712,11 @@ func ComputeExpectedGardenletConfiguration(
 				RetryDuration: &metav1.Duration{
 					Duration: 12 * time.Hour,
 				},
-				DNSEntryTTLSeconds: pointer.Int64(120),
+				DNSEntryTTLSeconds: ptr.To[int64](120),
 			},
 			ManagedSeed: &gardenletv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
-				JitterUpdates:   pointer.Bool(false),
+				JitterUpdates:   ptr.To(false),
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
@@ -775,7 +769,7 @@ func ComputeExpectedGardenletConfiguration(
 						},
 					},
 				},
-				WebhookRemediatorEnabled: pointer.Bool(false),
+				WebhookRemediatorEnabled: ptr.To(false),
 			},
 			SeedCare: &gardenletv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
@@ -812,7 +806,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		LeaderElection: &baseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       pointer.Bool(true),
+			LeaderElect:       ptr.To(true),
 			LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
 			RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 			RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
@@ -823,15 +817,15 @@ func ComputeExpectedGardenletConfiguration(
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
 		Logging: &gardenletv1alpha1.Logging{
-			Enabled: pointer.Bool(false),
+			Enabled: ptr.To(false),
 			Vali: &gardenletv1alpha1.Vali{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 				Garden: &gardenletv1alpha1.GardenVali{
-					Storage: &defaultCentralValiStorage,
+					Storage: &gardenletv1alpha1.DefaultCentralValiStorage,
 				},
 			},
 			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{
-				Enabled: pointer.Bool(false),
+				Enabled: ptr.To(false),
 			},
 		},
 		Server: gardenletv1alpha1.ServerConfiguration{
@@ -843,8 +837,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{
-			EnableProfiling:           pointer.Bool(false),
-			EnableContentionProfiling: pointer.Bool(false),
+			EnableProfiling:           ptr.To(false),
+			EnableContentionProfiling: ptr.To(false),
 		},
 		FeatureGates: featureGates,
 		Resources: &gardenletv1alpha1.ResourcesConfiguration{
@@ -853,31 +847,32 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SNI: &gardenletv1alpha1.SNI{Ingress: &gardenletv1alpha1.SNIIngress{
-			ServiceName: pointer.String(v1beta1constants.DefaultSNIIngressServiceName),
-			Namespace:   pointer.String(v1beta1constants.DefaultSNIIngressNamespace),
+			ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
+			Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
 		Monitoring: &gardenletv1alpha1.MonitoringConfig{
 			Shoot: &gardenletv1alpha1.ShootMonitoringConfig{
-				Enabled: pointer.Bool(true),
+				Enabled: ptr.To(true),
 			},
 		},
 		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
-				EnableBackupCompaction: pointer.Bool(false),
-				EventsThreshold:        pointer.Int64(1000000),
-				Workers:                pointer.Int64(3),
+				EnableBackupCompaction:    ptr.To(false),
+				EventsThreshold:           ptr.To[int64](1000000),
+				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
+				Workers:                   ptr.To[int64](3),
 			},
 			CustodianController: &gardenletv1alpha1.CustodianController{
-				Workers: pointer.Int64(10),
+				Workers: ptr.To[int64](10),
 			},
 			ETCDController: &gardenletv1alpha1.ETCDController{
-				Workers: pointer.Int64(50),
+				Workers: ptr.To[int64](50),
 			},
 		},
 		NodeToleration: &gardenletv1alpha1.NodeToleration{
-			DefaultNotReadyTolerationSeconds:    pointer.Int64(60),
-			DefaultUnreachableTolerationSeconds: pointer.Int64(60),
+			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
+			DefaultUnreachableTolerationSeconds: ptr.To[int64](60),
 		},
 	}
 
@@ -931,7 +926,7 @@ func VerifyGardenletComponentConfigConfigMap(
 
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
-	Expect(componentConfigYaml).ToNot(HaveLen(0))
+	Expect(componentConfigYaml).ToNot(BeEmpty())
 	gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())
@@ -963,12 +958,12 @@ func ComputeExpectedGardenletDeploymentSpec(
 	error,
 ) {
 	if image.Repository == nil || image.Tag == nil {
-		return appsv1.DeploymentSpec{}, fmt.Errorf("the image repository and tag must be provided")
+		return appsv1.DeploymentSpec{}, errors.New("the image repository and tag must be provided")
 	}
 
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: pointer.Int32(2),
-		Replicas:             pointer.Int32(2),
+		RevisionHistoryLimit: ptr.To[int32](2),
+		Replicas:             ptr.To[int32](2),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -1036,13 +1031,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 					{
 						Key:               "node.kubernetes.io/not-ready",
 						Operator:          "Exists",
-						TolerationSeconds: pointer.Int64(60),
+						TolerationSeconds: ptr.To[int64](60),
 						Effect:            "NoExecute",
 					},
 					{
 						Key:               "node.kubernetes.io/unreachable",
 						Operator:          "Exists",
-						TolerationSeconds: pointer.Int64(60),
+						TolerationSeconds: ptr.To[int64](60),
 						Effect:            "NoExecute",
 					},
 				},
@@ -1050,11 +1045,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 					Name: "kube-api-access-gardener",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To[int32](420),
 							Sources: []corev1.VolumeProjection{
 								{ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",
-									ExpirationSeconds: pointer.Int64(43200),
+									ExpirationSeconds: ptr.To[int64](43200),
 								}},
 								{ConfigMap: &corev1.ConfigMapProjection{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -1095,13 +1090,13 @@ func ComputeExpectedGardenletDeploymentSpec(
 			deployment.Replicas = deploymentConfiguration.ReplicaCount
 		}
 
-		if replicas := pointer.Int32Deref(deployment.Replicas, 2); replicas > 1 {
+		if replicas := ptr.Deref(deployment.Replicas, 2); replicas > 1 {
 			numberOfZones := 1
 			if seedConfig != nil {
 				numberOfZones = len(seedConfig.Spec.Provider.Zones)
 			}
 
-			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil)
+			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil, false)
 		}
 
 		if deploymentConfiguration.Env != nil {
@@ -1215,7 +1210,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 			},
 		})
 		deployment.Template.Spec.ServiceAccountName = ""
-		deployment.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+		deployment.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 	}
 
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

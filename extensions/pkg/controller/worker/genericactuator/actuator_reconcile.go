@@ -23,26 +23,27 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
-func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	log = log.WithValues("operation", "reconcile")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
@@ -50,40 +51,14 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
-	// Call pre reconcilation hook to prepare Worker reconciliation.
+	// Call pre reconciliation hook to prepare Worker reconciliation.
 	if err := workerDelegate.PreReconcileHook(ctx); err != nil {
 		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
 	}
 
 	// Get the list of all existing machine deployments.
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
-	}
-
-	// mcmReplicaFunc returns the desired replicas for machine controller manager
-	var mcmReplicaFunc = func() int32 {
-		switch {
-		// if there are any existing machine deployments present with a positive replica count then MCM is needed.
-		case isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments):
-			return 1
-		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
-		case extensionscontroller.IsHibernated(cluster):
-			return 0
-		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
-		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
-			return 0
-		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
-		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
-			return 1
-		// If the shoot is awake then MCM should be available and therefore its desired replicas is 1
-		default:
-			return 1
-		}
-	}
-
-	// Deploy the machine-controller-manager into the cluster.
-	if err := a.deployMachineControllerManager(ctx, log, worker, cluster, workerDelegate, mcmReplicaFunc); err != nil {
+	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return err
 	}
 
@@ -94,20 +69,13 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to generate the machine deployments: %w", err)
 	}
 
-	var clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
-
-	// TODO(rfranzke): Remove this code after v1.77 was released.
-	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
-	// with Gardeners modifications on the machine deployment's replicas fields.
-	isHibernationEnabled := controller.IsHibernationEnabled(cluster)
-	if clusterAutoscalerUsed && isHibernationEnabled {
-		if err = a.scaleClusterAutoscaler(ctx, log, worker, 0); err != nil {
-			return err
-		}
-	}
+	var (
+		clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
+		isHibernationEnabled  = extensionscontroller.IsHibernationEnabled(cluster)
+	)
 
 	// Get list of existing machine class names
-	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace, workerDelegate.MachineClassList())
+	existingMachineClassNames, err := a.listMachineClassNames(ctx, worker.Namespace)
 	if err != nil {
 		return err
 	}
@@ -129,7 +97,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := deployMachineDeployments(ctx, log, a.client, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
+	if err := deployMachineDeployments(ctx, log, a.seedClient, cluster, worker, existingMachineDeployments, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
@@ -149,19 +117,23 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 		if isStuck {
 			podList := corev1.PodList{}
-			if err2 := a.client.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
+			if err2 := a.seedClient.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
 				return fmt.Errorf("failed to list machine-controller-manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 			}
 
 			for _, pod := range podList.Items {
-				if err2 := a.client.Delete(ctx, &pod); err2 != nil {
+				if err2 := a.seedClient.Delete(ctx, &pod); err2 != nil {
 					return fmt.Errorf("failed to delete stuck machine-controller-manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 				}
 			}
 			log.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
-		return fmt.Errorf("Failed while waiting for all machine deployments to be ready: %w", err)
+		newError := fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
+		if a.errorCodeCheckFunc != nil {
+			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
+		}
+		return newError
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -170,7 +142,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Delete all old machine classes (i.e. those which were not previously computed but exist in the cluster).
-	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, workerDelegate.MachineClassList(), wantedMachineDeployments); err != nil {
+	if err := a.cleanupMachineClasses(ctx, log, worker.Namespace, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to cleanup the machine classes: %w", err)
 	}
 
@@ -179,8 +151,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to cleanup the orphaned machine class secrets: %w", err)
 	}
 
-	replicas := mcmReplicaFunc()
-	if replicas > 0 {
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: worker.Namespace}}
+	if err := a.seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed reading deployment %s: %w", client.ObjectKeyFromObject(deployment), err)
+	}
+	if ptr.Deref(deployment.Spec.Replicas, 0) > 0 {
 		// Wait until all unwanted machine deployments are deleted from the system.
 		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, log, worker, wantedMachineDeployments); err != nil {
 			return fmt.Errorf("error while waiting for all undesired machine deployments to be deleted: %w", err)
@@ -194,29 +169,17 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernationEnabled {
-		if err := scaleMachineControllerManager(ctx, log, a.client, worker, 0); err != nil {
+		if err := scaleMachineControllerManager(ctx, log, a.seedClient, worker, 0); err != nil {
 			return err
 		}
 	}
 
-	// TODO(rfranzke): Remove this code after v1.77 was released.
-	if clusterAutoscalerUsed && !isHibernationEnabled {
-		if err = a.scaleClusterAutoscaler(ctx, log, worker, 1); err != nil {
-			return err
-		}
-	}
-
-	// Call post reconcilation hook after Worker reconciliation has happened.
+	// Call post reconciliation hook after Worker reconciliation has happened.
 	if err := workerDelegate.PostReconcileHook(ctx); err != nil {
 		return fmt.Errorf("post worker reconciliation hook failed: %w", err)
 	}
 
 	return nil
-}
-
-func (a *genericActuator) scaleClusterAutoscaler(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
-	log.Info("Scaling cluster-autoscaler", "replicas", replicas)
-	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kubernetesutils.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
 }
 
 func deployMachineDeployments(
@@ -227,7 +190,6 @@ func deployMachineDeployments(
 	worker *extensionsv1alpha1.Worker,
 	existingMachineDeployments *machinev1alpha1.MachineDeploymentList,
 	wantedMachineDeployments extensionsworkercontroller.MachineDeployments,
-	classKind string,
 	clusterAutoscalerUsed bool,
 ) error {
 	log.Info("Deploying machine deployments")
@@ -241,7 +203,7 @@ func deployMachineDeployments(
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
 		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
-		case controller.IsHibernationEnabled(cluster):
+		case extensionscontroller.IsHibernationEnabled(cluster):
 			replicas = 0
 			if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
 				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
@@ -262,7 +224,7 @@ func deployMachineDeployments(
 			}
 		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
 		// autoscaler can scale them as required.
-		case shootIsAwake(controller.IsHibernationEnabled(cluster), existingMachineDeployments):
+		case shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments):
 			replicas = deployment.Minimum
 		// If the shoot worker pool minimum was updated and if the current machine deployment replica
 		// count is less than minimum, we update the machine deployment replica count to updated minimum.
@@ -290,6 +252,9 @@ func deployMachineDeployments(
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
+			for k, v := range deployment.ClusterAutoscalerAnnotations {
+				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
+			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,
@@ -309,7 +274,7 @@ func deployMachineDeployments(
 					},
 					Spec: machinev1alpha1.MachineSpec{
 						Class: machinev1alpha1.ClassSpec{
-							Kind: classKind,
+							Kind: "MachineClass",
 							Name: deployment.ClassName,
 						},
 						NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
@@ -345,18 +310,18 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
 		// Get the list of all machine sets
 		machineSets := &machinev1alpha1.MachineSetList{}
-		if err := a.client.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
 		// map the owner reference to the machine sets
-		ownerReferenceToMachineSet := extensionsworkerhelper.BuildOwnerToMachineSetsMap(machineSets.Items)
+		ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
@@ -377,7 +342,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numberOfAwakeMachines += deployment.Status.Replicas
 
 			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
-			if controller.IsHibernationEnabled(cluster) {
+			if extensionscontroller.IsHibernationEnabled(cluster) {
 				continue
 			}
 
@@ -417,7 +382,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		var msg string
 		switch {
-		case !controller.IsHibernationEnabled(cluster):
+		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
 			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {
@@ -450,7 +415,7 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 	log.Info("Waiting until unwanted machine deployments are deleted")
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-		if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 			return retryutils.SevereError(err)
 		}
 
@@ -487,7 +452,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	patch := client.MergeFrom(worker.DeepCopy())
 	worker.Status.MachineDeployments = statusMachineDeployments
 	worker.Status.MachineDeploymentsLastUpdateTime = &updateTime
-	return a.client.Status().Patch(ctx, worker, patch)
+	return a.seedClient.Status().Patch(ctx, worker, patch)
 }
 
 // Helper functions
@@ -521,15 +486,6 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 		}
 	}
 	return nil
-}
-
-func isExistingMachineDeploymentWithPositiveReplicaCountPresent(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {
-	for _, machineDeployment := range existingMachineDeployments.Items {
-		if machineDeployment.Status.Replicas > 0 {
-			return true
-		}
-	}
-	return false
 }
 
 // ReadMachineConfiguration reads the configuration from worker-pool and returns the corresponding configuration of machine-deployment.

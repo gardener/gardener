@@ -66,7 +66,7 @@ func (v *VirtualGardenAccessVerifier) Before(ctx context.Context) {
 }
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
-func (v *VirtualGardenAccessVerifier) ExpectPreparingStatus(g Gomega) {}
+func (v *VirtualGardenAccessVerifier) ExpectPreparingStatus(_ Gomega) {}
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *VirtualGardenAccessVerifier) AfterPrepared(ctx context.Context) {
@@ -106,7 +106,7 @@ func (v *VirtualGardenAccessVerifier) AfterPrepared(ctx context.Context) {
 }
 
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *VirtualGardenAccessVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *VirtualGardenAccessVerifier) ExpectCompletingStatus(_ Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *VirtualGardenAccessVerifier) AfterCompleted(ctx context.Context) {
@@ -165,7 +165,7 @@ func (v *VirtualGardenAccessVerifier) Cleanup(ctx context.Context) {
 		g.Expect(access.CleanupObjectsFromCSRAccess(ctx, virtualGardenClient)).To(Succeed())
 	}).Should(Succeed())
 
-	By("Clean up objects in shoot from dynamic ServiceAccount token access")
+	By("Clean up objects in virtual garden from dynamic ServiceAccount token access")
 	Eventually(func(g Gomega) {
 		g.Expect(access.CleanupObjectsFromDynamicServiceAccountTokenAccess(ctx, virtualGardenClient)).To(Succeed())
 	}).Should(Succeed())

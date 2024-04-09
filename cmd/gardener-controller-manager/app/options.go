@@ -15,6 +15,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -23,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
@@ -46,13 +48,15 @@ type options struct {
 	config     *config.ControllerManagerConfiguration
 }
 
+var _ utils.Options = &options{}
+
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
-func (o *options) complete() error {
+func (o *options) Complete() error {
 	if len(o.configFile) == 0 {
-		return fmt.Errorf("missing config file")
+		return errors.New("missing config file")
 	}
 
 	data, err := os.ReadFile(o.configFile)
@@ -70,9 +74,13 @@ func (o *options) complete() error {
 	return features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates)
 }
 
-func (o *options) validate() error {
+func (o *options) Validate() error {
 	if errs := controllermanagervalidation.ValidateControllerManagerConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 	return nil
+}
+
+func (o *options) LogConfig() (string, string) {
+	return o.config.LogLevel, o.config.LogFormat
 }

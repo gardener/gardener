@@ -19,8 +19,8 @@ import (
 	_ "embed"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
-	"k8s.io/utils/pointer"
+	"github.com/Masterminds/sprig/v3"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -84,12 +84,22 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	logRotateUnits, logRotateFiles := logrotate.Config(pathLogRotateConfig, "/var/log/pods/*/*/*.log", ContainerRuntime)
 
-	return append([]extensionsv1alpha1.Unit{
-			{
-				Name:    UnitNameMonitor,
-				Command: pointer.String("start"),
-				Enable:  pointer.Bool(true),
-				Content: pointer.String(`[Unit]
+	monitorFile := extensionsv1alpha1.File{
+		Path:        pathHealthMonitor,
+		Permissions: ptr.To[int32](0755),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
+			},
+		},
+	}
+
+	monitorUnit := extensionsv1alpha1.Unit{
+		Name:    UnitNameMonitor,
+		Command: ptr.To(extensionsv1alpha1.CommandStart),
+		Enable:  ptr.To(true),
+		Content: ptr.To(`[Unit]
 Description=Containerd-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -98,19 +108,8 @@ WantedBy=multi-user.target
 Restart=always
 EnvironmentFile=/etc/environment
 ExecStart=` + pathHealthMonitor),
-			},
-		}, logRotateUnits...),
-		append([]extensionsv1alpha1.File{
-			{
-				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32(0755),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64(healthMonitorScript.Bytes()),
-					},
-				},
-			},
-		}, logRotateFiles...),
-		nil
+		FilePaths: []string{monitorFile.Path},
+	}
+
+	return append(logRotateUnits, monitorUnit), append(logRotateFiles, monitorFile), nil
 }

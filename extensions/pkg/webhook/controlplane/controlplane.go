@@ -76,13 +76,13 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	}
 
 	return &extensionswebhook.Webhook{
-		Name:     getName(args.Kind),
-		Provider: args.Provider,
-		Types:    args.Types,
-		Target:   extensionswebhook.TargetSeed,
-		Path:     getName(args.Kind),
-		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
-		Selector: namespaceSelector,
+		Name:              getName(args.Kind),
+		Provider:          args.Provider,
+		Types:             args.Types,
+		Target:            extensionswebhook.TargetSeed,
+		Path:              getName(args.Kind),
+		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
+		NamespaceSelector: namespaceSelector,
 	}, nil
 }
 
@@ -101,6 +101,7 @@ func getName(kind string) string {
 func buildSelector(kind, provider string) (*metav1.LabelSelector, error) {
 	// Determine label selector key from the kind
 	var key string
+
 	switch kind {
 	case KindSeed:
 		key = v1beta1constants.LabelSeedProvider

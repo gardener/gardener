@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ShootSeedNamespace gets the shoot namespace in the seed
@@ -48,35 +47,33 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
-func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
-	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
-
-	if tenant == "" {
-		tenant = "fake"
-	}
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+	valiLabelsSelector := labels.SelectorFromSet(valiLabels)
 
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", valiPort, tenant, query)
+	log := f.Logger.WithValues("namespace", valiNamespace, "labels", valiLabels, "q", query)
+
+	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
 
 	var reader io.Reader
-	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
+	log.Info("Fetching logs")
+	if err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
 		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
 
 		if err != nil {
-			f.Logger.Error(err, "Error exec'ing into pod")
+			log.Error(err, "Error fetching logs")
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
 	search := &SearchResponse{}
 
-	if err = json.NewDecoder(reader).Decode(search); err != nil {
+	if err := json.NewDecoder(reader).Decode(search); err != nil {
 		return nil, err
 	}
 
@@ -167,6 +164,8 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 
 	setShootTolerations(shoot)
 
+	setShootControlPlaneHighAvailability(shoot, cfg)
+
 	return shoot.Name, shoot, nil
 }
 
@@ -239,7 +238,7 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 	}
 
 	if StringSet(cfg.secretBinding) {
-		shoot.Spec.SecretBindingName = pointer.String(cfg.secretBinding)
+		shoot.Spec.SecretBindingName = ptr.To(cfg.secretBinding)
 	}
 
 	if StringSet(cfg.shootProviderType) {
@@ -261,16 +260,6 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 		shoot.Spec.Hibernation.Enabled = &cfg.startHibernated
 	}
 
-	// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-	k8sLessEqual125, _ := versionutils.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, "< 1.25")
-	// This field should not be set for kubernetes version >= 1.25
-	if k8sLessEqual125 {
-		// allow privileged containers defaults to true
-		if cfg.allowPrivilegedContainers != nil {
-			shoot.Spec.Kubernetes.AllowPrivilegedContainers = cfg.allowPrivilegedContainers
-		}
-	}
-
 	if clearExtensions {
 		shoot.Spec.Extensions = nil
 	}
@@ -284,7 +273,7 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 	}
 
 	if StringSet(cfg.networkingType) {
-		shoot.Spec.Networking.Type = pointer.String(cfg.networkingType)
+		shoot.Spec.Networking.Type = ptr.To(cfg.networkingType)
 	}
 
 	if StringSet(cfg.networkingPods) {
@@ -309,7 +298,7 @@ func setShootTolerations(shoot *gardencorev1beta1.Shoot) {
 	shoot.Spec.Tolerations = []gardencorev1beta1.Toleration{
 		{
 			Key:   SeedTaintTestRun,
-			Value: pointer.String(GetTestRunID()),
+			Value: ptr.To(GetTestRunID()),
 		},
 	}
 }
@@ -369,4 +358,23 @@ func PrettyPrintObject(obj runtime.Object) error {
 	}
 	fmt.Print(string(d))
 	return nil
+}
+
+func setShootControlPlaneHighAvailability(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) {
+	if StringSet(cfg.controlPlaneFailureTolerance) {
+		if shoot.Spec.ControlPlane == nil {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{},
+				},
+			}
+		}
+
+		if shoot.Spec.ControlPlane.HighAvailability == nil {
+			shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
+				FailureTolerance: gardencorev1beta1.FailureTolerance{},
+			}
+		}
+		shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type = gardencorev1beta1.FailureToleranceType(cfg.controlPlaneFailureTolerance)
+	}
 }

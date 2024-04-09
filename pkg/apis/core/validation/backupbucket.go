@@ -73,7 +73,7 @@ func ValidateBackupBucketSpecUpdate(newSpec, oldSpec *core.BackupBucketSpec, fld
 }
 
 // ValidateBackupBucketStatusUpdate validates the status field of a BackupBucket object.
-func ValidateBackupBucketStatusUpdate(newBackupBucket, oldBackupBucket *core.BackupBucket) field.ErrorList {
+func ValidateBackupBucketStatusUpdate(_, _ *core.BackupBucket) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

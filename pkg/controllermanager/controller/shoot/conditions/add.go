@@ -21,7 +21,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(r)
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gardencorev1beta1.Seed{}},
+		source.Kind(mgr.GetCache(), &gardencorev1beta1.Seed{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToShoot), mapper.UpdateWithNew, c.GetLogger()),
 		r.SeedPredicate(),
 	)

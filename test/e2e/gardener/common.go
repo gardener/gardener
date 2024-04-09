@@ -20,8 +20,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -42,6 +43,7 @@ func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 // getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
 func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 	var failureToleranceType gardencorev1beta1.FailureToleranceType
+
 	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
 	case "zone":
 		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
@@ -62,31 +64,32 @@ func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
 func DefaultShoot(name string) *gardencorev1beta1.Shoot {
-	return &gardencorev1beta1.Shoot{
+	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
 				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",
+				v1beta1constants.AnnotationAuthenticationIssuer:                        v1beta1constants.AnnotationAuthenticationIssuerManaged,
 			},
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane:      getShootControlPlane(),
 			Region:            "local",
-			SecretBindingName: pointer.String("local"),
+			SecretBindingName: ptr.To("local"),
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.27.1",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				Version:                     "1.29.0",
+				EnableStaticTokenKubeconfig: ptr.To(false),
 				Kubelet: &gardencorev1beta1.KubeletConfig{
-					SerializeImagePulls: pointer.Bool(false),
-					RegistryPullQPS:     pointer.Int32(10),
-					RegistryBurst:       pointer.Int32(20),
+					SerializeImagePulls: ptr.To(false),
+					RegistryPullQPS:     ptr.To[int32](10),
+					RegistryBurst:       ptr.To[int32](20),
 				},
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type: pointer.String("calico"),
+				Type: ptr.To("calico"),
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
@@ -115,6 +118,18 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 		},
 	}
+
+	if ginkgo.Label("default").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) {
+		// TODO(maboehm): Add permanently to default shoot after v1.92
+		// The extension is not available in the previous gardener
+		// version (so during upgrade tests), so only set it for default tests.
+		shoot.Spec.Extensions = append(shoot.Spec.Extensions,
+			gardencorev1beta1.Extension{
+				Type: "local-ext-shoot-after-worker",
+			},
+		)
+	}
+	return shoot
 }
 
 // DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.
@@ -128,8 +143,9 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 			Region:           "local",
 			CloudProfileName: "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.27.1",
-				EnableStaticTokenKubeconfig: pointer.Bool(false),
+				Version:                     "1.29.0",
+				EnableStaticTokenKubeconfig: ptr.To(false),
+				KubeAPIServer:               &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
@@ -150,7 +166,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 func SetupDNSForMultiZoneTest() {
 	net.DefaultResolver = &net.Resolver{
 		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			dialer := net.Dialer{
 				Timeout: time.Duration(5) * time.Second,
 			}

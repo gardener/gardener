@@ -40,7 +40,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 )
@@ -67,9 +66,6 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		}
 		ginkgo.By("Deploy the net test daemon set")
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-serviceaccount.yaml.tpl", templateParams))
-		if !v1beta1helper.IsPSPDisabled(f.Shoot) {
-			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "network-nginx-rolebinding-privileged.yaml.tpl", templateParams))
-		}
 		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.NginxDaemonSetName, templateParams))
 
 		err := f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, f.Namespace)
@@ -87,7 +83,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		for _, from := range pods.Items {
 			for _, to := range pods.Items {
 				ginkgo.By(fmt.Sprintf("Testing %s to %s", from.GetName(), to.GetName()))
-				reader, err := podExecutor.Execute(ctx, from.Namespace, from.Name, "net-curl", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
+				reader, err := podExecutor.Execute(ctx, from.Namespace, from.Name, "pause", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
 				if err != nil {
 					allErrs = multierror.Append(allErrs, fmt.Errorf("%s to %s: %w", from.GetName(), to.GetName(), err))
 					continue

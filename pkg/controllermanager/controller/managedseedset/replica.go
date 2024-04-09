@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -325,12 +325,10 @@ func managedSeedRegistered(managedSeed *seedmanagementv1alpha1.ManagedSeed) bool
 
 func seedReady(seed *gardencorev1beta1.Seed) bool {
 	conditionGardenletReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
-	conditionBootstrapped := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 	conditionBackupBucketsReady := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
 	conditionSystemComponentsHealthy := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	return seed.Generation == seed.Status.ObservedGeneration && seed.DeletionTimestamp == nil &&
 		conditionGardenletReady != nil && conditionGardenletReady.Status == gardencorev1beta1.ConditionTrue &&
-		conditionBootstrapped != nil && conditionBootstrapped.Status == gardencorev1beta1.ConditionTrue &&
 		conditionSystemComponentsHealthy != nil && conditionSystemComponentsHealthy.Status == gardencorev1beta1.ConditionTrue &&
 		(conditionBackupBucketsReady == nil || conditionBackupBucketsReady.Status == gardencorev1beta1.ConditionTrue)
 }
@@ -406,7 +404,7 @@ const placeholder = "replica-name"
 
 func replacePlaceholdersInShootSpec(spec *gardencorev1beta1.ShootSpec, name string) {
 	if spec.DNS != nil && spec.DNS.Domain != nil {
-		spec.DNS.Domain = pointer.String(strings.Replace(*spec.DNS.Domain, placeholder, name, -1))
+		spec.DNS.Domain = ptr.To(strings.Replace(*spec.DNS.Domain, placeholder, name, -1))
 	}
 }
 

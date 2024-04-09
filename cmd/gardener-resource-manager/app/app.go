@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -25,33 +26,30 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
+	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
@@ -69,34 +67,11 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			verflag.PrintAndExitIfRequested()
-
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(); err != nil {
-				return err
-			}
-
-			log, err := logger.NewZapLogger(opts.config.LogLevel, opts.config.LogFormat)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			log, err := utils.InitRun(cmd, opts, Name)
 			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+				return err
 			}
-
-			logf.SetLogger(log)
-			klog.SetLogger(log)
-
-			log.Info("Starting "+Name, "version", version.Get())
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
-			})
-
-			// don't output usage on further errors raised during execution
-			cmd.SilenceUsage = true
-			// further errors will be logged properly, don't duplicate
-			cmd.SilenceErrors = true
-
 			return run(cmd.Context(), log, opts.config)
 		},
 	}
@@ -138,19 +113,28 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		managerScheme = resourcemanagerclient.SourceScheme
 	}
 
+	var extraHandlers map[string]http.Handler
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+		extraHandlers = routes.ProfilingHandlers
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
 	log.Info("Setting up manager")
 	mgr, err := manager.New(sourceRESTConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  managerScheme,
-		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
-		Namespace:               *cfg.SourceClientConnection.Namespace,
-		SyncPeriod:              &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
-
-		Host:                   cfg.Server.Webhooks.BindAddress,
-		Port:                   cfg.Server.Webhooks.Port,
-		CertDir:                cfg.Server.Webhooks.TLS.ServerCertDir,
+		GracefulShutdownTimeout: ptr.To(5 * time.Second),
+		Cache: cache.Options{
+			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
+			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
+		},
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
-		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+		Metrics: metricsserver.Options{
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			ExtraHandlers: extraHandlers,
+		},
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
@@ -160,21 +144,18 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
-			RecoverPanic: pointer.Bool(true),
+		Controller: controllerconfig.Controller{
+			RecoverPanic: ptr.To(true),
 		},
+
+		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
+			Host:    cfg.Server.Webhooks.BindAddress,
+			Port:    cfg.Server.Webhooks.Port,
+			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
+		}),
 	})
 	if err != nil {
 		return err
-	}
-
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
-		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
-		}
-		if cfg.Debugging.EnableContentionProfiling {
-			goruntime.SetBlockProfileRate(1)
-		}
 	}
 
 	log.Info("Setting up health check endpoints")
@@ -205,27 +186,17 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
-			opts.MapperProvider = func(config *rest.Config) (meta.RESTMapper, error) {
-				return apiutil.NewDynamicRESTMapper(
-					config,
-					apiutil.WithLazyDiscovery,
-					apiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
-				)
-			}
+			opts.MapperProvider = apiutil.NewDynamicRESTMapper
 
-			opts.Namespace = *cfg.TargetClientConnection.Namespace
-			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
+			opts.Cache.DefaultNamespaces = getCacheConfig(cfg.TargetClientConnection.Namespaces)
+			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
-			if *cfg.TargetClientConnection.DisableCachedClient {
-				opts.NewClient = func(_ cache.Cache, config *rest.Config, opts client.Options, _ ...client.Object) (client.Client, error) {
-					return client.New(config, opts)
-				}
-			}
-
-			opts.ClientDisableCacheFor = []client.Object{
-				&corev1.Event{},
-				&eventsv1beta1.Event{},
-				&eventsv1.Event{},
+			opts.Client.Cache = &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1beta1.Event{},
+					&eventsv1.Event{},
+				},
 			}
 		})
 		if err != nil {
@@ -241,6 +212,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		if err := mgr.Add(targetCluster); err != nil {
 			return fmt.Errorf("failed adding target cluster to manager: %w", err)
 		}
+	}
+
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, targetCluster.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
 	log.Info("Adding webhook handlers to manager")
@@ -259,4 +235,27 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core/v1 API group
+		indexer.AddPodNodeName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getCacheConfig(namespaces []string) map[string]cache.Config {
+	cacheConfig := map[string]cache.Config{}
+
+	for _, namespace := range namespaces {
+		cacheConfig[namespace] = cache.Config{}
+	}
+
+	return cacheConfig
 }

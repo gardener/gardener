@@ -20,16 +20,16 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -38,13 +38,13 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/extensions"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
 
 var _ = Describe("#Interface", func() {
@@ -69,6 +69,7 @@ var _ = Describe("#Interface", func() {
 		providerConfig *runtime.RawExtension
 		providerStatus *runtime.RawExtension
 		nodesCIDR      *string
+		egressCIDRs    []string
 
 		empty, expected *extensionsv1alpha1.Infrastructure
 		values          *infrastructure.Values
@@ -94,7 +95,8 @@ var _ = Describe("#Interface", func() {
 		sshPublicKey = []byte("secure")
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
 		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
-		nodesCIDR = pointer.String("1.2.3.4/5")
+		nodesCIDR = ptr.To("1.2.3.4/5")
+		egressCIDRs = []string{"1.2.3.4/5", "5.6.7.8/9"}
 
 		values = &infrastructure.Values{
 			Namespace:      namespace,
@@ -112,10 +114,6 @@ var _ = Describe("#Interface", func() {
 		}
 
 		expected = &extensionsv1alpha1.Infrastructure{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-				Kind:       extensionsv1alpha1.InfrastructureResource,
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -332,6 +330,7 @@ var _ = Describe("#Interface", func() {
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus
+			expected.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
 
 			By("Wait")
@@ -340,6 +339,7 @@ var _ = Describe("#Interface", func() {
 			By("Verify status")
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 
 		It("should return no error when is ready (AnnotateOperation == false)", func() {
@@ -350,11 +350,13 @@ var _ = Describe("#Interface", func() {
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus
+			expected.Status.EgressCIDRs = egressCIDRs
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
 
@@ -414,7 +416,7 @@ var _ = Describe("#Interface", func() {
 				Spec: gardencorev1beta1.ShootStateSpec{
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
 						{
-							Name:  pointer.String(name),
+							Name:  ptr.To(name),
 							Kind:  extensionsv1alpha1.InfrastructureResource,
 							State: state,
 						},
@@ -447,7 +449,7 @@ var _ = Describe("#Interface", func() {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
-				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+				DoAndReturn(func(_ context.Context, actual client.Object, _ ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
 					return nil
 				})
@@ -536,12 +538,13 @@ var _ = Describe("#Interface", func() {
 
 			var (
 				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
-				nodesCIDR      = pointer.String("1.2.3.4")
+				nodesCIDR      = ptr.To("1.2.3.4")
 			)
 
 			infra := empty.DeepCopy()
 			infra.Status.ProviderStatus = providerStatus
 			infra.Status.NodesCIDR = nodesCIDR
+			infra.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Create(ctx, infra)).To(Succeed())
 
 			expected = infra.DeepCopy()
@@ -552,6 +555,7 @@ var _ = Describe("#Interface", func() {
 
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
 })

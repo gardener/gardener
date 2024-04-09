@@ -17,12 +17,13 @@ package terraformer_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +34,8 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var (
@@ -191,7 +192,7 @@ var _ = Describe("terraformer", func() {
 			It("should return error when the ConfigMap creation fails", func() {
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()).
-					Return(apierrors.NewForbidden(configMapGroupResource, name, fmt.Errorf("not allowed to create ConfigMap")))
+					Return(apierrors.NewForbidden(configMapGroupResource, name, errors.New("not allowed to create ConfigMap")))
 
 				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name, ownerRef)
 				Expect(err).To(HaveOccurred())

@@ -12,17 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package charttest
+package charttest_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-)
-
-const (
-	chartsRootPath = "../../../../../charts"
 )
 
 func TestApplier(t *testing.T) {

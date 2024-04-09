@@ -51,6 +51,7 @@ var _ = Describe("TokenRequestor tests", func() {
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      resourceName,
 					"serviceaccount.resources.gardener.cloud/namespace": testNamespace.Name,
+					"serviceaccount.resources.gardener.cloud/labels":    `{"foo":"bar"}`,
 				},
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
@@ -81,6 +82,7 @@ var _ = Describe("TokenRequestor tests", func() {
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(Succeed())
+		Expect(serviceAccount.Labels).To(Equal(map[string]string{"foo": "bar"}))
 
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 
@@ -95,6 +97,7 @@ var _ = Describe("TokenRequestor tests", func() {
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(Succeed())
+		Expect(serviceAccount.Labels).To(Equal(map[string]string{"foo": "bar"}))
 
 		patch := client.MergeFrom(secret.DeepCopy())
 		secret.Labels = nil

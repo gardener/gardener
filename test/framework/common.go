@@ -14,7 +14,9 @@
 
 package framework
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	k8sClientInitPollInterval = 20 * time.Second

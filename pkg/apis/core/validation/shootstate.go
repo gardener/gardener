@@ -77,7 +77,7 @@ func ValidateShootStateSpec(shootStateSpec *core.ShootStateSpec, fldPath *field.
 }
 
 // ValidateShootStateSpecUpdate validates the update to the specification of a ShootState
-func ValidateShootStateSpecUpdate(newShootState, oldShootState *core.ShootStateSpec) field.ErrorList {
+func ValidateShootStateSpecUpdate(_, _ *core.ShootStateSpec) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

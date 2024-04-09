@@ -1,3 +1,4 @@
+apiVersion: testmachinery.sapcloud.io
 kind: TestDefinition
 metadata:
   name: gardener-default-test-suite
@@ -11,7 +12,7 @@ spec:
   command: [bash, -c]
   args:
     - >-
-      go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener
+      go test -timeout=0 ./test/testmachinery/suites/gardener
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
       --report-file=$TM_EXPORT_PATH/report.json
       -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
@@ -19,4 +20,4 @@ spec:
       -ginkgo.focus="\[DEFAULT\]"
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
 
-  image: golang:1.20.6
+  image: golang:1.22.2

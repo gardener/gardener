@@ -1,0 +1,34 @@
+---
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+kind: NodeAgentConfiguration
+clientConnection:
+  qps: 100
+  burst: 130
+  kubeconfig: path/to/kubeconfig
+logLevel: info
+logFormat: text
+server:
+  healthProbes:
+    port: 2751
+  metrics:
+    port: 2752
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
+featureGates: {}
+apiServer:
+  server: https://localhost
+  caBundle: <some-base64-encoded-ca-bundle>
+#bootstrap:
+#  kubeletDataVolumeSize: 50Gi
+controllers:
+  operatingSystemConfig:
+    secretName: name-of-osc-secret
+    kubernetesVersion: 1.28.2
+  # syncPeriod: 10m
+  # syncJitterPeriod: 5m
+  token:
+    syncConfigs:
+    - secretName: name-of-access-token-secret
+      path: /path/on/machine/where/to/sync/the/token/to
+    syncPeriod: 1h

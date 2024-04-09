@@ -39,9 +39,9 @@ type AdminKubeconfigRequest struct {
 // the kubeconfig and expiration of the credential.
 type AdminKubeconfigRequestStatus struct {
 	// Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.
-	Kubeconfig []byte `json:"kubeconfig" protobuf:"bytes,1,name=kubeconfig"`
+	Kubeconfig []byte `json:"kubeconfig" protobuf:"bytes,1,opt,name=kubeconfig"`
 	// ExpirationTimestamp is the expiration timestamp of the returned credential.
-	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,name=expirationTimestamp"`
+	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,opt,name=expirationTimestamp"`
 }
 
 // AdminKubeconfigRequestSpec contains the expiration time of the kubeconfig.

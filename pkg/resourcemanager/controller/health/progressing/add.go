@@ -17,28 +17,39 @@ package progressing
 import (
 	"context"
 
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
+	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "health-progressing"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -49,19 +60,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	b := builder.
+	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(
@@ -75,38 +74,63 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			r.ClassFilter,
 		)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		})
-
-	if !targetCacheDisabled {
-		// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
-		// a change on managed resources.
-		// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
-		// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects
-		// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
-		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
-		// adding labels to managed resources and watch them explicitly.
-		b = b.Watches(
-			source.NewKindWithCache(&appsv1.Deployment{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		).Watches(
-			source.NewKindWithCache(&appsv1.StatefulSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		).Watches(
-			source.NewKindWithCache(&appsv1.DaemonSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-			builder.WithPredicates(r.ProgressingStatusChanged()),
-		)
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+		}).
+		Build(r)
+	if err != nil {
+		return err
 	}
 
-	return b.Complete(r)
+	for resource, obj := range map[string]client.Object{
+		"deployments":   &appsv1.Deployment{},
+		"statefulsets":  &appsv1.StatefulSet{},
+		"daemonsets":    &appsv1.DaemonSet{},
+		"prometheuses":  &monitoringv1.Prometheus{},
+		"alertmanagers": &monitoringv1.Alertmanager{},
+		"certificates":  &certv1alpha1.Certificate{},
+		"issuers":       &certv1alpha1.Issuer{},
+	} {
+		gvr := schema.GroupVersionResource{Group: appsv1.SchemeGroupVersion.Group, Version: appsv1.SchemeGroupVersion.Version, Resource: resource}
+
+		if _, err := targetCluster.GetRESTMapper().KindFor(gvr); err != nil {
+			if !meta.IsNoMatchError(err) {
+				return err
+			}
+			c.GetLogger().Info("Resource is not available/enabled API of the target cluster, skip adding watches", "gvr", gvr)
+
+			continue
+		}
+
+		if err := c.Watch(
+			source.Kind(targetCluster.GetCache(), obj),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			r.ProgressingStatusChanged(ctx),
+		); err != nil {
+			return err
+		}
+
+		if resource == "deployments" {
+			// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as
+			// there is a change on managed resources.
+			pod := &metav1.PartialObjectMetadata{}
+			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
+
+			if err := c.Watch(
+				source.Kind(targetCluster.GetCache(), pod),
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete),
+			); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // ProgressingStatusChanged returns a predicate that filters for events that indicate a change in the object's
 // progressing status.
-func (r *Reconciler) ProgressingStatusChanged() predicate.Predicate {
+func (r *Reconciler) ProgressingStatusChanged(ctx context.Context) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(_ event.CreateEvent) bool { return false },
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -115,12 +139,30 @@ func (r *Reconciler) ProgressingStatusChanged() predicate.Predicate {
 				return true
 			}
 
-			oldProgressing, _ := checkProgressing(e.ObjectOld)
-			newProgressing, _ := checkProgressing(e.ObjectNew)
+			oldProgressing, _, _ := r.checkProgressing(ctx, e.ObjectOld)
+			newProgressing, _, _ := r.checkProgressing(ctx, e.ObjectNew)
 
 			return oldProgressing != newProgressing
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
+	}
+}
+
+// MapPodToDeploymentToOriginManagedResource is a mapper.MapFunc for pods to their origin Deployment and origin
+// ManagedResource.
+func (r *Reconciler) MapPodToDeploymentToOriginManagedResource(clusterID string) mapper.MapFunc {
+	return func(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
+		deployment, err := kubernetesutils.GetDeploymentForPod(ctx, reader, obj.GetNamespace(), obj.GetOwnerReferences())
+		if err != nil {
+			log.Error(err, "Failed getting Deployment for Pod", "pod", client.ObjectKeyFromObject(obj))
+			return nil
+		}
+
+		if deployment == nil {
+			return nil
+		}
+
+		return utils.MapToOriginManagedResource(clusterID)(ctx, log, reader, deployment)
 	}
 }

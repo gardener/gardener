@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package webhook_test
 
 import (
 	"context"
@@ -20,9 +20,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,8 +32,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	. "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsmockwebhook "github.com/gardener/gardener/extensions/pkg/webhook/mock"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
 var logger = log.Log.WithName("controlplane-webhook-test")
@@ -138,7 +139,7 @@ var _ = Describe("Handler", func() {
 		It("should return a patch response if the resource was changed by mutator", func() {
 			// Create mock mutator
 			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
-			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb client.Object) error {
+			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(_ context.Context, obj, _ client.Object) error {
 				obj.SetAnnotations(map[string]string{"foo": "bar"})
 				return nil
 			})

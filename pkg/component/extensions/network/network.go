@@ -53,6 +53,8 @@ type Values struct {
 	Name string
 	// Type is the type of Network plugin/extension (e.g calico)
 	Type string
+	// IPFamilies specifies the IP protocol versions to use for shoot networking.
+	IPFamilies []extensionsv1alpha1.IPFamily
 	// ProviderConfig contains the provider config for the Network extension.
 	ProviderConfig *runtime.RawExtension
 	// PodCIDR is the Shoot's pod CIDR in the Shoot VPC
@@ -183,6 +185,7 @@ func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alp
 				Type:           n.values.Type,
 				ProviderConfig: n.values.ProviderConfig,
 			},
+			IPFamilies:  n.values.IPFamilies,
 			PodCIDR:     n.values.PodCIDR.String(),
 			ServiceCIDR: n.values.ServiceCIDR.String(),
 		}

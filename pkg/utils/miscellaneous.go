@@ -15,28 +15,17 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"regexp"
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-// ValueExists returns true or false, depending on whether the given string <value>
-// is part of the given []string list <list>.
-func ValueExists(value string, list []string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
 
 // MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
 // already existing in the <a> map, the <a> value for that key will be overwritten.
@@ -113,14 +102,17 @@ func FindFreePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
+// emailVefiryRegex is used to verify the validity of an email.
+var emailVefiryRegex = regexp.MustCompile(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`)
+
 // TestEmail validates the provided <email> against a regular expression and returns whether it matches.
 func TestEmail(email string) bool {
-	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
-	return match
+	return emailVefiryRegex.MatchString(email)
 }
 
 // IDForKeyWithOptionalValue returns an identifier for the given key + optional value.
@@ -132,33 +124,9 @@ func IDForKeyWithOptionalValue(key string, value *string) string {
 	return key + v
 }
 
-// QuantityPtr returns a Quantity pointer to its argument.
-func QuantityPtr(q resource.Quantity) *resource.Quantity {
-	return &q
-}
-
-// ProtocolPtr returns a corev1.Protocol pointer to its argument.
-func ProtocolPtr(protocol corev1.Protocol) *corev1.Protocol {
-	return &protocol
-}
-
-// TimePtr returns a time.Time pointer to its argument.
-func TimePtr(t time.Time) *time.Time {
-	return &t
-}
-
-// TimePtrDeref dereferences the time.Time ptr and returns it if not nil, or else
-// returns def.
-func TimePtrDeref(ptr *time.Time, def time.Time) time.Time {
-	if ptr != nil {
-		return *ptr
-	}
-	return def
-}
-
-// IntStrPtrFromInt returns an intstr.IntOrString pointer to its argument.
-func IntStrPtrFromInt(port int) *intstr.IntOrString {
-	v := intstr.FromInt(port)
+// IntStrPtrFromInt32 returns an intstr.IntOrString pointer to its argument.
+func IntStrPtrFromInt32(port int32) *intstr.IntOrString {
+	v := intstr.FromInt32(port)
 	return &v
 }
 
@@ -198,4 +166,65 @@ func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
 		m[k] = fmt.Sprint(v)
 	}
 	return m
+}
+
+// FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
+func FilterEntriesByPrefix(prefix string, entries []string) []string {
+	var result []string
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, prefix) {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
+// FilterEntriesByFilterFn returns a list of entries which passes the filter function.
+func FilterEntriesByFilterFn(entries []string, filterFn func(entry string) bool) []string {
+	var result []string
+	for _, entry := range entries {
+		if filterFn != nil && !filterFn(entry) {
+			continue
+		}
+
+		result = append(result, entry)
+	}
+	return result
+}
+
+// ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
+// For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
+// IPv6 and IPv4 is supported.
+func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
+	if subnet == nil {
+		return nil, errors.New("subnet is nil")
+	}
+
+	isIPv6 := false
+
+	bytes := subnet.IP.To4()
+	if bytes == nil {
+		isIPv6 = true
+		bytes = subnet.IP.To16()
+	}
+
+	ip := net.IP(big.NewInt(0).Add(big.NewInt(0).SetBytes(bytes), big.NewInt(offset)).Bytes())
+
+	if !subnet.Contains(ip) {
+		return nil, fmt.Errorf("cannot compute IP with offset %d - subnet %q too small", offset, subnet)
+	}
+
+	// there is no broadcast address on IPv6
+	if isIPv6 {
+		return ip, nil
+	}
+
+	for i := range ip {
+		// IP address is not the same, so it's not the broadcast ip.
+		if ip[i] != ip[i]|^subnet.Mask[i] {
+			return ip.To4(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
 }

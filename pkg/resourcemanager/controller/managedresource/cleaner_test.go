@@ -16,19 +16,19 @@ package managedresource
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("cleaner", func() {
@@ -59,13 +59,13 @@ var _ = Describe("cleaner", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"foo": "bar"},
 					},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To[int32](1),
 					VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 						{
 							Spec: corev1.PersistentVolumeClaimSpec{
 								AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 								VolumeName:       "foo-pvc",
-								StorageClassName: pointer.String("ultra-fast"),
+								StorageClassName: ptr.To("ultra-fast"),
 							},
 						},
 					},
@@ -97,10 +97,10 @@ var _ = Describe("cleaner", func() {
 		})
 
 		It("should do nothing if list PVCs fails", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-				DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
 					return fakeErr
 				})
 
@@ -110,7 +110,7 @@ var _ = Describe("cleaner", func() {
 
 		It("should do nothing if all PVCs of the StatefulSet have already been deleted", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-				DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
 					return nil
 				})
 
@@ -119,7 +119,7 @@ var _ = Describe("cleaner", func() {
 		})
 
 		It("should delete all PVCs of the StatefulSet", func() {
-			fakeErr := fmt.Errorf("fake")
+			fakeErr := errors.New("fake")
 
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaimList{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
@@ -129,14 +129,14 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.String("ultra-fast"),
+									StorageClassName: ptr.To("ultra-fast"),
 								},
 							},
 						}
 						return nil
 					}),
 				c.EXPECT().DeleteAllOf(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-					DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+					DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.DeleteAllOfOption) error {
 						return fakeErr
 					}),
 			)
@@ -154,14 +154,14 @@ var _ = Describe("cleaner", func() {
 								Spec: corev1.PersistentVolumeClaimSpec{
 									AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 									VolumeName:       "foo-pvc-foo-0",
-									StorageClassName: pointer.String("ultra-fast"),
+									StorageClassName: ptr.To("ultra-fast"),
 								},
 							},
 						}
 						return nil
 					}),
 				c.EXPECT().DeleteAllOf(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{}), client.InNamespace(sts.Namespace), client.MatchingLabels(sts.Spec.Selector.MatchLabels)).
-					DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+					DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.DeleteAllOfOption) error {
 						return nil
 					}),
 			)

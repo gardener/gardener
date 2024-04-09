@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -351,7 +351,7 @@ func Secret(objectMeta metav1.ObjectMeta, data map[string][]byte) *corev1.Secret
 		ObjectMeta: objectMeta,
 		Data:       data,
 		Type:       secretTypeForData(data),
-		Immutable:  pointer.Bool(true),
+		Immutable:  ptr.To(true),
 	}
 }
 

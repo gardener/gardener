@@ -39,9 +39,15 @@ fi
 kubeconfig=$1
 registry=$2
 
-echo "Generating new password for container registry $registry"
+if kubectl --kubeconfig "$kubeconfig" get secrets -n registry registry-password; then
+  echo "Container registry password found in seed cluster"
+  password=$(kubectl --kubeconfig "$kubeconfig" get secrets -n registry registry-password -o yaml | yq -e .data.password | base64 -d)
+else
+  echo "Generating new password for container registry $registry"
+  password=$(openssl rand -base64 20)
+fi
+
 mkdir -p "$SCRIPT_DIR"/htpasswd
-password=$(openssl rand -base64 20)
 htpasswd -Bbn gardener "$password" > "$SCRIPT_DIR"/htpasswd/auth
 
 echo "Creating basic auth secret for registry"
@@ -49,6 +55,79 @@ kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/loa
 kubectl create secret generic -n registry registry-htpasswd --from-file="$SCRIPT_DIR"/htpasswd/auth --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 kubectl rollout restart statefulsets -n registry -l app=registry --kubeconfig "$kubeconfig"
+# TODO(oliver-goetz): contribute basic authentication support for registry to https://github.com/distribution/distribution and switch back to the official image afterwards
+kubectl --kubeconfig "$kubeconfig" apply -f - << EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-cache-config
+  namespace: registry
+type: Opaque
+stringData:
+  registry-host: $registry
+  config.yml: |
+    version: 0.1
+    log:
+      fields:
+        service: registry
+    storage:
+      delete:
+        enabled: true
+      cache:
+        blobdescriptor: inmemory
+      filesystem:
+        rootdirectory: /var/lib/registry
+    http:
+      addr: 127.0.0.1:5000
+      headers:
+        X-Content-Type-Options: [nosniff]
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+    proxy:
+      remoteurl: https://$registry
+      username: gardener
+      password: '$password'
+  hosts.toml: |
+    server = "https://$registry"
+
+    [host."http://127.0.0.1:5000"]
+      capabilities = ["pull", "resolve"]
+  start-seed-registry-cache.conf: |
+    [Service]\n
+    ExecStartPre=bash /var/opt/docker/start-seed-registry-cache.sh\n
+  stop-seed-registry-cache.conf: |
+    [Service]\n
+    ExecStopPost=bash /var/opt/docker/stop-seed-registry-cache.sh\n
+  start-seed-registry-cache.sh: |
+    #!/usr/bin/env bash
+    if [[ "\$(/usr/bin/ctr task ls | grep seed-registry-cache | awk '{print \$3}')" == "RUNNING" ]]; then
+      echo "seed-registry-cache is already running"
+      exit 0
+    fi
+    if [[ "\$(/usr/bin/ctr container ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
+      echo "removing old seed-registry-cache container"
+      /usr/bin/ctr task kill seed-registry-cache
+      /usr/bin/ctr task rm seed-registry-cache
+      /usr/bin/ctr container rm seed-registry-cache
+    fi
+    if [[ "\$(/usr/bin/ctr snapshot ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
+      echo "removing old seed-registry-cache snapshot"
+      /usr/bin/ctr snapshot rm seed-registry-cache
+    fi
+    echo "Pulling registry-cache image"
+    /usr/bin/ctr image pull ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev
+    echo "Starting registry-cache"
+    /usr/bin/ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/docker/registry/config.yml,options=rbind:ro --net-host ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev seed-registry-cache
+  stop-seed-registry-cache.sh: |
+    #!/usr/bin/env bash
+    echo "stopping seed-registry-cache"
+    /usr/bin/ctr task kill seed-registry-cache
+    /usr/bin/ctr task rm seed-registry-cache
+    /usr/bin/ctr container rm seed-registry-cache
+EOF
 
 echo "Creating pull secret in garden namespace"
 kubectl apply -f "$SCRIPT_DIR"/../../00-namespace-garden.yaml --kubeconfig "$kubeconfig" --server-side=true
@@ -61,7 +140,7 @@ kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/reg
 echo "Waiting max 5m until registry endpoint is available"
 start_time=$(date +%s)
 until [ "$(curl --write-out '%{http_code}' --silent --output /dev/null https://"$registry"/v2/)" -eq "401" ]; do
-  elapsed_time=$(($(date +%s) - "$start_time"))
+  elapsed_time=$(($(date +%s) - ${start_time}))
   if [ $elapsed_time -gt 300 ]; then
     echo "Timeout"
     exit 1
@@ -72,3 +151,6 @@ done
 echo "Run docker login for registry $registry"
 docker login "$registry" -u gardener -p "$password"
 
+echo "Saving password in seed cluster"
+kubectl create secret generic -n registry registry-password --from-literal=password="$password" --dry-run=client -o yaml | \
+  kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -

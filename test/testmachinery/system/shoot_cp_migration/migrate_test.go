@@ -22,13 +22,14 @@ package cp_migration_test
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 )
@@ -65,7 +66,7 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 		guestBookApp = applications.GuestBookTest{}
 	)
 
-	CBeforeEach(func(c context.Context) {
+	CBeforeEach(func(_ context.Context) {
 		validateConfig()
 	}, 1*time.Minute)
 	CJustBeforeEach(func(ctx context.Context) {
@@ -113,13 +114,17 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 		return nil
 	}
 
+	if !v1beta1helper.NginxIngressEnabled(t.Shoot.Spec.Addons) {
+		return errors.New("the shoot must have the nginx-ingress addon enabled")
+	}
+
 	ginkgo.By("Create test Secret and Service Account")
 	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
 		return err
 	}
 
 	ginkgo.By("Verify Guest Book Application")
-	initializedApp, err := initGuestBookTest(ctx, t)
+	initializedApp, err := initGuestBookTest(t)
 	if err != nil {
 		return err
 	}
@@ -172,7 +177,7 @@ func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applicatio
 	return nil
 }
 
-func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*applications.GuestBookTest, error) {
+func initGuestBookTest(t *ShootMigrationTest) (*applications.GuestBookTest, error) {
 	sFramework := ShootFramework{
 		GardenerFramework: t.GardenerFramework,
 		TestDescription:   NewTestDescription("Guestbook App for CP Migration test"),
@@ -180,18 +185,6 @@ func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*application
 		Seed:              t.SourceSeed,
 		ShootClient:       t.ShootClient,
 		SeedClient:        t.SourceSeedClient,
-	}
-	if !t.Shoot.Spec.Addons.NginxIngress.Enabled {
-		if err := t.GardenerFramework.UpdateShoot(ctx, &t.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
-			if err := t.GardenerFramework.GetShoot(ctx, shoot); err != nil {
-				return err
-			}
-
-			shoot.Spec.Addons.NginxIngress.Enabled = true
-			return nil
-		}); err != nil {
-			return nil, err
-		}
 	}
 	return applications.NewGuestBookTest(&sFramework)
 }

@@ -60,7 +60,7 @@ The `kube-apiserver` command line **may** contain a number of additional provide
 * `--advertise-address`
 * `--feature-gates`
 
-Gardener uses [SNI](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver. In this case, Gardener **will** label the `kube-apiserver`'s `Deployment` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label (deprecated, the label will no longer be added as of `v1.80`) and expects that the `--endpoint-reconciler-type` and `--advertise-address` flags are not modified.
+Gardener uses [SNI](../proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver. In this case, Gardener **will** label the `kube-apiserver`'s `Deployment` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label (deprecated, the label will no longer be added as of `v1.80`) and expects that the `--endpoint-reconciler-type` and `--advertise-address` flags are not modified.
 
 The `--enable-admission-plugins` flag **may** contain admission plugins that are not compatible with CSI plugins such as `PersistentVolumeLabel`. Webhooks should therefore ensure that such admission plugins are either explicitly enabled (if CSI plugins are not used) or disabled (otherwise).
 

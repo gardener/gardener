@@ -44,7 +44,7 @@ var _ = Describe("Equivalences", func() {
 			}
 		})
 
-		It("no additonal equivalence sets (default equivalence sets)", func() {
+		It("no additional equivalence sets (default equivalence sets)", func() {
 			for _, equiList := range defaultEquivalences {
 				for _, gk := range equiList {
 					expectedEquivalenceSets[gk] = EquivalenceSet{}.Insert(equiList...)

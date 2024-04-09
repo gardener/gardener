@@ -15,6 +15,7 @@
 package apiserver
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -23,18 +24,19 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corerest "github.com/gardener/gardener/pkg/apiserver/registry/core/rest"
+	operationsrest "github.com/gardener/gardener/pkg/apiserver/registry/operations/rest"
+	seedmanagementrest "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/rest"
+	settingsrest "github.com/gardener/gardener/pkg/apiserver/registry/settings/rest"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
-	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
-	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
-	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
-	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
 )
 
 // ExtraConfig contains non-generic Gardener API server configuration.
 type ExtraConfig struct {
-	AdminKubeconfigMaxExpiration time.Duration
-	CredentialsRotationInterval  time.Duration
+	AdminKubeconfigMaxExpiration  time.Duration
+	ViewerKubeconfigMaxExpiration time.Duration
+	CredentialsRotationInterval   time.Duration
 }
 
 // Config contains Gardener API server configuration.
@@ -85,10 +87,11 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	var (
 		s                = &GardenerServer{GenericAPIServer: genericServer}
 		coreAPIGroupInfo = (corerest.StorageProvider{
-			AdminKubeconfigMaxExpiration: c.ExtraConfig.AdminKubeconfigMaxExpiration,
-			CredentialsRotationInterval:  c.ExtraConfig.CredentialsRotationInterval,
-			KubeInformerFactory:          c.kubeInformerFactory,
-			CoreInformerFactory:          c.coreInformerFactory,
+			AdminKubeconfigMaxExpiration:  c.ExtraConfig.AdminKubeconfigMaxExpiration,
+			ViewerKubeconfigMaxExpiration: c.ExtraConfig.ViewerKubeconfigMaxExpiration,
+			CredentialsRotationInterval:   c.ExtraConfig.CredentialsRotationInterval,
+			KubeInformerFactory:           c.kubeInformerFactory,
+			CoreInformerFactory:           c.coreInformerFactory,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
@@ -104,9 +107,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 
 // ExtraOptions is used for providing additional options to the Gardener API Server
 type ExtraOptions struct {
-	ClusterIdentity              string
-	AdminKubeconfigMaxExpiration time.Duration
-	CredentialsRotationInterval  time.Duration
+	ClusterIdentity               string
+	AdminKubeconfigMaxExpiration  time.Duration
+	ViewerKubeconfigMaxExpiration time.Duration
+	CredentialsRotationInterval   time.Duration
 
 	LogLevel  string
 	LogFormat string
@@ -116,17 +120,22 @@ type ExtraOptions struct {
 func (o *ExtraOptions) Validate() []error {
 	allErrors := []error{}
 	if len(o.ClusterIdentity) == 0 {
-		allErrors = append(allErrors, fmt.Errorf("--cluster-identity must be specified"))
+		allErrors = append(allErrors, errors.New("--cluster-identity must be specified"))
 	}
 
 	if o.AdminKubeconfigMaxExpiration < time.Hour ||
 		o.AdminKubeconfigMaxExpiration > time.Duration(1<<32)*time.Second {
-		allErrors = append(allErrors, fmt.Errorf("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
+		allErrors = append(allErrors, errors.New("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
+	}
+
+	if o.ViewerKubeconfigMaxExpiration < time.Hour ||
+		o.ViewerKubeconfigMaxExpiration > time.Duration(1<<32)*time.Second {
+		allErrors = append(allErrors, errors.New("--shoot-viewer-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
 	}
 
 	if o.CredentialsRotationInterval < 24*time.Hour ||
 		o.CredentialsRotationInterval > time.Duration(1<<32)*time.Second {
-		allErrors = append(allErrors, fmt.Errorf("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
+		allErrors = append(allErrors, errors.New("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
 	}
 
 	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {
@@ -144,6 +153,7 @@ func (o *ExtraOptions) Validate() []error {
 func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterIdentity, "cluster-identity", o.ClusterIdentity, "This flag is used for specifying the identity of the Garden cluster")
 	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
+	fs.DurationVar(&o.ViewerKubeconfigMaxExpiration, "shoot-viewer-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an ViewerKubeconfigRequest. If an otherwise valid ViewerKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.CredentialsRotationInterval, "shoot-credentials-rotation-interval", time.Hour*24*90, "The duration after the initial shoot creation or the last credentials rotation when a client warning for the next credentials rotation is issued.")
 
 	fs.StringVar(&o.LogLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
@@ -153,6 +163,7 @@ func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 // ApplyTo applies the extra options to the API Server config.
 func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.AdminKubeconfigMaxExpiration = o.AdminKubeconfigMaxExpiration
+	c.ExtraConfig.ViewerKubeconfigMaxExpiration = o.ViewerKubeconfigMaxExpiration
 	c.ExtraConfig.CredentialsRotationInterval = o.CredentialsRotationInterval
 
 	return nil

@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,7 +47,7 @@ type errorClient struct {
 	err error
 }
 
-func (e *errorClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+func (e *errorClient) Delete(_ context.Context, _ client.Object, _ ...client.DeleteOption) error {
 	return e.err
 }
 
@@ -73,9 +73,10 @@ func consistOfObjects(names ...string) gomegatypes.GomegaMatcher {
 
 var _ = Describe("Extension", func() {
 	const (
-		defaultName = "def"
-		afterName   = "after"
-		beforeName  = "before"
+		defaultName     = "def"
+		afterName       = "after"
+		beforeName      = "before"
+		afterWorkerName = "after-worker"
 	)
 
 	var (
@@ -85,16 +86,16 @@ var _ = Describe("Extension", func() {
 		ext            extension.Interface
 		log            logr.Logger
 
-		defaultExtension *extensionsv1alpha1.Extension
-		beforeExtension  *extensionsv1alpha1.Extension
-		afterExtension   *extensionsv1alpha1.Extension
-		allExtensions    []*extensionsv1alpha1.Extension
+		defaultExtension     *extensionsv1alpha1.Extension
+		beforeExtension      *extensionsv1alpha1.Extension
+		afterExtension       *extensionsv1alpha1.Extension
+		afterWorkerExtension *extensionsv1alpha1.Extension
+		allExtensions        []*extensionsv1alpha1.Extension
 
 		requiredExtensions map[string]extension.Extension
 	)
 
 	BeforeEach(func() {
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-namespace"}}
 
 		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
@@ -138,7 +139,20 @@ var _ = Describe("Extension", func() {
 			},
 		}
 
-		allExtensions = []*extensionsv1alpha1.Extension{defaultExtension, beforeExtension, afterExtension}
+		afterWorker := gardencorev1beta1.AfterWorker
+		afterWorkerExtension = &extensionsv1alpha1.Extension{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      afterWorkerName,
+				Namespace: namespace.Name,
+			},
+			Spec: extensionsv1alpha1.ExtensionSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type: afterWorkerName,
+				},
+			},
+		}
+
+		allExtensions = []*extensionsv1alpha1.Extension{defaultExtension, beforeExtension, afterExtension, afterWorkerExtension}
 
 		requiredExtensions = map[string]extension.Extension{
 			defaultName: {
@@ -163,7 +177,16 @@ var _ = Describe("Extension", func() {
 					Migrate:   &afterKubeAPIServer,
 				},
 			},
+			afterWorkerName: {
+				Extension: *afterWorkerExtension,
+				Timeout:   time.Second,
+				Lifecycle: &gardencorev1beta1.ControllerResourceLifecycle{
+					Reconcile: &afterWorker,
+				},
+			},
 		}
+
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&extensionsv1alpha1.Extension{}).Build()
 
 		ext = extension.New(
 			log,
@@ -193,6 +216,15 @@ var _ = Describe("Extension", func() {
 			extensionList := &extensionsv1alpha1.ExtensionList{}
 			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, afterName))
+		})
+	})
+
+	Describe("#DeployAfterWorker", func() {
+		It("should successfully deploy extension resources", func() {
+			Expect(ext.DeployAfterWorker(ctx)).To(Succeed())
+			extensionList := &extensionsv1alpha1.ExtensionList{}
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(extensionList.Items).To(consistOfObjects(afterWorkerName))
 		})
 	})
 
@@ -289,6 +321,49 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
+	Describe("#WaitAfterWorker", func() {
+		It("should return error when no resources are found", func() {
+			Expect(ext.WaitAfterWorker(ctx)).To(MatchError(ContainSubstring("not found")))
+		})
+
+		It("should return error when resource is not ready", func() {
+			errDescription := "Some error"
+			afterWorkerExtension.Status = extensionsv1alpha1.ExtensionStatus{
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastError: &gardencorev1beta1.LastError{
+						Description: errDescription,
+					},
+				},
+			}
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterWorkerExtension)).To(Succeed())
+			Expect(ext.WaitAfterWorker(ctx)).To(MatchError(ContainSubstring("Error while waiting for Extension test-namespace/after-worker to become ready: error during reconciliation: "+errDescription)), "extensions indicates error")
+		})
+
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			now := time.Now()
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(ext.DeployAfterWorker(ctx)).To(Succeed())
+
+			By("Patch object")
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterWorkerExtension), afterWorkerExtension)).To(Succeed())
+			patch := client.MergeFrom(afterWorkerExtension.DeepCopy())
+			// remove operation annotation, add old timestamp annotation
+			afterWorkerExtension.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
+			}
+			// set last operation
+			afterWorkerExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(fakeSeedClient.Patch(ctx, afterWorkerExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
+
+			By("Wait")
+			Expect(ext.WaitAfterWorker(ctx)).NotTo(Succeed())
+		})
+	})
+
 	Describe("#DestroyBeforeKubeAPIServer", func() {
 		It("should not return error when not found", func() {
 			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
@@ -321,9 +396,7 @@ var _ = Describe("Extension", func() {
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
-				Errors: []error{fakeError, fakeError},
-			}))
+			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(error(&multierror.Error{Errors: []error{fakeError, fakeError, fakeError}})))
 		})
 	})
 
@@ -339,7 +412,7 @@ var _ = Describe("Extension", func() {
 			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(Succeed())
 			extensionList := &extensionsv1alpha1.ExtensionList{}
 			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
-			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName))
+			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName, afterWorkerName))
 		})
 
 		It("should return error if deletion fails", func() {
@@ -359,9 +432,7 @@ var _ = Describe("Extension", func() {
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
-				Errors: []error{fakeError},
-			}))
+			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(MatchError(error(&multierror.Error{Errors: []error{fakeError}})))
 		})
 	})
 
@@ -409,7 +480,7 @@ var _ = Describe("Extension", func() {
 			extensions := make([]gardencorev1beta1.ExtensionResourceState, 0, len(requiredExtensions))
 			for _, ext := range requiredExtensions {
 				extensions = append(extensions, gardencorev1beta1.ExtensionResourceState{
-					Name:  pointer.String(ext.Name),
+					Name:  ptr.To(ext.Name),
 					Kind:  extensionsv1alpha1.ExtensionResource,
 					State: &runtime.RawExtension{Raw: state},
 				})
@@ -450,6 +521,20 @@ var _ = Describe("Extension", func() {
 				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
 				Expect(afterExtension.Status.State).To(Equal(&runtime.RawExtension{Raw: state}))
 				Expect(afterExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationRestore))
+			})
+		})
+
+		Describe("#RestoreAfterWorker", func() {
+			It("should properly restore the extensions state if it exists", func() {
+				Expect(ext.RestoreAfterWorker(ctx, shootState)).To(Succeed())
+
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+				Expect(extensionList.Items).To(consistOfObjects(afterWorkerName))
+
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterWorkerExtension), afterWorkerExtension)).To(Succeed())
+				Expect(afterWorkerExtension.Status.State).To(Equal(&runtime.RawExtension{Raw: state}))
+				Expect(afterWorkerExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationRestore))
 			})
 		})
 	})

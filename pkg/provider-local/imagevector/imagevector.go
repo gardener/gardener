@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../hack/generate-imagename-constants.sh imagevector
+//go:generate ../../../hack/generate-imagename-constants.sh
 package imagevector
 
 import (

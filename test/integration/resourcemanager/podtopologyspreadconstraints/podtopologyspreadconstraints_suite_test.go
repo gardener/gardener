@@ -16,7 +16,6 @@ package podtopologyspreadconstraints_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -28,13 +27,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -105,11 +107,15 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Port:               testEnv.WebhookInstallOptions.LocalServingPort,
-		Host:               testEnv.WebhookInstallOptions.LocalServingHost,
-		CertDir:            testEnv.WebhookInstallOptions.LocalServingCertDir,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+		}),
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -146,7 +152,7 @@ func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener-resource-manager-%s", testID),
+				Name: "gardener-resource-manager-" + testID,
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				resourcemanager.GetPodTopologySpreadConstraintsMutatingWebhook(

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -124,7 +124,7 @@ spec:
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				var actualCM corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "c", Namespace: "n"}, &actualCM)
@@ -135,7 +135,7 @@ spec:
 
 			It("should apply multiple objects", func() {
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm", Namespace: "test-ns"}, &corev1.ConfigMap{})
 				Expect(err).NotTo(HaveOccurred())
@@ -166,12 +166,12 @@ spec:
 				manifestReader := kubernetes.NewManifestReader(manifest)
 
 				Expect(c.Create(context.TODO(), &oldServiceAccount)).To(Succeed())
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				resultingService := &corev1.ServiceAccount{}
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-serviceaccount", Namespace: "test-ns"}, resultingService)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(resultingService.Secrets)).To(Equal(1))
+				Expect(resultingService.Secrets).To(HaveLen(1))
 				Expect(resultingService.Secrets[0].Name).To(Equal("test-secret"))
 			})
 
@@ -204,7 +204,7 @@ spec:
 									Name:       "foo",
 									Protocol:   corev1.ProtocolTCP,
 									Port:       123,
-									TargetPort: intstr.FromInt(456),
+									TargetPort: intstr.FromInt32(456),
 								},
 							},
 						},
@@ -239,11 +239,11 @@ spec:
 						"ClusterIP with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ClusterIP with changed ClusterIP, should not update it", func() {
@@ -261,24 +261,24 @@ spec:
 							newService.Spec.Type = ""
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
 							newService.Spec.Type = corev1.ServiceTypeNodePort
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
@@ -287,7 +287,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -297,7 +297,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -337,13 +337,13 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 						}),
 					Entry(
@@ -362,24 +362,24 @@ spec:
 						"NodePort with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
@@ -387,7 +387,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -397,7 +397,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -437,13 +437,13 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 						}),
 					Entry(
@@ -462,24 +462,24 @@ spec:
 						"NodePort with changed ports", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
@@ -487,7 +487,7 @@ spec:
 							newService.Spec.Selector = nil
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ClusterIP = ""
 							newService.Spec.ExternalName = "foo.com"
@@ -497,7 +497,7 @@ spec:
 							expected.Spec.Selector = nil
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ClusterIP = ""
 							expected.Spec.ExternalName = "foo.com"
@@ -568,7 +568,7 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeClusterIP
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 0
 							newService.Spec.ExternalName = ""
 							newService.Spec.ClusterIP = "3.4.5.6"
@@ -576,7 +576,7 @@ spec:
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 0
 							expected.Spec.ExternalName = ""
 							expected.Spec.ClusterIP = "3.4.5.6"
@@ -586,7 +586,7 @@ spec:
 							newService.Spec.Type = corev1.ServiceTypeNodePort
 							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							newService.Spec.Ports[0].Port = 999
-							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							newService.Spec.Ports[0].NodePort = 444
 							newService.Spec.ExternalName = ""
 							newService.Spec.ClusterIP = "3.4.5.6"
@@ -594,7 +594,7 @@ spec:
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
-							expected.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							expected.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 							expected.Spec.Ports[0].NodePort = 444
 							expected.Spec.ExternalName = ""
 							expected.Spec.ClusterIP = "3.4.5.6"
@@ -668,22 +668,22 @@ spec:
 					Entry(
 						"old without replicas, new with replicas", func() {
 							oldDeployment.Spec.Replicas = nil
-							newDeployment.Spec.Replicas = pointer.Int32(2)
-							expected.Spec.Replicas = pointer.Int32(2)
+							newDeployment.Spec.Replicas = ptr.To[int32](2)
+							expected.Spec.Replicas = ptr.To[int32](2)
 						},
 					),
 					Entry(
 						"old with replicas, new without replicas", func() {
-							oldDeployment.Spec.Replicas = pointer.Int32(3)
+							oldDeployment.Spec.Replicas = ptr.To[int32](3)
 							newDeployment.Spec.Replicas = nil
-							expected.Spec.Replicas = pointer.Int32(3)
+							expected.Spec.Replicas = ptr.To[int32](3)
 						},
 					),
 					Entry(
 						"old with replicas, new with replicas", func() {
-							oldDeployment.Spec.Replicas = pointer.Int32(3)
-							newDeployment.Spec.Replicas = pointer.Int32(4)
-							expected.Spec.Replicas = pointer.Int32(3)
+							oldDeployment.Spec.Replicas = ptr.To[int32](3)
+							newDeployment.Spec.Replicas = ptr.To[int32](4)
+							expected.Spec.Replicas = ptr.To[int32](3)
 						},
 					),
 				)
@@ -697,7 +697,7 @@ spec:
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
 				namespaceSettingReader := kubernetes.NewNamespaceSettingReader(manifestReader, "b")
-				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 				var actualCMWithNamespace corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test", Namespace: "b"}, &actualCMWithNamespace)
@@ -747,7 +747,7 @@ spec:
 			})
 
 			It("should not return error", func() {
-				Expect(result).To(BeNil())
+				Expect(result).NotTo(HaveOccurred())
 			})
 
 			It("should delete configmap", func() {

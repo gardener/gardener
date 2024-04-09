@@ -67,7 +67,7 @@ type handlerShootClient struct {
 }
 
 func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) admission.Response {
-	var mut MutateFunc = func(ctx context.Context, new, old client.Object) error {
+	var mut actionFunc = func(ctx context.Context, new, old client.Object) error {
 		// TODO: replace this logic with a proper authentication mechanism
 		// see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 		// API servers should authenticate against webhooks servers using TLS client certs, from which the webhook

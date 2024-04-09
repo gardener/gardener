@@ -33,7 +33,7 @@ var _ = Describe("BeNotFoundError", func() {
 	})
 
 	It("should be false when error is not k8s not found error", func() {
-		err := apierrors.NewGone("opsie")
+		err := apierrors.NewResourceExpired("opsie")
 		Expect(err).ToNot(BeNotFoundError())
 	})
 
@@ -61,7 +61,7 @@ var _ = Describe("BeAlreadyExistsError", func() {
 	})
 
 	It("should be false when error is not k8s AlreadyExists error", func() {
-		err := apierrors.NewGone("opsie")
+		err := apierrors.NewResourceExpired("opsie")
 		Expect(err).ToNot(BeAlreadyExistsError())
 	})
 
@@ -89,7 +89,7 @@ var _ = Describe("BeForbiddenError", func() {
 	})
 
 	It("should be false when error is not k8s forbidden", func() {
-		err := apierrors.NewGone("opsie")
+		err := apierrors.NewResourceExpired("opsie")
 		Expect(err).ToNot(BeForbiddenError())
 	})
 
@@ -117,7 +117,7 @@ var _ = Describe("BeBadRequestError", func() {
 	})
 
 	It("should be false when error is not k8s bad request", func() {
-		err := apierrors.NewGone("opsie")
+		err := apierrors.NewResourceExpired("opsie")
 		Expect(err).ToNot(BeBadRequestError())
 	})
 
@@ -147,7 +147,7 @@ var _ = Describe("BeNoMatchError", func() {
 	})
 
 	It("should be false when error is not a NoKindMatch", func() {
-		err := apierrors.NewGone("opsie")
+		err := apierrors.NewResourceExpired("opsie")
 		Expect(err).ToNot(BeNoMatchError())
 	})
 

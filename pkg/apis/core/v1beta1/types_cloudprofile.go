@@ -113,6 +113,12 @@ type MachineImage struct {
 	// +patchMergeKey=version
 	// +patchStrategy=merge
 	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
+	// UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+	//  - patch: update to the latest patch version of the current minor version.
+	//  - minor: update to the latest minor and patch version.
+	//  - major: always update to the overall latest version (default).
+	// +optional
+	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,3,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
@@ -244,4 +250,18 @@ const (
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version
 	// and will eventually expire.
 	ClassificationDeprecated VersionClassification = "deprecated"
+)
+
+// MachineImageUpdateStrategy is the update strategy to use for a machine image
+type MachineImageUpdateStrategy string
+
+const (
+	// UpdateStrategyPatch indicates that auto-updates are performed to the latest patch version of the current minor version.
+	// When using an expired version during the maintenance window, force updates to the latest patch of the next (not necessarily consecutive) minor when using an expired version.
+	UpdateStrategyPatch MachineImageUpdateStrategy = "patch"
+	// UpdateStrategyMinor indicates that auto-updates are performed to the latest patch and minor version of the current major version.
+	// When using an expired version during the maintenance window, force updates to the latest minor and patch of the next (not necessarily consecutive) major version.
+	UpdateStrategyMinor MachineImageUpdateStrategy = "minor"
+	// UpdateStrategyMajor indicates that auto-updates are performed always to the overall latest version.
+	UpdateStrategyMajor MachineImageUpdateStrategy = "major"
 )

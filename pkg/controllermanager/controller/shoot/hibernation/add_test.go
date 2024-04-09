@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -42,7 +42,7 @@ var _ = Describe("Add", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Hibernation: &gardencorev1beta1.Hibernation{
 					Schedules: []gardencorev1beta1.HibernationSchedule{{
-						Start: pointer.String("00 20 * * 1,2,3,4,5"),
+						Start: ptr.To("00 20 * * 1,2,3,4,5"),
 					}},
 				},
 			},
@@ -92,7 +92,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because hibernation schedules are equal and new shoot still has schedules", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Hibernation.Schedules[0].Start = pointer.String("00 20 * * 1,2,3,4,5,6,7")
+				shoot.Spec.Hibernation.Schedules[0].Start = ptr.To("00 20 * * 1,2,3,4,5,6,7")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 		})

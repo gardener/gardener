@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -24,12 +25,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all Seed controllers to the given manager.
@@ -42,13 +42,22 @@ func AddToManager(
 	cfg config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	healthManager healthz.Manager,
-	imageVector imagevector.ImageVector,
-	componentImageVectors imagevector.ComponentImageVectors,
 ) error {
+	var (
+		componentImageVectors imagevectorutils.ComponentImageVectors
+		err                   error
+	)
+
+	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
+		componentImageVectors, err = imagevectorutils.ReadComponentOverwriteFile(path)
+		if err != nil {
+			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
+		}
+	}
+
 	if err := (&care.Reconciler{
-		Config:         *cfg.Controllers.SeedCare,
-		SeedName:       cfg.SeedConfig.Name,
-		LoggingEnabled: gardenlethelper.IsLoggingEnabled(&cfg),
+		Config:   *cfg.Controllers.SeedCare,
+		SeedName: cfg.SeedConfig.Name,
 	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
@@ -66,7 +75,6 @@ func AddToManager(
 		SeedClientSet:         seedClientSet,
 		Config:                cfg,
 		Identity:              identity,
-		ImageVector:           imageVector,
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)

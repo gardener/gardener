@@ -16,10 +16,10 @@ package garbagecollector_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,12 +27,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -64,7 +66,14 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+			},
+		},
+		ErrorIfCRDPathMissing: true,
+	}
 
 	var err error
 	restConfig, err = testEnv.Start()
@@ -97,9 +106,11 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             resourcemanagerclient.CombinedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		Scheme:  resourcemanagerclient.CombinedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -109,9 +120,7 @@ var _ = BeforeSuite(func() {
 			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 		Clock:                 clock.RealClock{},
-		MinimumObjectLifetime: pointer.Duration(0),
-		// Use the same version as the envtest package
-		TargetKubernetesVersion: semver.MustParse("1.26.0"),
+		MinimumObjectLifetime: ptr.To(time.Duration(0)),
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")

@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -71,10 +71,6 @@ var _ = Describe("Seed Validation Tests", func() {
 						Kind: "nginx",
 					},
 				},
-				SecretRef: &corev1.SecretReference{
-					Name:      "seed-foo",
-					Namespace: "garden",
-				},
 				Taints: []core.SeedTaint{
 					{Key: "foo"},
 				},
@@ -111,7 +107,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSeed(seed)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		DescribeTable("Seed metadata",
@@ -170,8 +166,53 @@ var _ = Describe("Seed Validation Tests", func() {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			},
+				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
 			)
+
+			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
+				newSeed := prepareSeedForUpdate(seed)
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", operation)
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation is removed", func(operation string) {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
+				newSeed := prepareSeedForUpdate(seed)
+				delete(newSeed.Annotations, "gardener.cloud/operation")
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
+				newSeed := prepareSeedForUpdate(seed)
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			},
+				Entry("reconcile", "reconcile"),
+				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
+				Entry("renew-kubeconfig", "renew-kubeconfig"),
+			)
+
+			It("should return an error if a valid operation should be overwritten with a different valid operation", func() {
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", "renew-garden-access-secrets")
+				newSeed := prepareSeedForUpdate(seed)
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("must not overwrite operation \"renew-garden-access-secrets\" with \"renew-kubeconfig\""),
+					}))))
+			})
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
@@ -179,7 +220,6 @@ var _ = Describe("Seed Validation Tests", func() {
 			seed.Spec.Provider = core.SeedProvider{
 				Zones: []string{"a", "a"},
 			}
-			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
 				Nodes:    &invalidCIDR,
 				Pods:     "300.300.300.300/300",
@@ -246,14 +286,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field": Equal("spec.provider.zones[1]"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.secretRef.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.secretRef.namespace"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("spec.taints[1]"),
 				})),
@@ -313,11 +345,11 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Context("IPv4", func() {
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = pointer.String("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(BeEmpty())
@@ -357,11 +389,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv6 CIDRs with IPv4 IP family", func() {
-					seed.Spec.Networks.Nodes = pointer.String("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -520,11 +552,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should allow valid networking configuration", func() {
-					seed.Spec.Networks.Nodes = pointer.String("2001:db8:11::/48")
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
 					seed.Spec.Networks.Pods = "2001:db8:12::/48"
 					seed.Spec.Networks.Services = "2001:db8:13::/48"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("2001:db8:1::/48")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("2001:db8:3::/48")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(BeEmpty())
@@ -564,11 +596,11 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
-					seed.Spec.Networks.Nodes = pointer.String("10.1.0.0/16")
+					seed.Spec.Networks.Nodes = ptr.To("10.1.0.0/16")
 					seed.Spec.Networks.Pods = "10.2.0.0/16"
 					seed.Spec.Networks.Services = "10.3.0.0/16"
-					seed.Spec.Networks.ShootDefaults.Pods = pointer.String("10.4.0.0/16")
-					seed.Spec.Networks.ShootDefaults.Services = pointer.String("10.5.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
 
 					errorList := ValidateSeed(seed)
 					Expect(errorList).To(ConsistOfFields(Fields{
@@ -682,6 +714,112 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		Context("settings", func() {
+			Context("excessCapacityReservation", func() {
+				It("should allow valid excessCapacityReservation configurations", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{
+								{
+									Resources: corev1.ResourceList{
+										"cpu":    resource.MustParse("2"),
+										"memory": resource.MustParse("10Gi"),
+									},
+								},
+								{
+									Resources: corev1.ResourceList{
+										"cpu":    resource.MustParse("5"),
+										"memory": resource.MustParse("100Gi"),
+									},
+									NodeSelector: map[string]string{"foo": "bar"},
+									Tolerations: []corev1.Toleration{
+										{
+											Key:      "foo",
+											Operator: "Equal",
+											Value:    "bar",
+											Effect:   "NoExecute",
+										},
+										{
+											Key:      "bar",
+											Operator: "Equal",
+											Value:    "foo",
+											Effect:   "NoSchedule",
+										},
+									},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should not allow configs with no resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{{NodeSelector: map[string]string{"foo": "bar"}}},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources"),
+						})),
+					))
+				})
+
+				It("should not allow configs invalid resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{{Resources: corev1.ResourceList{"cpu": resource.MustParse("-1")}}},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources.cpu"),
+						})),
+					))
+				})
+
+				It("should not allow configs invalid tolerations", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						ExcessCapacityReservation: &core.SeedSettingExcessCapacityReservation{
+							Configs: []core.SeedSettingExcessCapacityReservationConfig{
+								{
+									Resources:   corev1.ResourceList{"cpu": resource.MustParse("1")},
+									Tolerations: []corev1.Toleration{{Key: "foo", Value: "bar", Operator: "Equal", Effect: "foobar"}},
+								},
+								{
+									Resources:   corev1.ResourceList{"cpu": resource.MustParse("1")},
+									Tolerations: []corev1.Toleration{{Key: "foo", Operator: "Exists", Value: "bar", Effect: "NoSchedule"}},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].tolerations[0].effect"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.excessCapacityReservation.configs[1].tolerations[0].operator"),
+						})),
+					))
+				})
+			})
+
 			Context("loadbalancer", func() {
 				It("should allow valid load balancer service annotations", func() {
 					seed.Spec.Settings = &core.SeedSettings{
@@ -1089,13 +1227,13 @@ var _ = Describe("Seed Validation Tests", func() {
 		Context("validate .status.clusterIdentity updates", func() {
 			newSeed := &core.Seed{
 				Status: core.SeedStatus{
-					ClusterIdentity: pointer.String("newClusterIdentity"),
+					ClusterIdentity: ptr.To("newClusterIdentity"),
 				},
 			}
 
 			It("should fail to update seed status cluster identity if it already exists", func() {
 				oldSeed := &core.Seed{Status: core.SeedStatus{
-					ClusterIdentity: pointer.String("clusterIdentityExists"),
+					ClusterIdentity: ptr.To("clusterIdentityExists"),
 				}}
 				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
 				Expect(allErrs).To(ConsistOfFields(Fields{
@@ -1117,13 +1255,13 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should allow valid resources", func() {
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid invalid metadata or spec fields", func() {
 			seedTemplate.Labels = map[string]string{"foo!": "bar"}
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
-			seedTemplate.Spec.Networks.Nodes = pointer.String("")
+			seedTemplate.Spec.Networks.Nodes = ptr.To("")
 
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 
@@ -1148,7 +1286,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should allow valid updates", func() {
 			errorList := ValidateSeedTemplateUpdate(seedTemplate, seedTemplate, nil)
 
-			Expect(errorList).To(HaveLen(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable fields in spec", func() {

@@ -2,8 +2,8 @@
 
 Gardener uses [Prometheus](https://prometheus.io/) to gather metrics from each component. A Prometheus is deployed in each shoot control plane (on the seed) which is responsible for gathering control plane and cluster metrics. Prometheus can be configured to fire alerts based on these metrics and send them to an [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/). The Alertmanager is responsible for sending the alerts to users and operators. This document describes how to setup alerting for:
 
-- [end-users/stakeholders/customers](#Alerting-for-Users)
-- [operators/administrators](#Alerting-for-Operators)
+- [end-users/stakeholders/customers](#alerting-for-users)
+- [operators/administrators](#alerting-for-operators)
 
 # Alerting for Users
 
@@ -16,14 +16,15 @@ spec:
       emailReceivers:
       - john.doe@example.com
 ```
+
 `emailReceivers` is a list of emails that will receive alerts if something is wrong with the shoot cluster. A list of alerts for users can be found in the [User Alerts](user_alerts.md) topic.
 
 # Alerting for Operators
 
 Currently, Gardener supports two options for alerting:
 
-- [Email Alerting](#Email-Alerting)
-- [Sending Alerts to an External Alertmanager](#External-Alertmanager)
+- [Email Alerting](#email-alerting)
+- [Sending Alerts to an External Alertmanager](#external-alertmanager)
 
 A list of operator alerts can be found in the [Operator Alerts](operator_alerts.md) topic.
 
@@ -87,6 +88,7 @@ type: Opaque
 Please refer to the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) documentation on how to configure an Alertmanager.
 
 We recommend you use at least the following inhibition rules in your Alertmanager configuration to prevent excessive alerts:
+
 ```yaml
 inhibit_rules:
 # Apply inhibition if the alert name is the same.
@@ -131,6 +133,7 @@ inhibit_rules:
     service: nodes
   equal: ['cluster']
 ```
+
 Below is a graph visualizing the inhibition rules:
 
 ![inhibitionGraph](../development/content/alertInhibitionGraph.png)

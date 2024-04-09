@@ -15,19 +15,19 @@ Administrators can then reschedule their workloads to the new worker pool accord
 ```yaml
 spec:
   kubernetes:
-    version: 1.24.6
+    version: 1.27.4
   provider:
     workers:
     - name: data1
       kubernetes:
-        version: 1.23.13
+        version: 1.26.8
     - name: data2
 ```
 
-- If `.kubernetes.version` is not specified in a worker pool, then the Kubernetes version of the kubelet is inherited from the control plane (`.spec.kubernetes.version`), i.e., in the above example, the `data2` pool will use `1.24.6`.
+- If `.kubernetes.version` is not specified in a worker pool, then the Kubernetes version of the kubelet is inherited from the control plane (`.spec.kubernetes.version`), i.e., in the above example, the `data2` pool will use `1.26.8`.
 - If `.kubernetes.version` is specified in a worker pool, then it must meet the following constraints:
   - It must be at most two minor versions lower than the control plane version.
-  - If it was not specified before, then no downgrade is possible (you cannot set it to `1.23.13` while `.spec.kubernetes.version` is already `1.24.6`). The "two minor version skew" is only possible if the worker pool version is set to the control plane version and then the control plane was updated gradually by two minor versions.
-  - If the version is removed from the worker pool, only one minor version difference is allowed to the control plane (you cannot upgrade a pool from version `1.22.0` to `1.24.0` in one go).
+  - If it was not specified before, then no downgrade is possible (you cannot set it to `1.26.8` while `.spec.kubernetes.version` is already `1.27.4`). The "two minor version skew" is only possible if the worker pool version is set to the control plane version and then the control plane was updated gradually by two minor versions.
+  - If the version is removed from the worker pool, only one minor version difference is allowed to the control plane (you cannot upgrade a pool from version `1.25.0` to `1.27.0` in one go).
 
 Automatic updates of Kubernetes versions (see [Shoot Maintenance](shoot_maintenance.md#automatic-version-updates)) also apply to worker pool Kubernetes versions.

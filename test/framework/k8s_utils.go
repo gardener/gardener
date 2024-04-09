@@ -32,13 +32,14 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -277,7 +278,7 @@ func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interfac
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(errors.New("Object still exists"))
+		return retry.MinorError(errors.New("object still exists"))
 	})
 }
 
@@ -348,18 +349,8 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		return false, "no conditions and last operation present yet"
 	}
 
-	shootConditions := sets.New(
-		gardencorev1beta1.ShootAPIServerAvailable,
-		gardencorev1beta1.ShootControlPlaneHealthy,
-		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootSystemComponentsHealthy,
-	)
-
-	if !v1beta1helper.IsWorkerless(shoot) {
-		shootConditions.Insert(
-			gardencorev1beta1.ShootEveryNodeReady,
-		)
-	}
+	workerlessShoot := v1beta1helper.IsWorkerless(shoot)
+	shootConditions := sets.New(gardenerutils.GetShootConditionTypes(workerlessShoot)...)
 
 	for _, condition := range shoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
@@ -367,7 +358,7 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 			// the `gardenlet` that operates the seed has already been shut down as part of the hibernation, the seed conditions will never
 			// be updated to True if they were previously not True.
 			hibernation := shoot.Spec.Hibernation
-			if !shootConditions.Has(condition.Type) && hibernation != nil && pointer.BoolDeref(hibernation.Enabled, false) {
+			if !shootConditions.Has(condition.Type) && hibernation != nil && ptr.Deref(hibernation.Enabled, false) {
 				continue
 			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
@@ -407,8 +398,8 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 // DownloadAdminKubeconfigForShoot requests an admin kubeconfig for the given shoot and writes the kubeconfig to the
 // given download path. The kubeconfig expires in 6 hours.
 func DownloadAdminKubeconfigForShoot(ctx context.Context, client kubernetes.Interface, shoot *gardencorev1beta1.Shoot, downloadPath string) error {
-	const expirationSeconds = 6 * 3600 // 6h
-	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, client, shoot, pointer.Int64(expirationSeconds))
+	const expirationSeconds int64 = 6 * 3600 // 6h
+	kubeconfig, err := access.RequestAdminKubeconfigForShoot(ctx, client, shoot, ptr.To(expirationSeconds))
 	if err != nil {
 		return err
 	}
@@ -464,7 +455,7 @@ func CreateTokenForServiceAccount(ctx context.Context, k8sClient kubernetes.Inte
 
 // NewClientFromServiceAccount returns a kubernetes client for a service account.
 func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, serviceAccount *corev1.ServiceAccount) (kubernetes.Interface, error) {
-	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, pointer.Int64(3600))
+	token, err := CreateTokenForServiceAccount(ctx, k8sClient, serviceAccount, ptr.To[int64](3600))
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +534,7 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 			Containers: []corev1.Container{
 				{
 					Name:  "root-container",
-					Image: "eu.gcr.io/gardener-project/3rd/busybox:1.29.3",
+					Image: "registry.k8s.io/e2e-test-images/busybox:1.29-4",
 					Command: []string{
 						"sleep",
 						"10000000",
@@ -553,7 +544,7 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 					ImagePullPolicy:          corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
+						Privileged: ptr.To(true),
 					},
 					Stdin: true,
 					VolumeMounts: []corev1.VolumeMount{

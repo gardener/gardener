@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerutils
+package controllerutils_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,14 +31,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("Patch", func() {
 	var (
 		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
+		fakeErr = errors.New("fake err")
 
 		ctrl   *gomock.Controller
 		c      *mockclient.MockClient
@@ -166,7 +167,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error {
 						return nil
 					}
@@ -184,7 +185,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch with optimistic locking", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error {
 						return nil
 					}
@@ -305,7 +306,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error { return nil }
 				}
 				_ = mutateFn(objCopy)()
@@ -325,7 +326,7 @@ var _ = Describe("Patch", func() {
 
 			It("should skip sending an empty patch with optimistic locking", func() {
 				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
+				mutateFn := func(_ *corev1.ServiceAccount) func() error {
 					return func() error { return nil }
 				}
 				_ = mutateFn(objCopy)()

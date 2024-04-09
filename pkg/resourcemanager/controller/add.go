@@ -18,15 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
@@ -47,26 +46,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
 	}
 
-	targetServerVersion, err := targetClientSet.Discovery().ServerVersion()
-	if err != nil {
-		return err
-	}
-
-	targetKubernetesVersion, err := semver.NewVersion(targetServerVersion.GitVersion)
-	if err != nil {
-		return err
-	}
-
-	var targetCacheDisabled bool
-	if cfg.TargetClientConnection != nil {
-		targetCacheDisabled = pointer.BoolDeref(cfg.TargetClientConnection.DisableCachedClient, false)
-	}
-
 	if cfg.Controllers.KubeletCSRApprover.Enabled {
 		if err := (&csrapprover.Reconciler{
 			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
 			Config:             cfg.Controllers.KubeletCSRApprover,
-			SourceNamespace:    *cfg.SourceClientConnection.Namespace,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding Kubelet CSR Approver controller: %w", err)
 		}
@@ -74,15 +57,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 
 	if cfg.Controllers.GarbageCollector.Enabled {
 		if err := (&garbagecollector.Reconciler{
-			Config:                  cfg.Controllers.GarbageCollector,
-			Clock:                   clock.RealClock{},
-			TargetKubernetesVersion: targetKubernetesVersion,
+			Config: cfg.Controllers.GarbageCollector,
+			Clock:  clock.RealClock{},
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding garbage collector controller: %w", err)
 		}
 	}
 
-	if err := health.AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
+	if err := health.AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg); err != nil {
 		return fmt.Errorf("failed adding health controller: %w", err)
 	}
 
@@ -103,13 +85,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		}
 	}
 
-	if err := (&secret.Reconciler{
-		Config:      cfg.Controllers.Secret,
-		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(ctx, mgr, sourceCluster); err != nil {
-		return fmt.Errorf("failed adding secret controller: %w", err)
-	}
-
 	if cfg.Controllers.TokenInvalidator.Enabled {
 		if err := (&tokeninvalidator.Reconciler{
 			Config: cfg.Controllers.TokenInvalidator,
@@ -120,12 +95,11 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 
 	if cfg.Controllers.TokenRequestor.Enabled {
 		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
 			APIAudiences:    []string{v1beta1constants.GardenerAudience},
-			// TODO(rfranzke): Uncomment the next line after v1.85 has been released.
-			// Class: pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
+			Class:           ptr.To(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}

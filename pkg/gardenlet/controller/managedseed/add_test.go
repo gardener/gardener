@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedseed
+package managedseed_test
 
 import (
 	"context"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -36,8 +36,9 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/test"
+	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
 
 var _ = Describe("Add", func() {
@@ -51,6 +52,9 @@ var _ = Describe("Add", func() {
 		managedSeedShoot       *seedmanagementv1alpha1.Shoot
 		shoot                  *gardencorev1beta1.Shoot
 		seedNameFromSeedConfig string
+
+		name      = "test"
+		namespace = "garden"
 	)
 
 	BeforeEach(func() {
@@ -126,7 +130,7 @@ var _ = Describe("Add", func() {
 		It("should return true when shoot referenced by ManagedSeed references a seed which is same as the seed mentioned in gardenlet configuration", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String(seedNameFromSeedConfig)
+			shoot.Spec.SeedName = ptr.To(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())
@@ -137,7 +141,7 @@ var _ = Describe("Add", func() {
 		It("should return false when shoot referenced by ManagedSeed references a seed which is not same as the seed mentioned in gardenlet configuration", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
+			shoot.Spec.SeedName = ptr.To("test")
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
@@ -148,8 +152,8 @@ var _ = Describe("Add", func() {
 		It("should return false when shoot referenced by ManagedSeed has seed name in status field which is not same as the seed mentioned in gardenlet configuration", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
-			shoot.Status.SeedName = pointer.String("other-seed")
+			shoot.Spec.SeedName = ptr.To("test")
+			shoot.Status.SeedName = ptr.To("other-seed")
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
@@ -160,8 +164,8 @@ var _ = Describe("Add", func() {
 		It("should return true when shoot referenced by ManagedSeed has seed name in status field which is same as the seed mentioned in gardenlet configuration", func() {
 			oldManagedSeed.Spec.Shoot = managedSeedShoot
 			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
-			shoot.Status.SeedName = pointer.String(seedNameFromSeedConfig)
+			shoot.Spec.SeedName = ptr.To("test")
+			shoot.Status.SeedName = ptr.To(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())
@@ -241,7 +245,7 @@ var _ = Describe("Add", func() {
 
 		It("should return true when shoot referenced by ManagedSeed references a seed which is same as the seed mentioned in gardenlet configuration", func() {
 			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String(seedNameFromSeedConfig)
+			shoot.Spec.SeedName = ptr.To(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeTrue())
@@ -252,7 +256,7 @@ var _ = Describe("Add", func() {
 
 		It("should return false when shoot referenced by ManagedSeed references a seed which is not same as the seed mentioned in gardenlet configuration", func() {
 			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
+			shoot.Spec.SeedName = ptr.To("test")
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
@@ -263,8 +267,8 @@ var _ = Describe("Add", func() {
 
 		It("should return false when shoot referenced by ManagedSeed has seed name in status field which is not same as shoot's spec.seedName field and the seed mentioned in gardenlet configuration", func() {
 			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
-			shoot.Status.SeedName = pointer.String("other-seed")
+			shoot.Spec.SeedName = ptr.To("test")
+			shoot.Status.SeedName = ptr.To("other-seed")
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
@@ -275,8 +279,8 @@ var _ = Describe("Add", func() {
 
 		It("should return true when shoot referenced by ManagedSeed has seed name in status field which is not same as shoot's spec.seedName field but same as the seed mentioned in gardenlet configuration", func() {
 			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = pointer.String("test")
-			shoot.Status.SeedName = pointer.String(seedNameFromSeedConfig)
+			shoot.Spec.SeedName = ptr.To("test")
+			shoot.Status.SeedName = ptr.To(seedNameFromSeedConfig)
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeTrue())
@@ -320,50 +324,50 @@ var _ = Describe("Add", func() {
 
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object without delay for Create events when generation is set to 1", func() {
 			queue.EXPECT().Add(req)
 
 			obj.Generation = 1
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
 			queue.EXPECT().Add(req)
 
-			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 2
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should not enqueue the object for Update events when generation and observedGeneration are equal", func() {
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 1
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when deletion timestamp is set", func() {
@@ -373,7 +377,7 @@ var _ = Describe("Add", func() {
 			obj.Status.ObservedGeneration = 1
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when generation is 1", func() {
@@ -381,37 +385,37 @@ var _ = Describe("Add", func() {
 
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 0
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
 			queue.EXPECT().Add(req)
 
-			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(false)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
 			queue.EXPECT().AddAfter(req, randomDuration)
 
-			cfg.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+			cfg.Controllers.ManagedSeed.JitterUpdates = ptr.To(true)
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Delete events", func() {
 			queue.EXPECT().Add(req)
 
-			hdlr.Delete(event.DeleteEvent{Object: obj}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: obj}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
 		})
 	})
 })

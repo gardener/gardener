@@ -15,7 +15,8 @@
 package cmd
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -57,8 +58,8 @@ func (a *FactoryAggregator) Webhooks(mgr manager.Manager) ([]*extensionswebhook.
 
 	// ensure stable order of webhooks, otherwise the WebhookConfig might be reordered on every restart
 	// leading to a different invocation order which can lead to unnecessary rollouts of components
-	sort.Slice(webhooks, func(i, j int) bool {
-		return webhooks[i].Name < webhooks[j].Name
+	slices.SortFunc(webhooks, func(a, b *extensionswebhook.Webhook) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	return webhooks, nil

@@ -39,13 +39,6 @@ Entering interactive mode (type "help" for commands, "o" for options)
 The handlers are served on the same port as the API endpoints (configured via `--secure-port`).
 This means that you will also have to authenticate against the API server according to the configured authentication and authorization policy.
 
-For example, in the [local-setup](../development/local_setup.md) you can use:
-
-```bash
-$ curl -k --cert ./hack/local-development/local-garden/certificates/certs/default-admin.crt --key ./hack/local-development/local-garden/certificates/keys/default-admin.key https://localhost:8443/debug/pprof/heap > /tmp/heap
-$ go tool pprof /tmp/heap
-```
-
 ## gardener-{admission-controller,controller-manager,scheduler,resource-manager}, gardenlet
 
 `gardener-controller-manager`, `gardener-admission-controller`, `gardener-scheduler`, `gardener-resource-manager` and `gardenlet` also allow enabling profiling handlers via their respective component configs (currently disabled by default).

@@ -25,23 +25,19 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ManagedSeedShoot"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameManagedSeedShoot, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }
@@ -49,14 +45,14 @@ func Register(plugins *admission.Plugins) {
 // Shoot contains listers and admission handler.
 type Shoot struct {
 	*admission.Handler
-	shootLister          gardencorelisters.ShootLister
+	shootLister          gardencorev1beta1listers.ShootLister
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&Shoot{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&Shoot{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&Shoot{})
+	_ = admissioninitializer.WantsSeedManagementClientSet(&Shoot{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -74,16 +70,16 @@ func (v *Shoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *Shoot) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *Shoot) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
-// SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *Shoot) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+// SetSeedManagementClientSet sets the garden seedmanagement clientset.
+func (v *Shoot) SetSeedManagementClientSet(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
@@ -140,6 +136,7 @@ func (v *Shoot) validateDeleteCollection(ctx context.Context, a admission.Attrib
 	if err != nil {
 		return err
 	}
+
 	for _, managedSeed := range managedSeeds {
 		if err := v.validateDelete(ctx, newAttributesWithName(a, managedSeed.Name)); err != nil {
 			return err
@@ -186,10 +183,11 @@ func (v *Shoot) getManagedSeeds(ctx context.Context, selector labels.Selector) (
 	return managedSeedList.Items, nil
 }
 
-func (v *Shoot) getShoots(selector labels.Selector) ([]*core.Shoot, error) {
+func (v *Shoot) getShoots(selector labels.Selector) ([]*gardencorev1beta1.Shoot, error) {
 	shoots, err := v.shootLister.List(selector)
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
+
 	return shoots, nil
 }

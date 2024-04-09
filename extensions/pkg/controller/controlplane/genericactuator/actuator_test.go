@@ -23,17 +23,17 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"go.uber.org/mock/gomock"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,16 +44,14 @@ import (
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
 	extensionsmockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
-	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -63,6 +61,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 const (
@@ -84,7 +83,6 @@ var (
 	pFalse, pTrue = &vFalse, &vTrue
 
 	fakeClock *testclock.FakeClock
-	mgr       *mockmanager.MockManager
 )
 
 func TestControlPlane(t *testing.T) {
@@ -107,7 +105,6 @@ var _ = Describe("Actuator", func() {
 
 		ctx                    = context.TODO()
 		webhookServerNamespace = "extension-foo-12345"
-		webhookServerPort      = 443
 
 		cp         *extensionsv1alpha1.ControlPlane
 		cpExposure = &extensionsv1alpha1.ControlPlane{
@@ -127,110 +124,33 @@ var _ = Describe("Actuator", func() {
 			},
 		}
 
-		cpSecretKey    = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
-		cpConfigMapKey = client.ObjectKey{Namespace: namespace, Name: cloudProviderConfigName}
-		cpSecret       = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCloudProvider, Namespace: namespace},
-			Data:       map[string][]byte{"foo": []byte("bar")},
-		}
-		cpConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: cloudProviderConfigName, Namespace: namespace},
-			Data:       map[string]string{"abc": "xyz"},
-		}
+		cpSecretKey    client.ObjectKey
+		cpConfigMapKey client.ObjectKey
+		cpSecret       *corev1.Secret
+		cpConfigMap    *corev1.ConfigMap
 
-		resourceKeyCPShootChart        = client.ObjectKey{Namespace: namespace, Name: ControlPlaneShootChartResourceName}
-		createdMRSecretForCPShootChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
-			Data:       map[string][]byte{chartName: []byte(renderedContent)},
-			Type:       corev1.SecretTypeOpaque,
-		}
-		createdMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: ControlPlaneShootChartResourceName},
-				},
-				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               pFalse,
-				ForceOverwriteAnnotations: pFalse,
-			},
-		}
-		deletedMRSecretForCPShootChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
-		}
-		deletedMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
-		}
+		resourceKeyCPShootChart        client.ObjectKey
+		createdMRSecretForCPShootChart *corev1.Secret
+		createdMRForCPShootChart       *resourcesv1alpha1.ManagedResource
+		deletedMRSecretForCPShootChart *corev1.Secret
+		deletedMRForCPShootChart       *resourcesv1alpha1.ManagedResource
 
-		resourceKeyCPShootCRDsChart        = client.ObjectKey{Namespace: namespace, Name: ControlPlaneShootCRDsChartResourceName}
-		createdMRSecretForCPShootCRDsChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
-			Data:       map[string][]byte{chartName: []byte(renderedContent)},
-			Type:       corev1.SecretTypeOpaque,
-		}
-		createdMRForCPShootCRDsChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: ControlPlaneShootCRDsChartResourceName},
-				},
-				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               pFalse,
-				ForceOverwriteAnnotations: pFalse,
-			},
-		}
-		deletedMRSecretForCPShootCRDsChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
-		}
-		deletedMRForCPShootCRDsChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
-		}
+		resourceKeyCPShootCRDsChart        client.ObjectKey
+		createdMRSecretForCPShootCRDsChart *corev1.Secret
+		createdMRForCPShootCRDsChart       *resourcesv1alpha1.ManagedResource
+		deletedMRSecretForCPShootCRDsChart *corev1.Secret
+		deletedMRForCPShootCRDsChart       *resourcesv1alpha1.ManagedResource
 
-		resourceKeyStorageClassesChart        = client.ObjectKey{Namespace: namespace, Name: StorageClassesChartResourceName}
-		createdMRSecretForStorageClassesChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
-			Data:       map[string][]byte{chartName: []byte(renderedContent)},
-			Type:       corev1.SecretTypeOpaque,
-		}
-		createdMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: StorageClassesChartResourceName},
-				},
-				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
-				KeepObjects:               pFalse,
-				ForceOverwriteAnnotations: pTrue,
-			},
-		}
-		deletedMRSecretForStorageClassesChart = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
-		}
-		deletedMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
-		}
+		resourceKeyStorageClassesChart        client.ObjectKey
+		createdMRSecretForStorageClassesChart *corev1.Secret
+		createdMRForStorageClassesChart       *resourcesv1alpha1.ManagedResource
+		deletedMRSecretForStorageClassesChart *corev1.Secret
+		deletedMRForStorageClassesChart       *resourcesv1alpha1.ManagedResource
 
-		resourceKeyShootWebhooksNetworkPolicy = client.ObjectKey{Namespace: namespace, Name: "gardener-extension-" + providerName}
-		createdNetworkPolicyForShootWebhooks  = constructNetworkPolicy(webhookServerNamespace, providerName, namespace, webhookServerPort)
-		deletedNetworkPolicyForShootWebhooks  = &networkingv1.NetworkPolicy{
-			ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
-		}
-
-		resourceKeyShootWebhooks  = client.ObjectKey{Namespace: namespace, Name: ShootWebhooksResourceName}
-		createdMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: ShootWebhooksResourceName},
-				},
-			},
-		}
-		deletedMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-		}
-		deletedMRSecretForShootWebhooks = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-		}
+		resourceKeyShootWebhooks        client.ObjectKey
+		createdMRForShootWebhooks       *resourcesv1alpha1.ManagedResource
+		deletedMRForShootWebhooks       *resourcesv1alpha1.ManagedResource
+		deletedMRSecretForShootWebhooks *corev1.Secret
 
 		imageVector = imagevector.ImageVector([]*imagevector.ImageSource{})
 
@@ -284,13 +204,10 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		fakeClient = fakeclient.NewClientBuilder().Build()
-		newSecretsManager = func(ctx context.Context, logger logr.Logger, clock clock.Clock, c client.Client, cluster *extensionscontroller.Cluster, identity string, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
+		newSecretsManager = func(ctx context.Context, logger logr.Logger, _ clock.Clock, _ client.Client, cluster *extensionscontroller.Cluster, identity string, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
 			// use fake clock and client, pass on the rest
 			return extensionssecretsmanager.SecretsManagerForCluster(ctx, logger, fakeClock, fakeClient, cluster, identity, secretConfigs)
 		}
-
-		// Create fake manager
-		mgr = mockmanager.NewMockManager(ctrl)
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
 		fakeClock = testclock.NewFakeClock(time.Unix(1649848746, 0))
@@ -311,6 +228,105 @@ var _ = Describe("Actuator", func() {
 		exposureShootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
 			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp-exposure", namespace)}
 		}
+
+		cpSecretKey = client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}
+		cpConfigMapKey = client.ObjectKey{Namespace: namespace, Name: cloudProviderConfigName}
+		cpSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCloudProvider, Namespace: namespace},
+			Data:       map[string][]byte{"foo": []byte("bar")},
+		}
+		cpConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: cloudProviderConfigName, Namespace: namespace},
+			Data:       map[string]string{"abc": "xyz"},
+		}
+
+		resourceKeyCPShootChart = client.ObjectKey{Namespace: namespace, Name: ControlPlaneShootChartResourceName}
+		createdMRSecretForCPShootChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
+			Data:       map[string][]byte{chartName: []byte(renderedContent)},
+			Type:       corev1.SecretTypeOpaque,
+		}
+		createdMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: ControlPlaneShootChartResourceName},
+				},
+				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
+				KeepObjects:               pFalse,
+				ForceOverwriteAnnotations: pFalse,
+			},
+		}
+		deletedMRSecretForCPShootChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
+		}
+		deletedMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
+		}
+
+		resourceKeyCPShootCRDsChart = client.ObjectKey{Namespace: namespace, Name: ControlPlaneShootCRDsChartResourceName}
+		createdMRSecretForCPShootCRDsChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
+			Data:       map[string][]byte{chartName: []byte(renderedContent)},
+			Type:       corev1.SecretTypeOpaque,
+		}
+		createdMRForCPShootCRDsChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: ControlPlaneShootCRDsChartResourceName},
+				},
+				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
+				KeepObjects:               pFalse,
+				ForceOverwriteAnnotations: pFalse,
+			},
+		}
+		deletedMRSecretForCPShootCRDsChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
+		}
+		deletedMRForCPShootCRDsChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootCRDsChartResourceName, Namespace: namespace},
+		}
+
+		resourceKeyStorageClassesChart = client.ObjectKey{Namespace: namespace, Name: StorageClassesChartResourceName}
+		createdMRSecretForStorageClassesChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
+			Data:       map[string][]byte{chartName: []byte(renderedContent)},
+			Type:       corev1.SecretTypeOpaque,
+		}
+		createdMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: StorageClassesChartResourceName},
+				},
+				InjectLabels:              map[string]string{v1beta1constants.ShootNoCleanup: "true"},
+				KeepObjects:               pFalse,
+				ForceOverwriteAnnotations: pTrue,
+			},
+		}
+		deletedMRSecretForStorageClassesChart = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
+		}
+		deletedMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
+		}
+
+		resourceKeyShootWebhooks = client.ObjectKey{Namespace: namespace, Name: ShootWebhooksResourceName}
+		createdMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: ShootWebhooksResourceName},
+				},
+			},
+		}
+		deletedMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
+		}
+		deletedMRSecretForShootWebhooks = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
+		}
 	})
 
 	AfterEach(func() {
@@ -322,17 +338,13 @@ var _ = Describe("Actuator", func() {
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
-				atomicWebhookConfig.Store(webhookConfig)
+				atomicWebhookConfig.Store(&extensionswebhook.Configs{MutatingWebhookConfig: webhookConfig})
 			}
 
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(c)
 
 			if webhookConfig != nil {
-				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
-				c.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
-
 				createdMRSecretForShootWebhooks := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
 					Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
@@ -347,9 +359,13 @@ webhooks:
 `)},
 					Type: corev1.SecretTypeOpaque,
 				}
-				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+
+				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForShootWebhooks))
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForShootWebhooks), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
 				c.EXPECT().Create(ctx, createdMRSecretForShootWebhooks).Return(nil)
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
+				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
 				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
 			}
 
@@ -358,21 +374,30 @@ webhooks:
 				c.EXPECT().Get(ctx, cpConfigMapKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cpConfigMap))
 			}
 
-			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootChart))
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
 			c.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
 			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+			createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
+			utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
 			c.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
 
 			if withShootCRDsChart {
-				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootCRDsChart))
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootCRDsChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
 				c.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
 				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
+				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
 				c.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
 			}
 
-			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForStorageClassesChart))
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForStorageClassesChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
 			c.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
 			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+			createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
+			utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))
 			c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
 
 			// Create mock Gardener clientset and chart applier
@@ -425,8 +450,8 @@ webhooks:
 				})
 
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(&corev1.Secret{
+				Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(Equal(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      shootAccessSecretsFunc(namespace)[0].Secret.Name,
 							Namespace: namespace,
@@ -445,12 +470,32 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              getSecretsConfigs,
+				shootAccessSecretsFunc:         shootAccessSecretsFunc,
+				exposureSecretConfigsFunc:      nil,
+				exposureShootAccessSecretsFunc: nil,
+				configChart:                    configChart,
+				controlPlaneChart:              ccmChart,
+				controlPlaneShootChart:         ccmShootChart,
+				controlPlaneShootCRDsChart:     cpShootCRDsChart,
+				storageClassesChart:            storageClassesChart,
+				controlPlaneExposureChart:      nil,
+				vp:                             vp,
+				chartRendererFactory:           crf,
+				imageVector:                    imageVector,
+				configName:                     configName,
+				atomicShootWebhookConfig:       atomicWebhookConfig,
+				webhookServerNamespace:         webhookServerNamespace,
+				gardenerClientset:              gardenerClientset,
+				client:                         c,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cp, cluster)
-			Expect(requeue).To(Equal(false))
+			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
@@ -469,7 +514,7 @@ webhooks:
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
-				atomicWebhookConfig.Store(webhookConfig)
+				atomicWebhookConfig.Store(&extensionswebhook.Configs{MutatingWebhookConfig: webhookConfig})
 			}
 
 			// Create mock values provider
@@ -482,19 +527,21 @@ webhooks:
 
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(client)
 
+			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 			client.EXPECT().Delete(ctx, deletedMRForStorageClassesChart).Return(nil)
 			client.EXPECT().Delete(ctx, deletedMRSecretForStorageClassesChart).Return(nil)
 			var cpShootCRDsChart chart.Interface
 			if withShootCRDsChart {
 				cpShootCRDsChartMock := mockchartutil.NewMockInterface(ctrl)
 				cpShootCRDsChart = cpShootCRDsChartMock
+				client.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 				client.EXPECT().Delete(ctx, deletedMRForCPShootCRDsChart).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRSecretForCPShootCRDsChart).Return(nil)
 				client.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootCRDsChart.Name))
 			}
 
+			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 			client.EXPECT().Delete(ctx, deletedMRForCPShootChart).Return(nil)
 			client.EXPECT().Delete(ctx, deletedMRSecretForCPShootChart).Return(nil)
 
@@ -514,7 +561,7 @@ webhooks:
 			ccmChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
 			if webhookConfig != nil {
-				client.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
+				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 				client.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
 				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
@@ -524,8 +571,28 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, vp, nil, nil, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              getSecretsConfigs,
+				shootAccessSecretsFunc:         shootAccessSecretsFunc,
+				exposureSecretConfigsFunc:      nil,
+				exposureShootAccessSecretsFunc: nil,
+				configChart:                    configChart,
+				controlPlaneChart:              ccmChart,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     cpShootCRDsChart,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      nil,
+				vp:                             vp,
+				chartRendererFactory:           nil,
+				imageVector:                    nil,
+				configName:                     configName,
+				atomicShootWebhookConfig:       atomicWebhookConfig,
+				webhookServerNamespace:         webhookServerNamespace,
+				gardenerClientset:              gardenerClientset,
+				client:                         client,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, logger, cp, cluster)).To(Succeed())
@@ -542,7 +609,6 @@ webhooks:
 		func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(c)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
@@ -564,7 +630,7 @@ webhooks:
 					obj.SetResourceVersion("0")
 				})
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+				Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      exposureShootAccessSecretsFunc(namespace)[0].Secret.Name,
@@ -584,12 +650,32 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, "", 0, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              nil,
+				shootAccessSecretsFunc:         nil,
+				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
+				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
+				configChart:                    nil,
+				controlPlaneChart:              nil,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     nil,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      cpExposureChart,
+				vp:                             vp,
+				chartRendererFactory:           nil,
+				imageVector:                    imageVector,
+				configName:                     "",
+				atomicShootWebhookConfig:       nil,
+				webhookServerNamespace:         "",
+				gardenerClientset:              gardenerClientset,
+				client:                         c,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, logger, cpExposure, cluster)
-			Expect(requeue).To(Equal(false))
+			Expect(requeue).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
@@ -604,7 +690,6 @@ webhooks:
 		func() {
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
-			mgr.EXPECT().GetClient().Return(client)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
@@ -617,8 +702,28 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, "", 0, gardenerClientset)
-			a.(*actuator).newSecretsManager = newSecretsManager
+			a := &actuator{
+				providerName:                   providerName,
+				secretConfigsFunc:              nil,
+				shootAccessSecretsFunc:         nil,
+				exposureSecretConfigsFunc:      getSecretsConfigsExposure,
+				exposureShootAccessSecretsFunc: exposureShootAccessSecretsFunc,
+				configChart:                    nil,
+				controlPlaneChart:              nil,
+				controlPlaneShootChart:         nil,
+				controlPlaneShootCRDsChart:     nil,
+				storageClassesChart:            nil,
+				controlPlaneExposureChart:      cpExposureChart,
+				vp:                             nil,
+				chartRendererFactory:           nil,
+				imageVector:                    nil,
+				configName:                     "",
+				atomicShootWebhookConfig:       nil,
+				webhookServerNamespace:         "",
+				gardenerClientset:              gardenerClientset,
+				client:                         client,
+				newSecretsManager:              newSecretsManager,
+			}
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, logger, cpExposure, cluster)).To(Succeed())
@@ -630,7 +735,7 @@ webhooks:
 })
 
 func clientGet(result client.Object) interface{} {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 		switch obj.(type) {
 		case *corev1.Secret:
 			*obj.(*corev1.Secret) = *result.(*corev1.Secret)
@@ -645,45 +750,6 @@ func getPurposeExposure() *extensionsv1alpha1.Purpose {
 	purpose := new(extensionsv1alpha1.Purpose)
 	*purpose = extensionsv1alpha1.Exposure
 	return purpose
-}
-
-func constructNetworkPolicy(webhookServerNamespace, providerName, shootNamespace string, webhookPort int) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{
-		ObjectMeta: extensionsshootwebhook.GetNetworkPolicyMeta(shootNamespace, providerName).ObjectMeta,
-		Spec: networkingv1.NetworkPolicySpec{
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{
-							Port:     utils.IntStrPtrFromInt(webhookPort),
-							Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-						},
-					},
-					To: []networkingv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"kubernetes.io/metadata.name": webhookServerNamespace,
-								},
-							},
-							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app.kubernetes.io/name": "gardener-extension-" + providerName,
-								},
-							},
-						},
-					},
-				},
-			},
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-					v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-				},
-			},
-		},
-	}
 }
 
 func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {

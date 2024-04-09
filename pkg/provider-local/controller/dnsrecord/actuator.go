@@ -16,13 +16,8 @@ package dnsrecord
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"os"
 	"regexp"
-	"sort"
 	"strings"
-	"sync"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -36,70 +31,31 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
-const pathEtcHosts = "/etc/hosts"
-
 type actuator struct {
 	client client.Client
-
-	lock             sync.Mutex
-	writeToHostsFile bool
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled DNSRecord resources.
-func NewActuator(mgr manager.Manager, writeToHostsFile bool) dnsrecord.Actuator {
+func NewActuator(mgr manager.Manager) dnsrecord.Actuator {
 	return &actuator{
-		client:           mgr.GetClient(),
-		writeToHostsFile: writeToHostsFile,
+		client: mgr.GetClient(),
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	return a.reconcile(ctx, log, dnsrecord, cluster, CreateOrUpdateValuesInEtcHostsFile, updateCoreDNSRewriteRule)
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, dnsrecord, cluster, updateCoreDNSRewriteRule)
 }
 
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	return a.reconcile(ctx, log, dnsrecord, cluster, DeleteValuesInEtcHostsFile, deleteCoreDNSRewriteRule)
+func (a *actuator) Delete(ctx context.Context, _ logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.reconcile(ctx, dnsrecord, cluster, deleteCoreDNSRewriteRule)
 }
 
-func (a *actuator) reconcile(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateEtcHosts func([]byte, *extensionsv1alpha1.DNSRecord) []byte, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
-	if err := a.updateCoreDNSRewritingRules(ctx, log, dnsRecord, cluster, mutateCorednsRules); err != nil {
-		return err
-	}
+func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
+	return a.Delete(ctx, log, dnsrecord, cluster)
+}
 
-	if !a.writeToHostsFile {
-		return nil
-	}
-
-	a.lock.Lock()
-	defer a.lock.Unlock()
-
-	fileInfo, err := os.Stat(pathEtcHosts)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(pathEtcHosts, os.O_RDWR, fileInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err := file.Close(); err != nil {
-			log.Error(err, "Error closing hosts file")
-		}
-	}()
-
-	content, err := io.ReadAll(file)
-	if err != nil {
-		return err
-	}
-
-	if err := file.Truncate(0); err != nil {
-		return err
-	}
-
-	_, err = file.WriteAt(mutateEtcHosts(content, dnsRecord), 0)
-	return err
+func (a *actuator) reconcile(ctx context.Context, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
+	return a.updateCoreDNSRewritingRules(ctx, dnsRecord, cluster, mutateCorednsRules)
 }
 
 func (a *actuator) Migrate(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
@@ -110,83 +66,12 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, dnsrecord *exte
 	return a.Reconcile(ctx, log, dnsrecord, cluster)
 }
 
-const (
-	beginOfSection = "# Begin of gardener-extension-provider-local section"
-	endOfSection   = "# End of gardener-extension-provider-local section"
-)
-
-// CreateOrUpdateValuesInEtcHostsFile creates or updates the values of the provided DNSRecord object in the /etc/hosts
-// file.
-func CreateOrUpdateValuesInEtcHostsFile(etcHostsContent []byte, dnsrecord *extensionsv1alpha1.DNSRecord) []byte {
-	return reconcileEtcHostsFile(etcHostsContent, dnsrecord.Spec.Name, dnsrecord.Spec.Values, false)
-}
-
-// DeleteValuesInEtcHostsFile deletes the values of the provided DNSRecord object in the /etc/hosts file.
-func DeleteValuesInEtcHostsFile(etcHostsContent []byte, dnsrecord *extensionsv1alpha1.DNSRecord) []byte {
-	return reconcileEtcHostsFile(etcHostsContent, dnsrecord.Spec.Name, dnsrecord.Spec.Values, true)
-}
-
-func reconcileEtcHostsFile(etcHostsContent []byte, name string, values []string, removeEntries bool) []byte {
-	var (
-		oldContent = string(etcHostsContent)
-		newContent = string(oldContent)
-
-		hostnameToIPs = make(map[string][]string)
-
-		sectionBeginIndex = strings.Index(oldContent, beginOfSection)
-		sectionEndIndex   = strings.Index(oldContent, endOfSection)
-		sectionExists     = sectionBeginIndex >= 0 && sectionEndIndex >= 0
-	)
-
-	if sectionExists {
-		newContent = oldContent[0 : sectionBeginIndex-1]
-		existingSection := oldContent[sectionBeginIndex : sectionEndIndex-1]
-
-		for _, line := range strings.Split(existingSection, "\n") {
-			split := strings.Split(line, " ")
-			if len(split) != 2 {
-				continue
-			}
-
-			ip, hostname := split[0], split[1]
-			hostnameToIPs[hostname] = append(hostnameToIPs[hostname], ip)
-		}
-	}
-
-	newContent = strings.TrimSuffix(newContent, "\n")
-
-	if removeEntries {
-		delete(hostnameToIPs, name)
-	} else {
-		hostnameToIPs[name] = values
-	}
-
-	var newEntries []string
-	for hostname, ips := range hostnameToIPs {
-		for _, ip := range ips {
-			newEntries = append(newEntries, fmt.Sprintf("%s %s", ip, hostname))
-		}
-	}
-
-	if len(newEntries) > 0 {
-		newContent += fmt.Sprintf("\n%s\n", beginOfSection)
-		sort.Strings(newEntries)
-		newContent += strings.Join(newEntries, "\n")
-		newContent += fmt.Sprintf("\n%s", endOfSection)
-	}
-
-	if sectionExists {
-		newContent += oldContent[sectionEndIndex+len(endOfSection):]
-	}
-
-	if !strings.HasSuffix(newContent, "\n") {
-		newContent += "\n"
-	}
-
-	return []byte(newContent)
-}
-
-func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string)) error {
+func (a *actuator) updateCoreDNSRewritingRules(
+	ctx context.Context,
+	dnsRecord *extensionsv1alpha1.DNSRecord,
+	cluster *extensionscontroller.Cluster,
+	mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string),
+) error {
 	// Only handle dns records for kube-apiserver
 	if dnsRecord == nil || !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") {
 		return nil
@@ -213,7 +98,7 @@ func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Log
 	return a.client.Patch(ctx, corednsConfig, client.MergeFrom(originalConfig))
 }
 
-func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string) {
+func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, _ *string) {
 	delete(corednsConfig.Data, dnsRecord.Spec.Name+".override")
 }
 

@@ -18,12 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -32,21 +31,20 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Reconciler performs garbage collection.
 type Reconciler struct {
-	TargetReader            client.Reader
-	TargetWriter            client.Writer
-	TargetKubernetesVersion *semver.Version
-	Config                  config.GarbageCollectorControllerConfig
-	Clock                   clock.Clock
-	MinimumObjectLifetime   *time.Duration
+	TargetReader          client.Reader
+	TargetWriter          client.Writer
+	Config                config.GarbageCollectorControllerConfig
+	Clock                 clock.Clock
+	MinimumObjectLifetime *time.Duration
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -96,18 +94,17 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			batchv1.SchemeGroupVersion.WithKind("JobList"),
 			corev1.SchemeGroupVersion.WithKind("PodList"),
 			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
+			resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
 		}
 	)
-
-	if versionutils.ConstraintK8sLess125.Check(r.TargetKubernetesVersion) {
-		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
-	}
 
 	for _, gvk := range groupVersionKinds {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 		if err := r.TargetReader.List(ctx, objList); err != nil {
-			return reconcile.Result{}, err
+			if !meta.IsNoMatchError(err) {
+				return reconcile.Result{}, err
+			}
 		}
 		items = append(items, objList.Items...)
 	}
@@ -131,6 +128,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	for id := range objectsToGarbageCollect {
 		objId := id
+
 		wg.StartWithContext(ctx, func(ctx context.Context) {
 			var (
 				meta = metav1.ObjectMeta{Namespace: objId.namespace, Name: objId.name}

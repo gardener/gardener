@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/cert"
 	csrutil "k8s.io/client-go/util/certificate/csr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -59,7 +59,7 @@ func CreateTargetClientFromCSR(ctx context.Context, targetClient kubernetes.Inte
 		csrData,
 		commonName,
 		certificatesv1.KubeAPIServerClientSignerName,
-		pointer.Duration(3600*time.Second),
+		ptr.To(3600*time.Second),
 		[]certificatesv1.KeyUsage{
 			certificatesv1.UsageDigitalSignature,
 			certificatesv1.UsageKeyEncipherment,

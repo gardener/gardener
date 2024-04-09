@@ -20,7 +20,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -98,7 +98,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("secretbinding"),
+				SecretBindingName: ptr.To("secretbinding"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -115,10 +115,10 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("some-domain.example.com"),
+					Domain: ptr.To("some-domain.example.com"),
 					Providers: []gardencorev1beta1.DNSProvider{
-						{Type: pointer.String("type"), SecretName: pointer.String(secret1.Name)},
-						{Type: pointer.String("type"), SecretName: pointer.String(secret2.Name)},
+						{Type: ptr.To("type"), SecretName: ptr.To(secret1.Name)},
+						{Type: ptr.To("type"), SecretName: ptr.To(secret2.Name)},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
@@ -134,7 +134,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 				Resources: []gardencorev1beta1.NamedResourceReference{
 					{
@@ -201,19 +201,63 @@ var _ = Describe("Shoot Reference controller tests", func() {
 			}
 		})
 
-		It("should remove finalizers from the referenced secrets and configmaps", func() {
+		It("should remove finalizers from the shoot and the referenced secrets and configmaps", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
 			shoot.Spec.Resources = nil
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
+			for _, obj := range []client.Object{shoot, secret1, secret2, secret3, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
 				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should not have the finalizer")
 			}
+		})
+
+		Context("multiple shoots", func() {
+			var shoot2 *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shoot2 = shoot.DeepCopy()
+			})
+
+			JustBeforeEach(func() {
+				By("Create second Shoot")
+				Expect(testClient.Create(ctx, shoot2)).To(Succeed())
+				log.Info("Created second Shoot for test", "shoot", client.ObjectKeyFromObject(shoot2))
+
+				DeferCleanup(func() {
+					By("Delete second Shoot")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot2))).To(Succeed())
+				})
+
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot2), shoot2)).To(Succeed())
+					return shoot2.Finalizers
+				}).Should(ContainElement("gardener.cloud/reference-protection"))
+			})
+
+			It("should not remove finalizers from the referenced secrets and configmaps because another shoot still references them", func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Spec.DNS.Providers = nil
+				shoot.Spec.Kubernetes.KubeAPIServer = nil
+				shoot.Spec.Resources = nil
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.GetFinalizers()
+				}).ShouldNot(ContainElement("gardener.cloud/reference-protection"), shoot.GetName()+" should not have the finalizer")
+
+				for _, obj := range []client.Object{shoot2, secret1, secret2, secret3, configMap1, configMap2} {
+					Consistently(func(g Gomega) []string {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+						return obj.GetFinalizers()
+					}).Should(ContainElement("gardener.cloud/reference-protection"), obj.GetName()+" should have the finalizer")
+				}
+			})
 		})
 	})
 })

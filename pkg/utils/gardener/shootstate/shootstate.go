@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
@@ -131,6 +131,41 @@ func computeGardenerData(
 	[]gardencorev1beta1.GardenerResourceData,
 	error,
 ) {
+	secretsToPersist, err := computeSecretsToPersist(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineState, err := computeMachineState(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	machineStateJSON, err := json.Marshal(machineState)
+	if err != nil {
+		return nil, fmt.Errorf("failed marshalling machine state to JSON: %w", err)
+	}
+
+	machineStateJSONCompressed, err := compressMachineState(machineStateJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
+	}
+
+	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+		Name: v1beta1constants.DataTypeMachineState,
+		Type: v1beta1constants.DataTypeMachineState,
+		Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
+	}), nil
+}
+
+func computeSecretsToPersist(
+	ctx context.Context,
+	seedClient client.Client,
+	seedNamespace string,
+) (
+	[]gardencorev1beta1.GardenerResourceData,
+	error,
+) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
 		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
@@ -150,7 +185,7 @@ func computeGardenerData(
 		dataList = append(dataList, gardencorev1beta1.GardenerResourceData{
 			Name:   secret.Name,
 			Labels: secret.Labels,
-			Type:   "secret",
+			Type:   v1beta1constants.DataTypeSecret,
 			Data:   runtime.RawExtension{Raw: dataJSON},
 		})
 	}
@@ -197,13 +232,14 @@ func computeExtensionsDataAndResources(
 				return fmt.Errorf("failed accessing extension object: %w", err)
 			}
 
-			if extensionObj.GetDeletionTimestamp() != nil {
+			if extensionObj.GetDeletionTimestamp() != nil ||
+				(extensionObj.GetExtensionStatus().GetState() == nil && len(extensionObj.GetExtensionStatus().GetResources()) == 0) {
 				return nil
 			}
 
 			dataList = append(dataList, gardencorev1beta1.ExtensionResourceState{
 				Kind:      extension.objKind,
-				Name:      pointer.String(extensionObj.GetName()),
+				Name:      ptr.To(extensionObj.GetName()),
 				Purpose:   extensionObj.GetExtensionSpec().GetExtensionPurpose(),
 				State:     extensionObj.GetExtensionStatus().GetState(),
 				Resources: extensionObj.GetExtensionStatus().GetResources(),

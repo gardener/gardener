@@ -16,6 +16,7 @@ package tokenrequestor_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,7 +33,7 @@ import (
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -68,7 +69,7 @@ var _ = Describe("Reconciler", func() {
 			fakeCreateServiceAccountToken = func() {
 				coreV1Client.AddReactor("create", "serviceaccounts", func(action testing.Action) (bool, runtime.Object, error) {
 					if action.GetSubresource() != "token" {
-						return false, nil, fmt.Errorf("subresource should be 'token'")
+						return false, nil, errors.New("subresource should be 'token'")
 					}
 
 					cAction, ok := action.(testing.CreateAction)
@@ -376,7 +377,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should reconcile the service account settings", func() {
-			serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+			serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 
 			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())

@@ -41,6 +41,7 @@ func (w *withSuppressed) Format(s fmt.State, verb rune) {
 			_, _ = fmt.Fprintf(s, "%+v\nsuppressed: %+v", w.Unwrap(), w.suppressed)
 			return
 		}
+
 		fallthrough
 	case 's', 'q':
 		_, _ = io.WriteString(s, w.Error())
@@ -111,6 +112,7 @@ func GetID(err error) string {
 	}
 
 	var id string
+
 	if err != nil {
 		if errWithID, ok := err.(errorIDer); ok {
 			id = errWithID.ErrorID()

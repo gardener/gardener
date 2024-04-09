@@ -22,13 +22,12 @@ missing_license_header_files="$(addlicense \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
-  -ignore "vendor/**" \
   -ignore "**/*.md" \
   -ignore "**/*.html" \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
-  -ignore "hack/tools/gomegacheck/**" \
-  -ignore "pkg/component/**/*.sh" \
+  -ignore "pkg/**/*.sh" \
+  -ignore "third_party/gopkg.in/yaml.v2/**" \
   .)" || true
 
 if [[ "$missing_license_header_files" ]]; then

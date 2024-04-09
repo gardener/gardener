@@ -18,9 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -70,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Check responsibility
-	if _, responsible := r.ClassFilter.Active(mr); !responsible {
+	if responsible := r.ClassFilter.Responsible(mr); !responsible {
 		log.Info("Stopping checks as the responsibility changed")
 		return reconcile.Result{}, nil
 	}
@@ -101,12 +106,13 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 
 	for _, ref := range mr.Status.Resources {
-		// only Deployment, StatefulSet and DaemonSet are considered for Progressing condition
-		if ref.GroupVersionKind().Group != appsv1.GroupName {
+		// Skip API groups that are irrelevant for progressing checks.
+		if !sets.New(appsv1.GroupName, monitoring.GroupName, certv1alpha1.GroupName).Has(ref.GroupVersionKind().Group) {
 			continue
 		}
 
 		var obj client.Object
+
 		switch ref.Kind {
 		case "Deployment":
 			obj = &appsv1.Deployment{}
@@ -114,6 +120,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			obj = &appsv1.StatefulSet{}
 		case "DaemonSet":
 			obj = &appsv1.DaemonSet{}
+		case "Prometheus":
+			obj = &monitoringv1.Prometheus{}
+		case "Alertmanager":
+			obj = &monitoringv1.Alertmanager{}
+		case "Certificate":
+			obj = &certv1alpha1.Certificate{}
+		case "Issuer":
+			obj = &certv1alpha1.Issuer{}
 		default:
 			continue
 		}
@@ -124,14 +138,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		)
 
 		if err := r.TargetClient.Get(checkCtx, objectKey, obj); err != nil {
-			if apierrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 				// missing objects already handled by health controller, skip
 				continue
 			}
 			return reconcile.Result{}, err
 		}
 
-		if progressing, description := checkProgressing(obj); progressing {
+		if progressing, description, err := r.checkProgressing(ctx, obj); err != nil {
+			return reconcile.Result{}, err
+		} else if progressing {
 			var (
 				reason  = ref.Kind + "Progressing"
 				message = fmt.Sprintf("%s %q is progressing: %s", ref.Kind, objectKey.String(), description)
@@ -173,19 +189,51 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 // checkProgressing checks whether the given object is progressing. It returns a bool indicating whether the object is
 // progressing, a reason for it if so and an error if the check failed.
-func checkProgressing(obj client.Object) (bool, string) {
+func (r *Reconciler) checkProgressing(ctx context.Context, obj client.Object) (bool, string, error) {
 	if obj.GetAnnotations()[resourcesv1alpha1.SkipHealthCheck] == "true" {
-		return false, ""
+		return false, "", nil
 	}
+
+	var (
+		progressing bool
+		reason      string
+	)
 
 	switch o := obj.(type) {
 	case *appsv1.Deployment:
-		return health.IsDeploymentProgressing(o)
+		progressing, reason = health.IsDeploymentProgressing(o)
+		if progressing {
+			return true, reason, nil
+		}
+
+		// health.IsDeploymentProgressing might return false even if there are still (terminating) pods in the system
+		// belonging to an older ReplicaSet of the Deployment, hence, we have to check for this explicitly.
+		exactNumberOfPods, err := health.DeploymentHasExactNumberOfPods(ctx, r.TargetClient, o)
+		if err != nil {
+			return progressing, reason, err
+		}
+		if !exactNumberOfPods {
+			return true, "there are still non-terminated old pods", nil
+		}
+
 	case *appsv1.StatefulSet:
-		return health.IsStatefulSetProgressing(o)
+		progressing, reason = health.IsStatefulSetProgressing(o)
+
 	case *appsv1.DaemonSet:
-		return health.IsDaemonSetProgressing(o)
+		progressing, reason = health.IsDaemonSetProgressing(o)
+
+	case *monitoringv1.Prometheus:
+		progressing, reason = health.IsPrometheusProgressing(o)
+
+	case *monitoringv1.Alertmanager:
+		progressing, reason = health.IsAlertmanagerProgressing(o)
+
+	case *certv1alpha1.Certificate:
+		progressing, reason = health.IsCertificateProgressing(o)
+
+	case *certv1alpha1.Issuer:
+		progressing, reason = health.IsCertificateIssuerProgressing(o)
 	}
 
-	return false, ""
+	return progressing, reason, nil
 }

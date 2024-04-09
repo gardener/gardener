@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateDNSRecord validates a DNSRecord object.
@@ -71,7 +71,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), strings.TrimPrefix(spec.Name, "*."))...)
 
 	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeAAAA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
-	if !utils.ValueExists(string(spec.RecordType), validRecordTypes) {
+	if !slices.Contains(validRecordTypes, string(spec.RecordType)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("recordType"), spec.RecordType, validRecordTypes))
 	}
 
@@ -81,6 +81,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	if spec.RecordType == extensionsv1alpha1.DNSRecordTypeCNAME && len(spec.Values) > 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("values"), spec.Values, "CNAME records must have a single value"))
 	}
+
 	for i, value := range spec.Values {
 		allErrs = append(allErrs, validateValue(spec.RecordType, value, fldPath.Child("values").Index(i))...)
 	}
@@ -110,22 +111,9 @@ func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, del
 	return allErrs
 }
 
-// ValidateDNSRecordStatus validates the status of a DNSRecord object.
-func ValidateDNSRecordStatus(status *extensionsv1alpha1.DNSRecordStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
-// ValidateDNSRecordStatusUpdate validates the status field of a DNSRecord object before an update.
-func ValidateDNSRecordStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.DNSRecordStatus, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	return allErrs
-}
-
 func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	switch recordType {
 	case extensionsv1alpha1.DNSRecordTypeA:
 		allErrs = append(allErrs, validation.IsValidIPv4Address(fldPath, value)...)

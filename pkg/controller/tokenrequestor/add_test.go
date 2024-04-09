@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -62,13 +62,13 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when secret is labeled with class that reconciler is responsible for", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "foo")
 				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeTrue())
 			})
 
 			It("should return false when secret is labeled with class but reconciler is responsible for another one", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "bar")
 				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
 			})
@@ -85,7 +85,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when secret is no longer relevant because class changed", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				oldSecret := secret.DeepCopy()
 				metav1.SetMetaDataLabel(&oldSecret.ObjectMeta, "resources.gardener.cloud/class", "foo")
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "bar")
@@ -108,7 +108,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when secret was not relevant but class changed", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				oldSecret := secret.DeepCopy()
 				metav1.SetMetaDataLabel(&oldSecret.ObjectMeta, "resources.gardener.cloud/class", "bar")
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "foo")
@@ -136,13 +136,13 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return true when secret is labeled with class that reconciler is responsible for", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "foo")
 				Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeTrue())
 			})
 
 			It("should return false when secret is labeled with class but reconciler is responsible for another one", func() {
-				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
+				p = (&Reconciler{Class: ptr.To("foo")}).SecretPredicate()
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, "resources.gardener.cloud/class", "bar")
 				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
 			})

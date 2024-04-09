@@ -16,8 +16,8 @@ package charttest
 
 import (
 	"context"
-	"path/filepath"
 
+	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -25,27 +25,21 @@ import (
 
 type gardenlet struct {
 	kubernetes.ChartApplier
-	chartPath string
-	values    map[string]interface{}
+	values map[string]interface{}
 }
 
 // NewGardenletChartApplier can be used to deploy the Gardenlet chart.
-func NewGardenletChartApplier(
-	applier kubernetes.ChartApplier,
-	values map[string]interface{},
-	chartsRootPath string,
-) component.Deployer {
+func NewGardenletChartApplier(applier kubernetes.ChartApplier, values map[string]interface{}) component.Deployer {
 	return &gardenlet{
 		ChartApplier: applier,
-		chartPath:    filepath.Join(chartsRootPath, "gardener", "gardenlet"),
 		values:       values,
 	}
 }
 
 func (c *gardenlet) Deploy(ctx context.Context) error {
-	return c.Apply(ctx, c.chartPath, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(c.values))
+	return c.ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(c.values))
 }
 
 func (c *gardenlet) Destroy(ctx context.Context) error {
-	return c.Delete(ctx, c.chartPath, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(c.values))
+	return c.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(c.values))
 }

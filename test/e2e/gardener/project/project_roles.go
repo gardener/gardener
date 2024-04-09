@@ -23,7 +23,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -46,7 +46,7 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 				Name: projectName,
 			},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: pointer.String("garden-" + projectName),
+				Namespace: ptr.To("garden-" + projectName),
 			},
 		}
 		projectNamespaceKey = client.ObjectKey{Name: *project.Spec.Namespace}

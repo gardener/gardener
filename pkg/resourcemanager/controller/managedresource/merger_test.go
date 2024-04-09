@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
@@ -55,14 +55,14 @@ var _ = Describe("merger", func() {
 					DeletionTimestamp:          &metav1.Time{Time: time.Now().Add(1 * time.Hour)},
 					UID:                        "8c3d49f6-e177-4938-8547-c61283a84876",
 					GenerateName:               "foo",
-					DeletionGracePeriodSeconds: pointer.Int64(30),
+					DeletionGracePeriodSeconds: ptr.To[int64](30),
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "v1",
 						Kind:               "Namespace",
 						Name:               "default",
 						UID:                "18590d53-3e4d-4616-b411-88212dc69ac6",
-						Controller:         pointer.Bool(true),
-						BlockOwnerDeletion: pointer.Bool(true),
+						Controller:         ptr.To(true),
+						BlockOwnerDeletion: ptr.To(true),
 					}},
 				},
 			}
@@ -302,7 +302,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -320,7 +320,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newDeployment.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			expected := old.DeepCopy()
 
@@ -329,7 +329,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newDeployment.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			expected := newDeployment.DeepCopy()
 
@@ -377,7 +377,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -387,7 +387,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserve-replicas is unset", func() {
-			newDeployment.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
@@ -399,7 +399,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
-			newDeployment.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = ptr.To[int32](2)
 			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
@@ -473,7 +473,7 @@ var _ = Describe("merger", func() {
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Replicas: pointer.Int32(1),
+					Replicas: ptr.To[int32](1),
 					Template: defaultPodTemplateSpec,
 				},
 			}
@@ -491,7 +491,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			newStatefulSet.Spec.Replicas = pointer.Int32(2)
+			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
 
 			expected := old.DeepCopy()
 
@@ -500,7 +500,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			newStatefulSet.Spec.Replicas = pointer.Int32(2)
+			newStatefulSet.Spec.Replicas = ptr.To[int32](2)
 
 			expected := newStatefulSet.DeepCopy()
 
@@ -533,7 +533,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: pointer.String("ultra-fast"),
+						StorageClassName: ptr.To("ultra-fast"),
 					},
 				},
 			}
@@ -551,7 +551,7 @@ var _ = Describe("merger", func() {
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						VolumeName:       "pvc-foo",
-						StorageClassName: pointer.String("ultra-fast"),
+						StorageClassName: ptr.To("ultra-fast"),
 					},
 				},
 			}
@@ -841,7 +841,7 @@ var _ = Describe("merger", func() {
 							Name:       "foo",
 							Protocol:   corev1.ProtocolTCP,
 							Port:       123,
-							TargetPort: intstr.FromInt(919),
+							TargetPort: intstr.FromInt32(919),
 						},
 					},
 					Type:            corev1.ServiceTypeClusterIP,
@@ -863,7 +863,7 @@ var _ = Describe("merger", func() {
 			Entry("ClusterIP with changed ports", func() {
 				newService.Spec.Ports[0].Port = 1234
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(989)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(989)
 				newService.Annotations = old.Annotations
 
 				expected = newService.DeepCopy()
@@ -879,7 +879,7 @@ var _ = Describe("merger", func() {
 			Entry("ClusterIP without passing any type", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Annotations = old.Annotations
 
 				expected = newService.DeepCopy()
@@ -890,7 +890,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeNodePort
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 				newService.Annotations = old.Annotations
 
@@ -902,7 +902,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -930,7 +930,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 
 				expected = newService.DeepCopy()
@@ -948,7 +948,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 
 				expected = newService.DeepCopy()
@@ -956,7 +956,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports and without nodePort", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 				expected = newService.DeepCopy()
 				newService.Spec.Ports[0].NodePort = 0
@@ -966,7 +966,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -992,7 +992,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 
 				expected = newService.DeepCopy()
@@ -1009,7 +1009,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 
 				expected = newService.DeepCopy()
@@ -1017,7 +1017,7 @@ var _ = Describe("merger", func() {
 			Entry("NodePort with changed ports and without nodePort", func() {
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 
 				expected = newService.DeepCopy()
 				newService.Spec.Ports[0].NodePort = 0
@@ -1027,7 +1027,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Selector = nil
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ClusterIP = ""
 				newService.Spec.ExternalName = "foo.com"
@@ -1077,7 +1077,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeClusterIP
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 0
 				newService.Spec.ExternalName = ""
 				newService.Spec.ClusterIP = "3.4.5.6"
@@ -1088,7 +1088,7 @@ var _ = Describe("merger", func() {
 				newService.Spec.Type = corev1.ServiceTypeNodePort
 				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				newService.Spec.Ports[0].Port = 999
-				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt32(888)
 				newService.Spec.Ports[0].NodePort = 444
 				newService.Spec.ExternalName = ""
 				newService.Spec.ClusterIP = "3.4.5.6"

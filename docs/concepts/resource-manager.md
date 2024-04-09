@@ -1,11 +1,16 @@
-# Gardener Resource Manager
+---
+title: Gardener Resource Manager
+description: Set of controllers with different responsibilities running once per seed and once per shoot
+---
+
+## Overview
 
 Initially, the `gardener-resource-manager` was a project similar to the [kube-addon-manager](https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager).
 It manages Kubernetes resources in a target cluster which means that it creates, updates, and deletes them.
 Also, it makes sure that manual modifications to these resources are reconciled back to the desired state.
 
 In the Gardener project we were using the kube-addon-manager since more than two years.
-While we have progressed with our [extensibility story](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) (moving cloud providers out-of-tree), we had decided that the kube-addon-manager is no longer suitable for this use-case.
+While we have progressed with our [extensibility story](../proposals/01-extensibility.md) (moving cloud providers out-of-tree), we had decided that the kube-addon-manager is no longer suitable for this use-case.
 The problem with it is that it needs to have its managed resources on its file system.
 This requires storing the resources in `ConfigMap`s or `Secret`s and mounting them to the kube-addon-manager pod during deployment time.
 The `gardener-resource-manager` uses `CustomResourceDefinition`s which allows to dynamically add, change, and remove resources with immediate action and without the need to reconfigure the volume mounts/restarting the pod.
@@ -19,7 +24,7 @@ Similar to other Gardener components, the `gardener-resource-manager` uses a so-
 It allows specifying certain central settings like log level and formatting, client connection configuration, server ports and bind addresses, etc.
 In addition, controllers and webhooks can be configured and sometimes even disabled.
 
-Note that the very basic `ManagedResource`, secret, and health controllers cannot be disabled.
+Note that the very basic `ManagedResource` and health controllers cannot be disabled.
 
 You can find an example configuration file [here](../../example/resource-manager/10-componentconfig.yaml).
 
@@ -130,11 +135,7 @@ The `gardener-resource-manager` can manage a resource in the following supported
 
 The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the `ManagedResource`.
 
-#### Skipping Health Check
-
-If a resource in the `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the health controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
-
-#### Resource Class
+#### Resource Class and Reconcilation Scope
 
 By default, the `gardener-resource-manager` controller watches for `ManagedResource`s in all namespaces.
 The `.sourceClientConnection.namespace` field in the component configuration restricts the watch to `ManagedResource`s in a single namespace only.
@@ -143,6 +144,12 @@ Note that this setting also affects all other controllers and webhooks since it'
 A `ManagedResource` has an optional `.spec.class` field that allows it to indicate that it belongs to a given class of resources.
 The `.controllers.resourceClass` field in the component configuration restricts the watch to `ManagedResource`s with the given `.spec.class`.
 A default class is assumed if no class is specified.
+
+For instance, the `gardener-resource-manager` which is deployed in the Shoot’s control plane namespace in the Seed does not specify a `.spec.class` and watches only for resources in the control plane namespace by specifying it in the `.sourceClientConnection.namespace`  field.
+
+If the `.spec.class` changes this means that the resources have to be handled by a different Gardener Resource Manager. That is achieved by:
+1. Cleaning all referenced resources by the Gardener Resource Manager that was responsible for the old class in its target cluster.
+2. Creating all referenced resources by the Gardener Resource Manager that is responsible for the new class in its target cluster.
 
 #### [Conditions](../../pkg/resourcemanager/controller/health)
 
@@ -166,6 +173,7 @@ A `ManagedResource` has a `ManagedResourceStatus`, which has an array of Conditi
 
 `ResourcesProgressing` may be `True` when:
 - a `Deployment`, `StatefulSet` or `DaemonSet` has not been fully rolled out yet, i.e. not all replicas have been updated with the latest changes to `spec.template`.
+- there are still old `Pod`s belonging to an older `ReplicaSet` of a `Deployment` which are not terminated yet.
 
 Each Kubernetes resources has different notion for being healthy. For example, a Deployment is considered healthy if the controller observed its current revision and if the number of updated replicas is equal to the number of replicas.
 
@@ -198,6 +206,12 @@ conditions:
 In some cases, it is not desirable to update or re-apply some of the cluster components (for example, if customization is required or needs to be applied by the end-user).
 For these resources, the annotation "resources.gardener.cloud/ignore" needs to be set to "true" or a truthy value (Truthy values are "1", "t", "T", "true", "TRUE", "True") in the corresponding managed resource secrets.
 This can be done from the components that create the managed resource secrets, for example Gardener extensions or Gardener. Once this is done, the resource will be initially created and later ignored during reconciliation.
+
+#### Finalizing Deletion of Resources After Grace Period
+
+When a `ManagedResource` is deleted, the controller deletes all managed resources from the target cluster.
+In case the resources still have entries in their `.metadata.finalizers[]` list, they will remain stuck in the system until another entity removes the finalizers.
+If you want the controller to forcefully finalize the deletion after some grace period (i.e., setting `.metadata.finalizers=null`), you can annotate the managed resources with `resources.gardener.cloud/finalize-deletion-after=<duration>`, e.g., `resources.gardener.cloud/finalize-deletion-after=1h`.
 
 #### Preserving `replicas` or `resources` in Workload Resources
 
@@ -233,6 +247,50 @@ By default, cluster id is not used. If cluster id is specified, the format is `<
 
 In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `.conrollers.managedResources.managedByLabelValue` field in the component configuration.
 
+### [`health` Controller](../../pkg/resourcemanager/controller/health)
+
+This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#managedResource-controller) at least once.
+Its main job is to perform checks for maintaining the well [known conditions](#conditions) `ResourcesHealthy` and `ResourcesProgressing`.
+
+#### Progressing Checks
+
+In Kubernetes, applied changes must usually be rolled out first, e.g. when changing the base image in a `Deployment`.
+Progressing checks detect ongoing roll-outs and report them in the `ResourcesProgressing` condition of the corresponding `ManagedResource`.
+
+The following object kinds are considered for progressing checks:
+- `DaemonSet`
+- `Deployment`
+- `StatefulSet`
+- [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Certificate`](https://github.com/gardener/cert-management)
+- [`Issuer`](https://github.com/gardener/cert-management)
+
+#### Health Checks
+
+`gardener-resource-manager` can evaluate the health of specific resources, often by consulting their conditions.
+Health check results are regularly updated in the `ResourcesHealthy` condition of the corresponding `ManagedResource`.
+
+The following object kinds are considered for health checks:
+- `CustomResourceDefinition`
+- `DaemonSet`
+- `Deployment`
+- `Job`
+- `Pod`
+- `ReplicaSet`
+- `ReplicationController`
+- `Service`
+- `StatefulSet`
+- [`VerticalPodAutoscaler`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)
+- [`Prometheus`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Alertmanager`](https://github.com/prometheus-operator/prometheus-operator)
+- [`Certificate`](https://github.com/gardener/cert-management)
+- [`Issuer`](https://github.com/gardener/cert-management)
+
+#### Skipping Health Check
+
+If a resource owned by a `ManagedResource` is annotated with `resources.gardener.cloud/skip-health-check=true`, then the resource will be skipped during health checks by the `health` controller. The `ManagedResource` conditions will not reflect the health condition of this resource anymore. The `ResourcesProgressing` condition will also be set to `False`.
+
 ### [Garbage Collector For Immutable `ConfigMap`s/`Secret`s](../../pkg/resourcemanager/controller/garbagecollector)
 
 In Kubernetes, workload resources (e.g., `Pod`s) can mount `ConfigMap`s or `Secret`s or reference them via environment variables in containers.
@@ -252,7 +310,7 @@ The purpose of this controller is cleaning up such immutable `ConfigMap`s/`Secre
 The following algorithm is implemented in the GC controller:
 
 1. List all `ConfigMap`s and `Secret`s labeled with `resources.gardener.cloud/garbage-collectable-reference=true`.
-1. List all `Deployment`s, `StatefulSet`s, `DaemonSet`s, `Job`s, `CronJob`s, `Pod`s and for each of them:
+1. List all `Deployment`s, `StatefulSet`s, `DaemonSet`s, `Job`s, `CronJob`s, `Pod`s, `ManagedResource`s and for each of them:
     - iterate over the `.metadata.annotations` and for each of them:
         - If the annotation key follows the `reference.resources.gardener.cloud/{configmap,secret}-<hash>` scheme and the value equals `<name>`, then consider it as "in-use".
 1. Delete all `ConfigMap`s and `Secret`s not considered as "in-use".
@@ -436,6 +494,9 @@ The controller ensures a `ServiceAccount` exists in the target cluster as specif
 serviceaccount.resources.gardener.cloud/name: <sa-name>
 serviceaccount.resources.gardener.cloud/namespace: <sa-namespace>
 ```
+
+You can optionally annotate the `Secret` with `serviceaccount.resources.gardener.cloud/labels`, e.g. `serviceaccount.resources.gardener.cloud/labels={"some":"labels","foo":"bar"}`.
+This will make the `ServiceAccount` getting labelled accordingly.
 
 The requested tokens will act with the privileges which are assigned to this `ServiceAccount`.
 
@@ -936,14 +997,17 @@ The webhook performs the following actions:
       In case the number of replicas is larger than twice the number of zones, then the `maxSkew=2` for the second spread constraints.
       The `minDomains` calculation is based on whatever value is lower - (maximum) replicas or number of zones. This is the number of minimum domains required to schedule pods in a highly available manner.
 
-   Independent on the number of zones, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread).
+   Independent on the number of zones, when one of the following conditions is true, then the field `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread):
+
+   - The `high-availability-config.resources.gardener.cloud/host-spread` annotation is set to `true`.
+   - The `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty.
 
 4. Adds default tolerations for [taint-based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions):
 
    Tolerations for taints `node.kubernetes.io/not-ready` and `node.kubernetes.io/unreachable` are added to the handled `Deployment` and `StatefulSet` if their `podTemplate`s do not already specify them.
    The `TolerationSeconds` are taken from the respective configuration section of the webhook's configuration (see [example](../../example/resource-manager/10-componentconfig.yaml))).
    
-   We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../../docs/usage/shoot_high_availability_best_practices.md).
+   We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../usage/shoot_high_availability_best_practices.md).
    In addition, this webhook handling helps to set defaults for many but not all workload components in a cluster. For instance, Gardener can use this webhook to set defaults for nearly every component in seed clusters but only for the system components in shoot clusters. Any customer workload remains unchanged.
 
 #### Kubernetes Service Host Injection

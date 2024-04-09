@@ -15,6 +15,7 @@
 package seed_test
 
 import (
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,7 +29,7 @@ var _ = Describe("Response", func() {
 	var (
 		reason        = "reason"
 		code    int32 = 123
-		fakeErr       = fmt.Errorf("fake")
+		fakeErr       = errors.New("fake")
 	)
 
 	Describe("#Allowed", func() {

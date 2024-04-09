@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,7 +98,7 @@ type RegisteredExtension struct {
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(ctx context.Context, extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
-	opts.Controller.RecoverPanic = pointer.Bool(true)
+	opts.Controller.RecoverPanic = ptr.To(true)
 
 	args := AddArgs{
 		ControllerOptions:       opts.Controller,
@@ -182,15 +182,15 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	// add type predicate to only watch registered resource (e.g ControlPlane) with a certain type (e.g aws)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
-	if err := ctrl.Watch(&source.Kind{Type: args.registeredExtension.getExtensionObjFunc()}, &handler.EnqueueRequestForObject{}, predicates...); err != nil {
+	if err := ctrl.Watch(source.Kind(mgr.GetCache(), args.registeredExtension.getExtensionObjFunc()), &handler.EnqueueRequestForObject{}, predicates...); err != nil {
 		return err
 	}
 
 	// watch Cluster of Shoot provider type (e.g aws)
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 	return ctrl.Watch(
-		&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.ClusterToObjectMapper(ctx, mgr, args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+		source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.ClusterToObjectMapper(mgr, args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 	)
 }
 

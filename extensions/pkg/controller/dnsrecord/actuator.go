@@ -29,6 +29,8 @@ type Actuator interface {
 	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Delete deletes the DNSRecord.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
+	// ForceDelete forcefully deletes the DNSRecord.
+	ForceDelete(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Restore restores the DNSRecord.
 	Restore(context.Context, logr.Logger, *extensionsv1alpha1.DNSRecord, *extensionscontroller.Cluster) error
 	// Migrate migrates the DNSRecord.

@@ -95,16 +95,16 @@ func (c *crd) Deploy(ctx context.Context) error {
 }
 
 // Destroy does nothing
-func (c *crd) Destroy(ctx context.Context) error {
+func (c *crd) Destroy(_ context.Context) error {
 	return nil
 }
 
 // Wait does nothing
-func (c *crd) Wait(ctx context.Context) error {
+func (c *crd) Wait(_ context.Context) error {
 	return nil
 }
 
 // WaitCleanup does nothing
-func (c *crd) WaitCleanup(ctx context.Context) error {
+func (c *crd) WaitCleanup(_ context.Context) error {
 	return nil
 }

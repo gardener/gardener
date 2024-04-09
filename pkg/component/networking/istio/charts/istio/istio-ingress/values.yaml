@@ -1,0 +1,34 @@
+labels:
+  app: istio-ingressgateway
+networkPolicyLabels:
+  to-target: allowed
+annotations: {}
+image: to-be-injected-by-imagevector
+trustDomain: cluster.local
+istiodNamespace: istio-system
+deployNamespace: false
+priorityClassName: gardener-system-critical
+serviceType: LoadBalancer
+# loadBalancerIP: 1.2.3.4
+ports: []
+# ports:
+# - name: tls
+#   port: 443
+#   targetPort: 443
+#
+#- name: tcp
+#  port: 8443
+#  targetPort: 8443
+serviceName: istio-ingressgateway
+ingressVersion: "1.19.3"
+#externalTrafficPolicy: Cluster
+replicas: 2
+minReplicas: 2
+maxReplicas: 5
+enforceSpreadAcrossHosts: false
+
+# Istio Ingress Configuration Resources
+proxyProtocolEnabled: false
+vpn:
+  enabled: false
+

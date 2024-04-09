@@ -1,0 +1,14 @@
+# This destination rule sets mutual tls as default and is the reason why other destinations rules with an empty tls config are needed.
+# If we remove this destinationrule we would not need the except for loadbalancer locality settings.
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: default
+  namespace: test
+spec:
+  host: "*"
+  exportTo:
+  - "*"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL

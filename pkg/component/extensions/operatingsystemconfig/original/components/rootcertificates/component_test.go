@@ -17,7 +17,7 @@ package rootcertificates_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -54,11 +54,11 @@ var _ = Describe("Component", func() {
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    "updatecacerts.service",
-					Command: pointer.String("start"),
-					Content: pointer.String(`[Unit]
+
+			updateCACertsUnit := extensionsv1alpha1.Unit{
+				Name:    "updatecacerts.service",
+				Command: ptr.To(extensionsv1alpha1.CommandStart),
+				Content: ptr.To(`[Unit]
 Description=Update local certificate authorities
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -71,15 +71,19 @@ ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
 [Service]
 Type=oneshot
 ExecStart=/var/lib/ssl/update-local-ca-certificates.sh
-ExecStartPost=/bin/systemctl restart docker.service
 [Install]
 WantedBy=multi-user.target`),
+				FilePaths: []string{
+					"/var/lib/ssl/update-local-ca-certificates.sh",
+					"/var/lib/ca-certificates-local/ROOTcerts.crt",
+					"/etc/pki/trust/anchors/ROOTcerts.pem",
 				},
-			))
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{
+			}
+
+			updateCACertsFiles := []extensionsv1alpha1.File{
+				{
 					Path:        "/var/lib/ssl/update-local-ca-certificates.sh",
-					Permissions: pointer.Int32(0744),
+					Permissions: ptr.To[int32](0744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -105,9 +109,9 @@ fi
 						},
 					},
 				},
-				extensionsv1alpha1.File{
+				{
 					Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To[int32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -115,9 +119,9 @@ fi
 						},
 					},
 				},
-				extensionsv1alpha1.File{
+				{
 					Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-					Permissions: pointer.Int32(0644),
+					Permissions: ptr.To[int32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -125,7 +129,10 @@ fi
 						},
 					},
 				},
-			))
+			}
+
+			Expect(units).To(ConsistOf(updateCACertsUnit))
+			Expect(files).To(ConsistOf(updateCACertsFiles))
 		})
 	})
 })

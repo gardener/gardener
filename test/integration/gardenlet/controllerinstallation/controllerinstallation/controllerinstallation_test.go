@@ -283,16 +283,15 @@ var _ = Describe("ControllerInstallation controller tests", func() {
         - c
       settings:
         dependencyWatchdog:
-          endpoint:
-            enabled: true
-          probe:
-            enabled: true
           prober:
             enabled: true
           weeder:
             enabled: true
         excessCapacityReservation:
-          enabled: true
+          configs:
+          - resources:
+              cpu: "2"
+              memory: 6Gi
         scheduling:
           visible: true
         topologyAwareRouting:
@@ -329,6 +328,15 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
 			}).Should(Succeed())
 
+			By("Create ServiceAccount for garden access secret")
+			// This ServiceAccount is typically created by the token-requestor controller which does not run in this
+			// integration test, so let's fake it here.
+			gardenClusterServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-" + controllerInstallation.Name,
+				Namespace: seedNamespace.Name,
+			}}
+			Expect(testClient.Create(ctx, gardenClusterServiceAccount)).To(Succeed())
+
 			By("Delete ControllerInstallation")
 			Expect(testClient.Delete(ctx, controllerInstallation)).To(Succeed())
 
@@ -341,6 +349,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(BeNotFoundError())
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenClusterServiceAccount), gardenClusterServiceAccount)).To(BeNotFoundError())
 		})
 
 		It("should not overwrite the Installed condition when it is not 'Unknown'", func() {

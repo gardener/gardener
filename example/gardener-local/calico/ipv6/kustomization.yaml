@@ -8,11 +8,11 @@ generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
-- name: calico-config
-  namespace: kube-system
-  behavior: merge
+- behavior: merge
   files:
   - cni_network_config=cni_network_config.json
+  name: calico-config
+  namespace: kube-system
 
-patchesStrategicMerge:
-- patch-calico-node-daemonset.yaml
+patches:
+- path: patch-calico-node-daemonset.yaml

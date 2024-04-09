@@ -84,7 +84,7 @@ func RequestKubeconfigWithBootstrapClient(
 // DeleteBootstrapAuth checks which authentication mechanism was used to request a certificate
 // (either a bootstrap token or a service account token was used). If the latter is true then it
 // also deletes the corresponding ClusterRoleBinding.
-func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName, seedName string) error {
+func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName string) error {
 	csr := &certificatesv1.CertificateSigningRequest{}
 	if err := reader.Get(ctx, kubernetesutils.Key(csrName), csr); err != nil {
 		return err

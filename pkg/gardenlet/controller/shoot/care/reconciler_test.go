@@ -40,13 +40,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/care"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -57,7 +56,7 @@ var _ = Describe("Shoot Care Control", func() {
 		ctx           context.Context
 		gardenClient  client.Client
 		reconciler    reconcile.Reconciler
-		gardenletConf config.GardenletConfiguration
+		gardenletConf gardenletconfig.GardenletConfiguration
 		fakeClock     *testclock.FakeClock
 
 		shootName, shootNamespace, seedName string
@@ -67,8 +66,6 @@ var _ = Describe("Shoot Care Control", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		shootName = "shoot"
 		shootNamespace = "project"
@@ -88,6 +85,8 @@ var _ = Describe("Shoot Care Control", func() {
 				},
 			},
 		}
+
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 	})
@@ -118,9 +117,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 			req = reconcile.Request{NamespacedName: kubernetesutils.Key(shootNamespace, shootName)}
 
-			gardenletConf = config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
-					ShootCare: &config.ShootCareControllerConfiguration{
+			gardenletConf = gardenletconfig.GardenletConfiguration{
+				Controllers: &gardenletconfig.GardenletControllerConfiguration{
+					ShootCare: &gardenletconfig.ShootCareControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 					},
 				},
@@ -240,8 +239,8 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when no conditions / constraints are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
-						&NewConstraintCheck, constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
+						&NewHealthCheck, healthCheckFunc(func(_ ShootConditions) []gardencorev1beta1.Condition { return nil }),
+						&NewConstraintCheck, constraintCheckFunc(func(_ ShootConstraints) []gardencorev1beta1.Condition { return nil }),
 					))
 				})
 
@@ -269,7 +268,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
-					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -283,12 +282,14 @@ var _ = Describe("Shoot Care Control", func() {
 			Context("when conditions / constraints are returned unchanged", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							conditionsCopy := append(cond[:0:0], cond...)
+						&NewHealthCheck, healthCheckFunc(func(cond ShootConditions) []gardencorev1beta1.Condition {
+							conditions := cond.ConvertToSlice()
+							conditionsCopy := append(conditions[:0:0], conditions...)
 							return conditionsCopy
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-							constraintsCopy := append(constr[:0:0], constr...)
+						&NewConstraintCheck, constraintCheckFunc(func(constr ShootConstraints) []gardencorev1beta1.Condition {
+							constraints := constr.ConvertToSlice()
+							constraintsCopy := append(constraints[:0:0], constraints...)
 							return constraintsCopy
 						}),
 					))
@@ -317,7 +318,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
-					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -373,10 +374,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -480,10 +481,10 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					DeferCleanup(test.WithVars(
-						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewHealthCheck, healthCheckFunc(func(_ ShootConditions) []gardencorev1beta1.Condition {
 							return conditions
 						}),
-						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+						&NewConstraintCheck, constraintCheckFunc(func(_ ShootConstraints) []gardencorev1beta1.Condition {
 							return constraints
 						}),
 					))
@@ -512,26 +513,41 @@ var _ = Describe("Shoot Care Control", func() {
 	})
 })
 
-type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConditionFunc func(ShootConditions) []gardencorev1beta1.Condition
 
-func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1.ConditionType]time.Duration, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con ShootConditions) []gardencorev1beta1.Condition {
 	return h(con)
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+	return func(
+		_ logr.Logger,
+		_ *shootpkg.Shoot,
+		_ *seedpkg.Seed,
+		_ kubernetes.Interface,
+		_ client.Client,
+		_ ShootClientInit,
+		_ clock.Clock,
+		_ *gardenletconfig.GardenletConfiguration,
+		_ map[gardencorev1beta1.ConditionType]time.Duration,
+	) HealthCheck {
 		return fn
 	}
 }
 
-type resultingConstraintFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
+type resultingConstraintFunc func(ShootConstraints) []gardencorev1beta1.Condition
 
-func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (c resultingConstraintFunc) Check(_ context.Context, constraints ShootConstraints) []gardencorev1beta1.Condition {
 	return c(constraints)
 }
 
 func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
-	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return func(_ logr.Logger,
+		_ *shootpkg.Shoot,
+		_ client.Client,
+		_ ShootClientInit,
+		_ clock.Clock,
+	) ConstraintCheck {
 		return fn
 	}
 }
@@ -543,11 +559,10 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ client.Client,
 		_ kubernetes.Interface,
 		_ clientmap.ClientMap,
-		_ *config.GardenletConfiguration,
+		_ *gardenletconfig.GardenletConfiguration,
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,
-		_ imagevector.ImageVector,
 		_ *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err
@@ -559,7 +574,7 @@ type nopGarbageCollector struct{}
 func (n *nopGarbageCollector) Collect(_ context.Context) {}
 
 func nopGarbageCollectorFunc() NewGarbageCollectorFunc {
-	return func(_ *operation.Operation, _ care.ShootClientInit) GarbageCollector {
+	return func(_ *operation.Operation, _ ShootClientInit) GarbageCollector {
 		return &nopGarbageCollector{}
 	}
 }

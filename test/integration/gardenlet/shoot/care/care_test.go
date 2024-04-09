@@ -21,16 +21,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -88,7 +86,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String(secretBinding.Name),
+				SecretBindingName: ptr.To(secretBinding.Name),
 				CloudProfileName:  "cloudprofile1",
 				SeedName:          &seedName,
 				Region:            "europe-central-1",
@@ -109,9 +107,9 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type:     pointer.String("foo-networking"),
-					Services: pointer.String("10.0.0.0/16"),
-					Pods:     pointer.String("10.1.0.0/16"),
+					Type:     ptr.To("foo-networking"),
+					Services: ptr.To("10.0.0.0/16"),
+					Pods:     ptr.To("10.1.0.0/16"),
 				},
 			},
 		}
@@ -128,8 +126,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.WorkerlessShoots, true))
-
 		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
 		By("Create seed-specific namespace")
 		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
@@ -153,7 +149,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		By("Patch shoot status")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.Gardener.Version = "1.71.0"
+		shoot.Status.Gardener.Version = "1.2.3"
 		shoot.Status.TechnicalID = testNamespace.Name
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -287,8 +283,8 @@ var _ = Describe("Shoot Care controller tests", func() {
 						return shoot.Status.Conditions
 					}).Should(And(
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
-						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler]")),
-						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-state-metrics plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler machine-controller-manager]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-state-metrics]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					))
@@ -300,7 +296,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -312,7 +308,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					}).Should(And(
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager]")),
-						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("StatefulSetMissing"), WithMessageSubstrings("Missing required stateful sets: [prometheus]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 						Not(ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady))),
 					))
@@ -333,8 +329,8 @@ var _ = Describe("Shoot Care controller tests", func() {
 						return shoot.Status.Conditions
 					}).Should(And(
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
-						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-apiserver kube-scheduler]")),
-						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-state-metrics plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-apiserver kube-scheduler machine-controller-manager]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-state-metrics]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					))
@@ -346,7 +342,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -358,7 +354,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					}).Should(And(
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-apiserver]")),
-						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("StatefulSetMissing"), WithMessageSubstrings("Missing required stateful sets: [prometheus]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 						Not(ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady))),
 					))
@@ -430,7 +426,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class: pointer.String("test"),
+						Class: ptr.To("test"),
 						SecretRefs: []corev1.LocalObjectReference{
 							{Name: "test-2"},
 						},
@@ -477,7 +473,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -578,7 +574,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.Networking = &gardencorev1beta1.Networking{
-						Services: pointer.String("10.0.0.0/16"),
+						Services: ptr.To("10.0.0.0/16"),
 					}
 				})
 
@@ -609,7 +605,7 @@ func createDeployment(names []string) {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-				Replicas: pointer.Int32(1),
+				Replicas: ptr.To[int32](1),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
 					Spec: corev1.PodSpec{

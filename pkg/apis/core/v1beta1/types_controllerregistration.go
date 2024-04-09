@@ -104,7 +104,7 @@ type ControllerRegistrationDeployment struct {
 	// An empty list means that all seeds are selected.
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty" protobuf:"bytes,4,opt,name=seedSelector"`
-	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.
 	// +optional
 	DeploymentRefs []DeploymentRef `json:"deploymentRefs,omitempty" protobuf:"bytes,5,opt,name=deploymentRefs"`
 }
@@ -132,6 +132,8 @@ const (
 	BeforeKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeKubeAPIServer"
 	// AfterKubeAPIServer specifies that a resource should be handled after the kube-apiserver.
 	AfterKubeAPIServer ControllerResourceLifecycleStrategy = "AfterKubeAPIServer"
+	// AfterWorker specifies that a resource should be handled after workers. This is only available during reconcile.
+	AfterWorker ControllerResourceLifecycleStrategy = "AfterWorker"
 )
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.

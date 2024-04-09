@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -105,7 +105,7 @@ func (m *fakeManager) Generate(ctx context.Context, config secretsutils.ConfigIn
 
 		patch := client.MergeFrom(secret.DeepCopy())
 		secret.Labels = objectMeta.Labels
-		secret.Immutable = pointer.Bool(true)
+		secret.Immutable = ptr.To(true)
 		if err := m.client.Patch(ctx, secret, patch); err != nil {
 			return nil, err
 		}

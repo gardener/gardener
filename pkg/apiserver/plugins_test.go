@@ -20,16 +20,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-
-	"github.com/gardener/gardener/pkg/apiserver"
 )
 
-var _ = Describe("AllOrderedPlugins", func() {
-	It("must end with specific plugins", func() {
-		// it's important for these admission plugins to be invoked at the end, ensure correct order here
-		Expect(strings.Join(apiserver.AllOrderedPlugins, ",")).To(HaveSuffix(",MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
-	})
-
+var _ = Describe("AllPluginNames", func() {
 	It("expects default plugins", func() {
 		// if this test breaks, the default admission plugins in the API server library have changed
 		admissionOpts := genericoptions.NewAdmissionOptions()

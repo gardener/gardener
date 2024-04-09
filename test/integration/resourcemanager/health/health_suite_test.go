@@ -26,12 +26,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
@@ -67,7 +70,13 @@ var _ = BeforeSuite(func() {
 	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+			Paths: []string{
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_alertmanagers.yaml"),
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-monitoring.coreos.com_prometheuses.yaml"),
+				filepath.Join("crds", "10-crd-cert.gardener.cloud_certificates.yaml"),
+				filepath.Join("crds", "10-crd-cert.gardener.cloud_issuers.yaml"),
+			},
 		},
 		ErrorIfCRDPathMissing: true,
 	}
@@ -104,15 +113,18 @@ var _ = BeforeSuite(func() {
 	By("Setup manager")
 
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             resourcemanagerclient.CombinedScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
+		Scheme:  resourcemanagerclient.CombinedScheme,
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
+		MapperProvider: apiutil.NewDynamicRESTMapper,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controllers")
 	cfg := config.HealthControllerConfig{
-		ConcurrentSyncs: pointer.Int(5),
+		ConcurrentSyncs: ptr.To(5),
 		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 	}
 	classFilter := resourcemanagerpredicate.NewClassFilter("")
@@ -120,11 +132,11 @@ var _ = BeforeSuite(func() {
 	Expect((&health.Reconciler{
 		Config:      cfg,
 		ClassFilter: classFilter,
-	}).AddToManager(ctx, mgr, mgr, mgr, false, "")).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr, "")).To(Succeed())
 	Expect((&progressing.Reconciler{
 		Config:      cfg,
 		ClassFilter: classFilter,
-	}).AddToManager(ctx, mgr, mgr, mgr, false, "")).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr, "")).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

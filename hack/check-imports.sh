@@ -31,6 +31,9 @@ echo "> Check Imports"
 
 this_module=$(go list -m)
 
+# setup virtual GOPATH
+source $(dirname $0)/vgopath-setup.sh
+
 # We need to explicitly pass GO111MODULE=off to import-boss as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
 export GO111MODULE=off

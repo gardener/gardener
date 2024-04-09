@@ -18,32 +18,26 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestCare(t *testing.T) {
@@ -62,8 +56,10 @@ var (
 	testClient client.Client
 	mgrClient  client.Client
 
+	testScheme    *runtime.Scheme
 	testRunID     string
 	testNamespace *corev1.Namespace
+	seedNamespace *corev1.Namespace
 	seedName      string
 )
 
@@ -100,7 +96,7 @@ var _ = BeforeSuite(func() {
 		kubernetes.AddGardenSchemeToScheme,
 		resourcesv1alpha1.AddToScheme,
 	)
-	testScheme := runtime.NewScheme()
+	testScheme = runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
 	By("Create test client")
@@ -123,41 +119,17 @@ var _ = BeforeSuite(func() {
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
-	By("Setup manager")
-	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             testScheme,
-		MetricsBindAddress: "0",
-		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
-				&gardencorev1beta1.Seed{}: {
-					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-				},
-			},
-		}),
-	})
-	Expect(err).NotTo(HaveOccurred())
-	mgrClient = mgr.GetClient()
-
-	By("Register controller")
-	Expect((&care.Reconciler{
-		Config: config.SeedCareControllerConfiguration{
-			SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+	By("Create seed Namespace")
+	seedNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: gardenerutils.ComputeGardenNamespace(seedName),
 		},
-		Namespace: &testNamespace.Name,
-		SeedName:  seedName,
-	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
-
-	By("Start manager")
-	mgrContext, mgrCancel := context.WithCancel(ctx)
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
+	}
+	Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+	log.Info("Created Namespace for seed", "namespaceName", seedNamespace.Name)
 
 	DeferCleanup(func() {
-		By("Stop manager")
-		mgrCancel()
+		By("Delete seed Namespace")
+		Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 })

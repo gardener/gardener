@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -49,7 +49,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Project",
 				},
-				ClusterLifetimeDays: pointer.Int32(1),
+				ClusterLifetimeDays: ptr.To[int32](1),
 			},
 		}
 
@@ -94,7 +94,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String(secretBinding.Name),
+				SecretBindingName: ptr.To(secretBinding.Name),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -111,13 +111,13 @@ var _ = Describe("Shoot Quota controller tests", func() {
 					},
 				},
 				DNS: &gardencorev1beta1.DNS{
-					Domain: pointer.String("some-domain.example.com"),
+					Domain: ptr.To("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
-					Type: pointer.String("foo-networking"),
+					Type: ptr.To("foo-networking"),
 				},
 			},
 		}
@@ -142,7 +142,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 	It("should delete the shoot because the expiration time has passed", func() {
 		fakeClock.Step(48 * time.Hour)
 
-		Eventually(func(g Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
@@ -163,7 +163,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 		fakeClock.Step(48 * time.Hour)
 
 		By("Ensure the shoot still exists")
-		Consistently(func(g Gomega) error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
 
@@ -181,7 +181,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		fakeClock.Step(2 * time.Hour)
 
-		Eventually(func(g Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
@@ -200,13 +200,13 @@ var _ = Describe("Shoot Quota controller tests", func() {
 
 		By("Verify that shoot is not deleted after original expiration time (1 day) has passed")
 		fakeClock.Step(25 * time.Hour)
-		Consistently(func(g Gomega) error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(Succeed())
 
 		By("Verify that shoot is deleted after manually prolonged expiration time has passed")
 		fakeClock.Step(25 * time.Hour)
-		Eventually(func(g Gomega) error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		}).Should(BeNotFoundError())
 	})
