@@ -25,6 +25,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -78,6 +79,9 @@ var _ = Describe("GardenerDashboard", func() {
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
+
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -272,6 +276,7 @@ var _ = Describe("GardenerDashboard", func() {
 				},
 			},
 		}
+		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -343,7 +348,67 @@ var _ = Describe("GardenerDashboard", func() {
 			},
 		}
 
-		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:dashboard",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"authentication.k8s.io"},
+					Resources: []string{"tokenreviews"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"quotas", "projects", "shoots", "controllerregistrations"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{"apiregistration.k8s.io"},
+					Resources: []string{"apiservices"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"configmaps"},
+					Verbs:         []string{"get"},
+					ResourceNames: []string{"cluster-identity"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"resourcequotas"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:dashboard",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:dashboard",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-dashboard",
+				Namespace: "kube-system",
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -444,7 +509,10 @@ var _ = Describe("GardenerDashboard", func() {
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(managedResourceVirtual).To(consistOf())
+				Expect(managedResourceVirtual).To(consistOf(
+					clusterRole,
+					clusterRoleBinding,
+				))
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
