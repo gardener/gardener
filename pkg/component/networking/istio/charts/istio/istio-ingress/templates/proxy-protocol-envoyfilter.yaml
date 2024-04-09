@@ -25,10 +25,10 @@ spec:
         - name: proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
-            allow_requests_without_proxy_protocol: true
         - name: inner_proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+            allow_requests_without_proxy_protocol: true
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
