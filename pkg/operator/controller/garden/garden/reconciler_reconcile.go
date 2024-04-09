@@ -289,6 +289,11 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
+		reconcileGardenerDashboard = g.Add(flow.Task{
+			Name:         "Reconciling Gardener Dashboard",
+			Fn:           component.OpWait(c.gardenerDashboard).Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying virtual system resources",
@@ -309,7 +314,7 @@ func (r *Reconciler) reconcile(
 				)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler, reconcileGardenerDashboard),
 		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",

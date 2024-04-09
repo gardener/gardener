@@ -38,6 +38,10 @@ images:
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/node-agent
   resourceId:
     name: node-agent
+- name: gardener-dashboard
+  sourceRepository: github.com/gardener/gardener
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dashboard
+  tag: "1.74.0"
 
 # Seed bootstrap
 - name: pause-container

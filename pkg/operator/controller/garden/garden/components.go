@@ -60,6 +60,7 @@ import (
 	gardeneradmissioncontroller "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
+	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -122,6 +123,7 @@ type components struct {
 	gardenerAdmissionController component.DeployWaiter
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
+	gardenerDashboard           component.DeployWaiter
 
 	gardenerMetricsExporter       component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
@@ -238,6 +240,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager)
 	if err != nil {
 		return
 	}
@@ -1013,6 +1019,33 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	}
 
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDashboard)
+	if err != nil {
+		return nil, err
+	}
+
+	values := gardenerdashboard.Values{
+		Image:          image.String(),
+		LogLevel:       logger.InfoLevel,
+		RuntimeVersion: r.RuntimeVersion,
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+	}
+
+	dashboard := gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values)
+
+	if garden.Spec.VirtualCluster.Gardener.Dashboard == nil {
+		dashboard = component.OpDestroyAndWait(dashboard)
+	}
+
+	return dashboard, nil
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
