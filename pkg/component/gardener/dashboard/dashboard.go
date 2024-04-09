@@ -89,8 +89,13 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
+	secretSession, err := g.reconcileSecretSession(ctx)
+	if err != nil {
+		return err
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
-		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),

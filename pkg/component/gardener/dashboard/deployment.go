@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -41,7 +42,11 @@ const (
 	portMetrics = 9050
 )
 
-func (g *gardenerDashboard) deployment(secretGenericTokenKubeconfig, secretVirtualGardenAccess string) *appsv1.Deployment {
+func (g *gardenerDashboard) deployment(
+	secretNameGenericTokenKubeconfig string,
+	secretNameVirtualGardenAccess string,
+	secretNameSession string,
+) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -83,6 +88,15 @@ func (g *gardenerDashboard) deployment(secretGenericTokenKubeconfig, secretVirtu
 								"server.js",
 							},
 							Env: []corev1.EnvVar{
+								{
+									Name: "SESSION_SECRET",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: secretNameSession},
+											Key:                  secretsutils.DataKeyPassword,
+										},
+									},
+								},
 								{
 									Name:  "KUBECONFIG",
 									Value: gardenerutils.PathGenericKubeconfig,
@@ -161,7 +175,7 @@ func (g *gardenerDashboard) deployment(secretGenericTokenKubeconfig, secretVirtu
 		},
 	}
 
-	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretGenericTokenKubeconfig, secretVirtualGardenAccess))
+	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment

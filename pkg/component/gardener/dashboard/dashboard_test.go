@@ -75,6 +75,7 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		virtualGardenAccessSecret *corev1.Secret
+		sessionSecret             *corev1.Secret
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
@@ -143,6 +144,27 @@ var _ = Describe("GardenerDashboard", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		sessionSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard-session-secret-34ea1210",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"manager-identity":              "fake",
+					"name":                          "gardener-dashboard-session-secret",
+					"rotation-strategy":             "inplace",
+					"checksum-of-config":            "5743303071195020433",
+					"last-rotation-initiation-time": "",
+					"managed-by":                    "secrets-manager",
+				},
+			},
+			Type:      corev1.SecretTypeOpaque,
+			Immutable: ptr.To(true),
+			Data: map[string][]byte{
+				"password": []byte("________________________________"),
+				"username": []byte("admin"),
+				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
+			},
+		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -154,7 +176,8 @@ var _ = Describe("GardenerDashboard", func() {
 				},
 				Annotations: map[string]string{
 					"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
-					"reference.resources.gardener.cloud/secret-da1c7d68": "shoot-access-gardener-dashboard",
+					"reference.resources.gardener.cloud/secret-da1c7d68": virtualGardenAccessSecret.Name,
+					"reference.resources.gardener.cloud/secret-73330522": sessionSecret.Name,
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -177,7 +200,8 @@ var _ = Describe("GardenerDashboard", func() {
 						},
 						Annotations: map[string]string{
 							"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
-							"reference.resources.gardener.cloud/secret-da1c7d68": "shoot-access-gardener-dashboard",
+							"reference.resources.gardener.cloud/secret-da1c7d68": virtualGardenAccessSecret.Name,
+							"reference.resources.gardener.cloud/secret-73330522": sessionSecret.Name,
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -199,6 +223,15 @@ var _ = Describe("GardenerDashboard", func() {
 									"server.js",
 								},
 								Env: []corev1.EnvVar{
+									{
+										Name: "SESSION_SECRET",
+										ValueFrom: &corev1.EnvVarSource{
+											SecretKeyRef: &corev1.SecretKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{Name: sessionSecret.Name},
+												Key:                  "password",
+											},
+										},
+									},
 									{
 										Name:  "KUBECONFIG",
 										Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
@@ -528,6 +561,13 @@ var _ = Describe("GardenerDashboard", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), actualAccessSecret)).To(Succeed())
 					virtualGardenAccessSecret.ResourceVersion = "1"
 					Expect(actualAccessSecret).To(Equal(virtualGardenAccessSecret))
+				})
+
+				It("should successfully deploy the session secret", func() {
+					actualSessionSecret := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(sessionSecret), actualSessionSecret)).To(Succeed())
+					sessionSecret.ResourceVersion = "1"
+					Expect(actualSessionSecret).To(Equal(sessionSecret))
 				})
 			})
 		})
