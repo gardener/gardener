@@ -24,5 +24,3 @@ rules:
   - github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
   - github.com/gardener/gardener/pkg/utils
   - github.com/gardener/gardener/third_party/mock
-  # TODO(dimityrmirchev): Remove the below rule when the ShootManagedIssuer feature gate is promoted to GA.
-  - github.com/gardener/gardener/pkg/features
