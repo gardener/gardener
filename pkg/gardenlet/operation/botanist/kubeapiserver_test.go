@@ -491,7 +491,9 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 
 				Entry("should default the issuer",
-					func() {},
+					func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, true))
+					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer: "https://api.internal.foo.bar.com",
 					},
@@ -506,6 +508,7 @@ var _ = Describe("KubeAPIServer", func() {
 								AcceptedIssuers:       []string{"aa", "bb"},
 							},
 						}
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, true))
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:                "foo",
@@ -535,6 +538,7 @@ var _ = Describe("KubeAPIServer", func() {
 								AcceptedIssuers:       []string{"aa", "bb"},
 							},
 						}
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, true))
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:                "https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer",
@@ -544,9 +548,40 @@ var _ = Describe("KubeAPIServer", func() {
 						JWKSURI:               ptr.To("https://foo.bar.example.cloud/projects/test/shoots/some-uuid/issuer/jwks"),
 					},
 				),
+				Entry("should not set managed issuer configuration because ShootManagedIssuer feature gate is disabled",
+					func() {
+						botanist.Garden = &garden.Garden{
+							Project: &gardencorev1beta1.Project{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
+							},
+						}
+						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
+						botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							"authentication.gardener.cloud/issuer": "managed",
+						}
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+								ExtendTokenExpiration: ptr.To(false),
+								MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+								AcceptedIssuers:       []string{"aa", "bb"},
+							},
+						}
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, false))
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:                "https://api.internal.foo.bar.com",
+						ExtendTokenExpiration: ptr.To(false),
+						MaxTokenExpiration:    &metav1.Duration{Duration: time.Second},
+						AcceptedIssuers:       []string{"aa", "bb"},
+					},
+				),
 			)
 
 			It("should return error because shoot wants managed issuer, but issuer hostname is not configured", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, true))
 				botanist.Garden = &garden.Garden{
 					Project: &gardencorev1beta1.Project{
 						ObjectMeta: metav1.ObjectMeta{

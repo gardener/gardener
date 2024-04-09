@@ -70,6 +70,12 @@ const (
 	// owner: @timuthy @benedictweis
 	// alpha: v1.92.0
 	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
+
+	// ShootManagedIssuer enables the shoot managed issuer functionality described in GEP 24.
+	// If enabled it will force gardenlet to fail if shoot service account hostname is not configured.
+	// owner: @dimityrmirchev
+	// alpha: v1.93.0
+	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -103,6 +109,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
+	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 }

@@ -301,7 +301,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 		config = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.DeepCopy()
 	}
 
-	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo())
+	shouldManageIssuer := v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()) && features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer)
 	canManageIssuer := b.Shoot.ServiceAccountIssuerHostname != nil
 	if shouldManageIssuer && !canManageIssuer {
 		return kubeapiserver.ServiceAccountConfig{}, errors.New("shoot requires managed issuer, but gardener does not have shoot service account hostname configured")
