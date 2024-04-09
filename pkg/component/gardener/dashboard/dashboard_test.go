@@ -62,6 +62,8 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
 		managedResourceSecretRuntime *corev1.Secret
 		managedResourceSecretVirtual *corev1.Secret
+
+		virtualGardenAccessSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -105,6 +107,22 @@ var _ = Describe("GardenerDashboard", func() {
 				Name:      "managedresource-" + managedResourceVirtual.Name,
 				Namespace: namespace,
 			},
+		}
+
+		virtualGardenAccessSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
+				},
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "gardener-dashboard",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
 		}
 	})
 
@@ -207,6 +225,15 @@ var _ = Describe("GardenerDashboard", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
 			})
+
+			Context("secrets", func() {
+				It("should successfully deploy the access secret for the virtual garden", func() {
+					actualAccessSecret := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), actualAccessSecret)).To(Succeed())
+					virtualGardenAccessSecret.ResourceVersion = "1"
+					Expect(actualAccessSecret).To(Equal(virtualGardenAccessSecret))
+				})
+			})
 		})
 	})
 
@@ -216,11 +243,7 @@ var _ = Describe("GardenerDashboard", func() {
 			Expect(fakeClient.Create(ctx, managedResourceVirtual)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResourceSecretRuntime)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResourceSecretVirtual)).To(Succeed())
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
+			Expect(fakeClient.Create(ctx, virtualGardenAccessSecret)).To(Succeed())
 
 			Expect(deployer.Destroy(ctx)).To(Succeed())
 
@@ -228,6 +251,7 @@ var _ = Describe("GardenerDashboard", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), virtualGardenAccessSecret)).To(BeNotFoundError())
 		})
 	})
 

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -36,7 +37,8 @@ const (
 	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
 	ManagedResourceNameVirtual = "gardener-dashboard-virtual"
 
-	roleName = "dashboard"
+	deploymentName = "gardener-dashboard"
+	roleName       = "dashboard"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -72,9 +74,14 @@ type gardenerDashboard struct {
 
 func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 	var (
-		runtimeRegistry       = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
-		managedResourceLabels = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
+		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		managedResourceLabels     = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
+		virtualGardenAccessSecret = g.newVirtualGardenAccessSecret()
 	)
+
+	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
+		return err
+	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
 	if err != nil {
@@ -120,7 +127,7 @@ func (g *gardenerDashboard) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
 }
 
 func (g *gardenerDashboard) WaitCleanup(ctx context.Context) error {
