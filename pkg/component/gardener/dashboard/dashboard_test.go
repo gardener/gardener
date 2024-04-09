@@ -21,8 +21,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +37,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -50,6 +54,8 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceNameVirtual = "gardener-dashboard-virtual"
 		namespace                  = "some-namespace"
 
+		image = "gardener-dashboard-image:latest"
+
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
 		deployer          component.DeployWaiter
@@ -64,6 +70,7 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		virtualGardenAccessSecret *corev1.Secret
+		deployment                *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -74,6 +81,7 @@ var _ = Describe("GardenerDashboard", func() {
 		values = Values{
 			LogLevel:       "info",
 			RuntimeVersion: semver.MustParse("1.26.4"),
+			Image:          image,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -124,10 +132,148 @@ var _ = Describe("GardenerDashboard", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				},
+				Annotations: map[string]string{
+					"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
+					"reference.resources.gardener.cloud/secret-da1c7d68": "shoot-access-gardener-dashboard",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":  "gardener",
+						"role": "dashboard",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                              "gardener",
+							"role":                             "dashboard",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-public-networks":                                 "allowed",
+							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
+						},
+						Annotations: map[string]string{
+							"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
+							"reference.resources.gardener.cloud/secret-da1c7d68": "shoot-access-gardener-dashboard",
+						},
+					},
+					Spec: corev1.PodSpec{
+						PriorityClassName:            "gardener-garden-system-200",
+						AutomountServiceAccountToken: ptr.To(false),
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65532),
+							RunAsGroup:   ptr.To[int64](65532),
+							FSGroup:      ptr.To[int64](65532),
+						},
+						Containers: []corev1.Container{
+							{
+								Name:            "gardener-dashboard",
+								Image:           image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Args: []string{
+									"--optimize-for-size",
+									"server.js",
+								},
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KUBECONFIG",
+										Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+									},
+									{
+										Name:  "METRICS_PORT",
+										Value: "9050",
+									},
+									{
+										Name: "POD_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.name",
+											},
+										},
+									},
+									{
+										Name: "POD_NAMESPACE",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+										},
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: map[corev1.ResourceName]resource.Quantity{
+										corev1.ResourceCPU:    resource.MustParse("50m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "http",
+										ContainerPort: 8080,
+										Protocol:      corev1.ProtocolTCP,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: 9050,
+										Protocol:      corev1.ProtocolTCP,
+									},
+								},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										TCPSocket: &corev1.TCPSocketAction{
+											Port: intstr.FromString("http"),
+										},
+									},
+									InitialDelaySeconds: 15,
+									TimeoutSeconds:      5,
+									FailureThreshold:    6,
+									SuccessThreshold:    1,
+									PeriodSeconds:       20,
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path:   "/healthz",
+											Port:   intstr.FromString("http"),
+											Scheme: "HTTP",
+										},
+									},
+									InitialDelaySeconds: 5,
+									TimeoutSeconds:      5,
+									FailureThreshold:    6,
+									SuccessThreshold:    1,
+									PeriodSeconds:       10,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 	})
 
 	JustBeforeEach(func() {
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
+
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -208,7 +354,9 @@ var _ = Describe("GardenerDashboard", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
-				expectedRuntimeObject = []client.Object{}
+				expectedRuntimeObject = []client.Object{
+					deployment,
+				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())

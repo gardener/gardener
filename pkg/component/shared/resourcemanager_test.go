@@ -90,7 +90,7 @@ var _ = Describe("ResourceManager", func() {
 			}
 			getAPIServerAddress = func() string { return "kube-apiserver" }
 
-			By("Ensure secrets managed outside of this function for whose secretsmanager.Get() will be called")
+			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
 			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			secrets = resourcemanager.Secrets{}

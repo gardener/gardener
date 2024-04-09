@@ -16,6 +16,7 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -83,7 +84,14 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	secretGenericTokenKubeconfig, found := g.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
+	)
 	if err != nil {
 		return err
 	}
