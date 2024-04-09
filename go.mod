@@ -49,7 +49,7 @@ require (
 	google.golang.org/protobuf v1.33.0
 	helm.sh/helm/v3 v3.14.3
 	istio.io/api v1.19.9
-	istio.io/client-go v1.19.8
+	istio.io/client-go v1.19.9
 	k8s.io/api v0.29.3
 	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.29.3
