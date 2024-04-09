@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"net"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -77,12 +78,12 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.Networks.Services.IP.To4() != nil {
-		b.APIServerClusterIP = clusterIP
-	} else {
+	if b.Shoot.Networks.Services.IP.To4() == nil && net.ParseIP(clusterIP).To4() != nil {
 		// "64:ff9b:1::" is a well known prefix for address translation for use
 		// in local networks.
 		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
+	} else {
+		b.APIServerClusterIP = clusterIP
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
