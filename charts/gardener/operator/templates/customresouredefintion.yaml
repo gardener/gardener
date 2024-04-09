@@ -755,6 +755,139 @@ spec:
                             - error
                             type: string
                         type: object
+                      gardenerDashboard:
+                        description: Dashboard contains configuration settings for
+                          the gardener-dashboard.
+                        properties:
+                          enableTokenLogin:
+                            default: true
+                            description: |-
+                              EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. Either this or OIDC
+                              must be configured.
+                            type: boolean
+                          frontendConfigMapRef:
+                            description: FrontendConfigMapRef is the reference to
+                              a ConfigMap containing the frontend configuration.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          gitHub:
+                            description: GitHub contains configuration for the GitHub
+                              ticketing feature.
+                            properties:
+                              apiURL:
+                                description: APIURL is the URL to the GitHub API.
+                                minLength: 1
+                                type: string
+                              organisation:
+                                description: Organisation is the name of the GitHub
+                                  organisation.
+                                minLength: 1
+                                type: string
+                              repository:
+                                description: Repository is the name of the GitHub
+                                  repository.
+                                minLength: 1
+                                type: string
+                              secretRef:
+                                description: SecretRef is the reference to a secret
+                                  containing the GitHub credentials.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
+                            required:
+                            - apiURL
+                            - organisation
+                            - repository
+                            - secretRef
+                            type: object
+                          logLevel:
+                            default: info
+                            description: |-
+                              LogLevel is the configured log level. Must be one of [trace,debug,info,warn,error].
+                              Defaults to info.
+                            enum:
+                            - trace
+                            - debug
+                            - info
+                            - warn
+                            - error
+                            type: string
+                          oidc:
+                            description: OIDC contains configuration for the OIDC
+                              settings.
+                            properties:
+                              additionalScopes:
+                                description: AdditionalScopes is the list of additional
+                                  OIDC scopes.
+                                items:
+                                  type: string
+                                type: array
+                              secretRef:
+                                description: SecretRef is the reference to a secret
+                                  containing the OIDC client ID and secret for the
+                                  dashboard.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              sessionLifetime:
+                                description: SessionLifetime is the maximum duration
+                                  of a session.
+                                pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                                type: string
+                            required:
+                            - secretRef
+                            type: object
+                          terminal:
+                            description: Terminal contains configuration for the terminal
+                              settings.
+                            properties:
+                              allowedHostSourceList:
+                                description: |-
+                                  AllowedHostSourceList should consist of permitted hostnames (without the scheme) for terminal connections.
+                                  It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
+                                  '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'.
+                                items:
+                                  type: string
+                                type: array
+                              container:
+                                description: Container contains configuration for
+                                  the dashboard terminal container.
+                                properties:
+                                  description:
+                                    description: Description is a description for
+                                      the dashboard terminal container with hints
+                                      for the user.
+                                    type: string
+                                  image:
+                                    description: Image is the container image for
+                                      the dashboard terminal container.
+                                    type: string
+                                required:
+                                - image
+                                type: object
+                            required:
+                            - container
+                            type: object
+                        type: object
                       gardenerScheduler:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.
