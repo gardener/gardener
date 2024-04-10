@@ -69,6 +69,15 @@
       "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
     },
     {
+      // Group istio module updates in one PR.
+      "groupName": "istio modules",
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": [
+        "istio\\.io\/api",
+        "istio\\.io\/client-go"
+      ],
+    },
+    {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
