@@ -6,7 +6,6 @@ spec:
   groups:
   - name: shoot
     rules:
-
     - alert: ShootOutageOverall
       expr: |
         count (

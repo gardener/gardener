@@ -6,7 +6,6 @@ spec:
   groups:
   - name: garden
     rules:
-
     - alert: ApiServerDown
       expr: |
         probe_success{job     = "blackbox-apiserver",

@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -60,6 +61,10 @@ const (
 	volumeNameClusterAccess = "cluster-access"
 	// VolumeMountPathClusterAccess is the volume mount path to the cluster access credentials.
 	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/cluster-access"
+
+	volumeNameGardenerCA = "gardener-ca"
+	// VolumeMountPathGardenerCA is the volume mount path to the gardener CA certificate bundle.
+	VolumeMountPathGardenerCA = "/var/run/secrets/blackbox_exporter/gardener-ca"
 
 	port int32 = 9115
 )
@@ -138,7 +143,7 @@ func (b *blackboxExporter) managedResourceName() string {
 	return "shoot-core-blackbox-exporter"
 }
 
-func (b *blackboxExporter) namespaceName() string {
+func (b *blackboxExporter) runtimeNamespace() string {
 	if b.values.ClusterType == component.ClusterTypeSeed {
 		return b.namespace
 	}
@@ -178,7 +183,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 				Labels:    getLabels(),
 			},
 			AutomountServiceAccountToken: ptr.To(false),
@@ -187,7 +192,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter-config",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
 					v1beta1constants.LabelApp:  "prometheus",
 					v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
@@ -203,7 +208,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -285,7 +290,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
 					labelKeyComponent: labelValue,
 				},
@@ -308,7 +313,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
 					labelKeyComponent:           labelValue,
@@ -337,7 +342,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
-				Namespace: b.namespaceName(),
+				Namespace: b.runtimeNamespace(),
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -372,40 +377,61 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
 
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameClusterAccess,
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To(int32(420)),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
-								Items: []corev1.KeyToPath{{
-									Key:  secrets.DataKeyCertificateBundle,
-									Path: secrets.DataKeyCertificateBundle,
-								}},
-								Optional: ptr.To(false),
+		caGardenerSecret, found := b.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
+		}
+
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: volumeNameClusterAccess,
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: ptr.To(int32(420)),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
+									Items: []corev1.KeyToPath{{
+										Key:  secrets.DataKeyCertificateBundle,
+										Path: secrets.DataKeyCertificateBundle,
+									}},
+									Optional: ptr.To(false),
+								},
 							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{Name: gardenprometheus.AccessSecretName},
-								Items: []corev1.KeyToPath{{
-									Key:  resourcesv1alpha1.DataKeyToken,
-									Path: resourcesv1alpha1.DataKeyToken,
-								}},
-								Optional: ptr.To(false),
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: gardenprometheus.AccessSecretName},
+									Items: []corev1.KeyToPath{{
+										Key:  resourcesv1alpha1.DataKeyToken,
+										Path: resourcesv1alpha1.DataKeyToken,
+									}},
+									Optional: ptr.To(false),
+								},
 							},
 						},
 					},
 				},
 			},
-		})
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameClusterAccess,
-			MountPath: VolumeMountPathClusterAccess,
-		})
+			corev1.Volume{
+				Name: volumeNameGardenerCA,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: caGardenerSecret.Name,
+					},
+				},
+			},
+		)
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      volumeNameClusterAccess,
+				MountPath: VolumeMountPathClusterAccess,
+			},
+			corev1.VolumeMount{
+				Name:      volumeNameGardenerCA,
+				MountPath: VolumeMountPathGardenerCA,
+			},
+		)
 	}
 
 	return registry.AddAllAndSerialize(

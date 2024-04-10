@@ -219,7 +219,9 @@ spec:
 			if clusterType == component.ClusterTypeSeed {
 				out += `
         - mountPath: /var/run/secrets/blackbox_exporter/cluster-access
-          name: cluster-access`
+          name: cluster-access
+        - mountPath: /var/run/secrets/blackbox_exporter/gardener-ca
+          name: gardener-ca`
 			}
 
 			out += `
@@ -258,7 +260,10 @@ spec:
               - key: token
                 path: token
               name: shoot-access-prometheus-garden
-              optional: false`
+              optional: false
+      - name: gardener-ca
+        secret:
+          secretName: ca-gardener`
 			}
 
 			out += `
@@ -416,6 +421,7 @@ status: {}
 
 			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
 		})
 
 		Describe("#Deploy", func() {

@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	http2xxModuleName              = "http_2xx"
-	httpAPIServerModuleName        = "http_apiserver"
-	httpAPIServerRootCAsModuleName = "http_apiserver_root_cas"
+	httpGardenerAPIServerModuleName    = "http_gardener_apiserver"
+	httpKubeAPIServerModuleName        = "http_kube_apiserver"
+	httpKubeAPIServerRootCAsModuleName = "http_kube_apiserver_root_cas"
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
@@ -47,22 +47,23 @@ func Config() blackboxexporterconfig.Config {
 			}
 		}
 
-		http2xxModule              = defaultModuleConfig()
-		httpAPIServerModule        = defaultModuleConfig()
-		httpAPIServerRootCAsModule = defaultModuleConfig()
+		httpGardenerAPIServerModule    = defaultModuleConfig()
+		httpKubeAPIServerModule        = defaultModuleConfig()
+		httpKubeAPIServerRootCAsModule = defaultModuleConfig()
 
-		pathCABundle = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
-		pathToken    = blackboxexporter.VolumeMountPathClusterAccess + "/" + resourcesv1alpha1.DataKeyToken
+		pathGardenerAPIServerCABundle = blackboxexporter.VolumeMountPathGardenerCA + "/" + secretsutils.DataKeyCertificateBundle
+		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
+		pathToken                     = blackboxexporter.VolumeMountPathClusterAccess + "/" + resourcesv1alpha1.DataKeyToken
 	)
 
-	http2xxModule.HTTP.HTTPClientConfig.TLSConfig.InsecureSkipVerify = true
-	httpAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathCABundle
-	httpAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
-	httpAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
+	httpGardenerAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
+	httpKubeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathKubeAPIServerCABundle
+	httpKubeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
+	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 
 	return blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-		http2xxModuleName:              http2xxModule,
-		httpAPIServerModuleName:        httpAPIServerModule,
-		httpAPIServerRootCAsModuleName: httpAPIServerRootCAsModule,
+		httpGardenerAPIServerModuleName:    httpGardenerAPIServerModule,
+		httpKubeAPIServerModuleName:        httpKubeAPIServerModule,
+		httpKubeAPIServerRootCAsModuleName: httpKubeAPIServerRootCAsModule,
 	}}
 }

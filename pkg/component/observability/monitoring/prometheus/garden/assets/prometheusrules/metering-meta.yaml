@@ -19,7 +19,7 @@ spec:
         *
           0
 
-  # garden_shoot_info :this_month
+  # garden_shoot_info:this_month
 
     - record: garden_shoot_info:this_month
       expr: |2

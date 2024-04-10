@@ -308,8 +308,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 
 		if k.values.NamePrefix != "" {
+			// controller-manager deployed for garden cluster
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkPolicyPort))
 		} else {
+			// controller-manager deployed for shoot cluster
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkPolicyPort))
 		}
 
@@ -584,6 +586,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 	}
 
+	// controller-manager deployed for garden cluster
 	if k.values.NamePrefix != "" {
 		serviceMonitor := k.emptyServiceMonitor()
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), serviceMonitor, func() error {

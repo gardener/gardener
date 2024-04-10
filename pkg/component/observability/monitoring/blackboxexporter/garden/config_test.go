@@ -29,7 +29,7 @@ var _ = Describe("Config", func() {
 	Describe("#Config", func() {
 		It("should return the expected config for the garden's blackbox-exporter", func() {
 			Expect(Config()).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-				"http_2xx": {
+				"http_gardener_apiserver": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
 					HTTP: blackboxexporterconfig.HTTPProbe{
@@ -38,12 +38,12 @@ var _ = Describe("Config", func() {
 							"Accept-Language": "en-US",
 						},
 						HTTPClientConfig: prometheuscommonconfig.HTTPClientConfig{
-							TLSConfig: prometheuscommonconfig.TLSConfig{InsecureSkipVerify: true},
+							TLSConfig: prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/blackbox_exporter/gardener-ca/bundle.crt"},
 						},
 						IPProtocol: "ipv4",
 					},
 				},
-				"http_apiserver": {
+				"http_kube_apiserver": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
 					HTTP: blackboxexporterconfig.HTTPProbe{
@@ -58,7 +58,7 @@ var _ = Describe("Config", func() {
 						IPProtocol: "ipv4",
 					},
 				},
-				"http_apiserver_root_cas": {
+				"http_kube_apiserver_root_cas": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
 					HTTP: blackboxexporterconfig.HTTPProbe{

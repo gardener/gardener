@@ -41,9 +41,9 @@ const (
 // Interface contains functions for an alertmanager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecret sets the ingress auth secret name.
+	// SetIngressAuthSecret sets the ingress authentication secret name.
 	SetIngressAuthSecret(*corev1.Secret)
-	// SetIngressWildcardCertSecret sets the ingress wildcard cert secret name.
+	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 }
 

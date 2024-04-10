@@ -6,7 +6,6 @@ spec:
   groups:
   - name: etcd
     rules:
-
     - alert: EtcdMainDown
       expr: |
         sum(

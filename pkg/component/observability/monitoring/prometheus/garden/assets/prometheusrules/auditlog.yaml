@@ -6,7 +6,6 @@ spec:
   groups:
   - name: auditlog
     rules:
-
     - alert: TooManyAuditlogFailures
       expr: |
         ( sum by (job) (

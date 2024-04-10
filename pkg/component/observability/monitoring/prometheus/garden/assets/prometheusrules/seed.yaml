@@ -6,7 +6,6 @@ spec:
   groups:
   - name: seed
     rules:
-
     - alert: PodFrequentlyRestarting
       expr: |
         seed:kube_pod_container_status_restarts_total:max_by_namespace > 5

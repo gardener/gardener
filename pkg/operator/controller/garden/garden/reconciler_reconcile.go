@@ -439,7 +439,7 @@ func (r *Reconciler) reconcile(
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
-		_ = g.Add(flow.Task{
+		deployPrometheus = g.Add(flow.Task{
 			Name: "Deploying Prometheus",
 			Fn: func(ctx context.Context) error {
 				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheus, virtualClusterClient)
@@ -449,7 +449,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying blackbox-exporter",
 			Fn:           c.blackboxExporter.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady, deployPrometheus),
 		})
 
 		_ = g.Add(flow.Task{

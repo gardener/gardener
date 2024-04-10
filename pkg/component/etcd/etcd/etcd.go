@@ -270,8 +270,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
 	}
 	if e.values.NamePrefix != "" {
+		// etcd deployed for garden cluster
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(clientService, ports...))
 	} else {
+		// etcd deployed for shoot cluster
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService, ports...))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 		metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
@@ -560,6 +562,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
+	// etcd deployed for garden cluster
 	if e.values.NamePrefix != "" {
 		serviceMonitor := e.emptyServiceMonitor()
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, serviceMonitor, func() error {

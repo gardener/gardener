@@ -41,7 +41,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Labels:    map[string]string{"prometheus": "garden"},
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						Params:      map[string][]string{"module": {"http_2xx"}},
+						Params:      map[string][]string{"module": {"http_gardener_apiserver"}},
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"},
@@ -91,7 +91,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Labels:    map[string]string{"prometheus": "garden"},
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						Params:      map[string][]string{"module": {"http_apiserver"}},
+						Params:      map[string][]string{"module": {"http_kube_apiserver"}},
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: kubeAPIServerTargets,
@@ -103,7 +103,7 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `https://api\..*`,
 								TargetLabel:  "__param_module",
-								Replacement:  "http_apiserver_root_cas",
+								Replacement:  "http_kube_apiserver_root_cas",
 								Action:       "replace",
 							},
 							{

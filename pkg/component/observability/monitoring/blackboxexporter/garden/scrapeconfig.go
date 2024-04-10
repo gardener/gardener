@@ -75,8 +75,8 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 	}
 
 	var (
-		gardenerAPIServerScrapeConfig = defaultScrapeConfig("gardener-apiserver", http2xxModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
-		kubeAPIServerScrapeConfig     = defaultScrapeConfig("apiserver", httpAPIServerModuleName, kubeAPIServerTargets)
+		gardenerAPIServerScrapeConfig = defaultScrapeConfig("gardener-apiserver", httpGardenerAPIServerModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
+		kubeAPIServerScrapeConfig     = defaultScrapeConfig("apiserver", httpKubeAPIServerModuleName, kubeAPIServerTargets)
 	)
 
 	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]*monitoringv1.RelabelConfig{{
@@ -84,7 +84,7 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		Separator:    ptr.To(";"),
 		Regex:        `https://api\..*`,
 		TargetLabel:  "__param_module",
-		Replacement:  httpAPIServerRootCAsModuleName,
+		Replacement:  httpKubeAPIServerRootCAsModuleName,
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 
