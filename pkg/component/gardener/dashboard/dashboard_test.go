@@ -24,6 +24,7 @@ import (
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -70,6 +71,7 @@ var _ = Describe("GardenerDashboard", func() {
 		enableTokenLogin bool
 		terminal         *TerminalValues
 		oidc             *OIDCValues
+		gitHub           *operatorv1alpha1.DashboardGitHub
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -98,12 +100,16 @@ var _ = Describe("GardenerDashboard", func() {
 		serviceAccountTerminal           *corev1.ServiceAccount
 		clusterRoleTerminalProjectMember *rbacv1.ClusterRole
 		clusterRoleBindingTerminal       *rbacv1.ClusterRoleBinding
+		roleGitHub                       *rbacv1.Role
+		roleBindingGitHub                *rbacv1.RoleBinding
+		leaseGitHub                      *coordinationv1.Lease
 	)
 
 	BeforeEach(func() {
 		enableTokenLogin = true
 		terminal = nil
 		oidc = nil
+		gitHub = nil
 
 		ctx = context.Background()
 
@@ -181,7 +187,7 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
-		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string) *corev1.ConfigMap {
+		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string, gitHub *operatorv1alpha1.DashboardGitHub) *corev1.ConfigMap {
 			obj := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard-config",
@@ -255,6 +261,16 @@ terminal:
 `
 			}
 
+			if gitHub != nil {
+				configRaw += `gitHub:
+    apiUrl: ` + gitHub.APIURL + `
+    org: ` + gitHub.Organisation + `
+    repository: ` + gitHub.Repository + `
+    syncThrottleSeconds: 20
+    syncConcurrency: 10
+`
+			}
+
 			obj.Data["config.yaml"] = configRaw
 
 			if enableTokenLogin && oidc == nil {
@@ -269,8 +285,8 @@ terminal:
 
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
-		}(enableTokenLogin, terminal, oidc, ingressValues.Domains)
-		deployment = func(oidc *OIDCValues) *appsv1.Deployment {
+		}(enableTokenLogin, terminal, oidc, ingressValues.Domains, gitHub)
+		deployment = func(oidc *OIDCValues, gitHub *operatorv1alpha1.DashboardGitHub) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard",
@@ -448,7 +464,7 @@ terminal:
 			}
 
 			if oidc != nil {
-				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+oidc.SecretRef.Name, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+oidc.SecretRef.Name, "75febc0dca34c373c9e4320cb729d2970731c07111bc6610e4732e55736cf191")
 				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
 					corev1.EnvVar{
 						Name: "OIDC_CLIENT_ID",
@@ -469,13 +485,36 @@ terminal:
 						},
 					},
 				)
+			}
 
+			if gitHub != nil {
+				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "d2b606ed2270efcdfc3b280981262dd0eeba4ae7ad2ac5d69c3d7bdbd2adf8c3")
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name: "GITHUB_AUTHENTICATION_TOKEN",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
+								Key:                  "authentication.token",
+							},
+						},
+					},
+					corev1.EnvVar{
+						Name: "GITHUB_WEBHOOK_SECRET",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
+								Key:                  "webhookSecret",
+							},
+						},
+					},
+				)
 			}
 
 			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 			utilruntime.Must(references.InjectAnnotations(obj))
 			return obj
-		}(oidc)
+		}(oidc, gitHub)
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -709,6 +748,52 @@ terminal:
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			}},
 		}
+		roleGitHub = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:dashboard-github-webhook",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{"coordination.k8s.io"},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{"gardener-dashboard-github-webhook"},
+				Verbs:         []string{"create", "get", "patch", "watch", "list"},
+			}},
+		}
+		roleBindingGitHub = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:dashboard-github-webhook",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:system:dashboard-github-webhook",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-dashboard",
+				Namespace: "kube-system",
+			}},
+		}
+		leaseGitHub = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard-github-webhook",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+		}
 
 		values = Values{
 			LogLevel:         logLevel,
@@ -719,6 +804,7 @@ terminal:
 			Terminal:         terminal,
 			OIDC:             oidc,
 			Ingress:          ingressValues,
+			GitHub:           gitHub,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -728,7 +814,7 @@ terminal:
 
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
-			var expectedRuntimeObject []client.Object
+			var expectedRuntimeObjects, expectedVirtualObjects []client.Object
 
 			BeforeEach(func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
@@ -804,13 +890,20 @@ terminal:
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
-				expectedRuntimeObject = []client.Object{
+				expectedRuntimeObjects = []client.Object{
 					configMap,
 					deployment,
 					service,
 					podDisruptionBudget,
 					vpa,
 					ingress,
+				}
+				expectedVirtualObjects = []client.Object{
+					clusterRole,
+					clusterRoleBinding,
+					serviceAccountTerminal,
+					clusterRoleBindingTerminal,
+					clusterRoleTerminalProjectMember,
 				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
@@ -819,20 +912,14 @@ terminal:
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(managedResourceVirtual).To(consistOf(
-					clusterRole,
-					clusterRoleBinding,
-					serviceAccountTerminal,
-					clusterRoleBindingTerminal,
-					clusterRoleTerminalProjectMember,
-				))
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})
 
 			When("token login is disabled", func() {
@@ -841,7 +928,8 @@ terminal:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 				})
 			})
 
@@ -860,7 +948,8 @@ terminal:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 				})
 			})
 
@@ -869,17 +958,50 @@ terminal:
 					oidc = &OIDCValues{
 						DashboardOIDC: operatorv1alpha1.DashboardOIDC{
 							AdditionalScopes: []string{"first", "second"},
-							SecretRef:        corev1.LocalObjectReference{Name: "some-secret"},
+							SecretRef:        corev1.LocalObjectReference{Name: "some-oidc-secret"},
 						},
 						IssuerURL:      "http://issuer",
 						ClientIDPublic: "public-client",
 					}
 
-					Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oidc.DashboardOIDC.SecretRef.Name, Namespace: namespace}})).To(Succeed())
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: oidc.DashboardOIDC.SecretRef.Name, Namespace: namespace},
+						Data:       map[string][]byte{"client_id": []byte("id"), "client_secret": []byte("secret")},
+					})).To(Succeed())
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
+			})
+
+			When("github is configured", func() {
+				BeforeEach(func() {
+					gitHub = &operatorv1alpha1.DashboardGitHub{
+						APIURL:       "api-url",
+						Organisation: "org",
+						Repository:   "repo",
+						SecretRef:    corev1.LocalObjectReference{Name: "some-github-secret"},
+					}
+
+					Expect(fakeClient.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: gitHub.SecretRef.Name, Namespace: namespace},
+						Data:       map[string][]byte{"authentication.token": []byte("token"), "webhookSecret": []byte("webhookSecret")},
+					})).To(Succeed())
+				})
+
+				JustBeforeEach(func() {
+					expectedVirtualObjects = append(expectedVirtualObjects,
+						roleGitHub,
+						roleBindingGitHub,
+						leaseGitHub,
+					)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 				})
 			})
 

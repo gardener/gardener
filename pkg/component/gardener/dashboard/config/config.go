@@ -31,6 +31,7 @@ type Config struct {
 	ContentSecurityPolicy                  *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
 	Terminal                               *Terminal              `yaml:"terminal,omitempty"`
 	OIDC                                   *OIDC                  `yaml:"oidc,omitempty"`
+	GitHub                                 *GitHub                `yaml:"gitHub,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.
@@ -96,4 +97,13 @@ type OIDC struct {
 type OIDCPublic struct {
 	ClientID string `yaml:"clientId"`
 	UsePKCE  bool   `yaml:"usePKCE"`
+}
+
+// GitHub is the GitHub configuration.
+type GitHub struct {
+	APIURL              string `yaml:"apiUrl"`
+	Org                 string `yaml:"org"`
+	Repository          string `yaml:"repository"`
+	SyncThrottleSeconds int    `yaml:"syncThrottleSeconds"`
+	SyncConcurrency     int    `yaml:"syncConcurrency"`
 }

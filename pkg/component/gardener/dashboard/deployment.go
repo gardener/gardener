@@ -16,6 +16,7 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,9 +50,6 @@ const (
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
 	volumeNameConfig           = "gardener-dashboard-config"
 	volumeNameLoginConfig      = "gardener-dashboard-login-config"
-
-	dataKeyOIDCClientID     = "client_id"
-	dataKeyOIDCClientSecret = "client_secret"
 )
 
 func (g *gardenerDashboard) deployment(
@@ -234,36 +232,60 @@ func (g *gardenerDashboard) deployment(
 	}
 
 	if g.values.OIDC != nil {
-		secret := &corev1.Secret{}
-		if err := g.client.Get(ctx, client.ObjectKey{Name: g.values.OIDC.SecretRef.Name, Namespace: g.namespace}, secret); err != nil {
-			return nil, err
+		if err := g.addChecksumAnnotationAndEnvVarsForSecret(ctx, deployment, g.values.OIDC.SecretRef.Name, []env{
+			{"client_id", "OIDC_CLIENT_ID"},
+			{"client_secret", "OIDC_CLIENT_SECRET"},
+		}); err != nil {
+			return nil, fmt.Errorf("failed adding checksum annotation and env vars for secret %s: %w", g.values.OIDC.SecretRef.Name, err)
 		}
+	}
 
-		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum-secret-"+g.values.OIDC.SecretRef.Name, utils.ComputeSecretChecksum(secret.Data))
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
-			corev1.EnvVar{
-				Name: "OIDC_CLIENT_ID",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: g.values.OIDC.SecretRef.Name},
-						Key:                  dataKeyOIDCClientID,
-					},
-				},
-			},
-			corev1.EnvVar{
-				Name: "OIDC_CLIENT_SECRET",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: g.values.OIDC.SecretRef.Name},
-						Key:                  dataKeyOIDCClientSecret,
-					},
-				},
-			},
-		)
+	if g.values.GitHub != nil {
+		if err := g.addChecksumAnnotationAndEnvVarsForSecret(ctx, deployment, g.values.GitHub.SecretRef.Name, []env{
+			{"authentication.token", "GITHUB_AUTHENTICATION_TOKEN"},
+			{"authentication.appId", "GITHUB_AUTHENTICATION_APP_ID"},
+			{"authentication.clientId", "GITHUB_AUTHENTICATION_CLIENT_ID"},
+			{"authentication.clientSecret", "GITHUB_AUTHENTICATION_CLIENT_SECRET"},
+			{"authentication.installationId", "GITHUB_AUTHENTICATION_INSTALLATION_ID"},
+			{"authentication.privateKey", "GITHUB_AUTHENTICATION_PRIVATE_KEY"},
+			{"webhookSecret", "GITHUB_WEBHOOK_SECRET"},
+		}); err != nil {
+			return nil, fmt.Errorf("failed adding checksum annotation and env vars for secret %s: %w", g.values.GitHub.SecretRef.Name, err)
+		}
 	}
 
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment, nil
+}
+
+type env struct {
+	secretKey string
+	varName   string
+}
+
+func (g *gardenerDashboard) addChecksumAnnotationAndEnvVarsForSecret(ctx context.Context, deployment *appsv1.Deployment, secretName string, envs []env) error {
+	secret := &corev1.Secret{}
+	if err := g.client.Get(ctx, client.ObjectKey{Name: secretName, Namespace: g.namespace}, secret); err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum-secret-"+secretName, utils.ComputeSecretChecksum(secret.Data))
+
+	for _, e := range envs {
+		if _, ok := secret.Data[e.secretKey]; ok {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+				Name: e.varName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+						Key:                  e.secretKey,
+					},
+				},
+			})
+		}
+	}
+
+	return nil
 }

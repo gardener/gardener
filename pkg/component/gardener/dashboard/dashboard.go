@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -64,6 +66,8 @@ type Values struct {
 	Terminal *TerminalValues
 	// OIDC is the configuration for the OIDC settings.
 	OIDC *OIDCValues
+	// GitHub is the configuration for the GitHub settings.
+	GitHub *operatorv1alpha1.DashboardGitHub
 }
 
 // TerminalValues contains the terminal configuration.
@@ -170,6 +174,23 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 	var (
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 	)
+
+	if g.values.GitHub != nil {
+		if err := virtualRegistry.Add(
+			g.role(),
+			g.roleBinding(virtualGardenAccessSecret.ServiceAccountName),
+			// TODO(rfranzke): Remove this `Lease` once https://github.com/gardener/dashboard/issues/1806 is fixed.
+			&coordinationv1.Lease{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-dashboard-github-webhook",
+					Namespace: metav1.NamespaceSystem,
+					Labels:    GetLabels(),
+				},
+			},
+		); err != nil {
+			return err
+		}
+	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		g.clusterRole(),

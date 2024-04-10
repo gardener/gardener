@@ -16,6 +16,7 @@ package dashboard
 
 import (
 	authenticationv1 "k8s.io/api/authentication/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,9 @@ const (
 
 	clusterRoleTerminalProjectMemberName = "dashboard.gardener.cloud:system:project-member"
 	clusterRoleBindingTerminalName       = "gardener.cloud:dashboard-terminal:admin"
+
+	gitHubWebhookRoleName        = "gardener.cloud:system:dashboard-github-webhook"
+	gitHubWebhookRoleBindingName = "gardener.cloud:system:dashboard-github-webhook"
 )
 
 func (g *gardenerDashboard) clusterRole() *rbacv1.ClusterRole {
@@ -125,6 +129,42 @@ func (g *gardenerDashboard) clusterRoleTerminalProjectMember() *rbacv1.ClusterRo
 			APIGroups: []string{"dashboard.gardener.cloud"},
 			Resources: []string{"terminals"},
 			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		}},
+	}
+}
+
+func (g *gardenerDashboard) role() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gitHubWebhookRoleName,
+			Namespace: metav1.NamespaceSystem,
+			Labels:    GetLabels(),
+		},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups:     []string{coordinationv1.GroupName},
+			Resources:     []string{"leases"},
+			ResourceNames: []string{"gardener-dashboard-github-webhook"},
+			Verbs:         []string{"create", "get", "patch", "watch", "list"},
+		}},
+	}
+}
+
+func (g *gardenerDashboard) roleBinding(serviceAccountName string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gitHubWebhookRoleBindingName,
+			Namespace: metav1.NamespaceSystem,
+			Labels:    GetLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     gitHubWebhookRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
 		}},
 	}
 }

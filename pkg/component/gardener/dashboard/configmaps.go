@@ -100,6 +100,16 @@ func (g *gardenerDashboard) configMap() (*corev1.ConfigMap, error) {
 		loginCfg.LoginTypes = append([]string{"oidc"}, loginCfg.LoginTypes...)
 	}
 
+	if g.values.GitHub != nil {
+		cfg.GitHub = &config.GitHub{
+			APIURL:              g.values.GitHub.APIURL,
+			Org:                 g.values.GitHub.Organisation,
+			Repository:          g.values.GitHub.Repository,
+			SyncThrottleSeconds: 20,
+			SyncConcurrency:     10,
+		}
+	}
+
 	rawConfig, err := yaml.Marshal(cfg)
 	if err != nil {
 		return nil, err

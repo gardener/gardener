@@ -1059,6 +1059,8 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 				ClientIDPublic: *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID,
 			}
 		}
+
+		values.GitHub = config.GitHub
 	}
 
 	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
