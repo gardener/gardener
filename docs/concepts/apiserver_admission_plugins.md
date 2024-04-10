@@ -126,6 +126,18 @@ It validates the resource consumption declared in the specification against appl
 Only if the applicable `Quota` resources admit the configured resources in the `Shoot` then it allows the request.
 Applicable `Quota`s are referred in the `SecretBinding` that is used by the `Shoot`.
 
+## `ShootResourceReservation`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
+It injects the `Kubernetes.Kubelet.KubeReserved` setting for kubelet either as global setting for a shoot or on a per worker pool basis.
+If the admission configuration (see [this example](../../example/20-admissionconfig.yaml)) for the `ShootResourceReservation` plugin contains `useGKEFormula: false` (the default), then it sets a static default resource reservation for the shoot.
+
+If `useGKEFormula: true` is set, then the plugin injects resource reservations based on the machine type similar to GKE's [formula for resource reservation](https://cloud.google.com/kubernetes-engine/docs/concepts/plan-node-sizes#resource_reservations) into each worker pool.
+Already existing resource reservations are not modified; this also means that resource reservations are not automatically updated if the machine type for a worker pool is changed.
+If a shoot contains global resource reservations, then no per worker pool resource reservations are injected.
+
 ## `ShootVPAEnabledByDefault`
 
 _(disabled by default)_
