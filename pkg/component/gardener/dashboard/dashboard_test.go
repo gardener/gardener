@@ -71,6 +71,7 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		deployment                *appsv1.Deployment
+		service                   *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -265,6 +266,27 @@ var _ = Describe("GardenerDashboard", func() {
 				},
 			},
 		}
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Selector: GetLabels(),
+				Ports: []corev1.ServicePort{{
+					Name:       "http",
+					Port:       8080,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt32(8080),
+				}},
+				SessionAffinity: corev1.ServiceAffinityClientIP,
+			},
+		}
 
 		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 	})
@@ -356,6 +378,7 @@ var _ = Describe("GardenerDashboard", func() {
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 				expectedRuntimeObject = []client.Object{
 					deployment,
+					service,
 				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
