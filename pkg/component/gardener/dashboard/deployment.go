@@ -48,8 +48,10 @@ const (
 
 	volumeMountPathConfig      = "/etc/gardener-dashboard/config"
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
+	volumeMountPathAssets      = "/app/public/static/assets"
 	volumeNameConfig           = "gardener-dashboard-config"
 	volumeNameLoginConfig      = "gardener-dashboard-login-config"
+	volumeNameConfigAssets     = "gardener-dashboard-assets"
 )
 
 func (g *gardenerDashboard) deployment(
@@ -58,6 +60,7 @@ func (g *gardenerDashboard) deployment(
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
 	configMapName string,
+	configMapAssets *corev1.ConfigMap,
 ) (
 	*appsv1.Deployment,
 	error,
@@ -252,6 +255,17 @@ func (g *gardenerDashboard) deployment(
 		}); err != nil {
 			return nil, fmt.Errorf("failed adding checksum annotation and env vars for secret %s: %w", g.values.GitHub.SecretRef.Name, err)
 		}
+	}
+
+	if configMapAssets != nil {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name:         volumeNameConfigAssets,
+			VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapAssets.Name}}},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameConfigAssets,
+			MountPath: volumeMountPathAssets,
+		})
 	}
 
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))

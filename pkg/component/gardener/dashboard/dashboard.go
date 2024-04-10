@@ -68,6 +68,8 @@ type Values struct {
 	OIDC *OIDCValues
 	// GitHub is the configuration for the GitHub settings.
 	GitHub *operatorv1alpha1.DashboardGitHub
+	// FrontendConfigMapName is the name of the ConfigMap containing the frontend configuration.
+	FrontendConfigMapName *string
 }
 
 // TerminalValues contains the terminal configuration.
@@ -140,12 +142,12 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	configMap, err := g.configMap()
+	configMap, configMapAssets, err := g.configMaps(ctx)
 	if err != nil {
 		return err
 	}
 
-	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name)
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name, configMapAssets)
 	if err != nil {
 		return err
 	}
@@ -157,6 +159,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		configMap,
+		configMapAssets,
 		deployment,
 		g.service(),
 		g.podDisruptionBudget(),

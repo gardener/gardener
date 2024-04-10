@@ -64,14 +64,15 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceNameVirtual = "gardener-dashboard-virtual"
 		namespace                  = "some-namespace"
 
-		image            = "gardener-dashboard-image:latest"
-		apiServerURL     = "https://api.com"
-		logLevel         = "debug"
-		ingressValues    = IngressValues{Domains: []string{"first", "second"}}
-		enableTokenLogin bool
-		terminal         *TerminalValues
-		oidc             *OIDCValues
-		gitHub           *operatorv1alpha1.DashboardGitHub
+		image                 = "gardener-dashboard-image:latest"
+		apiServerURL          = "https://api.com"
+		logLevel              = "debug"
+		ingressValues         = IngressValues{Domains: []string{"first", "second"}}
+		enableTokenLogin      bool
+		terminal              *TerminalValues
+		oidc                  *OIDCValues
+		gitHub                *operatorv1alpha1.DashboardGitHub
+		frontendConfigMapName *string
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -89,6 +90,7 @@ var _ = Describe("GardenerDashboard", func() {
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
 		configMap                 *corev1.ConfigMap
+		configMapAssets           *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
@@ -110,6 +112,7 @@ var _ = Describe("GardenerDashboard", func() {
 		terminal = nil
 		oidc = nil
 		gitHub = nil
+		frontendConfigMapName = nil
 
 		ctx = context.Background()
 
@@ -187,7 +190,7 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
-		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string, gitHub *operatorv1alpha1.DashboardGitHub) *corev1.ConfigMap {
+		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string, gitHub *operatorv1alpha1.DashboardGitHub, frontendConfigMapName *string) *corev1.ConfigMap {
 			obj := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard-config",
@@ -271,22 +274,62 @@ terminal:
 `
 			}
 
-			obj.Data["config.yaml"] = configRaw
+			if frontendConfigMapName != nil {
+				configRaw += `frontend:
+    branding:
+        some: branding
+    foo:
+        bar: baz
+    landingPageUrl: landing-page-url
+    themes:
+        some: themes
+`
+			}
 
+			loginTypes := "null"
 			if enableTokenLogin && oidc == nil {
-				obj.Data["login-config.json"] = `{"loginTypes":["token"]}`
+				loginTypes = `["token"]`
 			} else if enableTokenLogin && oidc != nil {
-				obj.Data["login-config.json"] = `{"loginTypes":["oidc","token"]}`
+				loginTypes = `["oidc","token"]`
 			} else if !enableTokenLogin && oidc != nil {
-				obj.Data["login-config.json"] = `{"loginTypes":["oidc"]}`
-			} else {
-				obj.Data["login-config.json"] = `{"loginTypes":null}`
+				loginTypes = `["oidc"]`
+			}
+
+			frontend := ``
+			if frontendConfigMapName != nil {
+				frontend = `,"landingPageUrl":"landing-page-url","branding":{"some":"branding"},"themes":{"some":"themes"}`
+			}
+
+			loginConfigRaw := `{"loginTypes":` + loginTypes + frontend + `}`
+
+			obj.Data["config.yaml"] = configRaw
+			obj.Data["login-config.json"] = loginConfigRaw
+			utilruntime.Must(kubernetesutils.MakeUnique(obj))
+			return obj
+		}(enableTokenLogin, terminal, oidc, ingressValues.Domains, gitHub, frontendConfigMapName)
+		configMapAssets = func(frontendConfigMapName *string) *corev1.ConfigMap {
+			if frontendConfigMapName == nil {
+				return nil
+			}
+
+			obj := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-dashboard-assets",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "gardener",
+						"role": "dashboard",
+					},
+				},
+				BinaryData: map[string][]byte{
+					"foo": []byte("bar"),
+				},
 			}
 
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
-		}(enableTokenLogin, terminal, oidc, ingressValues.Domains, gitHub)
-		deployment = func(oidc *OIDCValues, gitHub *operatorv1alpha1.DashboardGitHub) *appsv1.Deployment {
+		}(frontendConfigMapName)
+		deployment = func(oidc *OIDCValues, gitHub *operatorv1alpha1.DashboardGitHub, frontendConfigMapName *string) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard",
@@ -511,10 +554,21 @@ terminal:
 				)
 			}
 
+			if frontendConfigMapName != nil {
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name:         "gardener-dashboard-assets",
+					VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapAssets.Name}}},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "gardener-dashboard-assets",
+					MountPath: "/app/public/static/assets",
+				})
+			}
+
 			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 			utilruntime.Must(references.InjectAnnotations(obj))
 			return obj
-		}(oidc, gitHub)
+		}(oidc, gitHub, frontendConfigMapName)
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -796,15 +850,16 @@ terminal:
 		}
 
 		values = Values{
-			LogLevel:         logLevel,
-			RuntimeVersion:   semver.MustParse("1.26.4"),
-			Image:            image,
-			APIServerURL:     apiServerURL,
-			EnableTokenLogin: enableTokenLogin,
-			Terminal:         terminal,
-			OIDC:             oidc,
-			Ingress:          ingressValues,
-			GitHub:           gitHub,
+			LogLevel:              logLevel,
+			RuntimeVersion:        semver.MustParse("1.26.4"),
+			Image:                 image,
+			APIServerURL:          apiServerURL,
+			EnableTokenLogin:      enableTokenLogin,
+			Terminal:              terminal,
+			OIDC:                  oidc,
+			Ingress:               ingressValues,
+			GitHub:                gitHub,
+			FrontendConfigMapName: frontendConfigMapName,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -997,6 +1052,37 @@ terminal:
 						roleBindingGitHub,
 						leaseGitHub,
 					)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
+			})
+
+			When("frontend is configured", func() {
+				BeforeEach(func() {
+					frontendConfigMapName = ptr.To("frontend")
+
+					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: *frontendConfigMapName, Namespace: namespace},
+						Data: map[string]string{"config.yaml": `
+assets:
+  foo: YmFy
+foo:
+  bar: baz
+landingPageUrl: landing-page-url
+branding:
+  some: branding
+themes:
+  some: themes
+`}},
+					)).To(Succeed())
+
+				})
+
+				JustBeforeEach(func() {
+					expectedRuntimeObjects = append(expectedRuntimeObjects, configMapAssets)
 				})
 
 				It("should successfully deploy all resources", func() {

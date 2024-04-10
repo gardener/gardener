@@ -1061,6 +1061,10 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		}
 
 		values.GitHub = config.GitHub
+
+		if config.FrontendConfigMapRef != nil {
+			values.FrontendConfigMapName = &config.FrontendConfigMapRef.Name
+		}
 	}
 
 	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
