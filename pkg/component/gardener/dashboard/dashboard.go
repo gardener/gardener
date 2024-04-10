@@ -93,6 +93,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
 		g.service(),
 		g.podDisruptionBudget(),
+		g.verticalPodAutoscaler(),
 	)
 	if err != nil {
 		return err
