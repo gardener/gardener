@@ -92,6 +92,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
 		g.service(),
+		g.podDisruptionBudget(),
 	)
 	if err != nil {
 		return err

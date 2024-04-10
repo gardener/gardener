@@ -23,6 +23,7 @@ import (
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -37,6 +38,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -72,6 +74,7 @@ var _ = Describe("GardenerDashboard", func() {
 		virtualGardenAccessSecret *corev1.Secret
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
+		podDisruptionBudget       *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -287,6 +290,24 @@ var _ = Describe("GardenerDashboard", func() {
 				SessionAffinity: corev1.ServiceAffinityClientIP,
 			},
 		}
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				}},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
+		}
 
 		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 	})
@@ -379,6 +400,7 @@ var _ = Describe("GardenerDashboard", func() {
 				expectedRuntimeObject = []client.Object{
 					deployment,
 					service,
+					podDisruptionBudget,
 				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
