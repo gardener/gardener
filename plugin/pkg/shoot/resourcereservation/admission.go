@@ -35,9 +35,9 @@ import (
 
 const (
 	_ = 1 << (iota * 10)
-	KiB
-	MiB
-	GiB
+	kib
+	mib
+	gib
 )
 
 // Register registers a plugin.
@@ -280,28 +280,28 @@ func calculateCPUReservation(cpuMilli int64) int64 {
 
 func calculateMemoryReservation(memory int64) int64 {
 	reservation := int64(0)
-	if memory < 1*GiB {
-		reservation = 255 * MiB
+	if memory < 1*gib {
+		reservation = 255 * mib
 	}
 	// 25% of first 4 GB
-	if memory >= 1*GiB {
-		reservation += min(memory, 4*GiB) / 4
+	if memory >= 1*gib {
+		reservation += min(memory, 4*gib) / 4
 	}
 	// 20% for additional memory between 4GB and 8GB
-	if memory >= 4*GiB {
-		reservation += (min(memory, 8*GiB) - 4*GiB) / 5
+	if memory >= 4*gib {
+		reservation += (min(memory, 8*gib) - 4*gib) / 5
 	}
 	// 10% for additional memory between 8GB and 16GB
-	if memory >= 8*GiB {
-		reservation += (min(memory, 16*GiB) - 8*GiB) / 10
+	if memory >= 8*gib {
+		reservation += (min(memory, 16*gib) - 8*gib) / 10
 	}
 	// 6% for additional memory between 16GB and 128GB
-	if memory >= 16*GiB {
-		reservation += (min(memory, 128*GiB) - 16*GiB) / 100 * 6
+	if memory >= 16*gib {
+		reservation += (min(memory, 128*gib) - 16*gib) / 100 * 6
 	}
 	// 2% of remaining memory
-	if memory >= 128*GiB {
-		reservation += (memory - 128*GiB) / 100 * 2
+	if memory >= 128*gib {
+		reservation += (memory - 128*gib) / 100 * 2
 	}
 
 	return reservation
