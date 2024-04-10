@@ -36,6 +36,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard"
@@ -64,6 +65,7 @@ var _ = Describe("GardenerDashboard", func() {
 		apiServerURL     = "https://api.com"
 		logLevel         = "debug"
 		enableTokenLogin bool
+		terminal         *TerminalValues
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -80,19 +82,23 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
-		newConfigMap              func(enableTokenLogin bool) *corev1.ConfigMap
+		newConfigMap              func(enableTokenLogin bool, terminal *TerminalValues) *corev1.ConfigMap
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
 
-		clusterRole        *rbacv1.ClusterRole
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		clusterRole                      *rbacv1.ClusterRole
+		clusterRoleBinding               *rbacv1.ClusterRoleBinding
+		serviceAccountTerminal           *corev1.ServiceAccount
+		clusterRoleTerminalProjectMember *rbacv1.ClusterRole
+		clusterRoleBindingTerminal       *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
 		enableTokenLogin = true
+		terminal = nil
 
 		ctx = context.Background()
 
@@ -170,7 +176,7 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
-		newConfigMap = func(enableTokenLogin bool) *corev1.ConfigMap {
+		newConfigMap = func(enableTokenLogin bool, terminal *TerminalValues) *corev1.ConfigMap {
 			obj := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard-config",
@@ -183,7 +189,7 @@ var _ = Describe("GardenerDashboard", func() {
 				Data: make(map[string]string),
 			}
 
-			obj.Data["config.yaml"] = `port: 8080
+			configRaw := `port: 8080
 logFormat: text
 logLevel: ` + logLevel + `
 apiServerUrl: ` + apiServerURL + `
@@ -196,6 +202,36 @@ unreachableSeeds:
         seed.gardener.cloud/network: private
 `
 
+			if terminal != nil {
+				configRaw += `contentSecurityPolicy:
+    connectSrc:
+        - self`
+
+				for _, host := range terminal.AllowedHostSourceList {
+					configRaw += `
+        - wss://` + host + `
+        - https://` + host
+				}
+
+				configRaw += `
+terminal:
+    container:
+        image: ` + terminal.Container.Image + `
+    containerImageDescriptions:
+        - image: /.*/
+          description: ` + ptr.Deref(terminal.Container.Description, "") + `
+    gardenTerminalHost:
+        seedRef: ` + terminal.GardenTerminalSeedHost + `
+    garden:
+        operatorCredentials:
+            serviceAccountRef:
+                name: dashboard-terminal-admin
+                namespace: kube-system
+`
+			}
+
+			obj.Data["config.yaml"] = configRaw
+
 			if enableTokenLogin {
 				obj.Data["login-config.json"] = `{"loginTypes":["token"]}`
 			} else {
@@ -205,7 +241,7 @@ unreachableSeeds:
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
 		}
-		configMap = newConfigMap(enableTokenLogin)
+		configMap = newConfigMap(enableTokenLogin, terminal)
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -526,6 +562,50 @@ unreachableSeeds:
 				Namespace: "kube-system",
 			}},
 		}
+		serviceAccountTerminal = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dashboard-terminal-admin",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+		}
+		clusterRoleBindingTerminal = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:dashboard-terminal:admin",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:administrators",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "dashboard-terminal-admin",
+				Namespace: "kube-system",
+			}},
+		}
+		clusterRoleTerminalProjectMember = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dashboard.gardener.cloud:system:project-member",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+					"rbac.gardener.cloud/aggregate-to-project-member": "true",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"dashboard.gardener.cloud"},
+				Resources: []string{"terminals"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			}},
+		}
 
 		values = Values{
 			LogLevel:         logLevel,
@@ -533,6 +613,7 @@ unreachableSeeds:
 			Image:            image,
 			APIServerURL:     apiServerURL,
 			EnableTokenLogin: enableTokenLogin,
+			Terminal:         terminal,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -635,6 +716,9 @@ unreachableSeeds:
 				Expect(managedResourceVirtual).To(consistOf(
 					clusterRole,
 					clusterRoleBinding,
+					serviceAccountTerminal,
+					clusterRoleBindingTerminal,
+					clusterRoleTerminalProjectMember,
 				))
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
@@ -648,6 +732,32 @@ unreachableSeeds:
 			When("token login is disabled", func() {
 				BeforeEach(func() {
 					enableTokenLogin = false
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+				})
+			})
+
+			When("terminal is configured", func() {
+				var (
+					terminalContainerImage            = "some-image:latest"
+					terminalContainerImageDescription = "cool image"
+					allowedHostSourceList             = []string{"first", "second"}
+					gardenTerminalSeedHost            = "terminal-host"
+				)
+
+				BeforeEach(func() {
+					terminal = &TerminalValues{
+						DashboardTerminal: operatorv1alpha1.DashboardTerminal{
+							Container: operatorv1alpha1.DashboardTerminalContainer{
+								Image:       terminalContainerImage,
+								Description: &terminalContainerImageDescription,
+							},
+							AllowedHostSourceList: allowedHostSourceList,
+						},
+						GardenTerminalSeedHost: gardenTerminalSeedHost,
+					}
 				})
 
 				It("should successfully deploy all resources", func() {

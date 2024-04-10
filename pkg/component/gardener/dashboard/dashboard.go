@@ -58,10 +58,26 @@ type Values struct {
 	APIServerURL string
 	// EnableTokenLogin specifies whether token-based login is enabled.
 	EnableTokenLogin bool
+	// Terminal contains the terminal configuration.
+	Terminal *TerminalValues
+}
+
+// TerminalValues contains the terminal configuration.
+type TerminalValues struct {
+	operatorv1alpha1.DashboardTerminal
+	// GardenTerminalSeedHost is the name of a seed hosting the garden terminals.
+	GardenTerminalSeedHost string
+}
+
+// Interface contains function for deploying the gardener-dashboard.
+type Interface interface {
+	component.DeployWaiter
+	// SetGardenTerminalSeedHost sets the terminal seed host field.
+	SetGardenTerminalSeedHost(string)
 }
 
 // New creates a new instance of DeployWaiter for the gardener-dashboard.
-func New(client client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) component.DeployWaiter {
+func New(client client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) Interface {
 	return &gardenerDashboard{
 		client:         client,
 		namespace:      namespace,
@@ -125,6 +141,9 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		g.clusterRole(),
 		g.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
+		g.serviceAccountTerminal(),
+		g.clusterRoleBindingTerminal(),
+		g.clusterRoleTerminalProjectMember(),
 	)
 	if err != nil {
 		return err
@@ -171,6 +190,12 @@ func (g *gardenerDashboard) WaitCleanup(ctx context.Context) error {
 			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, ManagedResourceNameVirtual)
 		},
 	)(timeoutCtx)
+}
+
+func (g *gardenerDashboard) SetGardenTerminalSeedHost(host string) {
+	if g.values.Terminal != nil {
+		g.values.Terminal.GardenTerminalSeedHost = host
+	}
 }
 
 // GetLabels returns the labels for the gardener-dashboard.

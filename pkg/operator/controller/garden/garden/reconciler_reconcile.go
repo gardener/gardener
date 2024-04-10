@@ -25,8 +25,11 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,11 +40,13 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
+	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -289,11 +294,6 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
-		reconcileGardenerDashboard = g.Add(flow.Task{
-			Name:         "Reconciling Gardener Dashboard",
-			Fn:           component.OpWait(c.gardenerDashboard).Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
-		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying virtual system resources",
@@ -314,7 +314,7 @@ func (r *Reconciler) reconcile(
 				)
 			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler, reconcileGardenerDashboard),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler),
 		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
@@ -329,6 +329,14 @@ func (r *Reconciler) reconcile(
 				RetryUntilTimeout(time.Second, 30*time.Second),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Reconciling Gardener Dashboard",
+			Fn: func(ctx context.Context) error {
+				return r.deployGardenerDashboard(ctx, c.gardenerDashboard, garden.Spec.VirtualCluster.Gardener.Dashboard != nil, virtualClusterClient)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
+		})
+
 		// Renew seed secrets tasks must run sequentially. They all use "gardener.cloud/operation" annotation of the seeds and there can be only one annotation at the same time.
 		renewGardenAccessSecretsInAllSeeds = g.Add(flow.Task{
 			Name: "Label seeds to trigger renewal of their garden access secrets",
@@ -673,6 +681,36 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
+}
+
+func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gardenerdashboard.Interface, enabled bool, virtualGardenClient client.Client) error {
+	if !enabled {
+		return component.OpDestroyAndWait(dashboard).Destroy(ctx)
+	}
+
+	// fetch the first managed seed that is not labeled with seed.gardener.cloud/network=private
+	// TODO(rfranzke): Remove this once https://github.com/gardener/dashboard/issues/1789 has been fixed.
+	seedList := &gardencorev1beta1.SeedList{}
+	if err := virtualGardenClient.List(ctx, seedList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelSeedNetwork, selection.NotEquals, v1beta1constants.LabelSeedNetworkPrivate))}); err != nil {
+		return fmt.Errorf("failed listing secrets in virtual garden: %w", err)
+	}
+
+	for _, seed := range seedList.Items {
+		// The dashboard can only handle managed seeds for terminals (otherwise, it has no chance to acquire a
+		// kubeconfig) - for managed seeds, it can use the shoots/adminkubeconfig subresource. Hence, let's find the
+		// first managed seed here.
+		if err := virtualGardenClient.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: seedmanagementv1alpha1.SchemeGroupVersion.String(), Kind: "ManagedSeed"}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed checking whether seed %s is a managed seed: %w", seed.Name, err)
+			}
+			continue
+		}
+
+		dashboard.SetGardenTerminalSeedHost(seed.Name)
+		break
+	}
+
+	return component.OpWait(dashboard).Deploy(ctx)
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

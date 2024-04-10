@@ -123,7 +123,7 @@ type components struct {
 	gardenerAdmissionController component.DeployWaiter
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
-	gardenerDashboard           component.DeployWaiter
+	gardenerDashboard           gardenerdashboard.Interface
 
 	gardenerMetricsExporter       component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
@@ -1021,7 +1021,7 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
-func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerdashboard.Interface, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDashboard)
 	if err != nil {
 		return nil, err
@@ -1039,18 +1039,17 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		if config.LogLevel != nil {
 			values.LogLevel = *config.LogLevel
 		}
+
 		if config.EnableTokenLogin != nil {
 			values.EnableTokenLogin = *config.EnableTokenLogin
 		}
+
+		if config.Terminal != nil {
+			values.Terminal = &gardenerdashboard.TerminalValues{DashboardTerminal: *config.Terminal}
+		}
 	}
 
-	dashboard := gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values)
-
-	if garden.Spec.VirtualCluster.Gardener.Dashboard == nil {
-		dashboard = component.OpDestroyAndWait(dashboard)
-	}
-
-	return dashboard, nil
+	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {

@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/dashboard/config"
@@ -51,6 +52,29 @@ func (g *gardenerDashboard) configMap() (*corev1.ConfigMap, error) {
 
 	if g.values.EnableTokenLogin {
 		loginCfg.LoginTypes = append(loginCfg.LoginTypes, "token")
+	}
+
+	if g.values.Terminal != nil {
+		cfg.ContentSecurityPolicy = &config.ContentSecurityPolicy{ConnectSources: []string{"self"}}
+		for _, host := range g.values.Terminal.AllowedHostSourceList {
+			cfg.ContentSecurityPolicy.ConnectSources = append(cfg.ContentSecurityPolicy.ConnectSources,
+				"wss://"+host,
+				"https://"+host,
+			)
+		}
+
+		cfg.Terminal = &config.Terminal{
+			Container: config.TerminalContainer{Image: g.values.Terminal.Container.Image},
+			ContainerImageDescriptions: []config.TerminalContainerImageDescription{{
+				Image:       `/.*/`,
+				Description: ptr.Deref(g.values.Terminal.Container.Description, ""),
+			}},
+			GardenTerminalHost: config.TerminalGardenHost{SeedRef: g.values.Terminal.GardenTerminalSeedHost},
+			Garden: config.TerminalGarden{OperatorCredentials: config.TerminalOperatorCredentials{ServiceAccountRef: corev1.SecretReference{
+				Name:      serviceAccountNameTerminal,
+				Namespace: metav1.NamespaceSystem,
+			}}},
+		}
 	}
 
 	rawConfig, err := yaml.Marshal(cfg)

@@ -435,6 +435,9 @@ const (
 	// LabelSeedNetworkPrivate is used to specify that the seed is in private networks and not reachable from the garden
 	// cluster.
 	LabelSeedNetworkPrivate = "private"
+	// LabelKeyAggregateToProjectMember is a constant for a label on ClusterRoles that are aggregated to the project
+	// member ClusterRole.
+	LabelKeyAggregateToProjectMember = "rbac.gardener.cloud/aggregate-to-project-member"
 
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"
@@ -736,6 +739,9 @@ const (
 	// ShootGroupViewers is a constant for a group name in shoot clusters whose users get read-only privileges (except
 	// for core/v1.Secrets).
 	ShootGroupViewers = "gardener.cloud:system:viewers"
+	// ClusterRoleNameGardenerAdministrators is the name of a cluster role in the garden cluster defining privileges
+	// for administrators.
+	ClusterRoleNameGardenerAdministrators = "gardener.cloud:system:administrators"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"

@@ -220,7 +220,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 		clusterRoleGardenerAdminAggregated = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:system:administrators",
+				Name: v1beta1constants.ClusterRoleNameGardenerAdministrators,
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
@@ -379,11 +379,10 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Verbs:     []string{"create"},
 			}},
 		}
-		labelKeyAggregateToProjectMember = "rbac.gardener.cloud/aggregate-to-project-member"
-		clusterRoleProjectMember         = &rbacv1.ClusterRole{
+		clusterRoleProjectMember = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:system:project-member-aggregation",
-				Labels: map[string]string{labelKeyAggregateToProjectMember: "true"},
+				Labels: map[string]string{v1beta1constants.LabelKeyAggregateToProjectMember: "true"},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -452,7 +451,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
-					{MatchLabels: map[string]string{labelKeyAggregateToProjectMember: "true"}},
+					{MatchLabels: map[string]string{v1beta1constants.LabelKeyAggregateToProjectMember: "true"}},
 				},
 			},
 		}

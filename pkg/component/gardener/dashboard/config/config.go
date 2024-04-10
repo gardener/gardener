@@ -14,6 +14,10 @@
 
 package config
 
+import (
+	corev1 "k8s.io/api/core/v1"
+)
+
 // Config is the dashboard config structure.
 type Config struct {
 	Port                                   int32                  `yaml:"port"`
@@ -25,6 +29,7 @@ type Config struct {
 	ReadinessProbe                         ReadinessProbe         `yaml:"readinessProbe"`
 	UnreachableSeeds                       UnreachableSeeds       `yaml:"unreachableSeeds"`
 	ContentSecurityPolicy                  *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
+	Terminal                               *Terminal              `yaml:"terminal,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.
@@ -40,4 +45,38 @@ type UnreachableSeeds struct {
 // ContentSecurityPolicy is the configuration for the content security policy.
 type ContentSecurityPolicy struct {
 	ConnectSources []string `yaml:"connectSrc"`
+}
+
+// Terminal is the configuration for the terminals.
+type Terminal struct {
+	Container                  TerminalContainer                   `yaml:"container"`
+	ContainerImageDescriptions []TerminalContainerImageDescription `yaml:"containerImageDescriptions"`
+	GardenTerminalHost         TerminalGardenHost                  `yaml:"gardenTerminalHost"`
+	Garden                     TerminalGarden                      `yaml:"garden"`
+}
+
+// TerminalContainer is the configuration for a terminal container.
+type TerminalContainer struct {
+	Image string `yaml:"image"`
+}
+
+// TerminalContainerImageDescription is the configuration for terminal image descriptions.
+type TerminalContainerImageDescription struct {
+	Image       string `yaml:"image"`
+	Description string `yaml:"description"`
+}
+
+// TerminalGardenHost is the configuration for the garden terminal host.
+type TerminalGardenHost struct {
+	SeedRef string `yaml:"seedRef"`
+}
+
+// TerminalGarden is the configuration for the garden terminals.
+type TerminalGarden struct {
+	OperatorCredentials TerminalOperatorCredentials `yaml:"operatorCredentials"`
+}
+
+// TerminalOperatorCredentials is the configuration for the operator credentials for terminals.
+type TerminalOperatorCredentials struct {
+	ServiceAccountRef corev1.SecretReference `yaml:"serviceAccountRef"`
 }
