@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -65,6 +66,7 @@ var _ = Describe("GardenerDashboard", func() {
 		image            = "gardener-dashboard-image:latest"
 		apiServerURL     = "https://api.com"
 		logLevel         = "debug"
+		ingressValues    = IngressValues{Domains: []string{"first", "second"}}
 		enableTokenLogin bool
 		terminal         *TerminalValues
 		oidc             *OIDCValues
@@ -89,6 +91,7 @@ var _ = Describe("GardenerDashboard", func() {
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
+		ingress                   *networkingv1.Ingress
 
 		clusterRole                      *rbacv1.ClusterRole
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
@@ -178,7 +181,7 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
-		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues) *corev1.ConfigMap {
+		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string) *corev1.ConfigMap {
 			obj := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard-config",
@@ -238,7 +241,7 @@ terminal:
     sessionLifetime: 43200
     redirect_uris:`
 
-				for _, domain := range oidc.IngressDomains {
+				for _, domain := range ingressDomains {
 					configRaw += `
         - https://dashboard.` + domain + `/auth/callback`
 				}
@@ -266,7 +269,7 @@ terminal:
 
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
-		}(enableTokenLogin, terminal, oidc)
+		}(enableTokenLogin, terminal, oidc, ingressValues.Domains)
 		deployment = func(oidc *OIDCValues) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -543,6 +546,63 @@ terminal:
 				},
 			},
 		}
+		ingress = &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-dashboard",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				},
+				Annotations: map[string]string{
+					"nginx.ingress.kubernetes.io/ssl-redirect":          "true",
+					"nginx.ingress.kubernetes.io/use-port-in-redirects": "true",
+				},
+			},
+			Spec: networkingv1.IngressSpec{
+				IngressClassName: ptr.To("nginx-ingress-gardener"),
+				TLS: []networkingv1.IngressTLS{{
+					SecretName: "gardener-dashboard-tls",
+					Hosts:      []string{"dashboard.first", "dashboard.second"},
+				}},
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "dashboard.first",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{{
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "gardener-dashboard",
+											Port: networkingv1.ServiceBackendPort{Number: 8080},
+										},
+									},
+									Path:     "/",
+									PathType: ptr.To(networkingv1.PathTypePrefix),
+								}},
+							},
+						},
+					},
+					{
+						Host: "dashboard.second",
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{{
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "gardener-dashboard",
+											Port: networkingv1.ServiceBackendPort{Number: 8080},
+										},
+									},
+									Path:     "/",
+									PathType: ptr.To(networkingv1.PathTypePrefix),
+								}},
+							},
+						},
+					},
+				},
+			},
+		}
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -658,6 +718,7 @@ terminal:
 			EnableTokenLogin: enableTokenLogin,
 			Terminal:         terminal,
 			OIDC:             oidc,
+			Ingress:          ingressValues,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -749,6 +810,7 @@ terminal:
 					service,
 					podDisruptionBudget,
 					vpa,
+					ingress,
 				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
@@ -811,7 +873,6 @@ terminal:
 						},
 						IssuerURL:      "http://issuer",
 						ClientIDPublic: "public-client",
-						IngressDomains: []string{"first", "second"},
 					}
 
 					Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oidc.DashboardOIDC.SecretRef.Name, Namespace: namespace}})).To(Succeed())

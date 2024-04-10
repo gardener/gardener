@@ -58,6 +58,8 @@ type Values struct {
 	APIServerURL string
 	// EnableTokenLogin specifies whether token-based login is enabled.
 	EnableTokenLogin bool
+	// Ingress contains the ingress configuration.
+	Ingress IngressValues
 	// Terminal contains the terminal configuration.
 	Terminal *TerminalValues
 	// OIDC is the configuration for the OIDC settings.
@@ -78,8 +80,15 @@ type OIDCValues struct {
 	IssuerURL string
 	// ClientIDPublic is the public client ID.
 	ClientIDPublic string
-	// IngressDomains is the list of ingress domains.
-	IngressDomains []string
+}
+
+// IngressValues contains the Ingress configuration.
+type IngressValues struct {
+	// Domains is the list of ingress domains.
+	Domains []string
+	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
+	// ingress domains. If not provided, a self-signed server certificate will be created.
+	WildcardCertSecretName *string
 }
 
 // Interface contains function for deploying the gardener-dashboard.
@@ -137,12 +146,18 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	ingress, err := g.ingress(ctx)
+	if err != nil {
+		return err
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		configMap,
 		deployment,
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
+		ingress,
 	)
 	if err != nil {
 		return err

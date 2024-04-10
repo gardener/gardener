@@ -80,9 +80,9 @@ func (g *gardenerDashboard) configMap() (*corev1.ConfigMap, error) {
 	}
 
 	if g.values.OIDC != nil {
-		redirectURIs := make([]string, 0, len(g.values.OIDC.IngressDomains))
-		for _, domain := range g.values.OIDC.IngressDomains {
-			redirectURIs = append(redirectURIs, "https://dashboard."+domain+"/auth/callback")
+		redirectURIs := make([]string, 0, len(g.ingressHosts()))
+		for _, host := range g.ingressHosts() {
+			redirectURIs = append(redirectURIs, "https://"+host+"/auth/callback")
 		}
 
 		cfg.OIDC = &config.OIDC{

@@ -243,7 +243,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager)
+	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1021,7 +1021,7 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
-func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerdashboard.Interface, error) {
+func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDashboard)
 	if err != nil {
 		return nil, err
@@ -1033,6 +1033,10 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		RuntimeVersion:   r.RuntimeVersion,
 		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 		EnableTokenLogin: true,
+		Ingress: gardenerdashboard.IngressValues{
+			Domains:                garden.Spec.RuntimeCluster.Ingress.Domains,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
@@ -1053,7 +1057,6 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 				DashboardOIDC:  *config.OIDC,
 				IssuerURL:      *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL,
 				ClientIDPublic: *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID,
-				IngressDomains: garden.Spec.RuntimeCluster.Ingress.Domains,
 			}
 		}
 	}
