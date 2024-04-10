@@ -40,12 +40,20 @@ const (
 
 	portServer  = 8080
 	portMetrics = 9050
+
+	readinessProbePeriodSeconds = 10
+
+	volumeMountPathConfig      = "/etc/gardener-dashboard/config"
+	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
+	volumeNameConfig           = "gardener-dashboard-config"
+	volumeNameLoginConfig      = "gardener-dashboard-login-config"
 )
 
 func (g *gardenerDashboard) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
+	configMapName string,
 ) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,6 +104,10 @@ func (g *gardenerDashboard) deployment(
 											Key:                  secretsutils.DataKeyPassword,
 										},
 									},
+								},
+								{
+									Name:  "GARDENER_CONFIG",
+									Value: volumeMountPathConfig + "/" + dataKeyConfig,
 								},
 								{
 									Name:  "KUBECONFIG",
@@ -166,7 +178,44 @@ func (g *gardenerDashboard) deployment(
 								TimeoutSeconds:      5,
 								FailureThreshold:    6,
 								SuccessThreshold:    1,
-								PeriodSeconds:       10,
+								PeriodSeconds:       readinessProbePeriodSeconds,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeNameConfig,
+									MountPath: volumeMountPathConfig,
+								},
+								{
+									Name:      volumeNameLoginConfig,
+									MountPath: volumeMountPathLoginConfig,
+									SubPath:   dataKeyLoginConfig,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: volumeNameConfig,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+									Items: []corev1.KeyToPath{{
+										Key:  dataKeyConfig,
+										Path: dataKeyConfig,
+									}},
+								},
+							},
+						},
+						{
+							Name: volumeNameLoginConfig,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+									Items: []corev1.KeyToPath{{
+										Key:  dataKeyLoginConfig,
+										Path: dataKeyLoginConfig,
+									}},
+								},
 							},
 						},
 					},

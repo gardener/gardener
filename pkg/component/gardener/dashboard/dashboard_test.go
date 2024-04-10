@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -59,7 +60,10 @@ var _ = Describe("GardenerDashboard", func() {
 		managedResourceNameVirtual = "gardener-dashboard-virtual"
 		namespace                  = "some-namespace"
 
-		image = "gardener-dashboard-image:latest"
+		image            = "gardener-dashboard-image:latest"
+		apiServerURL     = "https://api.com"
+		logLevel         = "debug"
+		enableTokenLogin bool
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -76,6 +80,8 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
+		newConfigMap              func(enableTokenLogin bool) *corev1.ConfigMap
+		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
@@ -86,15 +92,12 @@ var _ = Describe("GardenerDashboard", func() {
 	)
 
 	BeforeEach(func() {
+		enableTokenLogin = true
+
 		ctx = context.Background()
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
-		values = Values{
-			LogLevel:       "info",
-			RuntimeVersion: semver.MustParse("1.26.4"),
-			Image:          image,
-		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -128,7 +131,9 @@ var _ = Describe("GardenerDashboard", func() {
 				Namespace: namespace,
 			},
 		}
+	})
 
+	JustBeforeEach(func() {
 		virtualGardenAccessSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-gardener-dashboard",
@@ -165,6 +170,42 @@ var _ = Describe("GardenerDashboard", func() {
 				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
 			},
 		}
+		newConfigMap = func(enableTokenLogin bool) *corev1.ConfigMap {
+			obj := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-dashboard-config",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "gardener",
+						"role": "dashboard",
+					},
+				},
+				Data: make(map[string]string),
+			}
+
+			obj.Data["config.yaml"] = `port: 8080
+logFormat: text
+logLevel: ` + logLevel + `
+apiServerUrl: ` + apiServerURL + `
+maxRequestBodySize: 500kb
+experimentalUseWatchCacheForListShoots: "yes"
+readinessProbe:
+    periodSeconds: 10
+unreachableSeeds:
+    matchLabels:
+        seed.gardener.cloud/network: private
+`
+
+			if enableTokenLogin {
+				obj.Data["login-config.json"] = `{"loginTypes":["token"]}`
+			} else {
+				obj.Data["login-config.json"] = `{"loginTypes":null}`
+			}
+
+			utilruntime.Must(kubernetesutils.MakeUnique(obj))
+			return obj
+		}
+		configMap = newConfigMap(enableTokenLogin)
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -175,9 +216,10 @@ var _ = Describe("GardenerDashboard", func() {
 					"high-availability-config.resources.gardener.cloud/type": "server",
 				},
 				Annotations: map[string]string{
-					"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
-					"reference.resources.gardener.cloud/secret-da1c7d68": virtualGardenAccessSecret.Name,
-					"reference.resources.gardener.cloud/secret-73330522": sessionSecret.Name,
+					references.AnnotationKey("configmap", configMap.Name): configMap.Name,
+					"reference.resources.gardener.cloud/secret-867d23cd":  "generic-token-kubeconfig",
+					"reference.resources.gardener.cloud/secret-da1c7d68":  virtualGardenAccessSecret.Name,
+					"reference.resources.gardener.cloud/secret-73330522":  sessionSecret.Name,
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -199,9 +241,10 @@ var _ = Describe("GardenerDashboard", func() {
 							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
 						},
 						Annotations: map[string]string{
-							"reference.resources.gardener.cloud/secret-867d23cd": "generic-token-kubeconfig",
-							"reference.resources.gardener.cloud/secret-da1c7d68": virtualGardenAccessSecret.Name,
-							"reference.resources.gardener.cloud/secret-73330522": sessionSecret.Name,
+							references.AnnotationKey("configmap", configMap.Name): configMap.Name,
+							"reference.resources.gardener.cloud/secret-867d23cd":  "generic-token-kubeconfig",
+							"reference.resources.gardener.cloud/secret-da1c7d68":  virtualGardenAccessSecret.Name,
+							"reference.resources.gardener.cloud/secret-73330522":  sessionSecret.Name,
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -231,6 +274,10 @@ var _ = Describe("GardenerDashboard", func() {
 												Key:                  "password",
 											},
 										},
+									},
+									{
+										Name:  "GARDENER_CONFIG",
+										Value: "/etc/gardener-dashboard/config/config.yaml",
 									},
 									{
 										Name:  "KUBECONFIG",
@@ -302,6 +349,43 @@ var _ = Describe("GardenerDashboard", func() {
 									FailureThreshold:    6,
 									SuccessThreshold:    1,
 									PeriodSeconds:       10,
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "gardener-dashboard-config",
+										MountPath: "/etc/gardener-dashboard/config",
+									},
+									{
+										Name:      "gardener-dashboard-login-config",
+										MountPath: "/app/public/login-config.json",
+										SubPath:   "login-config.json",
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "gardener-dashboard-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+										Items: []corev1.KeyToPath{{
+											Key:  "config.yaml",
+											Path: "config.yaml",
+										}},
+									},
+								},
+							},
+							{
+								Name: "gardener-dashboard-login-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+										Items: []corev1.KeyToPath{{
+											Key:  "login-config.json",
+											Path: "login-config.json",
+										}},
+									},
 								},
 							},
 						},
@@ -442,9 +526,14 @@ var _ = Describe("GardenerDashboard", func() {
 				Namespace: "kube-system",
 			}},
 		}
-	})
 
-	JustBeforeEach(func() {
+		values = Values{
+			LogLevel:         logLevel,
+			RuntimeVersion:   semver.MustParse("1.26.4"),
+			Image:            image,
+			APIServerURL:     apiServerURL,
+			EnableTokenLogin: enableTokenLogin,
+		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -530,6 +619,7 @@ var _ = Describe("GardenerDashboard", func() {
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 				expectedRuntimeObject = []client.Object{
+					configMap,
 					deployment,
 					service,
 					podDisruptionBudget,
@@ -553,6 +643,16 @@ var _ = Describe("GardenerDashboard", func() {
 
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+			})
+
+			When("token login is disabled", func() {
+				BeforeEach(func() {
+					enableTokenLogin = false
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+				})
 			})
 
 			Context("secrets", func() {

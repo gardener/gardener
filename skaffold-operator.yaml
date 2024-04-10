@@ -86,6 +86,7 @@ build:
             - pkg/component/gardener/apiserver
             - pkg/component/gardener/controllermanager
             - pkg/component/gardener/dashboard
+            - pkg/component/gardener/dashboard/config
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/gardener/scheduler

@@ -430,6 +430,11 @@ const (
 	LabelKeyCustomLoggingResource = "fluentbit.gardener/type"
 	// LabelValueCustomLoggingResource is the value of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
 	LabelValueCustomLoggingResource = "seed"
+	// LabelSeedNetwork is used to specify whether the seed is reachable from the garden cluster.
+	LabelSeedNetwork = "seed.gardener.cloud/network"
+	// LabelSeedNetworkPrivate is used to specify that the seed is in private networks and not reachable from the garden
+	// cluster.
+	LabelSeedNetworkPrivate = "private"
 
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"

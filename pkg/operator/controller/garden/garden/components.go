@@ -1028,14 +1028,19 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 	}
 
 	values := gardenerdashboard.Values{
-		Image:          image.String(),
-		LogLevel:       logger.InfoLevel,
-		RuntimeVersion: r.RuntimeVersion,
+		Image:            image.String(),
+		LogLevel:         logger.InfoLevel,
+		RuntimeVersion:   r.RuntimeVersion,
+		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+		EnableTokenLogin: true,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
 		if config.LogLevel != nil {
 			values.LogLevel = *config.LogLevel
+		}
+		if config.EnableTokenLogin != nil {
+			values.EnableTokenLogin = *config.EnableTokenLogin
 		}
 	}
 

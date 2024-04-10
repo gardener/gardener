@@ -54,6 +54,10 @@ type Values struct {
 	LogLevel string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// APIServerURL is the URL of the API server of the virtual garden cluster.
+	APIServerURL string
+	// EnableTokenLogin specifies whether token-based login is enabled.
+	EnableTokenLogin bool
 }
 
 // New creates a new instance of DeployWaiter for the gardener-dashboard.
@@ -94,8 +98,14 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	configMap, err := g.configMap()
+	if err != nil {
+		return err
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
-		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name),
+		configMap,
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
