@@ -459,6 +459,10 @@ build:
             - plugin/pkg/shoot/oidc/clusteropenidconnectpreset
             - plugin/pkg/shoot/oidc/openidconnectpreset
             - plugin/pkg/shoot/quotavalidator
+            - plugin/pkg/shoot/resourcereservation
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/install
+            - plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/v1alpha1
             - plugin/pkg/shoot/tolerationrestriction
             - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction
             - plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/install
