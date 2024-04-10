@@ -40,7 +40,7 @@ require (
 	go.uber.org/mock v0.4.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.22.0
-	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
+	golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8
 	golang.org/x/text v0.14.0
 	golang.org/x/time v0.5.0
 	golang.org/x/tools v0.20.0
@@ -49,7 +49,7 @@ require (
 	google.golang.org/protobuf v1.33.0
 	helm.sh/helm/v3 v3.14.3
 	istio.io/api v1.19.9
-	istio.io/client-go v1.19.8
+	istio.io/client-go v1.19.9
 	k8s.io/api v0.29.3
 	k8s.io/apiextensions-apiserver v0.29.3
 	k8s.io/apimachinery v0.29.3
