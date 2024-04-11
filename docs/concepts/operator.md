@@ -169,11 +169,11 @@ The controller maintains the `.status.lastOperation` which indicates the status 
 
 ###### Garden Prometheus
 
-`gardener-operator` deploys a Prometheus instance in the `garden` namespace (called "garden Prometheus") which fetches metrics and data from garden system components, cAdvisors, the virtual cluster control plane, and the Seeds' aggregate Prometheus instances.
+`gardener-operator` deploys a Prometheus instance in the `garden` namespace (called "Garden Prometheus") which fetches metrics and data from garden system components, cAdvisors, the virtual cluster control plane, and the Seeds' aggregate Prometheus instances.
 Its purpose is to provide an entrypoint for operators when debugging issues with components running in the garden cluster.
 It also serves as the top-level aggregator of metering across a Gardener landscape.
 
-If you would like to extend the configuration for this garden Prometheus, you can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=garden`, for example:
+If you would like to extend the configuration for this Garden Prometheus, you can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=garden`, for example:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
