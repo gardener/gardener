@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -38,6 +39,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/gardenercustommetrics"
 	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
@@ -105,6 +107,7 @@ type components struct {
 	nginxIngressController   component.DeployWaiter
 	verticalPodAutoscaler    component.DeployWaiter
 	hvpaController           component.DeployWaiter
+	gardenerCustomMetrics    component.DeployWaiter
 	etcdDruid                component.DeployWaiter
 	clusterAutoscaler        component.DeployWaiter
 	machineControllerManager component.DeployWaiter
@@ -178,6 +181,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.hvpaController, err = r.newHVPA()
+	if err != nil {
+		return
+	}
+	c.gardenerCustomMetrics, err = r.newGardenerCustomMetics(secretsManager)
 	if err != nil {
 		return
 	}
@@ -499,6 +506,30 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	}
 
 	return
+}
+
+// newGardenerCustomMetics creates a [component.Deployer] for the gardener-custom-metrics component.
+func (r *Reconciler) newGardenerCustomMetics(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(
+		imagevector.ImageNameGardenerCustomMetics, imagevectorutils.TargetVersion(r.SeedVersion.String()))
+	if err != nil {
+		return nil, fmt.Errorf("An error occurred while creating the %s component - "+
+			"failed to find an image version suitable for seed version '%s' in the image vector. "+
+			"The error message reported by the underlying operation follows: %w",
+			imagevector.ImageNameGardenerCustomMetics,
+			r.SeedVersion,
+			err)
+	}
+
+	var gcmxDeployer component.DeployWaiter = gardenercustommetrics.NewGardenerCustomMetrics(
+		r.GardenNamespace, image.String(), r.SeedVersion, r.SeedClientSet.Client(), secretsManager)
+
+	if !features.DefaultFeatureGate.Enabled(features.BilinearPodAutoscalingForAPIServer) {
+		// Wrap the deployer in a thin wrapper which redirects Deploy calls to Destroy
+		gcmxDeployer = component.OpDestroyWithoutWait(gcmxDeployer)
+	}
+
+	return gcmxDeployer, nil
 }
 
 func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {

@@ -139,7 +139,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:     component.OpDestroyAndWait(c.clusterIdentity).Destroy,
 			SkipIf: !seedIsOriginOfClusterIdentity,
 		})
-
 		destroyDNSRecord = g.Add(flow.Task{
 			Name: "Destroying managed ingress DNS record (if existing)",
 			Fn:   component.OpDestroyAndWait(c.ingressDNSRecord).Destroy,
@@ -242,6 +241,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:     component.OpDestroyAndWait(c.hvpaController).Destroy,
 			SkipIf: seedIsGarden,
 		})
+		destroyGardenerCustomMetrics = g.Add(flow.Task{
+			Name:   "Destroy gardener-custom-metrics",
+			Fn:     component.OpDestroyAndWait(c.gardenerCustomMetrics).Destroy,
+			SkipIf: seedIsGarden,
+		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name:   "Destroy kube-state-metrics",
 			Fn:     component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
@@ -283,6 +287,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyGardenerCustomMetrics,
 			destroyClusterIdentity,
 			destroyCachePrometheus,
 			destroySeedPrometheus,
