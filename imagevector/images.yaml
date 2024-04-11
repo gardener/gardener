@@ -619,6 +619,12 @@ images:
         integrity_requirement: 'high'
         availability_requirement: 'high'
 
+  # Bilinear pod autoscaler
+- name: gardener-custom-metrics
+  sourceRepository: github.com/gardener/gardener-custom-metrics
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-custom-metrics
+  tag: "v0.1.0"
+
 # Horizontal cluster-proportional-autoscaler
 - name: cluster-proportional-autoscaler
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler

@@ -116,6 +116,7 @@ var (
 		druidv1alpha1.AddToScheme,
 		machinev1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
 		fluentbitv1alpha2.AddToScheme,
