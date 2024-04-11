@@ -83,8 +83,6 @@ spec:
             value: /var/run/secrets/remote/config
           - name: PILOT_TRACE_SAMPLING
             value: "1"
-          - name: ISTIOD_ADDR
-            value: istiod.{{ .Release.Namespace }}.svc:15012
           - name: PILOT_ENABLE_ANALYSIS
             value: "false"
           - name: CLUSTER_ID
