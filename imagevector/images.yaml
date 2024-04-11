@@ -197,7 +197,7 @@ images:
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: quay.io/prometheus-operator/prometheus-config-reloader
-  tag: v0.73.0
+  tag: v0.73.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
