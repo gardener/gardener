@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+    app: istio-ingressgateway
+    foo: bar
+  name: proxy-protocol-sni
+  namespace: test-ingress
+spec:
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar
+  configPatches:
+  - applyTo: LISTENER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+    patch:
+      operation: MERGE
+      value:
+        listener_filters:
+        - name: proxy_protocol
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
+            allow_requests_without_proxy_protocol: true
+        - name: envoy.filters.listener.tls_inspector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector

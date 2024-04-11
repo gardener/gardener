@@ -237,6 +237,16 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioProxyProtocolEnvoyFilterSNI = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_sni.yaml")
+			return string(data)
+		}
+
+		istioProxyProtocolEnvoyFilterVPN = func() string {
+			data, _ := os.ReadFile("./test_charts/proxyprotocol_envoyfilter_vpn.yaml")
+			return string(data)
+		}
+
 		istioProxyProtocolGateway = func() string {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_gateway.yaml")
 			return string(data)
@@ -375,7 +385,7 @@ var _ = Describe("istiod", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+			Expect(managedResourceIstioSecret.Data).To(HaveLen(17))
 			Expect(managedResourceIstioSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -390,7 +400,9 @@ var _ = Describe("istiod", func() {
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["servicemonitor__istio-system__aggregate-istio-ingressgateway.yaml"]), istioIngressServiceMonitor())).To(BeEmpty())
 
 			By("Verify istio-proxy-protocol resources")
-			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"]), istioProxyProtocolEnvoyFilter())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol.yaml"]), istioProxyProtocolEnvoyFilter())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-sni.yaml"]), istioProxyProtocolEnvoyFilterSNI())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-vpn.yaml"]), istioProxyProtocolEnvoyFilterVPN())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"]), istioProxyProtocolGateway())).To(BeEmpty())
 			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"]), istioProxyProtocolVirtualService())).To(BeEmpty())
 
@@ -452,7 +464,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy pdb with the correct spec", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(17))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
 				managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
@@ -657,7 +669,7 @@ var _ = Describe("istiod", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(14))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"]), istioIngressDeployment(nil))).To(BeEmpty())
