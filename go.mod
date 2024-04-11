@@ -47,7 +47,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/protobuf v1.33.0
-	helm.sh/helm/v3 v3.14.3
+	helm.sh/helm/v3 v3.14.4
 	istio.io/api v1.19.9
 	istio.io/client-go v1.19.9
 	k8s.io/api v0.29.3
