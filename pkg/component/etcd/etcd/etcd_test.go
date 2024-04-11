@@ -1960,10 +1960,10 @@ var _ = Describe("Etcd", func() {
 					},
 				)
 
-			expectedHvpa := hvpaObj.DeepCopy()
-			expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
-			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To[int32](3)
-			test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
+				expectedHvpa := hvpaObj.DeepCopy()
+				expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
+				expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To[int32](3)
+				test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
 
 				Expect(etcd.Scale(ctx, 3)).To(Succeed())
 			})
