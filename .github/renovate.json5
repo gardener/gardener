@@ -78,6 +78,12 @@
       ],
     },
     {
+      // Group prometheus-operator image updates in one PR.
+      "groupName": "prometheus-operator images",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["quay\\.io\/prometheus-operator\/.+"],
+    },
+    {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
