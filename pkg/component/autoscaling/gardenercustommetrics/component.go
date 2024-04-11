@@ -47,8 +47,6 @@ type GardenerCustomMetrics struct {
 
 	seedClient     client.Client
 	secretsManager secretsmanager.Interface
-
-	testIsolation gardenerCustomMetricsTestIsolation // Provides indirections necessary to isolate the unit during tests
 }
 
 // NewGardenerCustomMetrics creates a new GardenerCustomMetrics instance tied to a specific server connection.
@@ -72,11 +70,6 @@ func NewGardenerCustomMetrics(
 		kubernetesVersion:  kubernetesVersion,
 		seedClient:         seedClient,
 		secretsManager:     secretsManager,
-
-		testIsolation: gardenerCustomMetricsTestIsolation{
-			CreateForSeed: managedresources.CreateForSeed,
-			DeleteForSeed: managedresources.DeleteForSeed,
-		},
 	}
 }
 
@@ -105,7 +98,7 @@ func (gcmx *GardenerCustomMetrics) Deploy(ctx context.Context) error {
 			err)
 	}
 
-	err = gcmx.testIsolation.CreateForSeed(
+	err = managedresources.CreateForSeed(
 		ctx,
 		gcmx.seedClient,
 		gcmx.namespaceName,
@@ -125,7 +118,7 @@ func (gcmx *GardenerCustomMetrics) Deploy(ctx context.Context) error {
 
 // Destroy implements [component.Deployer.Destroy]()
 func (gcmx *GardenerCustomMetrics) Destroy(ctx context.Context) error {
-	if err := gcmx.testIsolation.DeleteForSeed(ctx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
 		return fmt.Errorf(
 			"An error occurred while removing the gardener-custom-metrics component in namespace '%s' from the seed server"+
 				" - failed to remove ManagedResource '%s'. "+
@@ -184,16 +177,6 @@ const (
 	serverCertificateSecretName = componentBaseName + "-tls" // GCMx's HTTPS serving certificate
 	managedResourceTimeout      = 2 * time.Minute            // Timeout for ManagedResources to become healthy or deleted
 )
-
-// gardenerCustomMetricsTestIsolation contains all points of indirection necessary to isolate GardenerCustomMetrics'
-// dependencies on external static functions during test.
-type gardenerCustomMetricsTestIsolation struct {
-	// Points to [managedresources.CreateForSeed]()
-	CreateForSeed func(
-		ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error
-	// Points to [managedresources.DeleteForSeed]()
-	DeleteForSeed func(ctx context.Context, client client.Client, namespace, name string) error
-}
 
 // Deploys the GCMx server TLS certificate to a secret and returns the name of the created secret
 func (gcmx *GardenerCustomMetrics) deployServerCertificate(ctx context.Context) (*corev1.Secret, error) {
