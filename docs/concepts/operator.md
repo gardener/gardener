@@ -147,6 +147,9 @@ The Gardener control plane components are:
 - `gardener-controller-manager`
 - `gardener-scheduler`
 
+Besides those, the optional [Gardener Dashboard](https://github.com/gardener/dashboard) will also get deployed when `.spec.virtualCluster.gardener.gardenerDashboard` is set.
+You can read more about it and its configuration in [this section](#dashboard).
+
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
 - `fluent-operator`
@@ -164,6 +167,72 @@ It is also mandatory to provide an IPv4 CIDR for the service network of the virt
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `.status.lastOperation` which indicates the status of an operation.
+
+##### Dashboard
+
+`.spec.virtualCluster.gardener.gardenerDashboard` serves a few configuration options for the dashboard.
+This section highlights the most prominent fields:
+
+1. `frontendConfigMapRef`: Reference a `ConfigMap` here that contains the frontend configuration, for example
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: gardener-dashboard-frontend
+     namespace: garden
+   data:
+     config.yaml: |
+       helpMenuItems:
+       - title: Homepage
+         icon: mdi-file-document
+         url: https://gardener.cloud
+   ```
+   This also includes branding, themes, colors, and icons/logos.
+   Read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/customization.md).
+2. `gitHub`: You can connect a GitHub repository that can be used to create issues for shoot clusters in the cluster details page.
+   You have to reference a `Secret` that contains the GitHub credentials, for example:
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: gardener-dashboard-github
+     namespace: garden
+   type: Opaque
+   stringData:
+     # This is for GitHub token authentication:
+     authentication.token: <secret>
+     # Alternatively, this is for GitHub app authentication:
+     authentication.appId: <secret>
+     authentication.clientId: <secret>
+     authentication.clientSecret: <secret>
+     authentication.installationId: <secret>
+     authentication.privateKey: <secret>
+     # This is the webhook secret, see explanation below
+     webhookSecret: <secret>
+   ```
+   Note that you should also setup a GitHub webhook to the dashboard such that it receives updates when somebody changes the GitHub issue.
+   The `webhookSecret` field is the secret that you enter in GitHub in the webhook configuration. The dashboard uses it to verify that received traffic is indeed originated from GitHub.
+3. `oidc`: The general OIDC configuration is part of `.spec.virtualCluster.kubernetes.kubeAPIServer.oidc`, but this section allows you to define a few specific settings for the dashboard.
+   `sessionLifetime` is the duration after which a session is terminated (i.e., after which a user is automatically logged out).
+   `additionalScopes` allows to extend the list of scopes of the JWT token that are to be recognized.
+   You must reference a `Secret` containing the client ID/secret for the dashboard:
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: gardener-dashboard-oidc
+     namespace: garden
+   type: Opaque
+   stringData:
+     client_id: <secret>
+     client_secret: <secret>
+   ```
+4. `enableTokenLogin`: This is enabled by default and allows logging into the dashboard with a JWT token.
+   You can disable it in case you want to only allow OIDC-based login.
+   However, at least one of the both login methods must be enabled.
+5. `terminal`: This enables the web terminal feature, read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md).
+   The `allowedHostSourceList` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
+   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
 
 ##### Observability
 
