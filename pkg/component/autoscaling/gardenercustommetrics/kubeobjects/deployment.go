@@ -52,9 +52,9 @@ func makeDeployment(deploymentName, namespace, containerImageName, serverSecretN
 					Labels: map[string]string{
 						v1beta1constants.LabelApp:                                                  gcmxBaseName,
 						v1beta1constants.GardenRole:                                                gcmxBaseName,
-						v1beta1constants.LabelNetworkPolicyToDNS:                                   "allowed",
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                      "allowed",
-						"networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443": "allowed",
+						v1beta1constants.LabelNetworkPolicyToDNS:                                   v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                      v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443": v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 				Spec: corev1.PodSpec{

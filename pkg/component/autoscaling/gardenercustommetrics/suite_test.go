@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPrometheusMetricsAdapter(t *testing.T) {
+func TestGardenerCustomMetrics(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "gardener-custom-metrics component unit test suite")
+	RunSpecs(t, "Component Autoscaling GardenerCustomMetrics Suite")
 }
