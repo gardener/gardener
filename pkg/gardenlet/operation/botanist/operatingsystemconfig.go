@@ -46,9 +46,19 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	oscImages, err := imagevectorutils.FindImages(imagevector.ImageVector(), []string{imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail, imagevector.ImageNameGardenerNodeAgent}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	oscImages, err := imagevectorutils.FindImages(imagevector.ImageVector(), []string{imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
+	}
+
+	// This image is intentionally not part of the above FindImages call because this function defaults the image tag to
+	// the ShootVersion (which is the Kubernetes version of the shoot cluster) in case the image tag in the image vector
+	// is not set. This is true for gardener-node-agent because gardenlet always deploys it with its own version (ref
+	// WithOptionalTag call a few lines below).
+	// See also: https://github.com/gardener/gardener/issues/9577
+	oscImages[imagevector.ImageNameGardenerNodeAgent], err = imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerNodeAgent)
+	if err != nil {
+		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ImageNameGardenerNodeAgent, err)
 	}
 	oscImages[imagevector.ImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
 
