@@ -249,6 +249,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	var (
 		primaryIPFamily = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
 		networks        []cidrvalidation.CIDR
+		vpnNetwork      cidrvalidation.CIDR
 	)
 
 	if !inTemplate || len(seedNetworks.Pods) > 0 {
@@ -260,6 +261,25 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	if seedNetworks.Nodes != nil {
 		networks = append(networks, cidrvalidation.NewCIDR(*seedNetworks.Nodes, fldPath.Child("nodes")))
 	}
+
+	if seedNetworks.VPN != nil {
+		// vpn network must be a valid network and must match the primary IP family (see below)
+		vpnNetwork = cidrvalidation.NewCIDR(*seedNetworks.VPN, fldPath.Child("vpn"))
+		// vpn network must be disjoint with the other networks (see below)
+		networks = append(networks, vpnNetwork)
+
+		// vpn network must be a /24 network for IPv4 and /120 for IPv6
+		if vpnCIDR := vpnNetwork.GetIPNet(); vpnCIDR != nil {
+			prefix, _ := vpnCIDR.Mask.Size()
+			if primaryIPFamily == core.IPFamilyIPv4 && prefix != 24 {
+				allErrs = append(allErrs, field.Invalid(vpnNetwork.GetFieldPath(), vpnNetwork.GetCIDR(), "VPN network must have a /24 prefix for IPv4 seeds"))
+			}
+			if primaryIPFamily == core.IPFamilyIPv6 && prefix != 120 {
+				allErrs = append(allErrs, field.Invalid(vpnNetwork.GetFieldPath(), vpnNetwork.GetCIDR(), "VPN network must have a /120 prefix for IPv6 seeds"))
+			}
+		}
+	}
+
 	if shootDefaults := seedNetworks.ShootDefaults; shootDefaults != nil {
 		if shootDefaults.Pods != nil {
 			networks = append(networks, cidrvalidation.NewCIDR(*shootDefaults.Pods, fldPath.Child("shootDefaults", "pods")))
@@ -275,11 +295,6 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(networks, string(primaryIPFamily))...)
 	}
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
-
-	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
-	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
-	vpnRangeV6 := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRangeV6, field.NewPath(""))
-	allErrs = append(allErrs, vpnRangeV6.ValidateNotOverlap(networks...)...)
 
 	return allErrs
 }

@@ -26,3 +26,14 @@ func ConsistOfFields(fields ...gstruct.Fields) types.GomegaMatcher {
 	}
 	return gomega.ConsistOf(m...)
 }
+
+// ContainFields succeeds if actual contains elements matching all respective fields.
+// Actual must be an array, slice or map. For maps, ContainFields searches through the map's values.
+// Actual's elements must be pointers.
+func ContainFields(fields ...gstruct.Fields) types.GomegaMatcher {
+	var m []interface{}
+	for _, f := range fields {
+		m = append(m, HaveFields(f))
+	}
+	return gomega.ContainElements(m...)
+}
