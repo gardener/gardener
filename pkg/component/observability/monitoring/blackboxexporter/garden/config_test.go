@@ -72,6 +72,17 @@ var _ = Describe("Config", func() {
 						IPProtocol: "ipv4",
 					},
 				},
+				"http_gardener_dashboard": {
+					Prober:  "http",
+					Timeout: 10 * time.Second,
+					HTTP: blackboxexporterconfig.HTTPProbe{
+						Headers: map[string]string{
+							"Accept":          "*/*",
+							"Accept-Language": "en-US",
+						},
+						IPProtocol: "ipv4",
+					},
+				},
 			}}))
 		})
 	})

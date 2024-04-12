@@ -28,12 +28,13 @@ import (
 var _ = Describe("ScrapeConfig", func() {
 	Describe("#ScrapeConfig", func() {
 		var (
-			namespace            = "namespace"
-			kubeAPIServerTargets = []monitoringv1alpha1.Target{"target1", "target2"}
+			namespace               = "namespace"
+			kubeAPIServerTargets    = []monitoringv1alpha1.Target{"target1", "target2"}
+			gardenerDashboardTarget = monitoringv1alpha1.Target("target3")
 		)
 
-		It("should compute the scrape config for {gardener,kube}-apiserver", func() {
-			Expect(ScrapeConfig(namespace, kubeAPIServerTargets)).To(ContainElements(
+		It("should compute the scrape configs", func() {
+			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget)).To(ContainElements(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -132,6 +133,56 @@ var _ = Describe("ScrapeConfig", func() {
 							{
 								Action:      "replace",
 								Replacement: "blackbox-apiserver",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
+						}},
+					},
+				},
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-blackbox-dashboard",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						Params:      map[string][]string{"module": {"http_gardener_dashboard"}},
+						MetricsPath: ptr.To("/probe"),
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
+							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__address__"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "__param_target",
+								Replacement:  `$1`,
+								Action:       "replace",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__param_target"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "instance",
+								Replacement:  `$1`,
+								Action:       "replace",
+							},
+							{
+								Separator:   ptr.To(";"),
+								Regex:       `(.*)`,
+								TargetLabel: "__address__",
+								Replacement: "blackbox-exporter:9115",
+								Action:      "replace",
+							},
+							{
+								Action:      "replace",
+								Replacement: "blackbox-dashboard",
 								TargetLabel: "job",
 							},
 						},

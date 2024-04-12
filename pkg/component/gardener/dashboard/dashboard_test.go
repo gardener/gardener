@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -96,6 +97,7 @@ var _ = Describe("GardenerDashboard", func() {
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                   *networkingv1.Ingress
+		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		clusterRole                      *rbacv1.ClusterRole
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
@@ -577,16 +579,27 @@ terminal:
 					"app":  "gardener",
 					"role": "dashboard",
 				},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9050}]`,
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
 				Selector: GetLabels(),
-				Ports: []corev1.ServicePort{{
-					Name:       "http",
-					Port:       8080,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt32(8080),
-				}},
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "http",
+						Port:       8080,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt32(8080),
+					},
+					{
+						Name:       "metrics",
+						Port:       9050,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt32(9050),
+					},
+				},
 				SessionAffinity: corev1.ServiceAffinityClientIP,
 			},
 		}
@@ -694,6 +707,26 @@ terminal:
 						},
 					},
 				},
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-dashboard",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "dashboard",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+				}},
 			},
 		}
 
@@ -952,6 +985,7 @@ terminal:
 					podDisruptionBudget,
 					vpa,
 					ingress,
+					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
 					clusterRole,

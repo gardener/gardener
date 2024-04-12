@@ -165,6 +165,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
 		ingress,
+		g.serviceMonitor(),
 	)
 	if err != nil {
 		return err

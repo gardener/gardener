@@ -1195,7 +1195,10 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 }
 
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (blackboxexporter.Interface, error) {
-	kubeAPIServerTargets := []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
+	var (
+		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")
+	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
 		for _, domainPattern := range garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns {
@@ -1221,7 +1224,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
-			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets),
+			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
 		},
 	)
 }
