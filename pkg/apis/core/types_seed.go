@@ -150,6 +150,12 @@ type SeedNetworks struct {
 	Pods string
 	// Services is the CIDR of the service network. This field is immutable.
 	Services string
+	// VPN is the CIDR of the vpn network (spanning vpn-seed-server and vpn-shoot) of shoots on this seed. It must be
+	// disjoint with the Nodes, Pods, and Services networks. It must be a /24 network for IPv4 and /120 for IPv6.
+	// This field is mutable. Changing it leads to a temporary VPN disconnect during the next reconciliation of all shoots
+	// on this seed.
+	// Defaults to "192.168.123.0/24" or "fd8f:6d53:b97a:1::/120" depending on the primary IPFamilies configuration.
+	VPN *string
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	ShootDefaults *ShootNetworks
 	// BlockCIDRs is a list of network addresses that should be blocked for shoot control plane components running

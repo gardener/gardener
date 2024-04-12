@@ -3965,6 +3965,11 @@ func (in *SeedNetworks) DeepCopyInto(out *SeedNetworks) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.VPN != nil {
+		in, out := &in.VPN, &out.VPN
+		*out = new(string)
+		**out = **in
+	}
 	if in.ShootDefaults != nil {
 		in, out := &in.ShootDefaults, &out.ShootDefaults
 		*out = new(ShootNetworks)

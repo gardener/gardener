@@ -9429,6 +9429,22 @@ string
 </tr>
 <tr>
 <td>
+<code>vpn</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VPN is the CIDR of the vpn network (spanning vpn-seed-server and vpn-shoot) of shoots on this seed. It must be
+disjoint with the Nodes, Pods, and Services networks. It must be a /24 network for IPv4 and /120 for IPv6.
+This field is mutable. Changing it leads to a temporary VPN disconnect during the next reconciliation of all shoots
+on this seed.
+Defaults to &ldquo;192.168.123.0/24&rdquo; or &ldquo;fd8f:6d53:b97a:1::/120&rdquo; depending on the primary IPFamilies configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>shootDefaults</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ShootNetworks">

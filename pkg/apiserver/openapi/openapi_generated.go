@@ -6847,6 +6847,13 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"vpn": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VPN is the CIDR of the vpn network (spanning vpn-seed-server and vpn-shoot) of shoots on this seed. It must be disjoint with the Nodes, Pods, and Services networks. It must be a /24 network for IPv4 and /120 for IPv6. This field is mutable. Changing it leads to a temporary VPN disconnect during the next reconciliation of all shoots on this seed. Defaults to \"192.168.123.0/24\" or \"fd8f:6d53:b97a:1::/120\" depending on the primary IPFamilies configuration.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"shootDefaults": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ShootDefaults contains the default networks CIDRs for shoots.",
