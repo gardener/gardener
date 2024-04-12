@@ -244,6 +244,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       nodes: ` + *seed.Spec.Networks.Nodes + `
       pods: ` + seed.Spec.Networks.Pods + `
       services: ` + seed.Spec.Networks.Services + `
+      vpn: 192.168.123.0/24
     protected: false
     provider: ` + seed.Spec.Provider.Type + `
     region: ` + seed.Spec.Provider.Region + `
@@ -264,6 +265,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
         nodes: ` + *seed.Spec.Networks.Nodes + `
         pods: ` + seed.Spec.Networks.Pods + `
         services: ` + seed.Spec.Networks.Services + `
+        vpn: 192.168.123.0/24
       provider:
         region: ` + seed.Spec.Provider.Region + `
         type: ` + seed.Spec.Provider.Type + `

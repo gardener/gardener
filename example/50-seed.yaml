@@ -40,6 +40,7 @@ spec:
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17
     services: 10.241.0.0/17
+  # vpn: 192.168.123.0/24
   # shootDefaults:
   #   pods: 100.96.0.0/11
   #   services: 100.64.0.0/13
