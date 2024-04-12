@@ -69,6 +69,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 						`{__name__=~"seed:(.+):sum"}`,
 						`{__name__=~"seed:(.+):sum_cp"}`,
 						`{__name__=~"seed:(.+):sum_by_pod",namespace=~"extension-(.+)"}`,
+						`{__name__=~"seed:(.+):sum_by_container",__name__!="seed:kube_pod_container_status_restarts_total:sum_by_container",container="kube-apiserver"}`,
 						`{__name__=~"shoot:(.+):(.+)",__name__!="shoot:apiserver_storage_objects:sum_by_resource",__name__!="shoot:apiserver_watch_duration:quantile"}`,
 						`{__name__="ALERTS"}`,
 						`{__name__="shoot:availability"}`,
