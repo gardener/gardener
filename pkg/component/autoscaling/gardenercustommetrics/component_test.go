@@ -50,7 +50,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("GardenerCustomMetrics", func() {
+var _ = Describe("gardenerCustomMetrics", func() {
 	const (
 		managedResourceName = "gardener-custom-metrics"
 
@@ -86,7 +86,7 @@ var _ = Describe("GardenerCustomMetrics", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		component = NewGardenerCustomMetrics(namespace, image, kubernetesVersion, c, sm)
+		component = New(namespace, image, kubernetesVersion, c, sm)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -474,7 +474,7 @@ var _ = Describe("GardenerCustomMetrics", func() {
 		Context("Kubernetes versions >= 1.26", func() {
 			BeforeEach(func() {
 				kubernetesVersion = semver.MustParse("1.26.2")
-				component = NewGardenerCustomMetrics(namespace, image, kubernetesVersion, c, sm)
+				component = New(namespace, image, kubernetesVersion, c, sm)
 			})
 
 			It("should successfully deploy all resources", func() {

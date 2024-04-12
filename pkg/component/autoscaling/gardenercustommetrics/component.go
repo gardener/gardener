@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package gardenercustommetrics implements the gardener-custom-metrics seed component (aka GCMx).
-// For details, see the GardenerCustomMetrics type.
+// For details, see the gardenerCustomMetrics type.
 package gardenercustommetrics
 
 import (
@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/gardenercustommetrics/kubeobjects"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -36,11 +37,11 @@ import (
 // ComponentName is the component name.
 const ComponentName = componentBaseName
 
-// GardenerCustomMetrics manages an instance of the gardener-custom-metrics component (aka GCMx). The component is
+// gardenerCustomMetrics manages an instance of the gardener-custom-metrics component (aka GCMx). The component is
 // deployed on a seed, scrapes the metrics from all shoot kube-apiserver pods, and provides custom metrics by
 // registering as APIService at the custom metrics extension point of the seed kube-apiserver.
-// For information about individual fields, see the NewGardenerCustomMetrics function.
-type GardenerCustomMetrics struct {
+// For information about individual fields, see the New function.
+type gardenerCustomMetrics struct {
 	namespaceName      string
 	containerImageName string
 	kubernetesVersion  *semver.Version
@@ -49,7 +50,7 @@ type GardenerCustomMetrics struct {
 	secretsManager secretsmanager.Interface
 }
 
-// NewGardenerCustomMetrics creates a new GardenerCustomMetrics instance tied to a specific server connection.
+// New creates a new gardenerCustomMetrics instance tied to a specific server connection.
 //
 // namespace is where the server-side artefacts (e.g. pods) will be deployed (usually the 'garden' namespace).
 // containerImageName points to the binary for the gardener-custom-metrics pods. The exact version to be used, is
@@ -58,13 +59,13 @@ type GardenerCustomMetrics struct {
 // false, this instance strives to uninstall the component.
 // seedClient represents the connection to the seed API server.
 // secretsManager is used to interact with secrets on the seed.
-func NewGardenerCustomMetrics(
+func New(
 	namespace string,
 	containerImageName string,
 	kubernetesVersion *semver.Version,
 	seedClient client.Client,
-	secretsManager secretsmanager.Interface) *GardenerCustomMetrics {
-	return &GardenerCustomMetrics{
+	secretsManager secretsmanager.Interface) component.DeployWaiter {
+	return &gardenerCustomMetrics{
 		namespaceName:      namespace,
 		containerImageName: containerImageName,
 		kubernetesVersion:  kubernetesVersion,
@@ -74,7 +75,7 @@ func NewGardenerCustomMetrics(
 }
 
 // Deploy implements [component.Deployer.Deploy]()
-func (gcmx *GardenerCustomMetrics) Deploy(ctx context.Context) error {
+func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 	baseErrorMessage :=
 		fmt.Sprintf(
 			"An error occurred while deploying gardener-custom-metrics component in namespace '%s' of the seed server",
@@ -117,7 +118,7 @@ func (gcmx *GardenerCustomMetrics) Deploy(ctx context.Context) error {
 }
 
 // Destroy implements [component.Deployer.Destroy]()
-func (gcmx *GardenerCustomMetrics) Destroy(ctx context.Context) error {
+func (gcmx *gardenerCustomMetrics) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForSeed(ctx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
 		return fmt.Errorf(
 			"An error occurred while removing the gardener-custom-metrics component in namespace '%s' from the seed server"+
@@ -132,7 +133,7 @@ func (gcmx *GardenerCustomMetrics) Destroy(ctx context.Context) error {
 }
 
 // Wait implements [component.Waiter.Wait]()
-func (gcmx *GardenerCustomMetrics) Wait(ctx context.Context) error {
+func (gcmx *gardenerCustomMetrics) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
 
@@ -151,7 +152,7 @@ func (gcmx *GardenerCustomMetrics) Wait(ctx context.Context) error {
 }
 
 // WaitCleanup implements [component.Waiter.WaitCleanup]()
-func (gcmx *GardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
+func (gcmx *gardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
 
@@ -170,16 +171,19 @@ func (gcmx *GardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 }
 
 const (
-	componentBaseName           = "gardener-custom-metrics"
-	deploymentName              = componentBaseName
-	managedResourceName         = componentBaseName // The implementing artifacts are deployed to the seed via this MR
-	serviceName                 = componentBaseName
-	serverCertificateSecretName = componentBaseName + "-tls" // GCMx's HTTPS serving certificate
-	managedResourceTimeout      = 2 * time.Minute            // Timeout for ManagedResources to become healthy or deleted
+	componentBaseName = "gardener-custom-metrics"
+	deploymentName    = componentBaseName
+	// The implementing artifacts are deployed to the seed via this MR
+	managedResourceName = componentBaseName
+	serviceName         = componentBaseName
+	// GCMx's HTTPS serving certificate
+	serverCertificateSecretName = componentBaseName + "-tls"
+	// Timeout for ManagedResources to become healthy or deleted
+	managedResourceTimeout = 2 * time.Minute
 )
 
 // Deploys the GCMx server TLS certificate to a secret and returns the name of the created secret
-func (gcmx *GardenerCustomMetrics) deployServerCertificate(ctx context.Context) (*corev1.Secret, error) {
+func (gcmx *gardenerCustomMetrics) deployServerCertificate(ctx context.Context) (*corev1.Secret, error) {
 	const baseErrorMessage = "An error occurred while deploying server TLS certificate for gardener-custom-metrics"
 
 	_, found := gcmx.secretsManager.Get(v1beta1constants.SecretNameCASeed)

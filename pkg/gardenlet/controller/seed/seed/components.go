@@ -521,7 +521,7 @@ func (r *Reconciler) newGardenerCustomMetics(secretsManager secretsmanager.Inter
 			err)
 	}
 
-	var gcmxDeployer component.DeployWaiter = gardenercustommetrics.NewGardenerCustomMetrics(
+	var gcmxDeployer component.DeployWaiter = gardenercustommetrics.New(
 		r.GardenNamespace, image.String(), r.SeedVersion, r.SeedClientSet.Client(), secretsManager)
 
 	if !features.DefaultFeatureGate.Enabled(features.BilinearPodAutoscalingForAPIServer) {
