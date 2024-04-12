@@ -26,6 +26,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+const portNameMetrics = "metrics"
+
 func (a *gardenerAdmissionController) service() *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,7 +46,7 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 					TargetPort: intstr.FromInt32(serverPort),
 				},
 				{
-					Name:       "metrics",
+					Name:       portNameMetrics,
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(metricsPort),
 					TargetPort: intstr.FromInt32(metricsPort),
@@ -55,6 +57,11 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt32(serverPort),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(svc, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(metricsPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

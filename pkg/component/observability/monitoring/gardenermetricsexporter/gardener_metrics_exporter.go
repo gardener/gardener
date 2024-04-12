@@ -94,6 +94,7 @@ func (g *gardenerMetricsExporter) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
 		g.service(),
+		g.serviceMonitor(),
 	)
 	if err != nil {
 		return err

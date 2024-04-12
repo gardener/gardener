@@ -195,7 +195,10 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			if clusterType == component.ClusterTypeSeed {
-				obj.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`}
+				obj.Annotations = map[string]string{
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports":   `[{"protocol":"TCP","port":8080}]`,
+				}
 			}
 			if clusterType == component.ClusterTypeShoot {
 				obj.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`}
@@ -517,6 +520,55 @@ var _ = Describe("KubeStateMetrics", func() {
 				}},
 			},
 		}
+		scrapeConfigGarden = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-kube-state-metrics",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       "service",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+				}},
+				RelabelConfigs: []*monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_label_component",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "kube-state-metrics;metrics",
+						Action: "keep",
+					},
+					{
+						Action:      "replace",
+						Replacement: "kube-state-metrics",
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "instance",
+						Replacement: "kube-state-metrics",
+					},
+				},
+				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"pod"},
+						Regex:        `^.+\.tf-pod.+$`,
+						Action:       "drop",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"namespace"},
+						Regex:        "garden",
+						Action:       "drop",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(kube_pod_container_status_restarts_total|kube_pod_status_phase)$`,
+					},
+				},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -675,6 +727,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					vpa,
 					scrapeConfigCache,
 					scrapeConfigSeed,
+					scrapeConfigGarden,
 				}
 
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name

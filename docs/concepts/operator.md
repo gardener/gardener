@@ -129,9 +129,12 @@ Instead, the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernete
 Third-party components that need to communicate with the virtual cluster can leverage the [`gardener-resource-manager`'s `TokenRequestor` controller](resource-manager.md#tokenrequestor-controller) and the generic kubeconfig, just like it works for `Shoot`s.
 Please note, that this functionality is restricted to the `garden` namespace. The current `Secret` name of the generic kubeconfig can be found in the annotations (key: `generic-token-kubeconfig.secret.gardener.cloud/name`) of the `Garden` resource.
 
-For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domains`.
-**The respective DNS record is not managed by `gardener-operator` and should be created manually. It should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.**
-The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
+For the virtual cluster, it is essential to provide at least one DNS domain via `.spec.virtualCluster.dns.domains`.
+**The respective DNS records are not managed by `gardener-operator` and should be created manually.
+They should point to the load balancer IP of the `istio-ingressgateway` `Service` in namespace `virtual-garden-istio-ingress`.
+The DNS records must be prefixed with both `gardener.` and `api.` for all domains in `.spec.virtualCluster.dns.domains`.**
+
+The first DNS domain in this list is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
 
 Apart from the control plane components of the virtual cluster, the reconcile also deploys the control plane components of Gardener.
 `gardener-apiserver` reuses the same ETCDs like the `virtual-garden-kube-apiserver`, so all data related to the "the garden cluster" is stored together and "isolated" from ETCD data related to the runtime cluster.
@@ -154,6 +157,8 @@ The reconciler also manages a few observability-related components (more planned
 - `vali`
 - `prometheus-operator`
 - `alertmanager-garden` (read more [here](#observability))
+- `prometheus-garden` (read more [here](#observability))
+- `blackbox-exporter`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
@@ -161,6 +166,37 @@ This range is used by the API server to compute the cluster IPs of `Service`s.
 The controller maintains the `.status.lastOperation` which indicates the status of an operation.
 
 ##### Observability
+
+###### Garden Prometheus
+
+`gardener-operator` deploys a Prometheus instance in the `garden` namespace (called "Garden Prometheus") which fetches metrics and data from garden system components, cAdvisors, the virtual cluster control plane, and the Seeds' aggregate Prometheus instances.
+Its purpose is to provide an entrypoint for operators when debugging issues with components running in the garden cluster.
+It also serves as the top-level aggregator of metering across a Gardener landscape.
+
+If you would like to extend the configuration for this Garden Prometheus, you can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=garden`, for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: garden
+  name: garden-my-component
+  namespace: garden
+spec:
+  selector:
+    matchLabels:
+      app: my-component
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(metric1|metric2|...)$
+      sourceLabels:
+      - __name__
+    port: metrics
+```
+
+###### Alertmanager
 
 By default, the `alertmanager-garden` deployed by `gardener-operator` does not come with any configuration.
 It is the responsibility of the human operators to design and provide it.

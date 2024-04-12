@@ -1,0 +1,544 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: metering-meta
+spec:
+  groups:
+  - name: metering.rules.meta
+    interval: 60s
+    rules:
+
+  # - _year_month2
+
+    - record: _year_month2
+      expr: |2
+          count_values without () (
+            "year",
+            year(timestamp(count_values without () ("month", month(timestamp(vector(0))))))
+          )
+        *
+          0
+
+  # garden_shoot_info:this_month
+
+    - record: garden_shoot_info:this_month
+      expr: |2
+          (garden_shoot_info + on () group_left (year, month) _year_month2)
+        or
+          last_over_time(garden_shoot_info:this_month[30m]) + on (year, month) group_left () _year_month2
+
+  # _timestamp
+
+    - record: _timestamp
+      expr: |
+        count_values without () ("timestamp", round(timestamp(vector(0)))) * 0
+
+  # garden_shoot_info:timestamp
+
+    - record: garden_shoot_info:timestamp
+      expr: |2
+          (
+              last_over_time(garden_shoot_info:timestamp[30m])
+            or ignoring (timestamp)
+              garden_shoot_info + on () group_left (timestamp) _timestamp
+          )
+        and ignoring (timestamp)
+          garden_shoot_info
+
+  # garden_shoot_info :timestamp :this_month
+
+    - record: garden_shoot_info:timestamp:this_month
+      expr: |2
+          (garden_shoot_info:timestamp + on () group_left (year, month) _year_month2)
+        or
+          last_over_time(garden_shoot_info:timestamp:this_month[30m]) + on (year, month) group_left () _year_month2
+
+  # - metering :cpu_requests             :sum_by_namespace :meta
+  # - metering :cpu_usage                :sum_by_namespace :meta
+  # - metering :memory_requests          :sum_by_namespace :meta
+  # - metering :memory_usage             :sum_by_namespace :meta
+  # - metering :network_receive          :sum_by_namespace :meta
+  # - metering :network_transmit         :sum_by_namespace :meta
+  # - metering :persistent_volume_claims :sum_by_namespace :meta
+  # - metering :persistent_volume_usage  :sum_by_namespace :meta
+  # - metering :working_set_memory       :sum_by_namespace :meta
+
+    - record: metering:cpu_requests:sum_by_namespace:meta
+      expr: |2
+          metering:cpu_requests:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:cpu_usage:sum_by_namespace:meta
+      expr: |2
+          metering:cpu_usage:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:memory_requests:sum_by_namespace:meta
+      expr: |2
+          metering:memory_requests:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:memory_usage:sum_by_namespace:meta
+      expr: |2
+          metering:memory_usage:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:network_receive:sum_by_namespace:meta
+      expr: |2
+          metering:network_receive:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:network_transmit:sum_by_namespace:meta
+      expr: |2
+          metering:network_transmit:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:persistent_volume_claims:sum_by_namespace:meta
+      expr: |2
+          metering:persistent_volume_claims:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:persistent_volume_usage:sum_by_namespace:meta
+      expr: |2
+          metering:persistent_volume_usage:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+    - record: metering:working_set_memory:sum_by_namespace:meta
+      expr: |2
+          metering:working_set_memory:sum_by_namespace{shoot_uid!=""}
+        + on (shoot_uid, seed) group_left (project, name, failure_tolerance, version, cost_object, cost_object_owner, iaas, region, seed_iaas, seed_region, is_seed, timestamp)
+          garden_shoot_info:timestamp
+
+  # - metering   :memory_usage_seconds   :meta
+  # - metering   :disk_usage_seconds     :meta
+  # - metering   :memory_usage_seconds   :meta      :this_month
+  # - metering   :disk_usage_seconds     :meta      :this_month
+
+    - record: metering:memory_usage_seconds:meta
+      expr: |2
+          (metering:working_set_memory:sum_by_namespace:meta > bool 0) * 60
+        +
+          (last_over_time(metering:memory_usage_seconds:meta[30m]) or metering:working_set_memory:sum_by_namespace:meta * 0)
+
+    - record: metering:disk_usage_seconds:meta
+      expr: |2
+          (metering:persistent_volume_claims:sum_by_namespace:meta > bool 0) * 60
+        +
+          (
+              last_over_time(metering:disk_usage_seconds:meta[30m])
+            or
+              metering:persistent_volume_claims:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:memory_usage_seconds:meta:this_month
+      expr: |2
+          metering:memory_usage_seconds:meta
+        or
+            last_over_time(metering:memory_usage_seconds:meta:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:disk_usage_seconds:meta:this_month
+      expr: |2
+          metering:disk_usage_seconds:meta
+        or
+            last_over_time(metering:disk_usage_seconds:meta:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+  # - metering  :persistent_volume_claims   :sum_by_namespace   :meta   :sum_over_time
+  # - metering  :persistent_volume_claims   :sum_by_namespace   :meta   :avg_over_time
+  # - metering  :persistent_volume_claims   :sum_by_namespace   :meta   :avg_over_time   :this_month
+
+    - record: metering:persistent_volume_claims:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:persistent_volume_claims:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:persistent_volume_claims:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:persistent_volume_claims:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:persistent_volume_claims:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:persistent_volume_claims:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:disk_usage_seconds:meta != 0)
+
+    - record: metering:persistent_volume_claims:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:persistent_volume_claims:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:persistent_volume_claims:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+  # - metering  :cpu_usage                 :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :cpu_usage                 :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :cpu_usage                 :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :cpu_requests              :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :cpu_requests              :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :cpu_requests              :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :memory_usage              :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :memory_usage              :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :memory_usage              :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :working_set_memory        :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :working_set_memory        :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :working_set_memory        :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :memory_requests           :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :memory_requests           :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :memory_requests           :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :network_transmit          :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :network_transmit          :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :network_transmit          :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :network_receive           :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :network_receive           :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :network_receive           :sum_by_namespace           :meta            :avg_over_time             :this_month
+  # - metering  :persistent_volume_usage   :sum_by_namespace           :meta            :sum_over_time
+  # - metering  :persistent_volume_usage   :sum_by_namespace           :meta            :avg_over_time
+  # - metering  :persistent_volume_usage   :sum_by_namespace           :meta            :avg_over_time             :this_month
+
+    - record: metering:cpu_usage:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:cpu_usage:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:cpu_usage:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:cpu_usage:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:cpu_usage:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:cpu_usage:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:cpu_usage:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:cpu_usage:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:cpu_usage:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:cpu_requests:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:cpu_requests:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:cpu_requests:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:cpu_requests:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:cpu_requests:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:cpu_requests:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:cpu_requests:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:cpu_requests:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:cpu_requests:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:memory_usage:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:memory_usage:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:memory_usage:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:memory_usage:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:memory_usage:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:memory_usage:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:memory_usage:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:memory_usage:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:memory_usage:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:working_set_memory:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:working_set_memory:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:working_set_memory:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:working_set_memory:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:working_set_memory:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:working_set_memory:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:working_set_memory:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:working_set_memory:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:working_set_memory:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:memory_requests:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:memory_requests:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:memory_requests:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:memory_requests:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:memory_requests:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:memory_requests:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:memory_requests:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:memory_requests:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:memory_requests:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:network_transmit:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:network_transmit:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:network_transmit:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:network_transmit:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:network_transmit:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:network_transmit:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:network_transmit:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:network_transmit:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:network_transmit:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:network_receive:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:network_receive:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:network_receive:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:network_receive:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:network_receive:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:network_receive:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:network_receive:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:network_receive:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:network_receive:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:persistent_volume_usage:sum_by_namespace:meta:sum_over_time
+      expr: |2
+          metering:persistent_volume_usage:sum_by_namespace:meta
+        +
+          (
+              last_over_time(metering:persistent_volume_usage:sum_by_namespace:meta:sum_over_time[30m])
+            or
+              metering:persistent_volume_usage:sum_by_namespace:meta * 0
+          )
+
+    - record: metering:persistent_volume_usage:sum_by_namespace:meta:avg_over_time
+      expr: |2
+          metering:persistent_volume_usage:sum_by_namespace:meta:sum_over_time * 60
+        /
+          (metering:memory_usage_seconds:meta != 0)
+
+    - record: metering:persistent_volume_usage:sum_by_namespace:meta:avg_over_time:this_month
+      expr: |2
+          metering:persistent_volume_usage:sum_by_namespace:meta:avg_over_time
+        or
+            last_over_time(metering:persistent_volume_usage:sum_by_namespace:meta:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+  # - metering  :node_capacity             :sum_by_instance_type   :sum_over_time
+  # - metering  :node_capacity             :sum_by_instance_type   :count_over_time
+  # - metering  :node_capacity             :sum_by_instance_type   :count_over_time :this_month
+  # - metering  :node_capacity             :sum_by_instance_type   :avg_over_time
+  # - metering  :node_capacity             :sum_by_instance_type   :avg_over_time   :this_month
+
+    - record: metering:node_capacity:sum_by_instance_type:sum_over_time
+      expr: |2
+          metering:node_capacity:sum_by_instance_type
+        +
+          (
+              last_over_time(metering:node_capacity:sum_by_instance_type:sum_over_time[30m])
+            or
+              metering:node_capacity:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_capacity:sum_by_instance_type:count_over_time
+      expr: |2
+          1 + metering:node_capacity:sum_by_instance_type * 0
+        +
+          (
+              last_over_time(metering:node_capacity:sum_by_instance_type:count_over_time[30m])
+            or
+              metering:node_capacity:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_capacity:sum_by_instance_type:count_over_time:this_month
+      expr: |2
+          metering:node_capacity:sum_by_instance_type:count_over_time
+        or
+            last_over_time(metering:node_capacity:sum_by_instance_type:count_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:node_capacity:sum_by_instance_type:avg_over_time
+      expr: |2
+          metering:node_capacity:sum_by_instance_type:sum_over_time
+        /
+          metering:node_capacity:sum_by_instance_type:count_over_time
+
+    - record: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month
+      expr: |2
+          metering:node_capacity:sum_by_instance_type:avg_over_time
+        or
+            last_over_time(metering:node_capacity:sum_by_instance_type:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+  # - metering  :node_cp_usage             :sum_by_instance_type   :sum_over_time
+  # - metering  :node_cp_usage             :sum_by_instance_type   :count_over_time
+  # - metering  :node_cp_usage             :sum_by_instance_type   :count_over_time :this_month
+  # - metering  :node_cp_usage             :sum_by_instance_type   :avg_over_time
+  # - metering  :node_cp_usage             :sum_by_instance_type   :avg_over_time   :this_month
+
+    - record: metering:node_cp_usage:sum_by_instance_type:sum_over_time
+      expr: |2
+          metering:node_cp_usage:sum_by_instance_type
+        +
+          (
+              last_over_time(metering:node_cp_usage:sum_by_instance_type:sum_over_time[30m])
+            or
+              metering:node_cp_usage:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_cp_usage:sum_by_instance_type:count_over_time
+      expr: |2
+          1 + metering:node_cp_usage:sum_by_instance_type * 0
+        +
+          (
+              last_over_time(metering:node_cp_usage:sum_by_instance_type:count_over_time[30m])
+            or
+              metering:node_cp_usage:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month
+      expr: |2
+          metering:node_cp_usage:sum_by_instance_type:count_over_time
+        or
+            last_over_time(metering:node_cp_usage:sum_by_instance_type:count_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:node_cp_usage:sum_by_instance_type:avg_over_time
+      expr: |2
+          metering:node_cp_usage:sum_by_instance_type:sum_over_time
+        /
+          metering:node_cp_usage:sum_by_instance_type:count_over_time
+
+    - record: metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month
+      expr: |2
+          metering:node_cp_usage:sum_by_instance_type:avg_over_time
+        or
+            last_over_time(metering:node_cp_usage:sum_by_instance_type:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+  # - metering  :node_cp_requests             :sum_by_instance_type   :sum_over_time
+  # - metering  :node_cp_requests             :sum_by_instance_type   :count_over_time
+  # - metering  :node_cp_requests             :sum_by_instance_type   :count_over_time :this_month
+  # - metering  :node_cp_requests             :sum_by_instance_type   :avg_over_time
+  # - metering  :node_cp_requests             :sum_by_instance_type   :avg_over_time   :this_month
+
+    - record: metering:node_cp_requests:sum_by_instance_type:sum_over_time
+      expr: |2
+          metering:node_cp_requests:sum_by_instance_type
+        +
+          (
+              last_over_time(metering:node_cp_requests:sum_by_instance_type:sum_over_time[30m])
+            or
+              metering:node_cp_requests:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_cp_requests:sum_by_instance_type:count_over_time
+      expr: |2
+          1 + metering:node_cp_requests:sum_by_instance_type * 0
+        +
+          (
+              last_over_time(metering:node_cp_requests:sum_by_instance_type:count_over_time[30m])
+            or
+              metering:node_cp_requests:sum_by_instance_type * 0
+          )
+
+    - record: metering:node_cp_requests:sum_by_instance_type:count_over_time:this_month
+      expr: |2
+          metering:node_cp_requests:sum_by_instance_type:count_over_time
+        or
+            last_over_time(metering:node_cp_requests:sum_by_instance_type:count_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2
+
+    - record: metering:node_cp_requests:sum_by_instance_type:avg_over_time
+      expr: |2
+          metering:node_cp_requests:sum_by_instance_type:sum_over_time
+        /
+          metering:node_cp_requests:sum_by_instance_type:count_over_time
+
+    - record: metering:node_cp_requests:sum_by_instance_type:avg_over_time:this_month
+      expr: |2
+          metering:node_cp_requests:sum_by_instance_type:avg_over_time
+        or
+            last_over_time(metering:node_cp_requests:sum_by_instance_type:avg_over_time:this_month[30m])
+          + on (year, month) group_left ()
+            _year_month2

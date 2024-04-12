@@ -69,10 +69,22 @@ var (
 		monitoringv1.AddToScheme,
 		monitoringv1beta1.AddToScheme,
 		monitoringv1alpha1.AddToScheme,
+		func(scheme *runtime.Scheme) error {
+			apiextensionsinstall.Install(scheme)
+			return nil
+		},
 	)
 	virtualSchemeBuilder = runtime.NewSchemeBuilder(
 		kubernetesscheme.AddToScheme,
 		apiregistrationv1.AddToScheme,
+		func(scheme *runtime.Scheme) error {
+			apiextensionsinstall.Install(scheme)
+			gardencoreinstall.Install(scheme)
+			seedmanagementinstall.Install(scheme)
+			settingsinstall.Install(scheme)
+			operationsinstall.Install(scheme)
+			return nil
+		},
 	)
 
 	// AddRuntimeSchemeToScheme adds all object kinds used in the runtime cluster into the given scheme.
@@ -83,12 +95,5 @@ var (
 
 func init() {
 	utilruntime.Must(AddRuntimeSchemeToScheme(RuntimeScheme))
-	apiextensionsinstall.Install(RuntimeScheme)
-
 	utilruntime.Must(AddVirtualSchemeToScheme(VirtualScheme))
-	apiextensionsinstall.Install(VirtualScheme)
-	gardencoreinstall.Install(VirtualScheme)
-	seedmanagementinstall.Install(VirtualScheme)
-	settingsinstall.Install(VirtualScheme)
-	operationsinstall.Install(VirtualScheme)
 }

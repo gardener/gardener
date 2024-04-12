@@ -41,9 +41,9 @@ const (
 // Interface contains functions for an alertmanager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetIngressAuthSecret sets the ingress auth secret name.
+	// SetIngressAuthSecret sets the ingress authentication secret name.
 	SetIngressAuthSecret(*corev1.Secret)
-	// SetIngressWildcardCertSecret sets the ingress wildcard cert secret name.
+	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
 	SetIngressWildcardCertSecret(*corev1.Secret)
 }
 
@@ -205,9 +205,14 @@ func (a *alertManager) name() string {
 }
 
 func (a *alertManager) getLabels() map[string]string {
+	return GetLabels(a.values.Name)
+}
+
+// GetLabels returns the labels for the given name.
+func GetLabels(name string) map[string]string {
 	return map[string]string{
 		"component":                "alertmanager",
 		v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring,
-		"alertmanager":             a.values.Name,
+		"alertmanager":             name,
 	}
 }

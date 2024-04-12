@@ -59,7 +59,7 @@ func (m *managedResourceObjectsMatcher) createMessage(actual interface{}, additi
 
 	switch {
 	case len(m.mismatchExpectedToActual) > 0:
-		message = fmt.Sprintf("Expected for ManagedResource %s/%s the following object mismathes %s found:\n", managedResource.Namespace, managedResource.Name, addition)
+		message = fmt.Sprintf("Expected for ManagedResource %s/%s the following object mismatches %s found:\n", managedResource.Namespace, managedResource.Name, addition)
 		for expected, actual := range m.mismatchExpectedToActual {
 			message += format.MessageWithDiff(actual, "to equal", expected)
 		}

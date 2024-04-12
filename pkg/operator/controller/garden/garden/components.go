@@ -20,11 +20,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -70,7 +73,11 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
+	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -125,6 +132,8 @@ type components struct {
 	vali                          component.Deployer
 	prometheusOperator            component.DeployWaiter
 	alertManager                  alertmanager.Interface
+	prometheus                    prometheus.Interface
+	blackboxExporter              blackboxexporter.Interface
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -267,6 +276,14 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.prometheus, err = r.newPrometheus(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager)
 	if err != nil {
 		return
 	}
@@ -782,11 +799,13 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 	)
 }
 
+const gardenerDNSNamePrefix = "gardener."
+
 func getAPIServerDomains(domains []string) []string {
 	apiServerDomains := make([]string, 0, len(domains)*2)
 	for _, domain := range domains {
 		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain))
-		apiServerDomains = append(apiServerDomains, "gardener."+domain)
+		apiServerDomains = append(apiServerDomains, gardenerDNSNamePrefix+domain)
 	}
 	return apiServerDomains
 }
@@ -1075,4 +1094,75 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 			},
 		},
 	})
+}
+
+func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "garden",
+		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "200Gi")),
+		Replicas:          2,
+		Retention:         ptr.To(monitoringv1.Duration("10d")),
+		RetentionSize:     "190GB",
+		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
+		RuntimeVersion:    r.RuntimeVersion,
+		ExternalLabels:    map[string]string{"landscape": garden.Spec.VirtualCluster.Gardener.ClusterIdentity},
+		VPAMaxAllowed: &corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("4"),
+			corev1.ResourceMemory: resource.MustParse("50G"),
+		},
+		AdditionalPodLabels: map[string]string{
+			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		CentralConfigs: prometheus.CentralConfigs{
+			AdditionalScrapeConfigs: gardenprometheus.AdditionalScrapeConfigs(),
+			PrometheusRules:         gardenprometheus.CentralPrometheusRules(),
+			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
+		},
+		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
+		Ingress: &prometheus.IngressValues{
+			Host:                   "prometheus-garden." + ingressDomain,
+			SecretsManager:         secretsManager,
+			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "garden-prometheus",
+			PVCNames: []string{
+				"prometheus-db-garden-prometheus-0",
+				"prometheus-db-garden-prometheus-1",
+			},
+		},
+	})
+}
+
+func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (blackboxexporter.Interface, error) {
+	kubeAPIServerTargets := []monitoringv1alpha1.Target{monitoringv1alpha1.Target(gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0])}
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
+		for _, domainPattern := range garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns {
+			if !strings.Contains(domainPattern, "*") {
+				kubeAPIServerTargets = append(kubeAPIServerTargets, monitoringv1alpha1.Target(domainPattern))
+			}
+		}
+	}
+
+	return sharedcomponent.NewBlackboxExporter(
+		r.RuntimeClientSet.Client(),
+		secretsManager,
+		r.GardenNamespace,
+		blackboxexporter.Values{
+			ClusterType:       component.ClusterTypeSeed,
+			VPAEnabled:        true,
+			KubernetesVersion: r.RuntimeVersion,
+			PodLabels: map[string]string{
+				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias+"-"+v1beta1constants.DefaultSNIIngressServiceName, 9443): v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(gardenerapiserver.DeploymentName, 8443):                                                                                v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+			Config:            gardenblackboxexporter.Config(),
+			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets),
+		},
+	)
 }

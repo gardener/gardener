@@ -78,6 +78,8 @@ var _ = Describe("Virtual", func() {
 		clusterRoleProjectViewerAggregated                *rbacv1.ClusterRole
 		roleReadClusterIdentityConfigMap                  *rbacv1.Role
 		roleBindingReadClusterIdentityConfigMap           *rbacv1.RoleBinding
+		clusterRoleMetricsScraper                         *rbacv1.ClusterRole
+		clusterRoleBindingMetricsScraper                  *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -597,6 +599,30 @@ var _ = Describe("Virtual", func() {
 				Name:     "system:authenticated",
 			}},
 		}
+		clusterRoleMetricsScraper = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:metrics-scraper",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				NonResourceURLs: []string{"/metrics"},
+				Verbs:           []string{"get"},
+			}},
+		}
+		clusterRoleBindingMetricsScraper = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:metrics-scraper",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:metrics-scraper",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus-garden",
+				Namespace: "kube-system",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -657,6 +683,8 @@ var _ = Describe("Virtual", func() {
 				clusterRoleProjectViewer,
 				roleReadClusterIdentityConfigMap,
 				roleBindingReadClusterIdentityConfigMap,
+				clusterRoleMetricsScraper,
+				clusterRoleBindingMetricsScraper,
 			))
 		})
 

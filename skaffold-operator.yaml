@@ -106,11 +106,14 @@ build:
             - pkg/component/observability/logging/vali/constants
             - pkg/component/observability/monitoring
             - pkg/component/observability/monitoring/alertmanager
+            - pkg/component/observability/monitoring/blackboxexporter
+            - pkg/component/observability/monitoring/blackboxexporter/garden
             - pkg/component/observability/monitoring/gardenermetricsexporter
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
             - pkg/component/observability/monitoring/prometheus/cache
+            - pkg/component/observability/monitoring/prometheus/garden
             - pkg/component/observability/monitoring/prometheus/seed
             - pkg/component/observability/monitoring/prometheusoperator
             - pkg/component/observability/monitoring/utils

@@ -66,6 +66,7 @@ var _ = BeforeSuite(func() {
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+				filepath.Join("testdata", "crd-seeds.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,

@@ -144,7 +144,6 @@ func (s *service) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: ptr.To(corev1.ProtocolTCP)}))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -153,7 +152,9 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from istio-ingress components to kube-apiserver.
+		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: ptr.To(corev1.ProtocolTCP)}
 		if isShootNamespace(obj.Namespace) {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkPolicyPort))
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 
 			namespaceSelectors = append(namespaceSelectors,
@@ -161,13 +162,14 @@ func (s *service) Deploy(ctx context.Context) error {
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
 			)
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(obj, networkPolicyPort))
 		}
+
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
-
-		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
-
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
+		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		obj.Spec.Type = corev1.ServiceTypeClusterIP
 		obj.Spec.Selector = getLabels()
 		obj.Spec.Ports = kubernetesutils.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{

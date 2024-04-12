@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -119,6 +120,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		clusterRoleBinding               *rbacv1.ClusterRoleBinding
 		clusterRoleBindingAuthDelegation *rbacv1.ClusterRoleBinding
 		roleBindingAuthReader            *rbacv1.RoleBinding
+		serviceMonitor                   *monitoringv1.ServiceMonitor
 	)
 
 	BeforeEach(func() {
@@ -213,7 +215,8 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:      "gardener-apiserver",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
+						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
 					},
 					Labels: map[string]string{
 						"app":  "gardener",
@@ -752,6 +755,33 @@ var _ = Describe("GardenerAPIServer", func() {
 				Name:      "gardener-apiserver",
 				Namespace: "kube-system",
 			}},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-apiserver",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					TargetPort: ptr.To(intstr.FromInt32(8443)),
+					Scheme:     "https",
+					TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+						Key:                  "token",
+					}},
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_request_total|apiserver_storage_objects|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_registered_watchers|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_request_duration_seconds_.+|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|go_.+|apiserver_cache_list_.+|apiserver_storage_list_.+)$`,
+					}},
+				}},
+			},
 		}
 	})
 
@@ -1425,7 +1455,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
-					expectedRuntimeObjects = []client.Object{deployment}
+					expectedRuntimeObjects = []client.Object{deployment, serviceMonitor}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))

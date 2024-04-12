@@ -1,0 +1,239 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: etcd
+spec:
+  groups:
+  - name: etcd
+    rules:
+    - alert: EtcdMainDown
+      expr: |
+        sum(
+          up{job  = "virtual-garden-etcd",
+            role = "main"}
+        ) < 2
+      for: 5m
+      labels:
+        severity: critical
+        topology: garden
+        service: VirtualGardenEtcd
+        role: main
+      annotations:
+        summary: >-
+          Virtual garden etcd main cluster is down in landscape
+          {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss. As
+          long as etcd main is down the virtual garden cluster is unreachable.
+
+    - alert: EtcdEventsDown
+      expr: |
+        sum(
+          up{job  = "virtual-garden-etcd",
+            role = "events"}
+        ) < 2
+      for: 15m
+      labels:
+        severity: info
+        topology: garden
+        service: VirtualGardenEtcd
+        role: events
+      annotations:
+        summary: >-
+          Virtual garden etcd events cluster is down in landscape
+          {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
+          Cluster events cannot be collected.
+
+    - alert: EtcdMainNoLeader
+      expr: |
+        sum(
+          etcd_server_has_leader{job  = "virtual-garden-etcd",
+                                role = "main"}
+        )
+        <
+        count(
+          etcd_server_has_leader{job  = "virtual-garden-etcd",
+                                role = "main"}
+        )
+      for: 10m
+      labels:
+        severity: critical
+        topology: garden
+        service: VirtualGardenEtcd
+        role: main
+      annotations:
+        summary: >-
+          Virtual garden etcd main has no leader in landscape
+          {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd main has no leader. Possible network partition in the etcd cluster.
+
+    - alert: EtcdEventsNoLeader
+      expr: |
+        sum(
+          etcd_server_has_leader{job  = "virtual-garden-etcd",
+                                role = "events"}
+        )
+        <
+        count(
+          etcd_server_has_leader{job  = "virtual-garden-etcd",
+                                role = "events"}
+        )
+      for: 15m
+      labels:
+        severity: info
+        topology: garden
+        service: VirtualGardenEtcd
+        role: events
+      annotations:
+        summary: >-
+          Virtual garden etcd events has no leader in landscape
+          {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd events has no leader. Possible network partition in the etcd cluster.
+
+    - alert: EtcdHighNumberOfFailedProposals
+      expr: |
+        increase(
+          etcd_server_proposals_failed_total{job="virtual-garden-etcd"}[1h]
+        ) > 80
+      labels:
+        severity: info
+        topology: garden
+        service: VirtualGardenEtcd
+      annotations:
+        summary: >-
+          High number of failed virtual garden etcd {{$labels.role}} proposals in
+          landscape {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd {{$labels.role}} has seen {{$value}} proposal
+          failures within the last hour.
+
+    - record: virtual_garden:apiserver_storage_objects:max_by_resource
+      expr: |
+        max by (resource) (
+            apiserver_storage_objects
+        )
+
+    - alert: EtcdDbSizeLimitApproaching
+      expr: |
+        ( etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
+          > bool 4294967296
+        )
+        +
+        ( etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
+          <= bool 8589900000
+        )
+        == 2 # between 4GB and 8GB
+      labels:
+        severity: warning
+        topology: garden
+        service: VirtualGardenEtcd
+      annotations:
+        summary: >-
+          Virtual garden etcd {{$labels.role}} DB size is approaching its current
+          practical limit in landscape {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd {{$labels.role}} DB size is approaching its current
+          practical limit of 8GB. Etcd quota might need to be increased.
+
+    - alert: EtcdDbSizeLimitCrossed
+      expr: |
+        etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
+        > 8589900000 # above 8GB
+      labels:
+        severity: critical
+        topology: garden
+        service: VirtualGardenEtcd
+      annotations:
+        summary: >-
+          Virtual garden etcd {{$labels.role}} DB size has crossed its current
+          practical limit in landscape {{$externalLabels.landscape}}.
+        description: >
+          Virtual garden etcd {{$labels.role}} DB size has crossed its current
+          practical limit of 8GB. Etcd quota must be increased to allow updates.
+
+    - alert: EtcdDeltaBackupFailed
+      expr: |
+        (( time()
+          -
+          etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
+                                          kind = "Incr",
+                                          role = "main"}
+          > bool 900
+        )
+        +
+        ( etcdbr_snapshot_required{kind = "Incr",
+                                  role = "main"}
+          >= bool 1
+        )
+        == 2
+        )
+        +
+        on(pod,role)
+        group_left 0 *
+        ( etcd_server_is_leader{job = "virtual-garden-etcd-backup", role = "main"}
+        == 1
+        )
+      for: 15m
+      labels:
+        severity: critical
+        topology: garden
+        service: VirtualGardenEtcd
+      annotations:
+        summary: >-
+          Virtual garden etcd delta snapshot failure in landscape
+          {{$externalLabels.landscape}}.
+        description: No delta snapshot for the past at least 30 minutes taken by backup-restore leader.
+
+    - alert: EtcdFullBackupFailed
+      expr: |
+        (( time()
+          -
+          etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
+                                          kind = "Full",
+                                          role = "main"}
+          > bool 86400
+        )
+        +
+        ( etcdbr_snapshot_required{kind = "Full",
+                                  role = "main"}
+          >= bool 1
+        )
+        == 2
+        )
+        +
+        on(pod,role)
+        group_left 0 *
+        ( etcd_server_is_leader{job="virtual-garden-etcd-backup",role="main"}
+        == 1
+        )
+      for: 15m
+      labels:
+        severity: critical
+        topology: garden
+        service: VirtualGardenEtcd
+      annotations:
+        summary: >-
+          Virtual garden etcd full snapshot failure in landscape
+          {{$externalLabels.landscape}}.
+        description: No full snapshot taken in the past day taken by backup-restore leader.
+
+    - alert: EtcdRestorationFailed
+      expr: |
+        rate(
+          etcdbr_restoration_duration_seconds_count{job       = "virtual-garden-etcd-backup",
+                                                    role      = "main",
+                                                    succeeded = "false"}[2m]
+        )
+        > 0
+      for: 1m
+      labels:
+        service: VirtualGardenEtcd
+        severity: critical
+      annotations:
+        summary: Virtual garden etcd data restoration failure.
+        description: >
+          Virtual garden etcd data restoration was triggered, but has failed.

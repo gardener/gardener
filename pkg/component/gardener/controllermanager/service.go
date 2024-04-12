@@ -16,11 +16,19 @@ package controllermanager
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
+
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const serviceName = DeploymentName
+const (
+	serviceName     = DeploymentName
+	portNameMetrics = "metrics"
+)
 
 func (g *gardenerControllerManager) service() *corev1.Service {
 	service := &corev1.Service{
@@ -33,13 +41,18 @@ func (g *gardenerControllerManager) service() *corev1.Service {
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: GetLabels(),
 			Ports: []corev1.ServicePort{{
-				Name:       "metrics",
+				Name:       portNameMetrics,
 				Port:       int32(metricsPort),
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(metricsPort),
 			}},
 		},
 	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(metricsPort)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
 
 	return service
 }

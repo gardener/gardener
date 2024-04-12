@@ -22,7 +22,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -31,9 +33,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -72,6 +78,16 @@ func (r *Reconciler) delete(
 		destroyAlertmanager = g.Add(flow.Task{
 			Name: "Destroying Alertmanager",
 			Fn:   component.OpDestroyAndWait(c.alertManager).Destroy,
+		})
+		destroyPrometheus = g.Add(flow.Task{
+			Name: "Destroying Prometheus",
+			Fn: func(ctx context.Context) error {
+				return r.destroyGardenPrometheus(ctx, c.prometheus)
+			},
+		})
+		destroyBlackboxExporter = g.Add(flow.Task{
+			Name: "Destroying blackbox-exporter",
+			Fn:   component.OpDestroyAndWait(c.blackboxExporter).Destroy,
 		})
 
 		destroyGardenerScheduler = g.Add(flow.Task{
@@ -191,7 +207,7 @@ func (r *Reconciler) delete(
 		destroyPrometheusOperator = g.Add(flow.Task{
 			Name:         "Destroying prometheus-operator",
 			Fn:           component.OpDestroyAndWait(c.prometheusOperator).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyAlertmanager),
+			Dependencies: flow.NewTaskIDs(destroyAlertmanager, destroyPrometheus),
 		})
 		destroyFluentOperatorCustomResources = g.Add(flow.Task{
 			Name:         "Destroying fluent-operator custom resources",
@@ -224,6 +240,7 @@ func (r *Reconciler) delete(
 			destroyFluentOperator,
 			destroyVali,
 			destroyPrometheusOperator,
+			destroyBlackboxExporter,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{
@@ -315,4 +332,16 @@ func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error 
 			Cause:        errors.New("at least one ManagedResource still exists"),
 		}
 	}
+}
+
+func (r *Reconciler) destroyGardenPrometheus(ctx context.Context, prometheus prometheus.Interface) error {
+	if err := component.OpDestroyAndWait(prometheus).Destroy(ctx); err != nil {
+		return err
+	}
+
+	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Secret); err != nil {
+		return err
+	}
+
+	return r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: gardenerutils.LabelPurposeGlobalMonitoringSecret})
 }

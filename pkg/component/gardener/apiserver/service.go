@@ -42,6 +42,11 @@ func (g *gardenerAPIServer) serviceRuntime() *corev1.Service {
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(port)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
+
 	return service
 }
 

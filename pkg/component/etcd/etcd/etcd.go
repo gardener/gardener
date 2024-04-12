@@ -25,6 +25,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +44,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
@@ -260,13 +263,21 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	clientService := &corev1.Service{}
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
-		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
-	))
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
-	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
+
+	ports := []networkingv1.NetworkPolicyPort{
+		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
+	}
+	if e.values.NamePrefix != "" {
+		// etcd deployed for garden cluster
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(clientService, ports...))
+	} else {
+		// etcd deployed for shoot cluster
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService, ports...))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+		metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
@@ -551,6 +562,107 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
+	// etcd deployed for garden cluster
+	if e.values.NamePrefix != "" {
+		serviceMonitor := e.emptyServiceMonitor()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, serviceMonitor, func() error {
+			serviceMonitor.Labels = monitoringutils.Labels(garden.Label)
+			serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"name":     "etcd",
+					"instance": e.etcd.Name,
+				}},
+				Endpoints: []monitoringv1.Endpoint{
+					{
+						Port:   portNameClient,
+						Scheme: "https",
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+							InsecureSkipVerify: true,
+							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+								Key:                  secretsutils.DataKeyCertificate,
+							}},
+							KeySecret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+								Key:                  secretsutils.DataKeyPrivateKey,
+							},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+								TargetLabel:  "role",
+							},
+							{
+								Action:      "replace",
+								Replacement: e.values.NamePrefix + "etcd",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+							Action: "labeldrop",
+							Regex:  `^instance$`,
+						}},
+					},
+					{
+						Port:   portNameBackupRestore,
+						Scheme: "https",
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+							InsecureSkipVerify: true,
+							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+								Key:                  secretsutils.DataKeyCertificate,
+							}},
+							KeySecret: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+								Key:                  secretsutils.DataKeyPrivateKey,
+							},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+								TargetLabel:  "role",
+							},
+
+							{
+								Action:      "replace",
+								Replacement: e.values.NamePrefix + "etcd-backup",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+							Action: "labeldrop",
+							Regex:  `^instance$`,
+						}}, monitoringutils.StandardMetricRelabelConfig(
+							"etcdbr_defragmentation_duration_seconds_.+",
+							"etcdbr_defragmentation_duration_seconds_count",
+							"etcdbr_defragmentation_duration_seconds_sum",
+							"etcdbr_network_received_bytes",
+							"etcdbr_network_transmitted_bytes",
+							"etcdbr_restoration_duration_seconds_.+",
+							"etcdbr_restoration_duration_seconds_count",
+							"etcdbr_restoration_duration_seconds_sum",
+							"etcdbr_snapshot_duration_seconds_.+",
+							"etcdbr_snapshot_duration_seconds_count",
+							"etcdbr_snapshot_duration_seconds_sum",
+							"etcdbr_snapshot_gc_total",
+							"etcdbr_snapshot_latest_revision",
+							"etcdbr_snapshot_latest_timestamp",
+							"etcdbr_snapshot_required",
+							"etcdbr_validation_duration_seconds_.+",
+							"etcdbr_validation_duration_seconds_count",
+							"etcdbr_validation_duration_seconds_sum",
+							"process_resident_memory_bytes",
+							"process_cpu_seconds_total",
+						)...),
+					},
+				},
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -561,6 +673,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, e.client,
 		e.emptyHVPA(),
+		e.emptyServiceMonitor(),
 		e.etcd,
 	)
 }
@@ -582,6 +695,10 @@ func GetLabels() map[string]string {
 
 func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
 	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
+}
+
+func (e *etcd) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(e.etcd.Name, e.namespace, garden.Label)}
 }
 
 func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {

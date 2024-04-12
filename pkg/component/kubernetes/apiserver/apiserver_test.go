@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -87,6 +88,7 @@ var _ = Describe("KubeAPIServer", func() {
 		version             *semver.Version
 		runtimeVersion      *semver.Version
 		autoscalingConfig   apiserver.AutoscalingConfig
+		namePrefix          string
 
 		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                      = "ca"
@@ -116,6 +118,7 @@ var _ = Describe("KubeAPIServer", func() {
 		verticalPodAutoscaler      *vpaautoscalingv1.VerticalPodAutoscaler
 		hvpa                       *hvpav1alpha1.Hvpa
 		podDisruptionBudget        *policyv1.PodDisruptionBudget
+		serviceMonitor             *monitoringv1.ServiceMonitor
 		configMapAdmission         *corev1.ConfigMap
 		secretAdmissionKubeconfigs *corev1.Secret
 		configMapAuditPolicy       *corev1.ConfigMap
@@ -132,6 +135,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		version = semver.MustParse("1.25.1")
 		runtimeVersion = semver.MustParse("1.25.1")
+		namePrefix = ""
 	})
 
 	JustBeforeEach(func() {
@@ -139,8 +143,10 @@ var _ = Describe("KubeAPIServer", func() {
 			Values: apiserver.Values{
 				Autoscaling:    autoscalingConfig,
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{ResourcesToEncrypt: []string{"secrets"}},
-				RuntimeVersion: runtimeVersion},
+				RuntimeVersion: runtimeVersion,
+			},
 			PriorityClassName: priorityClassName,
+			NamePrefix:        namePrefix,
 			Version:           version,
 			VPN:               VPNConfig{Enabled: true},
 		}
@@ -185,6 +191,12 @@ var _ = Describe("KubeAPIServer", func() {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-virtual-garden-kube-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -657,6 +669,46 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					}))
 				})
+			})
+		})
+
+		Describe("ServiceMonitor", func() {
+			BeforeEach(func() {
+				namePrefix = "virtual-garden-"
+			})
+
+			It("should successfully deploy the resource", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(Succeed())
+				Expect(serviceMonitor).To(DeepEqual(&monitoringv1.ServiceMonitor{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            serviceMonitor.Name,
+						Namespace:       serviceMonitor.Namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"prometheus": "garden"},
+					},
+					Spec: monitoringv1.ServiceMonitorSpec{
+						Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+							"app":  "kubernetes",
+							"role": "apiserver",
+						}},
+						Endpoints: []monitoringv1.Endpoint{{
+							TargetPort: ptr.To(intstr.FromInt32(443)),
+							Scheme:     "https",
+							TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+								Key:                  "token",
+							}},
+							MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+								SourceLabels: []monitoringv1.LabelName{"__name__"},
+								Action:       "keep",
+								Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_request_total|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_registered_watchers|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_request_duration_seconds_.+|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|go_.+)$`,
+							}},
+						}},
+					},
+				}))
 			})
 		})
 

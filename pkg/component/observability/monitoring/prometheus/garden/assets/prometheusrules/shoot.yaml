@@ -1,0 +1,113 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shoot
+spec:
+  groups:
+  - name: shoot
+    rules:
+    - alert: ShootOutageOverall
+      expr: |
+        count (
+          garden_shoot_condition{condition =  "APIServerAvailable",
+                                operation =  "Reconcile",
+                                is_seed   =  "false",
+                                purpose   =~ "production"}
+          == 0
+        )
+        /
+        count (
+          garden_shoot_condition{condition =  "APIServerAvailable",
+                                operation =  "Reconcile",
+                                is_seed   =  "false",
+                                purpose   =~ "production"}
+        )
+        > 0.10
+      for: 10m
+      labels:
+        severity: critical
+        topology: garden
+      annotations:
+        summary: >-
+          Over 10% of productive shoots are unavailable on the 
+          {{$externalLabels.landscape}} landscape.
+        description: >
+          Over 10% of the shoots have the condition APIServerAvailable false.
+          (
+          {{`count(
+          garden_shoot_condition{condition =  "APIServerAvailable"
+          ,                      operation =  "Reconcile"
+          ,                      is_seed   =  "false"
+          ,                      purpose   =~ "production"}
+          == 0)`
+          | query | first | value}}
+          out of
+          {{`count(
+          garden_shoot_condition{condition =  "APIServerAvailable"
+          ,                      operation =  "Reconcile"
+          ,                      is_seed   =  "false"
+          ,                      purpose   =~ "production"})`
+          | query | first | value}}
+          )
+
+    - alert: ShootOutageByIaas
+      expr: |
+        count by (iaas) (
+          garden_shoot_condition{condition =  "APIServerAvailable",
+                                operation =  "Reconcile",
+                                is_seed   =  "false",
+                                purpose   =~ "production"}
+          == 0
+        )
+        /
+        count by (iaas) (
+          garden_shoot_condition{condition =  "APIServerAvailable",
+                                operation =  "Reconcile",
+                                is_seed   =  "false",
+                                purpose   =~ "production"}
+        )
+        > 0.10
+      for: 10m
+      labels:
+        severity: critical
+        topology: garden
+      annotations:
+        summary: >-
+          Over 10% of productive {{$labels.iaas}} shoots are unavailable on the 
+          {{$externalLabels.landscape}} landscape.
+        description: >
+          Over 10% of {{$labels.iaas}} shoots have the condition
+          APIServerAvailable == 0.
+          (
+          {{printf `count(
+          garden_shoot_condition{iaas      =  "%s"
+          ,                      condition =  "APIServerAvailable"
+          ,                      operation =  "Reconcile"
+          ,                      is_seed   =  "false"
+          ,                      purpose   =~ "production"}
+          == 0)`
+          $labels.iaas
+          | query | first | value}}
+          out of
+          {{printf `count(
+          garden_shoot_condition{iaas      =  "%s"
+          ,                      condition =  "APIServerAvailable"
+          ,                      operation =  "Reconcile"
+          ,                      is_seed   =  "false"
+          ,                      purpose   =~ "production"})`
+          $labels.iaas
+          | query | first | value}}
+          )
+
+
+    - alert: NodeFilesystemAlmostOutOfFiles
+      expr: shoot:node_filesystem_files_free:percent{project="garden"} < 5
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Node filesystem has less than 5% inodes left.
+        description: >
+          The seed cluster: {{$labels.project}}/{{$labels.name}} has a filesystem mounted at {{ $labels.mountpoint }}
+          on node {{ $labels.node }} that has only {{ printf "%.2f" $value }}% available inodes left.

@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -181,8 +182,7 @@ var _ = Describe("KubeControllerManager", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		pdbMaxUnavailable = intstr.FromInt32(1)
-		pdbFor            = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
+		pdbFor = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
 			pdb := &policyv1.PodDisruptionBudget{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pdbName,
@@ -194,7 +194,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ResourceVersion: "1",
 				},
 				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: &pdbMaxUnavailable,
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "kubernetes",
@@ -212,8 +212,7 @@ var _ = Describe("KubeControllerManager", func() {
 			return pdb
 		}
 
-		hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
-		hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
+		hvpaFor = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
 			scaleDownUpdateMode := config.ScaleDownUpdateMode
 			if scaleDownUpdateMode == nil {
 				scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
@@ -260,7 +259,7 @@ var _ = Describe("KubeControllerManager", func() {
 						Deploy: true,
 						ScaleUp: hvpav1alpha1.ScaleType{
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-								UpdateMode: &hvpaUpdateModeAuto,
+								UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
 							},
 						},
 						ScaleDown: hvpav1alpha1.ScaleType{
@@ -334,6 +333,36 @@ var _ = Describe("KubeControllerManager", func() {
 						Port:     10257,
 					},
 				},
+			},
+		}
+
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "garden-virtual-garden-kube-controller-manager",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "garden"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port:      "metrics",
+					Scheme:    "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+						Key:                  "token",
+					}},
+					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(rest_client_requests_total|process_max_fds|process_open_fds)$`,
+					}},
+				}},
 			},
 		}
 
@@ -849,6 +878,49 @@ namespace: kube-system
 				"--controllers=*,bootstrapsigner,tokencleaner,-clusterrole-aggregation,-endpointslice,-endpointslicemirroring,-resource-claim-controller,-storage-version-gc",
 			),
 		)
+
+		Context("when name prefix is set", func() {
+			BeforeEach(func() {
+				values = Values{
+					RuntimeVersion:    runtimeKubernetesVersion,
+					TargetVersion:     semverVersion,
+					Image:             image,
+					Config:            &kcmConfig,
+					PriorityClassName: priorityClassName,
+					HVPAConfig:        hvpaConfigDisabled,
+					IsWorkerless:      isWorkerless,
+					PodNetwork:        podCIDR,
+					ServiceNetwork:    serviceCIDR,
+					NamePrefix:        "virtual-garden-",
+				}
+				kubeControllerManager = New(
+					testLogger,
+					fakeInterface,
+					namespace,
+					sm,
+					values,
+				)
+			})
+
+			It("should deploy the expected Service", func() {
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				service.Name = "virtual-garden-kube-controller-manager"
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`}
+
+				actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: service.Name, Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
+				Expect(actualService).To(DeepEqual(service))
+			})
+
+			It("should deploy the expected ServiceMonitor", func() {
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: serviceMonitor.Name, Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
+				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -858,6 +930,7 @@ namespace: kube-system
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
 			hvpa := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
+			serviceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-kube-controller-manager", Namespace: namespace}}
 			pdb := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
@@ -866,6 +939,7 @@ namespace: kube-system
 			Expect(c.Create(ctx, vpa)).To(Succeed())
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, service)).To(Succeed())
+			Expect(c.Create(ctx, serviceMonitor)).To(Succeed())
 			Expect(c.Create(ctx, deploy)).To(Succeed())
 			Expect(c.Create(ctx, pdb)).To(Succeed())
 			Expect(c.Create(ctx, secret)).To(Succeed())
@@ -885,6 +959,7 @@ namespace: kube-system
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(service), service)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())

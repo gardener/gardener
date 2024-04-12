@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -69,6 +70,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		serviceRuntime *corev1.Service
+		serviceMonitor *monitoringv1.ServiceMonitor
 
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
@@ -115,8 +117,9 @@ var _ = Describe("GardenerMetricsExporter", func() {
 		}
 		serviceRuntime = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-metrics-exporter",
-				Namespace: namespace,
+				Name:        "gardener-metrics-exporter",
+				Namespace:   namespace,
+				Annotations: map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2718}]`},
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "metrics-exporter",
@@ -133,6 +136,24 @@ var _ = Describe("GardenerMetricsExporter", func() {
 					Port:       2718,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt32(2718),
+				}},
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-metrics-exporter",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "metrics-exporter"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					TargetPort: ptr.To(intstr.FromInt32(2718)),
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(garden_projects_status|garden_users_total|garden_shoot_info|garden_shoot_condition|garden_shoot_node_info|garden_shoot_operation_states|garden_shoot_node_max_total|garden_shoot_node_min_total|garden_shoot_response_duration_milliseconds|garden_shoot_operations_total|garden_shoots_hibernation_enabled_total|garden_shoots_hibernation_schedule_total|garden_shoot_hibernated|garden_shoots_custom_addon_kubedashboard_total|garden_shoots_custom_addon_nginxingress_total|garden_shoots_custom_apiserver_auditpolicy_total|garden_shoots_custom_apiserver_basicauth_total|garden_shoots_custom_apiserver_featuregates_total|garden_shoots_custom_apiserver_oidcconfig_total|garden_shoots_custom_extensions_total|garden_shoots_custom_kcm_horizontalpodautoscale_total|garden_shoots_custom_kcm_nodecidrmasksize_total|garden_shoots_custom_kubelet_podpidlimit_total|garden_shoots_custom_network_customdomain_total|garden_shoots_custom_privileged_containers_total|garden_shoots_custom_proxy_mode_total|garden_shoots_custom_worker_annotations_total|garden_shoots_custom_worker_multiplepools_total|garden_shoots_custom_worker_multizones_total|garden_shoots_custom_worker_taints_total|garden_seed_info|garden_seed_condition|garden_seed_capacity|garden_seed_usage)$`,
+					}},
 				}},
 			},
 		}
@@ -242,7 +263,11 @@ var _ = Describe("GardenerMetricsExporter", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
 				Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
-				Expect(managedResourceRuntime).To(consistOf(serviceRuntime, deployment(namespace, values)))
+				Expect(managedResourceRuntime).To(consistOf(
+					serviceRuntime,
+					deployment(namespace, values),
+					serviceMonitor,
+				))
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())

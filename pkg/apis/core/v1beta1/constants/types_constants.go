@@ -491,6 +491,10 @@ const (
 	// which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
 	LabelNetworkPolicyScrapeTargets = "all-scrape-targets"
+	// LabelNetworkPolicyGardenScrapeTargets is a constant for pod selector label which can be used on Services for
+	// garden system components or extensions which should be scraped by Prometheus.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
+	LabelNetworkPolicyGardenScrapeTargets = "all-garden-scrape-targets"
 	// LabelNetworkPolicySeedScrapeTargets is a constant for pod selector label which can be used on Services for
 	// seed system components or extensions which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
@@ -778,6 +782,9 @@ const (
 
 	// IngressTLSCertificateValidity is the default validity for ingress TLS certificates.
 	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+	// IngressDomainPrefixPrometheusAggregate is the prefix of a domain exposing prometheus-aggregate in seed clusters.
+	IngressDomainPrefixPrometheusAggregate = "p-seed"
+
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 

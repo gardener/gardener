@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -81,6 +82,7 @@ var _ = Describe("GardenerControllerManager", func() {
 
 		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
 		serviceRuntime         *corev1.Service
+		serviceMonitor         *monitoringv1.ServiceMonitor
 		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
 
 		clusterRole        *rbacv1.ClusterRole
@@ -160,8 +162,9 @@ var _ = Describe("GardenerControllerManager", func() {
 		}
 		serviceRuntime = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-controller-manager",
-				Namespace: namespace,
+				Name:        "gardener-controller-manager",
+				Namespace:   namespace,
+				Annotations: map[string]string{"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2719}]`},
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "controller-manager",
@@ -181,7 +184,24 @@ var _ = Describe("GardenerControllerManager", func() {
 				}},
 			},
 		}
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "controller-manager"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(rest_client_.+|controller_runtime_.+|workqueue_.+|go_.+)$`,
+					}},
+				}},
+			},
+		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-controller-manager-vpa",
@@ -198,7 +218,7 @@ var _ = Describe("GardenerControllerManager", func() {
 					Name:       "gardener-controller-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -320,6 +340,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				expectedRuntimeObjects = []client.Object{
 					configMap(namespace, values),
 					serviceRuntime,
+					serviceMonitor,
 					vpa,
 					deployment(namespace, "gardener-controller-manager-config-cff08f20", values),
 				}

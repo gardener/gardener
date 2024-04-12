@@ -40,6 +40,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			EvaluationInterval: "1m",
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: "1m",
+				ScrapeTimeout:  p.values.ScrapeTimeout,
 				ReloadStrategy: ptr.To(monitoringv1.HTTPReloadStrategyType),
 				ExternalLabels: p.values.ExternalLabels,
 				AdditionalScrapeConfigs: &corev1.SecretKeySelector{
@@ -49,14 +50,13 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 
 				PodMetadata: &monitoringv1.EmbeddedObjectMetadata{
 					Labels: utils.MergeStringMaps(map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                                                         v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                            v1beta1constants.LabelNetworkPolicyAllowed,
-						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelObservabilityApplication:                                                   p.name(),
+						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelObservabilityApplication:        p.name(),
 					}, p.values.AdditionalPodLabels),
 				},
 				PriorityClassName: p.values.PriorityClassName,
-				Replicas:          ptr.To[int32](1),
+				Replicas:          &p.values.Replicas,
 				Shards:            ptr.To[int32](1),
 				Image:             &p.values.Image,
 				ImagePullPolicy:   corev1.PullIfNotPresent,
@@ -92,6 +92,10 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
 		},
+	}
+
+	if p.values.Ingress != nil {
+		obj.Spec.ExternalURL = "https://" + p.values.Ingress.Host
 	}
 
 	if p.values.Retention != nil {

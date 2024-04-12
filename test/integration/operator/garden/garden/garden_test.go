@@ -123,8 +123,12 @@ var _ = Describe("Garden controller tests", func() {
 		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
 
+		scheme := runtime.NewScheme()
+		Expect(operatorclient.AddRuntimeSchemeToScheme(scheme)).To(Succeed())
+		Expect(operatorclient.AddVirtualSchemeToScheme(scheme)).To(Succeed())
+
 		mgr, err := manager.New(restConfig, manager.Options{
-			Scheme:  operatorclient.RuntimeScheme,
+			Scheme:  scheme,
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				Mapper: mapper,
@@ -423,9 +427,9 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
 			return service.Annotations
 		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
-			"networking.istio.io/exportTo":                                              "*",
-			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-			"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
+			"networking.istio.io/exportTo": "*",
+			"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
+			"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 		})))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
@@ -715,6 +719,8 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-metrics-exporter-runtime")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-metrics-exporter-virtual")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-garden")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("blackbox-exporter")})}),
 		))
 
 		By("Wait for last operation state to be set to Succeeded")

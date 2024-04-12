@@ -42,6 +42,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -580,6 +581,30 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Name:     user.AllAuthenticated,
 			}},
 		}
+		clusterRoleMetricsScraper = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:metrics-scraper",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				NonResourceURLs: []string{"/metrics"},
+				Verbs:           []string{"get"},
+			}},
+		}
+		clusterRoleBindingMetricsScraper = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleMetricsScraper.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRoleMetricsScraper.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      gardenprometheus.ServiceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
 	)
 
 	if err := registry.Add(
@@ -604,6 +629,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleProjectViewerAggregated,
 		roleReadClusterIdentityConfigMap,
 		roleBindingReadClusterIdentityConfigMap,
+		clusterRoleMetricsScraper,
+		clusterRoleBindingMetricsScraper,
 	); err != nil {
 		return nil, err
 	}

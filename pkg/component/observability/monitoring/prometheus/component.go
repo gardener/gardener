@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -46,6 +47,17 @@ const (
 	ServicePortName = "web"
 )
 
+// Interface contains functions for a Prometheus deployer.
+type Interface interface {
+	component.DeployWaiter
+	// SetIngressAuthSecret sets the ingress authentication secret name.
+	SetIngressAuthSecret(*corev1.Secret)
+	// SetIngressWildcardCertSecret sets the ingress wildcard certificate secret name.
+	SetIngressWildcardCertSecret(*corev1.Secret)
+	// SetCentralScrapeConfigs sets the central scrape configs.
+	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
+}
+
 // Values contains configuration values for the prometheus resources.
 type Values struct {
 	// Name is the name of the prometheus. It will be used for the resource names of Prometheus and ManagedResource.
@@ -58,12 +70,20 @@ type Values struct {
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
 	StorageCapacity resource.Quantity
+	// Replicas is the number of replicas.
+	Replicas int32
 	// Retention is the duration for the data retention.
 	Retention *monitoringv1.Duration
 	// RetentionSize is the size for the data retention.
 	RetentionSize monitoringv1.ByteSize
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
+	// ScrapeTimeout is the timeout duration when scraping targets.
+	ScrapeTimeout monitoringv1.Duration
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
 	VPAMinAllowed *corev1.ResourceList
+	// VPAMaxAllowed defines the resource list for the maxAllowed field for the prometheus container resource policy.
+	VPAMaxAllowed *corev1.ResourceList
 	// ExternalLabels is the set of external labels for the Prometheus configuration.
 	ExternalLabels map[string]string
 	// AdditionalPodLabels is a map containing additional labels for the created pods.
@@ -114,13 +134,16 @@ type IngressValues struct {
 	// SecretsManager is the secrets manager used for generating the TLS certificate if no wildcard certificate is
 	// provided.
 	SecretsManager secretsmanager.Interface
+	// SigningCA is the name of the CA that should be used the sign a self-signed server certificate. Only needed when
+	// no wildcard certificate secret is provided.
+	SigningCA string
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
-func New(log logr.Logger, client client.Client, namespace string, values Values) component.DeployWaiter {
+func New(log logr.Logger, client client.Client, namespace string, values Values) Interface {
 	return &prometheus{
 		log:       log,
 		client:    client,
@@ -174,6 +197,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalScrapeConfigs(),
 		p.prometheus(takeOverExistingPV),
 		p.vpa(),
+		p.podDisruptionBudget(),
 		ingress,
 	)
 	if err != nil {
@@ -224,6 +248,22 @@ func (p *prometheus) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, p.name())
+}
+
+func (p *prometheus) SetIngressAuthSecret(secret *corev1.Secret) {
+	if p.values.Ingress != nil && secret != nil {
+		p.values.Ingress.AuthSecretName = secret.Name
+	}
+}
+
+func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
+	if p.values.Ingress != nil && secret != nil {
+		p.values.Ingress.WildcardCertSecretName = &secret.Name
+	}
+}
+
+func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
+	p.values.CentralConfigs.ScrapeConfigs = configs
 }
 
 func (p *prometheus) name() string {

@@ -1,0 +1,396 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: seed
+spec:
+  groups:
+  - name: seed
+    rules:
+    - alert: PodFrequentlyRestarting
+      expr: |
+        seed:kube_pod_container_status_restarts_total:max_by_namespace > 5
+      for: 10m
+      labels:
+        severity: info
+        topology: garden
+      annotations:
+        summary: Some container is restarting frequently
+        description: >
+          Some container in namespace {{$labels.namespace}} in seed
+          {{$labels.seed}} in landscape {{$externalLabels.landscape}} was
+          restarted more than 5 times within the last hour.
+
+    - alert: PersistentVolumeSizeMismatch
+      expr: round((seed:persistentvolume:inconsistent_size > 0.05) * 10000) / 100
+      for: 5m
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary: There is a persistent volume with a size mismatch
+        description: |
+          Landscape: {{$externalLabels.landscape}}
+          Seed: {{$labels.seed}}
+          Namespace:  {{$labels.namespace}}
+          PersistentVolumeClaim:  {{$labels.persistentvolumeclaim}}
+          Size difference: {{$value}}%
+
+    - alert: GardenletDown
+      expr: |
+        min_over_time(garden_seed_condition{condition = "GardenletReady"}[5m])
+        == 0
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+        service: gardenlet
+      annotations:
+        summary: Gardenlet Down in landscape {{$externalLabels.landscape}}
+        description: The Gardenlet in seed {{$labels.name}} is down.
+
+    - alert: GardenletUnknown
+      expr: |
+        min_over_time(garden_seed_condition{condition = "GardenletReady"}[5m])
+        == -1
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+        service: gardenlet
+      annotations:
+        summary: >-
+          Gardenlet Unknown Status in landscape {{$externalLabels.landscape}}
+        description: >
+          The Gardenlet in seed {{$labels.name}} has been in an in unknown state
+          for over 10 minutes.
+
+    - alert: SeedAPIServerUnavailable
+      expr: |
+        garden_shoot_condition{condition = "APIServerAvailable",
+                              operation = "Reconcile",
+                              is_seed   = "true",
+                              purpose   = "infrastructure"}
+        < 1
+      for: 2m
+      labels:
+        severity: critical
+        topology: shoot
+      annotations:
+        summary: API Server Unavailable
+        description: >
+          The seed cluster: {{$labels.project}}/{{$labels.name}} has the
+          condition APIServerAvailable < 1.
+
+    - alert: ApproachingSeedCapacity
+      expr: |
+        # number of shoots
+        sum by(iaas, region) (
+          sum by (iaas,region,name) (
+            garden_seed_usage{protected="false",resource="shoot",visible="true"})
+            +
+            # Only count usage of seeds that also have a capacity
+            (sum by (iaas,region, name) (
+              garden_seed_capacity{protected="false",visible="true"}
+            ) * 0
+          )
+        )
+        >
+        # total regional seed capacity
+        sum by (iaas,region) (
+          garden_seed_capacity{protected = "false",
+                              visible   = "true"}
+        ) * 0.98
+        # hysteresis: alert as long as the value is above 90%
+        or
+        (
+          sum by(iaas, region) (
+            sum by (iaas,region,name) (
+              garden_seed_usage{protected="false",resource="shoot",visible="true"})
+              +
+              # Only count usage of seeds that also have a capacity
+              (sum by (iaas,region, name) (
+                garden_seed_capacity{protected="false",visible="true"}
+              ) * 0
+            )
+          )
+          >
+          # total regional seed capacity
+          sum by (iaas,region) (
+            garden_seed_capacity{protected = "false",
+                                visible   = "true"}
+          ) * 0.90
+          and
+          count by(iaas,region) (
+            ALERTS{alertname  = "ApproachingSeedCapacity",
+                  alertstate = "firing"}
+          )
+        )
+      for: 10m
+      labels:
+        severity: critical
+        topology: garden
+      annotations:
+        summary: >-
+          {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
+          approaching capacity
+        description: >
+          {{$labels.region}} in {{$labels.iaas}} has crossed the 98% capacity threshold.
+          The alert will stop firing when the seed usage drops below 90%.
+
+          There are currently {{$value}} shoots hosted in this region.
+          Current usage is
+          {{range
+                  printf `
+                    round(
+                          sum by (iaas, region) (
+                              sum by (iaas, region, name) (garden_seed_usage{protected="false",resource="shoot",visible="true"})
+                            +
+                              0 * sum by (iaas, region, name) (garden_seed_capacity{protected="false",visible="true"})
+                          )
+                        / ignoring (resource)
+                          sum by (iaas, region) (
+                            garden_seed_capacity{iaas="%s",protected="false",region="%s",visible="true"}
+                          )
+                      *
+                        100,
+                      0.01
+                    )
+                  ` $labels.iaas $labels.region
+                  | query -}}
+            {{- . | value -}}%
+          {{- end}}.
+
+          Current distribution of shoots:
+          {{range
+          printf `sum by (name) (garden_seed_usage{resource  = "shoot"
+          ,                                        protected = "false"
+          ,                                        visible   = "true"
+          ,                                        region    = "%s"
+          ,                                        iaas      = "%s"})`
+          $labels.region $labels.iaas
+          | query}}
+          {{. | label "name"}} = {{. | value}},
+          {{end}}
+
+          Visible non-protected seeds:
+          {{range
+          printf `count by (name) (garden_seed_info{protected = "false"
+          ,                                         visible   = "true"
+          ,                                         region    = "%s"
+          ,                                         iaas      = "%s"})`
+          $labels.region $labels.iaas
+          | query}}
+          {{. | label "name"}},
+          {{end}}
+
+    - alert: ApproachingSeedCapacity
+      expr: |
+        # number of shoots
+        sum by(iaas, region) (
+          sum by (iaas,region,name) (
+            garden_seed_usage{protected="false",resource="shoot",visible="true"})
+            +
+            # Only count usage of seeds that also have a capacity
+            (sum by (iaas,region, name) (
+              garden_seed_capacity{protected="false",visible="true"}
+            ) * 0
+          )
+        )
+        >
+        # total regional seed capacity
+        sum by (iaas,region) (
+          garden_seed_capacity{protected = "false",
+                              visible   = "true"}
+        ) * 0.90
+        # hysteresis: alert as long as the value is above 85%
+        or
+        (
+          sum by(iaas, region) (
+            sum by (iaas,region,name) (
+              garden_seed_usage{protected="false",resource="shoot",visible="true"})
+              +
+              # Only count usage of seeds that also have a capacity
+              (sum by (iaas,region, name) (
+                garden_seed_capacity{protected="false",visible="true"}
+              ) * 0
+            )
+          )
+          >
+          # total regional seed capacity
+          sum by (iaas,region) (
+            garden_seed_capacity{protected = "false",
+                                visible   = "true"}
+          ) * 0.85
+          and
+          count by(iaas,region) (
+            ALERTS{alertname  = "ApproachingSeedCapacity",
+                  alertstate = "firing"}
+          )
+        )
+      for: 10m
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary: >-
+          {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
+          approaching capacity
+        description: >
+          {{$labels.region}} in {{$labels.iaas}} has crossed the 90% capacity threshold.
+          The alert will stop firing when the seed usage drops below 85%.
+
+          There are currently {{$value}} shoots hosted in this region.
+          Current usage is
+          {{range
+                  printf `
+                    round(
+                          sum by (iaas, region) (
+                              sum by (iaas, region, name) (garden_seed_usage{protected="false",resource="shoot",visible="true"})
+                            +
+                              0 * sum by (iaas, region, name) (garden_seed_capacity{protected="false",visible="true"})
+                          )
+                        / ignoring (resource)
+                          sum by (iaas, region) (
+                            garden_seed_capacity{iaas="%s",protected="false",region="%s",visible="true"}
+                          )
+                      *
+                        100,
+                      0.01
+                    )
+                  ` $labels.iaas $labels.region
+                  | query -}}
+            {{- . | value -}}%
+          {{- end}}.
+
+          Current distribution of shoots:
+          {{range
+          printf `sum by (name) (garden_seed_usage{resource  = "shoot"
+          ,                                        protected = "false"
+          ,                                        visible   = "true"
+          ,                                        region    = "%s"
+          ,                                        iaas      = "%s"})`
+          $labels.region $labels.iaas
+          | query}}
+          {{. | label "name"}} = {{. | value}},
+          {{end}}
+
+          Visible non-protected seeds:
+          {{range
+          printf `count by (name) (garden_seed_info{protected = "false"
+          ,                                         visible   = "true"
+          ,                                         region    = "%s"
+          ,                                         iaas      = "%s"})`
+          $labels.region $labels.iaas
+          | query}}
+          {{. | label "name"}},
+          {{end}}
+
+    - alert: SeedFederationFailure
+      expr: up{job="prometheus-aggregate", instance!~".*\\.(cc|cp-mgr).*"} == 0
+      for: 5m
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary: Seed federation failure
+        description: |
+          Federating from the prometheus-aggregate instance {{$labels.instance}} failed.
+          Please check the error message in the `prometheus-garden` in the garden runtime cluster.
+          Port-forward to `prometheus-garden-0` in the `garden` namespace and open:
+          http://localhost:9090/targets?search={{$labels.instance}}
+
+    - alert: SeedPodStuckInPending
+      expr: |
+        ALERTS{alertname="PodStuckInPending",alertstate="firing"}
+      for: 10m
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary: A pod is stuck in Pending state for more than 10 minutes.
+        description: >
+          The pod {{$labels.pod}} in namespace {{$labels.namespace}} in seed
+          {{$labels.seed}} in landscape {{$externalLabels.landscape}} is
+          stuck in Pending state for more than 10 minutes.
+
+    - alert: SeedNodeNotHealthy
+      expr: |
+        ALERTS{alertname="NodeNotHealthy",alertstate="firing"}
+      for: 0m
+      labels:
+        severity: warning
+        topology: garden
+      annotations:
+        summary:  A node was reported not healthy for 5 scrapes in the past 30 minutes.
+        description: >
+          Node {{$labels.node}} in landscape
+          {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 minutes.
+
+    - alert: SeedControlPlaneUnhealthy
+      expr: |
+        max_over_time(
+          garden_shoot_condition{condition       = "ControlPlaneHealthy",
+                                 operation       = "Reconcile",
+                                 is_seed         = "false",
+                                 purpose         =~ "infrastructure",
+                                 is_compliant    = "True",
+                                 has_user_errors = "false"}[2m])
+        == 0
+      for: 30m
+      labels:
+        severity: critical
+        topology: garden
+      annotations:
+        summary: Seed ControlPlane Components Unhealthy
+        description: >
+          The seed cluster: {{$labels.name}} has
+          condition ControlPlaneHealthy == 0 for more than 30 minutes. Some Control Plane
+          components of the seed may have an issue.
+          {{with printf `ALERTS{alertstate       = 'firing',
+                                project          = '%s',
+                                shoot_name       = '%s',
+                                severity         =~'critical|blocker',
+                                shoot_alertname != ''}` $labels.project $labels.name
+                 | query
+                 | sortByLabel "shoot_alertname"}}
+          {{if .}}Currently firing alerts:
+          {{end -}}
+          {{range . -}}
+          - {{.Labels.shoot_alertname}}
+          {{end -}}
+          {{end -}}
+
+    - alert: SeedSystemComponentsUnhealthy
+      expr: |
+        max_over_time(
+          garden_shoot_condition{condition       = "SystemComponentsHealthy",
+                                 operation       = "Reconcile",
+                                 is_seed         = "false",
+                                 purpose         =~ "infrastructure",
+                                 is_compliant    = "True",
+                                 has_user_errors = "false"}[2m])
+        == 0
+      for: 30m
+      labels:
+        severity: critical
+        topology: garden
+        mute_on_weekends: "true"
+      annotations:
+        summary: Seed System Components Unhealthy
+        description: >
+          The seed cluster: {{$labels.name}} has
+          condition SystemComponentsHealthy == 0 for more than 30 minutes. Some
+          components required by the seed may have an issue.
+          {{with printf `ALERTS{alertstate       = 'firing',
+                                project          = '%s',
+                                shoot_name       = '%s',
+                                severity         =~'critical|blocker',
+                                shoot_alertname != ''}` $labels.project $labels.name
+                 | query
+                 | sortByLabel "shoot_alertname"}}
+          {{if .}}Currently firing alerts:
+          {{end -}}
+          {{range . -}}
+          - {{.Labels.shoot_alertname}}
+          {{end -}}
+          {{end -}}
