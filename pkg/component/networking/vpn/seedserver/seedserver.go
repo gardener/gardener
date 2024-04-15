@@ -763,14 +763,14 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 				{
 					ContainerName: DeploymentName,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("100Mi"),
+						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
 					ControlledValues: &controlledValues,
 				},
 				{
 					ContainerName: envoyProxyContainerName,
 					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("20Mi"),
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					},
 					ControlledValues: &controlledValues,
 				},
