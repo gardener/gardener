@@ -59,12 +59,11 @@ var _ = Describe("gardenerCustomMetrics", func() {
 	)
 
 	var (
-		ctx               = context.Background()
-		kubernetesVersion = semver.MustParse("1.25.5")
-		c                 client.Client
-		sm                secretsmanager.Interface
-		component         component.DeployWaiter
-		consistOf         func(object ...client.Object) types.GomegaMatcher
+		ctx       = context.Background()
+		c         client.Client
+		sm        secretsmanager.Interface
+		component component.DeployWaiter
+		consistOf func(object ...client.Object) types.GomegaMatcher
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -86,7 +85,11 @@ var _ = Describe("gardenerCustomMetrics", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		component = New(namespace, image, kubernetesVersion, c, sm)
+		values := Values{
+			Image:             image,
+			KubernetesVersion: semver.MustParse("1.25.5"),
+		}
+		component = New(namespace, values, c, sm)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -473,8 +476,11 @@ var _ = Describe("gardenerCustomMetrics", func() {
 
 		Context("Kubernetes versions >= 1.26", func() {
 			BeforeEach(func() {
-				kubernetesVersion = semver.MustParse("1.26.2")
-				component = New(namespace, image, kubernetesVersion, c, sm)
+				values := Values{
+					Image:             image,
+					KubernetesVersion: semver.MustParse("1.26.2"),
+				}
+				component = New(namespace, values, c, sm)
 			})
 
 			It("should successfully deploy all resources", func() {

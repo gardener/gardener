@@ -521,8 +521,12 @@ func (r *Reconciler) newGardenerCustomMetics(secretsManager secretsmanager.Inter
 			err)
 	}
 
-	var gcmxDeployer component.DeployWaiter = gardenercustommetrics.New(
-		r.GardenNamespace, image.String(), r.SeedVersion, r.SeedClientSet.Client(), secretsManager)
+	values := gardenercustommetrics.Values{
+		Image:             image.String(),
+		KubernetesVersion: r.SeedVersion,
+	}
+
+	gcmxDeployer := gardenercustommetrics.New(r.GardenNamespace, values, r.SeedClientSet.Client(), secretsManager)
 
 	if !features.DefaultFeatureGate.Enabled(features.BilinearPodAutoscalingForAPIServer) {
 		// Wrap the deployer in a thin wrapper which redirects Deploy calls to Destroy

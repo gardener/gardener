@@ -42,12 +42,19 @@ const ComponentName = componentBaseName
 // registering as APIService at the custom metrics extension point of the seed kube-apiserver.
 // For information about individual fields, see the New function.
 type gardenerCustomMetrics struct {
-	namespaceName      string
-	containerImageName string
-	kubernetesVersion  *semver.Version
+	namespaceName string
+	values        Values
 
 	seedClient     client.Client
 	secretsManager secretsmanager.Interface
+}
+
+// Values is a set of configuration values for the GardenerCustomMetrics component.
+type Values struct {
+	// Image is the container image for the GCMx pods.
+	Image string
+	// KubernetesVersion is the version of the runtime cluster.
+	KubernetesVersion *semver.Version
 }
 
 // New creates a new gardenerCustomMetrics instance tied to a specific server connection.
@@ -61,16 +68,14 @@ type gardenerCustomMetrics struct {
 // secretsManager is used to interact with secrets on the seed.
 func New(
 	namespace string,
-	containerImageName string,
-	kubernetesVersion *semver.Version,
+	values Values,
 	seedClient client.Client,
 	secretsManager secretsmanager.Interface) component.DeployWaiter {
 	return &gardenerCustomMetrics{
-		namespaceName:      namespace,
-		containerImageName: containerImageName,
-		kubernetesVersion:  kubernetesVersion,
-		seedClient:         seedClient,
-		secretsManager:     secretsManager,
+		namespaceName:  namespace,
+		values:         values,
+		seedClient:     seedClient,
+		secretsManager: secretsManager,
 	}
 }
 
@@ -90,7 +95,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 	}
 
 	kubeObjects, err := kubeobjects.GetKubeObjectsAsYamlBytes(
-		deploymentName, gcmx.namespaceName, gcmx.containerImageName, serverCertificateSecret.Name, gcmx.kubernetesVersion)
+		deploymentName, gcmx.namespaceName, gcmx.values.Image, serverCertificateSecret.Name, gcmx.values.KubernetesVersion)
 	if err != nil {
 		return fmt.Errorf(baseErrorMessage+
 			" - failed to create the K8s object definitions which describe the individual "+
