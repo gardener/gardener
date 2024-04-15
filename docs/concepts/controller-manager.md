@@ -5,7 +5,7 @@ description: Understand where the gardener-controller-manager runs and its funct
 
 ## Overview
 
-The `gardener-controller-manager` (often refered to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
+The `gardener-controller-manager` (often referred to as "GCM") is a component that runs next to the Gardener API server, similar to the Kubernetes Controller Manager.
 It runs several controllers that do not require talking to any seed or shoot cluster.
 Also, as of today, it exposes an HTTP server that is serving several health check endpoints and metrics.
 
@@ -41,7 +41,7 @@ After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster, it need
 
 On startup, the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
 
-The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
+The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organization, common name and usages which the gardenlet would request.
 
 It only auto-approves the CSR if the client making the request is allowed to "create" the
 `certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
@@ -192,7 +192,7 @@ controllers:
 ```
 
 The Project controller takes the specified `config` and creates a `ResourceQuota` with the name `gardener` in the project namespace.
-If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time. 
+If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time.
 This is done to configure a default `Quota` in all projects but to allow manual quota increases as the projects' demands increase.
 `spec.hard` fields in the `ResourceQuota` object that are not present in the configuration are removed from the object.
 Labels and annotations on the `ResourceQuota` `config` get merged with the respective fields on existing `ResourceQuota`s.
@@ -236,7 +236,7 @@ The component configuration of the `gardener-controller-manager` offers to confi
 
 Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Secret`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case, the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
-The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
+The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any activity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
 ### [`SecretBinding` Controller](../../pkg/controllermanager/controller/secretbinding)
 

@@ -111,7 +111,7 @@ All control plane components should respect the following conventions:
 
     Hence, the node spread is done on best-effort basis only.
 
-    However, if the shoot cluster has defined a failure tolerance type, the `whenUnsafisfiable` field should be set to `DoNotSchedule`.
+    However, if the shoot cluster has defined a failure tolerance type, the `whenUnsatisfiable` field should be set to `DoNotSchedule`.
 
   - ... and the failure tolerance type of the shoot cluster is `zone`, then the component should also have a second `topologySpreadConstraint` ensuring the replicas are spread over the zones:
 

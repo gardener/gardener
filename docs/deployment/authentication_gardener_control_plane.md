@@ -54,10 +54,10 @@ Another solution is to bind the roles in the `target` cluster to a `User` subjec
 This approach requires an already deployed and configured [oidc-webhook-authenticator](https://github.com/gardener/oidc-webhook-authenticator) for the `target` cluster. Also, the `runtime` cluster should be registered as a trusted identity provider in the `target` cluster. Then, projected service accounts tokens from the `runtime` cluster can be used to authenticate against the `target` cluster. The needed steps are as follows:
 
 1. Deploy [OWA](https://github.com/gardener/oidc-webhook-authenticator) and establish the needed trust.
-2. Set `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.<GardenerControlPlaneComponent>.user.name`. 
+2. Set `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.<GardenerControlPlaneComponent>.user.name`.
     > **Note:** username value will depend on the trust configuration, e.g., `<prefix>:system:serviceaccount:<namespace>:<serviceaccount>`
-3. Set `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.audience`. 
-    > **Note:** audience value will depend on the trust configuration, e.g., `<cliend-id-from-trust-config>`.
+3. Set `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.audience`.
+    > **Note:** audience value will depend on the trust configuration, e.g., `<client-id-from-trust-config>`.
 4. Craft a kubeconfig (see the example below).
 5. Deploy the `application` part of the charts in the `target` cluster.
 6. Deploy the `runtime` part of the charts in the `runtime` cluster.

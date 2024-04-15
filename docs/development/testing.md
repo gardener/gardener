@@ -87,7 +87,7 @@ make test-cov-clean
 Run unit tests of specific packages:
 
 ```bash
-# run with same settings like in CI (race dector, timeout, ...)
+# run with same settings like in CI (race detector, timeout, ...)
 ./hack/test.sh ./pkg/resourcemanager/controller/... ./pkg/utils/secrets/...
 
 # freestyle

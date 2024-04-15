@@ -186,7 +186,7 @@ field `duration` that will allow clients to specify for how long the issued
 workload identity token to be valid. This duration will be ensured to be between
 certain limits of minimal and maximal validity, in order to avoid frequent token
 renewals as well as tokens with too long validity. If the duration field is not
-set, a default duration will applied.
+set, a default duration will be applied.
 
 `TokenRequest` resources will never be persisted in the storage layer, the
 generated token will be written in the `.status.token` field and returned to the
@@ -229,8 +229,8 @@ In a nutshell, the changes introduced compared to `SecretBinding` are:
 - `CredentialsBinding.secretRef` field will be optional and mutable.
 - `CredentialsBinding.workloadIdentityRef` field will be optional and mutable.
   It will refer to a `WorkloadIdentity` resource by its name and namespace. If
-  the namespace is unset, the namespace of the `CredentialsBinding` is
-  will be used.
+  the namespace is unset, the namespace of the `CredentialsBinding` will be
+  used.
 - `quotas` and `provider` fields have the semantic as their respective
   counterparts in the `SecretBinding` API. `providers` will be made mandatory
   field also via the API specification.

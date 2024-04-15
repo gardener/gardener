@@ -106,7 +106,7 @@ This document provides a checklist for them that you can walk through.
 
 6. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12))
 
-   Avoid runnig containers as root. Usually, components such as Kubernetes controllers and admission webhook servers don't need root user capabilities to do their jobs.
+   Avoid running containers as root. Usually, components such as Kubernetes controllers and admission webhook servers don't need root user capabilities to do their jobs.
 
    The problem with running as root, starts with how the container is first built. Unless a non-privileged user is configured in the `Dockerfile`, container build systems by default set up the container with the root user. Add a non-privileged user to your `Dockerfile` or use a base image with a non-root user (for example the `nonroot` images from [distroless](https://github.com/GoogleContainerTools/distroless) such as `gcr.io/distroless/static-debian12:nonroot`).
 
