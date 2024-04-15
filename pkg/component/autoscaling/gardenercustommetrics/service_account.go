@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeobjects
+package gardenercustommetrics
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -22,11 +22,11 @@ import (
 
 const serviceAccountName = "gardener-custom-metrics"
 
-func makeServiceAccount(namespace string) *corev1.ServiceAccount {
+func (gcmx *gardenerCustomMetrics) serviceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
-			Namespace: namespace,
+			Namespace: gcmx.namespaceName,
 		},
 		AutomountServiceAccountToken: ptr.To(false),
 	}

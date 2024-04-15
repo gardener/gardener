@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeobjects
+package gardenercustommetrics
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,19 +26,24 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	deploymentName    = "gardener-custom-metrics"
+	gcmxContainerName = "gardener-custom-metrics"
+)
+
 // getLabels returns a set of labels, common to GCMx resources.
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:   gcmxBaseName,
-		v1beta1constants.GardenRole: gcmxBaseName,
+		v1beta1constants.LabelApp:   "gardener-custom-metrics",
+		v1beta1constants.GardenRole: "gardener-custom-metrics",
 	}
 }
 
-func makeDeployment(deploymentName, namespace, containerImageName, serverSecretName string) *appsv1.Deployment {
+func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
-			Namespace: namespace,
+			Namespace: gcmx.namespaceName,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				// The actual availability requirement of gardener-custom-metrics is closer to the "controller"
 				// availability level (even less, actually). The value below is set to "server" solely to satisfy
@@ -68,7 +73,7 @@ func makeDeployment(deploymentName, namespace, containerImageName, serverSecretN
 								"--tls-cert-file=/var/run/secrets/gardener.cloud/tls/tls.crt",
 								"--tls-private-key-file=/var/run/secrets/gardener.cloud/tls/tls.key",
 								"--leader-election=true",
-								"--namespace=" + namespace,
+								"--namespace=" + gcmx.namespaceName,
 								"--access-ip=$(POD_IP)",
 								"--access-port=6443",
 								"--log-level=74",
@@ -91,9 +96,9 @@ func makeDeployment(deploymentName, namespace, containerImageName, serverSecretN
 									},
 								},
 							},
-							Image:           containerImageName,
+							Image:           gcmx.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            gcmxBaseName,
+							Name:            gcmxContainerName,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 6443,
@@ -117,7 +122,7 @@ func makeDeployment(deploymentName, namespace, containerImageName, serverSecretN
 						},
 					},
 					PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem700,
-					ServiceAccountName: gcmxBaseName,
+					ServiceAccountName: serviceAccountName,
 					Volumes: []corev1.Volume{
 						{
 							Name: "gardener-custom-metrics-tls",

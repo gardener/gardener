@@ -398,6 +398,7 @@ var _ = Describe("gardenerCustomMetrics", func() {
 					Name:      "gardener-custom-metrics",
 					Namespace: namespace,
 					Labels: map[string]string{
+						"app":                 "gardener-custom-metrics",
 						"gardener.cloud/role": "gardener-custom-metrics",
 					},
 				},

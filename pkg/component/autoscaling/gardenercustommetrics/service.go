@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeobjects
+package gardenercustommetrics
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -22,14 +22,16 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
-func makeService(namespace string) *corev1.Service {
+const serviceName = "gardener-custom-metrics"
+
+func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 	//This service intentionally does not contain a pod selector. As a result, KCM does not perform any endpoint management.
 	//Endpoint management is instead done by the gardener-custom-metrics leader instance, which ensures a single endpoint,
 	//directing all traffic to the leader.
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gcmxBaseName,
-			Namespace: namespace,
+			Name:      serviceName,
+			Namespace: gcmx.namespaceName,
 			Annotations: map[string]string{
 				resourcesv1alpha1.NetworkingFromWorldToPorts: `[{"protocol":"TCP","port":6443}]`,
 			},

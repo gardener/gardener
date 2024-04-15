@@ -12,32 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeobjects
+package gardenercustommetrics
 
 import (
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func makeAPIService(namespace string) *apiregistrationv1.APIService {
-	return &apiregistrationv1.APIService{
+func (gcmx *gardenerCustomMetrics) pdb() *policyv1.PodDisruptionBudget {
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "v1beta2.custom.metrics.k8s.io",
+			Name:      "gardener-custom-metrics",
+			Namespace: gcmx.namespaceName,
+			Labels:    getLabels(),
 		},
-		Spec: apiregistrationv1.APIServiceSpec{
-			Service: &apiregistrationv1.ServiceReference{
-				Name:      gcmxBaseName,
-				Namespace: namespace,
-				Port:      ptr.To[int32](443),
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: getLabels(),
 			},
-			Group:                "custom.metrics.k8s.io",
-			Version:              "v1beta2",
-			GroupPriorityMinimum: 100,
-			VersionPriority:      200,
-			// The following enables MITM attack between seed kube-apiserver and GCMx. Not ideal, but it's on par with
-			// the metrics-server setup. For more information, see https://github.com/kubernetes-sigs/metrics-server/issues/544
-			InsecureSkipTLSVerify: true,
 		},
 	}
+
+	kubernetesutils.SetAlwaysAllowEviction(pdb, gcmx.values.KubernetesVersion)
+
+	return pdb
 }

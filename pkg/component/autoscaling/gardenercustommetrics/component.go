@@ -26,16 +26,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/autoscaling/gardenercustommetrics/kubeobjects"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
-
-// ComponentName is the component name.
-const ComponentName = componentBaseName
 
 // gardenerCustomMetrics manages an instance of the gardener-custom-metrics component (aka GCMx). The component is
 // deployed on a seed, scrapes the metrics from all shoot kube-apiserver pods, and provides custom metrics by
@@ -94,8 +91,22 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 			err)
 	}
 
-	kubeObjects, err := kubeobjects.GetKubeObjectsAsYamlBytes(
-		deploymentName, gcmx.namespaceName, gcmx.values.Image, serverCertificateSecret.Name, gcmx.values.KubernetesVersion)
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+	resources, err := registry.AddAllAndSerialize(
+		gcmx.serviceAccount(),
+		gcmx.role(),
+		gcmx.roleBinding(),
+		gcmx.clusterRole(),
+		gcmx.clusterRoleBinding(),
+		gcmx.authDelegatorClusterRoleBinding(),
+		gcmx.authReaderRoleBinding(),
+		gcmx.deployment(serverCertificateSecret.Name),
+		gcmx.service(),
+		gcmx.apiService(),
+		gcmx.pdb(),
+		gcmx.vpa(),
+	)
 	if err != nil {
 		return fmt.Errorf(baseErrorMessage+
 			" - failed to create the K8s object definitions which describe the individual "+
@@ -110,7 +121,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 		gcmx.namespaceName,
 		managedResourceName,
 		false,
-		kubeObjects)
+		resources)
 	if err != nil {
 		return fmt.Errorf(baseErrorMessage+
 			" - failed to deploy the necessary resource config objects as a ManagedResource named '%s' to the server. "+
@@ -176,13 +187,10 @@ func (gcmx *gardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 }
 
 const (
-	componentBaseName = "gardener-custom-metrics"
-	deploymentName    = componentBaseName
 	// The implementing artifacts are deployed to the seed via this MR
-	managedResourceName = componentBaseName
-	serviceName         = componentBaseName
+	managedResourceName = "gardener-custom-metrics"
 	// GCMx's HTTPS serving certificate
-	serverCertificateSecretName = componentBaseName + "-tls"
+	serverCertificateSecretName = "gardener-custom-metrics-tls"
 	// Timeout for ManagedResources to become healthy or deleted
 	managedResourceTimeout = 2 * time.Minute
 )
