@@ -8,6 +8,7 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.authentication.v1alpha1;
 
+import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
@@ -48,6 +49,52 @@ message AdminKubeconfigRequestStatus {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
+// Credentials holds reference to credentials implementation.
+message Credentials {
+  // Secret is a reference to a secret object in the same or another namespace.
+  // +optional
+  optional k8s.io.api.core.v1.SecretReference secret = 1;
+
+  // WorkloadIdentity is a reference to a workloadidentity object in the same or another namespace.
+  // +optional
+  optional WorkloadIdentityReference workloadIdentity = 2;
+}
+
+// CredentialsBinding represents a binding to credentials in the same or another namespace.
+message CredentialsBinding {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Provider defines the provider type of the CredentialsBinding.
+  // This field is immutable.
+  optional CredentialsBindingProvider provider = 2;
+
+  // CredentialsRef specify reference to credentials.
+  optional Credentials credentialsRef = 3;
+
+  // Quotas is a list of references to Quota objects in the same or another namespace.
+  // This field is immutable.
+  // +optional
+  repeated k8s.io.api.core.v1.ObjectReference quotas = 4;
+}
+
+// CredentialsBindingList is a collection of CredentialsBindings.
+message CredentialsBindingList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of CredentialsBindings.
+  repeated CredentialsBinding items = 2;
+}
+
+// CredentialsBindingProvider defines the provider type of the CredentialsBinding.
+message CredentialsBindingProvider {
+  // Type is the type of the provider.
+  optional string type = 1;
+}
+
 // ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
 // for a Shoot cluster.
 message ViewerKubeconfigRequest {
@@ -79,5 +126,17 @@ message ViewerKubeconfigRequestStatus {
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+}
+
+// WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve
+// workloadidentity in any namespace
+message WorkloadIdentityReference {
+  // Name is unique within a namespace to reference a workloadidentity resource.
+  // +optional
+  optional string name = 1;
+
+  // Namespace defines the space within which the workloadidentity name must be unique.
+  // +optional
+  optional string namespace = 2;
 }
 
