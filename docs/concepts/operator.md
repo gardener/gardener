@@ -439,6 +439,7 @@ metadata:
   namespace: garden
   labels:
     resources.gardener.cloud/purpose: token-requestor
+    resources.gardener.cloud/class: shoot
   annotations:
     serviceaccount.resources.gardener.cloud/name: virtual-garden-user
     serviceaccount.resources.gardener.cloud/namespace: kube-system
