@@ -666,9 +666,9 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 		}
 	}
 
-	// fetch ingress urls for prometheus-aggregate scrape config
+	// fetch ingress urls of reachable seeds for prometheus-aggregate scrape config
 	seedList := &gardencorev1beta1.SeedList{}
-	if err := virtualGardenClient.List(ctx, seedList); err != nil {
+	if err := virtualGardenClient.List(ctx, seedList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelSeedNetwork, selection.NotEquals, v1beta1constants.LabelSeedNetworkPrivate))}); err != nil {
 		return fmt.Errorf("failed listing secrets in virtual garden: %w", err)
 	}
 
