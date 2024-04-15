@@ -30,7 +30,7 @@ endif
 
 SYSTEM_NAME                := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 SYSTEM_ARCH                := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
+TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin/$(SYSTEM_NAME)-$(SYSTEM_ARCH)
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
@@ -57,6 +57,8 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
+
+$(shell mkdir -p $(TOOLS_BIN_DIR))
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
