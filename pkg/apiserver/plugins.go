@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
+	shootresourcereservation "github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation"
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
@@ -69,4 +70,5 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	bastionvalidator.Register(plugins)
 	resourcequota.Register(plugins)
 	shootvpa.Register(plugins)
+	shootresourcereservation.Register(plugins)
 }
