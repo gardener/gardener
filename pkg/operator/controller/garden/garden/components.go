@@ -1113,6 +1113,7 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 		},
 		AdditionalPodLabels: map[string]string{
 			v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                                v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                               v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{
