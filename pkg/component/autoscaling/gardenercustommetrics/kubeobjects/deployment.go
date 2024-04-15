@@ -23,39 +23,42 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
+
+// getLabels returns a set of labels, common to GCMx resources.
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:   gcmxBaseName,
+		v1beta1constants.GardenRole: gcmxBaseName,
+	}
+}
 
 func makeDeployment(deploymentName, namespace, containerImageName, serverSecretName string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
 			Namespace: namespace,
-			Labels: map[string]string{
-				v1beta1constants.LabelApp: gcmxBaseName,
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				// The actual availability requirement of gardener-custom-metrics is closer to the "controller"
 				// availability level (even less, actually). The value below is set to "server" solely to satisfy
 				// the requirement for consistency with existing components.
-				resourcesv1alpha1.HighAvailabilityConfigType: "server",
-			},
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			}),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas:             ptr.To[int32](1),
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:   gcmxBaseName,
-					v1beta1constants.GardenRole: gcmxBaseName,
-				},
+				MatchLabels: getLabels(),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						v1beta1constants.LabelApp:                                                  gcmxBaseName,
-						v1beta1constants.GardenRole:                                                gcmxBaseName,
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:                                   v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                      v1beta1constants.LabelNetworkPolicyAllowed,
 						"networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443": v1beta1constants.LabelNetworkPolicyAllowed,
-					},
+					}),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
