@@ -77,8 +77,10 @@ const (
 	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 
-	// BilinearPodAutoscalingForAPIServer is applied to a seed cluster and enables simultaneous independent horizontal and vertical scaling.
-	// For more information, see 'BilinearPodAutoscalingForAPIServer' in the feature_gates.md file.
+	// BilinearPodAutoscalingForAPIServer is applied to a seed cluster. It enables a new autoscaling mechanism for the
+	// shoot kube-apiserver where it is scaled simultaneously via HPA on request rate and VPA on resource usage. For
+	// details, see GEP 23. When enabled, this feature takes precedence over the HVPA and HVPAForShootedSeed features in
+	// determining how shoot kube-apiserver pods are scaled.
 	// This feature is incompatible with the HVPA and HVPAForShootedSeed features.
 	// owner @andrerun
 	// alpha: v1.93.0
