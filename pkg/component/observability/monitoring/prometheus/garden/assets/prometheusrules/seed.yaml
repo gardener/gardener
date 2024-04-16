@@ -346,6 +346,7 @@ spec:
           The seed cluster: {{$labels.name}} has
           condition ControlPlaneHealthy == 0 for more than 30 minutes. Some Control Plane
           components of the seed may have an issue.
+
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
                                 shoot_name       = '%s',
@@ -354,9 +355,11 @@ spec:
                  | query
                  | sortByLabel "shoot_alertname"}}
           {{if .}}Currently firing alerts:
+
           {{end -}}
           {{range . -}}
           - {{.Labels.shoot_alertname}}
+
           {{end -}}
           {{end -}}
 
@@ -381,6 +384,7 @@ spec:
           The seed cluster: {{$labels.name}} has
           condition SystemComponentsHealthy == 0 for more than 30 minutes. Some
           components required by the seed may have an issue.
+
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
                                 shoot_name       = '%s',
@@ -389,8 +393,10 @@ spec:
                  | query
                  | sortByLabel "shoot_alertname"}}
           {{if .}}Currently firing alerts:
+
           {{end -}}
           {{range . -}}
           - {{.Labels.shoot_alertname}}
+
           {{end -}}
           {{end -}}
