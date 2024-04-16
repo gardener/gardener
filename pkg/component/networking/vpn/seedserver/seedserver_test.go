@@ -124,6 +124,10 @@ var _ = Describe("VpnSeedServer", func() {
 									Value: string(values.Network.IPFamilies[0]),
 								},
 								{
+									Name:  "VPN_NETWORK",
+									Value: values.Network.VPNCIDR,
+								},
+								{
 									Name:  "SERVICE_NETWORK",
 									Value: values.Network.ServiceCIDR,
 								},
@@ -606,6 +610,7 @@ var _ = Describe("VpnSeedServer", func() {
 			ImageVPNSeedServer:  vpnImage,
 			KubeAPIServerHost:   ptr.To("foo.bar"),
 			Network: NetworkValues{
+				VPNCIDR:     "10.0.3.0/24",
 				PodCIDR:     "10.0.1.0/24",
 				ServiceCIDR: "10.0.0.0/24",
 				NodeCIDR:    "10.0.2.0/24",

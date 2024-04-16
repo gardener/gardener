@@ -97,6 +97,8 @@ type Interface interface {
 
 // NetworkValues contains the configuration values for the network.
 type NetworkValues struct {
+	// VPNCIDR is the CIDR of the vpn network.
+	VPNCIDR string
 	// PodCIDR is the CIDR of the pod network.
 	PodCIDR string
 	// ServiceCIDR is the CIDR of the service network.
@@ -291,6 +293,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						{
 							Name:  "IP_FAMILIES",
 							Value: strings.Join(ipFamilies, ","),
+						},
+						{
+							Name:  "VPN_NETWORK",
+							Value: v.values.Network.VPNCIDR,
 						},
 						{
 							Name:  "SERVICE_NETWORK",

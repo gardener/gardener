@@ -31,9 +31,10 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		ImageAPIServerProxy:      imageAPIServerProxy.String(),
 		ImageVPNSeedServer:       imageVPNSeedServer.String(),
 		Network: vpnseedserver.NetworkValues{
+			VPNCIDR:     ptr.Deref(b.Seed.GetInfo().Spec.Networks.VPN, ""),
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			// NodeCIDR is set in DeployVPNServer to handle dynamice node network CIDRs
+			// NodeCIDR is set in DeployVPNServer to handle dynamic node network CIDRs
 			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 		},
 		Replicas:                             b.Shoot.GetReplicas(1),

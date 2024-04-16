@@ -49,6 +49,8 @@ var _ = Describe("VPNSeedServer", func() {
 	Describe("#DefaultVPNSeedServer", func() {
 		var kubernetesClient *kubernetesmock.MockInterface
 
+		const vpnNetwork = "10.42.0.0/24"
+
 		BeforeEach(func() {
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
@@ -70,6 +72,13 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Seed = &seed.Seed{
 				KubernetesVersion: semver.MustParse("1.26.3"),
 			}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Networks: gardencorev1beta1.SeedNetworks{
+						VPN: ptr.To(vpnNetwork),
+					},
+				},
+			})
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
@@ -89,6 +98,17 @@ var _ = Describe("VPNSeedServer", func() {
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
 			Expect(vpnSeedServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should correctly pass the expected values", func() {
+			kubernetesClient.EXPECT().Client()
+			kubernetesClient.EXPECT().Version()
+
+			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
+			Expect(vpnSeedServer).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(vpnSeedServer.GetValues().Network.VPNCIDR).To(Equal(vpnNetwork))
 		})
 
 		DescribeTable("should correctly set the deployment replicas",
