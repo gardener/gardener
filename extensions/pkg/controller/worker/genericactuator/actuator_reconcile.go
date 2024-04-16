@@ -290,7 +290,7 @@ func deployMachineDeployments(
 					},
 				},
 			}
-
+			log.Info("Deploying machine deployment", "machineDeploymentName", machineDeployment.Name, "replicas", machineDeployment.Spec.Replicas)
 			return nil
 		}); err != nil {
 			return err
