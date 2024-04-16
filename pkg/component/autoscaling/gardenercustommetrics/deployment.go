@@ -45,9 +45,6 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 			Name:      deploymentName,
 			Namespace: gcmx.namespaceName,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-				// The actual availability requirement of gardener-custom-metrics is closer to the "controller"
-				// availability level (even less, actually). The value below is set to "server" solely to satisfy
-				// the requirement for consistency with existing components.
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 			}),
 		},

@@ -15,6 +15,7 @@
 package gardenercustommetrics
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,7 +35,7 @@ func (gcmx *gardenerCustomMetrics) vpa() *vpaautoscalingv1.VerticalPodAutoscaler
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
-				APIVersion: "apps/v1",
+				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
 				Name:       deploymentName,
 			},

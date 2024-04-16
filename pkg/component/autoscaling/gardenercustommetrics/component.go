@@ -42,7 +42,7 @@ type gardenerCustomMetrics struct {
 	namespaceName string
 	values        Values
 
-	seedClient     client.Client
+	client         client.Client
 	secretsManager secretsmanager.Interface
 }
 
@@ -61,7 +61,7 @@ type Values struct {
 // determined by contextual configuration, e.g. image vector overrides.
 // If enabled is true, this instance strives to bring the component to an installed, working state. If enabled is
 // false, this instance strives to uninstall the component.
-// seedClient represents the connection to the seed API server.
+// client represents the connection to the seed API server.
 // secretsManager is used to interact with secrets on the seed.
 func New(
 	namespace string,
@@ -71,7 +71,7 @@ func New(
 	return &gardenerCustomMetrics{
 		namespaceName:  namespace,
 		values:         values,
-		seedClient:     seedClient,
+		client:         seedClient,
 		secretsManager: secretsManager,
 	}
 }
@@ -117,7 +117,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 
 	err = managedresources.CreateForSeed(
 		ctx,
-		gcmx.seedClient,
+		gcmx.client,
 		gcmx.namespaceName,
 		managedResourceName,
 		false,
@@ -135,7 +135,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 
 // Destroy implements [component.Deployer.Destroy]()
 func (gcmx *gardenerCustomMetrics) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForSeed(ctx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, gcmx.client, gcmx.namespaceName, managedResourceName); err != nil {
 		return fmt.Errorf(
 			"An error occurred while removing the gardener-custom-metrics component in namespace '%s' from the seed server"+
 				" - failed to remove ManagedResource '%s'. "+
@@ -153,7 +153,7 @@ func (gcmx *gardenerCustomMetrics) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
 
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, gcmx.client, gcmx.namespaceName, managedResourceName); err != nil {
 		return fmt.Errorf(
 			"An error occurred while waiting for the deployment process of the gardener-custom-metrics component to "+
 				"'%s' namespace in the seed server to finish and for the component to report ready status"+
@@ -172,7 +172,7 @@ func (gcmx *gardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
 
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, gcmx.seedClient, gcmx.namespaceName, managedResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(timeoutCtx, gcmx.client, gcmx.namespaceName, managedResourceName); err != nil {
 		return fmt.Errorf(
 			"An error occurred while waiting for the gardener-custom-metrics component to be fully removed from the "+
 				"'%s' namespace in the seed server"+
