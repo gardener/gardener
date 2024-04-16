@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
-
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // SetDefaults_Seed sets default values for Seed objects.
@@ -56,9 +54,9 @@ func SetDefaults_SeedNetworks(obj *SeedNetworks) {
 	if obj.VPN == nil {
 		// Determine the primary IPFamily. We can't use the helper package here as it would result in cyclic imports.
 		if obj.IPFamilies[0] == IPFamilyIPv6 {
-			obj.VPN = ptr.To(constants.DefaultVPNRangeV6)
+			obj.VPN = ptr.To(DefaultVPNNetworkV6)
 		} else {
-			obj.VPN = ptr.To(constants.DefaultVPNRange)
+			obj.VPN = ptr.To(DefaultVPNNetworkV4)
 		}
 	}
 }

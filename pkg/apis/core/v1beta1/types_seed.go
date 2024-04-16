@@ -207,6 +207,13 @@ type SeedNetworks struct {
 	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,6,rep,name=ipFamilies,casttype=IPFamily"`
 }
 
+const (
+	// DefaultVPNNetworkV4 is the default IPv4 network range for the VPN between seed and shoot cluster.
+	DefaultVPNNetworkV4 = "192.168.123.0/24"
+	// DefaultVPNNetworkV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
+	DefaultVPNNetworkV6 = "fd8f:6d53:b97a:1::/120"
+)
+
 // ShootNetworks contains the default networks CIDRs for shoots.
 type ShootNetworks struct {
 	// Pods is the CIDR of the pod network.
