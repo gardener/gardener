@@ -791,7 +791,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(istio_tcp_received_bytes_total{pod=~\"$istio_proxy_pod\", namespace=~\"$istio_proxy_namespace\" }[$__rate_interval])) by (namespace)",
+          "expr": "sum(rate(istio_tcp_sent_bytes_total{pod=~\"$istio_proxy_pod\", namespace=~\"$istio_proxy_namespace\" }[$__rate_interval])) by (namespace)",
           "format": "time_series",
           "hide": false,
           "interval": "",
