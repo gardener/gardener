@@ -17,12 +17,14 @@ package botanist
 import (
 	"context"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -34,6 +36,11 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		return nil, err
 	}
 
+	maxNodesTotal, err := gardenerutils.CalculateMaxNodesForShoot(b.Shoot.GetInfo())
+	if err != nil {
+		return nil, err
+	}
+
 	return clusterautoscaler.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -41,6 +48,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,
+		ptr.Deref(maxNodesTotal, 0),
 		b.Seed.KubernetesVersion,
 	), nil
 }

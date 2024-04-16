@@ -261,6 +261,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--v=2",
 					"--max-empty-bulk-delete=10",
 					"--new-pod-scale-up-delay=0s",
+					"--max-nodes-total=0",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -277,6 +278,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--v=%d", configVerbosity),
 					fmt.Sprintf("--max-empty-bulk-delete=%d", *configMaxEmptyBulkDelete),
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
+					"--max-nodes-total=0",
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[0]),
 					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[1]),
 				)
@@ -595,7 +597,7 @@ subjects:
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, 0, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -613,9 +615,9 @@ subjects:
 				}
 
 				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, semver.MustParse("1.26.1"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
 				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, semver.MustParse("1.25.0"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
 				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
