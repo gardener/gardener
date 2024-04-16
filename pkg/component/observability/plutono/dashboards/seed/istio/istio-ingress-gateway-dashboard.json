@@ -172,7 +172,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(container_memory_working_set_bytes{pod=~\"$istio_proxy_pod\"}[$__rate_interval])",
+          "expr": "container_memory_working_set_bytes{pod=~\"$istio_proxy_pod\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -805,7 +805,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "TCP Send by Namespace",
+      "title": "TCP Sent by Namespace",
       "tooltip": {
         "shared": true,
         "sort": 1,
