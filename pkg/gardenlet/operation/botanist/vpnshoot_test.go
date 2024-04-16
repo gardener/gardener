@@ -10,11 +10,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
@@ -35,6 +37,8 @@ var _ = Describe("VPNShoot", func() {
 	Describe("#DefaultVPNShoot", func() {
 		var kubernetesClient *kubernetesmock.MockInterface
 
+		const vpnNetwork = "10.42.0.0/24"
+
 		BeforeEach(func() {
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			botanist.SeedClientSet = kubernetesClient
@@ -54,6 +58,14 @@ var _ = Describe("VPNShoot", func() {
 					},
 				},
 			})
+			botanist.Seed = &seed.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Networks: gardencorev1beta1.SeedNetworks{
+						VPN: ptr.To(vpnNetwork),
+					},
+				},
+			})
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {
@@ -62,6 +74,16 @@ var _ = Describe("VPNShoot", func() {
 			vpnShoot, err := botanist.DefaultVPNShoot()
 			Expect(vpnShoot).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should correctly pass the expected values", func() {
+			kubernetesClient.EXPECT().Client()
+
+			vpnShoot, err := botanist.DefaultVPNShoot()
+			Expect(vpnShoot).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(vpnShoot.GetValues().ReversedVPN.VPNCIDR).To(Equal(vpnNetwork))
 		})
 	})
 })

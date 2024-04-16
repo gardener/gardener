@@ -61,10 +61,14 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
+	// GetValues returns the current configuration values of the deployer.
+	GetValues() Values
 }
 
 // ReversedVPNValues contains the configuration values for the ReversedVPN.
 type ReversedVPNValues struct {
+	// VPNCIDR is the CIDR of the vpn network.
+	VPNCIDR string
 	// Header is the header for the ReversedVPN.
 	Header string
 	// Endpoint is the endpoint for the ReversedVPN.
@@ -198,6 +202,10 @@ func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
+}
+
+func (v *vpnShoot) GetValues() Values {
+	return v.values
 }
 
 func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNShoot []vpnSecret) (map[string][]byte, error) {
@@ -547,6 +555,10 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 		corev1.EnvVar{
 			Name:  "IP_FAMILIES",
 			Value: strings.Join(ipFamilies, ","),
+		},
+		corev1.EnvVar{
+			Name:  "VPN_NETWORK",
+			Value: v.values.ReversedVPN.VPNCIDR,
 		},
 		corev1.EnvVar{
 			Name:  "ENDPOINT",

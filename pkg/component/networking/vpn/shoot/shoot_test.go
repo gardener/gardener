@@ -273,6 +273,10 @@ spec:
 						Value: string(values.ReversedVPN.IPFamilies[0]),
 					},
 					corev1.EnvVar{
+						Name:  "VPN_NETWORK",
+						Value: values.ReversedVPN.VPNCIDR,
+					},
+					corev1.EnvVar{
 						Name:  "ENDPOINT",
 						Value: endPoint,
 					},
@@ -649,6 +653,7 @@ spec:
 		Context("IPv6", func() {
 			BeforeEach(func() {
 				values.VPAEnabled = false
+				values.ReversedVPN.VPNCIDR = "fd8f:f00:b97a:1::/120"
 				values.ReversedVPN.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 			})
 

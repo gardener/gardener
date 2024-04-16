@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	shoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -80,6 +81,20 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() shoot.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(shoot.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
 // ScrapeConfigs mocks base method.
