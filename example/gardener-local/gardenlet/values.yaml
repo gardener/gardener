@@ -92,6 +92,7 @@ config:
         # Those CIDRs must match those specified in the kind Cluster configuration.
         pods: 10.1.0.0/16
         services: 10.2.0.0/16
+        vpn: 10.5.0.0/24
         shootDefaults:
           pods: 10.3.0.0/16
           services: 10.4.0.0/16
