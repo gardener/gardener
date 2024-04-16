@@ -1130,6 +1130,7 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 		},
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "garden-prometheus",
+			OldSubPath:      ptr.To("/"),
 			PVCNames: []string{
 				"prometheus-db-garden-prometheus-0",
 				"prometheus-db-garden-prometheus-1",

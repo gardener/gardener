@@ -52,6 +52,10 @@ type DataMigration struct {
 	StorageCapacity resource.Quantity
 	// FullName is the full name of the component (e.g., prometheus-<name> or alertmanager-<name>).
 	FullName string
+	// OldSubPath is the subpath of the database on the old persistent volume. prometheus-operator assumes a subpath
+	// `prometheus-db`, hence, if it was different before, it needs to be migrated.
+	// If this field is not specified, the old subpath is assumed to be `prometheus-`.
+	OldSubPath *string
 
 	// ImageAlpine defines the container image of alpine.
 	ImageAlpine string
