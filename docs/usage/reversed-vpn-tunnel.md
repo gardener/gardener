@@ -19,6 +19,22 @@ Connection establishment with a reversed tunnel:
 
 `APIServer --> Envoy-Proxy | VPN-Seed-Server <-- Istio/Envoy-Proxy <-- SNI API Server Endpoint <-- LB (one for all clusters of a seed) <--- internet <--- VPN-Shoot-Client --> Pods | Nodes | Services`
 
+## Configurable VPN Network
+
+The CIDR of the VPN network can be configured using the `Seed.spec.networks.vpn` field.
+The field configures the CIDR for all VPN tunnels of shoots running on the given seed.
+It defaults to `192.168.123.0/24` for `IPv4` seeds and `fd8f:6d53:b97a:1::/120` for `IPv6` seeds.
+The field is mutable and changing it leads to a temporary VPN disconnect during the next reconciliation of all shoots on this seed.
+
+Similar to the other seed networks (see `Seed.spec.networks`), the configured VPN network must not overlap with any other seed network.
+Also, shoot networks (see `Shoot.spec.networking`) must not overlap with any seed network including the VPN network.
+This is required for packets to be routed without ambiguity in all components of the seed/shoot architecture.
+Migrating the control plane of a shoot to a seed cluster with a different VPN network configuration works as long as network disjointedness is still fulfilled.
+
+With the requirement for disjoint seed and shoot networks, Gardener users are limited in choosing network ranges for their shoots.
+Gardener operators might want to use coherent ranges for their seed networks including the VPN network to give users more freedom of choice and make the limitations simpler to reason about.
+For this, configuring a non-default VPN network on the seed-level allows Gardener operators to use for example the [IANA-Reserved IPv4 Shared Address Space](https://datatracker.ietf.org/doc/html/rfc6598#section-7) (`100.64.0.0/10`) for all seed networks (the ones that users can't choose for their shoots).
+
 ## High Availability for Reversed VPN Tunnel
 
 Shoots which define `spec.controlPlane.highAvailability.failureTolerance: {node, zone}` get an HA control-plane, including a
