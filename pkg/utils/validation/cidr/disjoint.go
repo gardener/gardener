@@ -8,22 +8,20 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless bool) field.ErrorList {
+func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes, seedVPN *string, seedPods, seedServices string, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, seedNodes, seedVPN, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, seedNodes, seedVPN, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, seedNodes, seedVPN, seedPods, seedServices)...)
 
 	return allErrs
 }
 
-func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired bool, seedNodes, seedVPN *string, seedPods, seedServices string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if shootNetwork != nil {
@@ -39,12 +37,8 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork *string, networkT
 			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
 		}
 
-		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootNetwork) {
-			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRange)))
-		}
-
-		if NetworksIntersect(v1beta1constants.DefaultVPNRangeV6, *shootNetwork) {
-			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
+		if seedVPN != nil && NetworksIntersect(*seedVPN, *shootNetwork) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *shootNetwork, fmt.Sprintf("shoot %s network intersects with seed vpn network", networkType)))
 		}
 	} else if networkRequired {
 		allErrs = append(allErrs, field.Required(fldPath, networkType+"s is required"))

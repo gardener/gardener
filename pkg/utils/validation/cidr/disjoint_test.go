@@ -19,6 +19,7 @@ var _ = Describe("utils", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
+			seedVPNCIDR      = "10.239.0.0/24"
 		)
 
 		It("should pass the validation", func() {
@@ -34,6 +35,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -55,6 +57,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -85,6 +88,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -107,6 +111,7 @@ var _ = Describe("utils", func() {
 				nil,
 				nil,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -131,6 +136,7 @@ var _ = Describe("utils", func() {
 				nil,
 				nil,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				true,
@@ -144,9 +150,9 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should fail due to default vpn range overlap in pod cidr", func() {
+		It("should fail due to overlap of vpn and pod networks", func() {
 			var (
-				podsCIDR     = "192.168.123.0/24"
+				podsCIDR     = "10.239.0.0/17"
 				servicesCIDR = "10.242.0.0/17"
 				nodesCIDR    = "10.243.0.0/16"
 			)
@@ -157,6 +163,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -165,14 +172,14 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].pods"),
-				"Detail": ContainSubstring("pod network intersects with default vpn network"),
+				"Detail": ContainSubstring("pod network intersects with seed vpn network"),
 			}))))
 		})
 
-		It("should fail due to default vpn range overlap in services cidr", func() {
+		It("should fail due to overlap of vpn and service networks", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
-				servicesCIDR = "192.168.123.64/26"
+				servicesCIDR = "10.239.0.128/25"
 				nodesCIDR    = "10.243.0.0/16"
 			)
 
@@ -182,6 +189,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -190,15 +198,15 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].services"),
-				"Detail": ContainSubstring("service network intersects with default vpn network"),
+				"Detail": ContainSubstring("service network intersects with seed vpn network"),
 			}))))
 		})
 
-		It("should fail due to default vpn range overlap in nodes cidr", func() {
+		It("should fail due to overlap of vpn and node networks", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.242.0.0/17"
-				nodesCIDR    = "192.168.0.0/16"
+				nodesCIDR    = "10.239.0.0/24"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -207,6 +215,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -215,7 +224,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].nodes"),
-				"Detail": ContainSubstring("node network intersects with default vpn network"),
+				"Detail": ContainSubstring("node network intersects with seed vpn network"),
 			}))))
 		})
 
@@ -232,6 +241,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -260,6 +270,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -284,6 +295,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDR,
+				&seedVPNCIDR,
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
@@ -302,6 +314,7 @@ var _ = Describe("utils", func() {
 			seedPodsCIDRIPv6     = "2001:0db8:65a3::/113"
 			seedServicesCIDRIPv6 = "2001:0db8:75a3::/113"
 			seedNodesCIDRIPv6    = "2001:0db8:85a3::/112"
+			seedVPNCIDRIPv6      = "2001:0db8:95a3::/120"
 		)
 
 		It("should pass the validation", func() {
@@ -317,6 +330,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -338,6 +352,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -368,6 +383,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -390,6 +406,7 @@ var _ = Describe("utils", func() {
 				nil,
 				nil,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -414,6 +431,7 @@ var _ = Describe("utils", func() {
 				nil,
 				nil,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				true,
@@ -427,9 +445,9 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should fail due to default vpn range overlap in pod cidr", func() {
+		It("should fail due to overlap of vpn and pod networks", func() {
 			var (
-				podsCIDR     = "fd8f:6d53:b97a:1::/120"
+				podsCIDR     = "2001:0db8:95a3::/110"
 				servicesCIDR = "2001:0db8:45a3::/113"
 				nodesCIDR    = "2001:0db8:55a3::/112"
 			)
@@ -440,6 +458,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -448,14 +467,14 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].pods"),
-				"Detail": ContainSubstring("pod network intersects with default vpn network"),
+				"Detail": ContainSubstring("pod network intersects with seed vpn network"),
 			}))))
 		})
 
-		It("should fail due to default vpn range overlap in services cidr", func() {
+		It("should fail due to overlap of vpn and service networks", func() {
 			var (
 				podsCIDR     = "2001:0db8:35a3::/113"
-				servicesCIDR = "fd8f:6d53:b97a:1::/120"
+				servicesCIDR = "2001:0db8:95a3::80/121"
 				nodesCIDR    = "2001:0db8:55a3::/112"
 			)
 
@@ -465,6 +484,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -473,15 +493,15 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].services"),
-				"Detail": ContainSubstring("service network intersects with default vpn network"),
+				"Detail": ContainSubstring("service network intersects with seed vpn network"),
 			}))))
 		})
 
-		It("should fail due to default vpn range overlap in nodes cidr", func() {
+		It("should fail due to overlap of vpn and node networks", func() {
 			var (
 				podsCIDR     = "2001:0db8:35a3::/113"
 				servicesCIDR = "2001:0db8:45a3::/113"
-				nodesCIDR    = "fd8f:6d53:b97a:1::/120"
+				nodesCIDR    = "2001:0db8:95a3::/120"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -490,6 +510,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -498,7 +519,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].nodes"),
-				"Detail": ContainSubstring("node network intersects with default vpn network"),
+				"Detail": ContainSubstring("node network intersects with seed vpn network"),
 			}))))
 		})
 
@@ -515,6 +536,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -543,6 +565,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,
@@ -567,6 +590,7 @@ var _ = Describe("utils", func() {
 				&podsCIDR,
 				&servicesCIDR,
 				&seedNodesCIDRIPv6,
+				&seedVPNCIDRIPv6,
 				seedPodsCIDRIPv6,
 				seedServicesCIDRIPv6,
 				false,

@@ -95,6 +95,7 @@ var _ = Describe("validator", func() {
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
 			seedNodesCIDR    = "10.240.0.0/16"
+			seedVPNCIDR      = "10.242.0.0/24"
 
 			projectBase = gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -192,6 +193,7 @@ var _ = Describe("validator", func() {
 						Pods:       seedPodsCIDR,
 						Services:   seedServicesCIDR,
 						Nodes:      &seedNodesCIDR,
+						VPN:        &seedVPNCIDR,
 						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 					},
 				},
@@ -1657,9 +1659,21 @@ var _ = Describe("validator", func() {
 					oldShoot.Spec.SeedName = nil
 				})
 
+				It("should pass because seed and shoot networks are disjoint", func() {
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("update should pass because validation of network disjointedness should not be executed", func() {
-					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					// set shoot pod cidr to overlap with seed pod cidr
+					shoot.Spec.Networking.Pods = ptr.To(seedPodsCIDR)
 					oldShoot.Spec.SeedName = shoot.Spec.SeedName
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1673,8 +1687,8 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update should fail because validation of network disjointedness is executed", func() {
-					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					// set shoot pod cidr to overlap with seed pod cidr
+					shoot.Spec.Networking.Pods = ptr.To(seedPodsCIDR)
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1687,8 +1701,8 @@ var _ = Describe("validator", func() {
 				})
 
 				It("delete should pass because validation of network disjointedness should not be executed", func() {
-					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					// set shoot pod cidr to overlap with seed pod cidr
+					shoot.Spec.Networking.Pods = ptr.To(seedPodsCIDR)
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1851,6 +1865,48 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should reject because the shoot node and the seed vpn networks intersect", func() {
+					shoot.Spec.Networking.Nodes = &seedVPNCIDR
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot node network intersects with seed vpn network"))))
+				})
+
+				It("should reject because the shoot pod and the seed vpn networks intersect", func() {
+					shoot.Spec.Networking.Pods = &seedVPNCIDR
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot pod network intersects with seed vpn network"))))
+				})
+
+				It("should reject because the shoot service and the seed vpn networks intersect", func() {
+					shoot.Spec.Networking.Services = &seedVPNCIDR
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot service network intersects with seed vpn network"))))
 				})
 
 				It("should reject because the shoot service and the shoot node networks intersect", func() {

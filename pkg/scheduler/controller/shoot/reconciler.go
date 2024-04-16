@@ -495,6 +495,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		shootPodsNetwork,
 		shootServicesNetwork,
 		seed.Spec.Networks.Nodes,
+		seed.Spec.Networks.VPN,
 		seed.Spec.Networks.Pods,
 		seed.Spec.Networks.Services,
 		workerless,

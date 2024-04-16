@@ -736,6 +736,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 				c.shoot.Spec.Networking.Pods,
 				c.shoot.Spec.Networking.Services,
 				c.seed.Spec.Networks.Nodes,
+				c.seed.Spec.Networks.VPN,
 				c.seed.Spec.Networks.Pods,
 				c.seed.Spec.Networks.Services,
 				workerless,
