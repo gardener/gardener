@@ -215,7 +215,7 @@ make test-integration
 If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. Prior to execution, the `PATH` environment variable needs to be set to also included the tools binary directory. For example:
 
 ```bash
-export PATH="$PWD/hack/tools/bin:$PATH"
+export PATH="$PWD/hack/tools/bin/$(go env GOOS)-$(go env GOARCH):$PATH"
 
 source ./hack/test-integration.env
 ./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor

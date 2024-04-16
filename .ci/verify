@@ -24,7 +24,7 @@ cd /go/src/github.com/gardener/gardener
 git restore VERSION
 
 if [ $use_cache = yes ] ; then
-  make hack/tools/bin/golangci-lint
+  make hack/tools/bin/golangci-lint TOOLS_BIN_DIR=hack/tools/bin
 
   # list of all to-be-cached directories
   cache_dirs=(
