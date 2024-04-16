@@ -1972,6 +1972,7 @@ rules:
 						HighAvailabilityEnabled:              true,
 						HighAvailabilityNumberOfSeedServers:  2,
 						HighAvailabilityNumberOfShootClients: 3,
+						VPNNetworkCIDR:                       "10.42.0.0/24",
 						PodNetworkCIDR:                       "1.2.3.0/24",
 						NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
 					},
@@ -1989,6 +1990,10 @@ rules:
 							{
 								Name:  "ENDPOINT",
 								Value: fmt.Sprintf("vpn-seed-server-%d", index),
+							},
+							{
+								Name:  "VPN_NETWORK",
+								Value: values.VPN.VPNNetworkCIDR,
 							},
 							{
 								Name:  "SERVICE_NETWORK",
@@ -2105,6 +2110,10 @@ rules:
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         []string{"/path-controller.sh"},
 					Env: []corev1.EnvVar{
+						{
+							Name:  "VPN_NETWORK",
+							Value: values.VPN.VPNNetworkCIDR,
+						},
 						{
 							Name:  "SERVICE_NETWORK",
 							Value: values.ServiceNetworkCIDR,

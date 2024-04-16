@@ -49,8 +49,9 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 	if !b.Shoot.IsWorkerless {
 		vpnConfig.Enabled = true
+		vpnConfig.VPNNetworkCIDR = ptr.Deref(b.Seed.GetInfo().Spec.Networks.VPN, "")
 		vpnConfig.PodNetworkCIDR = pods
-		// NodeNetworkCIDR is set on deployment to handle dynamice node network CIDRs
+		// NodeNetworkCIDR is set on deployment to handle dynamic node network CIDRs
 		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
 		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers
 		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients

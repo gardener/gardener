@@ -70,6 +70,7 @@ var _ = Describe("KubeAPIServer", func() {
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
+		vpnNetwork            = "10.0.4.0/24"
 		apiServerClusterIP    = "1.2.3.4"
 		apiServerAddress      = "5.6.7.8"
 	)
@@ -157,6 +158,9 @@ var _ = Describe("KubeAPIServer", func() {
 				Ingress: &gardencorev1beta1.Ingress{
 					Domain: "foo.bar.local",
 				},
+				Networks: gardencorev1beta1.SeedNetworks{
+					VPN: ptr.To(vpnNetwork),
+				},
 			},
 		})
 	})
@@ -166,6 +170,13 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
+		It("should correctly pass the expected values", func() {
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(kubeAPIServer.GetValues().VPN.VPNNetworkCIDR).To(Equal(vpnNetwork))
+		})
+
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
 				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig apiserver.AutoscalingConfig) {

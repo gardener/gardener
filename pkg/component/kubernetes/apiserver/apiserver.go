@@ -156,6 +156,8 @@ type Images struct {
 type VPNConfig struct {
 	// Enabled states whether VPN is enabled.
 	Enabled bool
+	// VPNNetworkCIDR is the CIDR of the vpn network.
+	VPNNetworkCIDR string
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.

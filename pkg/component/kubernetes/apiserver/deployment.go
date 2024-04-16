@@ -760,6 +760,10 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 				Value: fmt.Sprintf("vpn-seed-server-%d", index),
 			},
 			{
+				Name:  "VPN_NETWORK",
+				Value: k.values.VPN.VPNNetworkCIDR,
+			},
+			{
 				Name:  "SERVICE_NETWORK",
 				Value: k.values.ServiceNetworkCIDR,
 			},
@@ -835,6 +839,10 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/path-controller.sh"},
 		Env: []corev1.EnvVar{
+			{
+				Name:  "VPN_NETWORK",
+				Value: k.values.VPN.VPNNetworkCIDR,
+			},
 			{
 				Name:  "SERVICE_NETWORK",
 				Value: k.values.ServiceNetworkCIDR,
