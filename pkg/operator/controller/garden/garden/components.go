@@ -1130,6 +1130,7 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 		},
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "garden-prometheus",
+			OldSubPath:      ptr.To("/"),
 			PVCNames: []string{
 				"prometheus-db-garden-prometheus-0",
 				"prometheus-db-garden-prometheus-1",
@@ -1139,12 +1140,12 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 }
 
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (blackboxexporter.Interface, error) {
-	kubeAPIServerTargets := []monitoringv1alpha1.Target{monitoringv1alpha1.Target(gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0])}
+	kubeAPIServerTargets := []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
 		for _, domainPattern := range garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns {
 			if !strings.Contains(domainPattern, "*") {
-				kubeAPIServerTargets = append(kubeAPIServerTargets, monitoringv1alpha1.Target(domainPattern))
+				kubeAPIServerTargets = append(kubeAPIServerTargets, monitoringv1alpha1.Target("https://"+domainPattern+"/healthz"))
 			}
 		}
 	}

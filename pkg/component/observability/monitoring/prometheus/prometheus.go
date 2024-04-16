@@ -117,13 +117,25 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 	}
 
 	if takeOverOldPV {
+		var (
+			mountPath = "/prometheus"
+			subPath   = ptr.Deref(p.values.DataMigration.OldSubPath, "prometheus-")
+			oldDBPath = mountPath + `/` + subPath
+			newDBPath = mountPath + `/prometheus-db`
+			arg       = `if [[ -d ` + oldDBPath + ` ]]; then mv ` + oldDBPath + ` ` + newDBPath + ` && echo "rename done"; else echo "rename already done"; fi`
+		)
+
+		if subPath == "/" {
+			arg = `if [[ -d ` + mountPath + `/wal ]]; then rm -rf ` + newDBPath + `; mkdir -p ` + newDBPath + `; find ` + mountPath + ` -mindepth 1 -maxdepth 1 ! -name prometheus-db -exec mv {} ` + newDBPath + ` \; && echo "rename done"; else echo "rename already done"; fi`
+		}
+
 		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
 			Name:            "take-over-old-pv",
 			Image:           p.values.DataMigration.ImageAlpine,
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			VolumeMounts:    []corev1.VolumeMount{{Name: "prometheus-db", MountPath: "/prometheus"}},
+			VolumeMounts:    []corev1.VolumeMount{{Name: "prometheus-db", MountPath: mountPath}},
 			Command:         []string{"/bin/sh", "-c"},
-			Args:            []string{`if [[ -d /prometheus/prometheus- ]]; then mv /prometheus/prometheus- /prometheus/prometheus-db && echo "rename done"; else echo "rename already done"; fi`},
+			Args:            []string{arg},
 		})
 	}
 
