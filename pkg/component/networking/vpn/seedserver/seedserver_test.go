@@ -171,7 +171,7 @@ var _ = Describe("VpnSeedServer", func() {
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
+									corev1.ResourceMemory: resource.MustParse("20Mi"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -324,7 +324,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("20m"),
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -374,7 +374,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("20m"),
-							corev1.ResourceMemory: resource.MustParse("20Mi"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("850M"),
@@ -591,14 +591,14 @@ var _ = Describe("VpnSeedServer", func() {
 						{
 							ContainerName: DeploymentName,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 							ControlledValues: &controlledValues,
 						},
 						{
 							ContainerName: "envoy-proxy",
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 							ControlledValues: &controlledValues,
 						},
