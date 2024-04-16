@@ -171,9 +171,6 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 		allErrs = append(allErrs, err)
 	}
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
-	if !gardencorehelper.IsWorkerless(shoot) && shoot.Spec.Networking != nil {
-		allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
-	}
 	return allErrs
 }
 
