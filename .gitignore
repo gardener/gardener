@@ -30,6 +30,7 @@ config.vmdk
 hack/tools/logcheck/pkg/logcheck/testdata/src/github.com/go-logr/logr
 hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log
 
+.golangci.yaml
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*
