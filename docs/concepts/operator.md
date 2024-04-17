@@ -159,8 +159,9 @@ The reconciler also manages a few observability-related components (more planned
 - `plutono`
 - `vali`
 - `prometheus-operator`
-- `alertmanager-garden` (read more [here](#observability))
-- `prometheus-garden` (read more [here](#observability))
+- `alertmanager-garden` (read more [here](#alertmanager))
+- `prometheus-garden` (read more [here](#garden-prometheus))
+- `prometheus-longterm` (read more [here](#long-term-prometheus))
 - `blackbox-exporter`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
@@ -277,6 +278,35 @@ metadata:
   labels:
     prometheus: garden
   name: garden-my-component
+  namespace: garden
+spec:
+  selector:
+    matchLabels:
+      app: my-component
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(metric1|metric2|...)$
+      sourceLabels:
+      - __name__
+    port: metrics
+```
+
+###### Long-Term Prometheus
+
+`gardener-operator` deploys another Prometheus instance in the `garden` namespace (called "Long-Term Prometheus") which federates metrics from [Garden Prometheus](#garden-prometheus).
+Its purpose is to store those with a longer retention than Garden Prometheus would (it is not possible to define different retention periods for different metrics in Prometheus, hence, using another Prometheus instance is the only option).
+This Long-Term Prometheus also has an additional [Cortex](https://cortexmetrics.io/) sidecar container for caching some queries to process faster processing times.
+
+If you would like to extend the configuration for this Long-Term Prometheus, you can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=longterm`, for example:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: longterm
+  name: longterm-my-component
   namespace: garden
 spec:
   selector:

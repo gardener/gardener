@@ -79,10 +79,14 @@ func (r *Reconciler) delete(
 			Name: "Destroying Alertmanager",
 			Fn:   component.OpDestroyAndWait(c.alertManager).Destroy,
 		})
-		destroyPrometheus = g.Add(flow.Task{
-			Name: "Destroying Prometheus",
+		destroyPrometheusLongTerm = g.Add(flow.Task{
+			Name: "Destroying long-term Prometheus",
+			Fn:   component.OpDestroyAndWait(c.prometheusLongTerm).Destroy,
+		})
+		destroyPrometheusGarden = g.Add(flow.Task{
+			Name: "Destroying Garden Prometheus",
 			Fn: func(ctx context.Context) error {
-				return r.destroyGardenPrometheus(ctx, c.prometheus)
+				return r.destroyGardenPrometheus(ctx, c.prometheusGarden)
 			},
 		})
 		destroyBlackboxExporter = g.Add(flow.Task{
@@ -212,7 +216,7 @@ func (r *Reconciler) delete(
 		destroyPrometheusOperator = g.Add(flow.Task{
 			Name:         "Destroying prometheus-operator",
 			Fn:           component.OpDestroyAndWait(c.prometheusOperator).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyAlertmanager, destroyPrometheus),
+			Dependencies: flow.NewTaskIDs(destroyAlertmanager, destroyPrometheusGarden, destroyPrometheusLongTerm),
 		})
 		destroyFluentOperatorCustomResources = g.Add(flow.Task{
 			Name:         "Destroying fluent-operator custom resources",
