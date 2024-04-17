@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount"
 	"github.com/gardener/gardener/pkg/features"
 )
 
@@ -58,7 +58,7 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 func Components(sshAccessEnabled bool) []components.Component {
 	components := []components.Component{
 		valitail.New(),
-		varlibmount.New(),
+		varlibkubeletmount.New(),
 		rootcertificates.New(),
 		containerd.New(),
 		containerd.NewInitializer(),
