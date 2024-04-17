@@ -1,0 +1,212 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sla
+spec:
+  groups:
+  - name: error_budget
+    rules:
+    # values:
+    #   1: the system was in a failed state for the observed scrape interval
+    #   0: the system was in a working state for the observed scrape interval
+    # note on min aggregation:
+    #   it is used to remove the instance and job labels; the instance vector
+    #   is expected to have a single item
+    # note on offset:
+    #   if the scrape duration fluctuates, data points with a long scrape duration
+    #   could be missing at the evaluation time; by using an offset of the scrape
+    #   interval, we can read the data points which arrived late and were dated back
+    - record: probe_failure
+      expr: |
+        min without(instance, job)
+          (garden_shoot_condition{operation = "Reconcile",
+                                  condition = "APIServerAvailable"}
+          offset 1m)
+        < bool 1
+
+    # if we don't trust a single failure, we can assert that in the preceeding
+    # minutes, there were at least n failures (n==1 is a NOOP)
+    - record: probe_failure:run
+      expr: |
+        probe_failure
+
+    # adds the day label with the index of the current day since 1970
+    - record: probe_failure:run:day
+      expr: |
+        probe_failure:run
+        + ignoring(day) group_right
+        count_values without() ("day",
+          floor(
+            timestamp(
+              probe_failure:run
+            ) / 60 / 60 / 24
+          )
+        ) * 0
+
+    # adds the week label with the index of the current week since 1970
+    - record: probe_failure:run:week
+      expr: |
+        probe_failure:run
+        + ignoring(week) group_right
+        count_values without() ("week",
+          floor(
+            (
+              timestamp(
+                probe_failure:run
+              ) - 4 * 24 * 60 * 60
+            ) / 60 / 60 / 24 / 7
+          )
+        ) * 0
+
+    # adds the week4 label with the index of the current "four week" since 1970
+    - record: probe_failure:run:week4
+      expr: |
+        probe_failure:run
+        + ignoring(week4) group_right
+        count_values without() ("week4",
+          floor(
+            (
+              timestamp(
+                probe_failure:run
+              ) - 4 * 24 * 60 * 60
+            ) / 60 / 60 / 24 / 7 / 4
+          )
+        ) * 0
+
+    # adds the year and month labels with the current year and month
+    - record: probe_failure:run:yearmonth
+      expr: |
+        probe_failure:run
+        + ignoring(year, month) group_right
+        count_values without() ("year",
+          year(timestamp(
+            count_values without() ("month",
+              month(timestamp(
+                probe_failure:run
+              ))
+            )
+          ))
+        ) * 0
+
+    # use the same metric name for the series above
+    - record: probe_failure:run:time
+      expr: |
+        label_replace(probe_failure:run, "window", "moving", "__name__", ".*") or
+        probe_failure:run:day or
+        probe_failure:run:week or
+        probe_failure:run:week4 or
+        probe_failure:run:yearmonth
+
+    # accumulate the probe failure seconds (hence multiplied by the evaluation_interval)
+    # due to the time labels, the accumulation is restarted in each time interval
+    # max_over_time could be used optionally to extend the default look back period
+    # of 5 minutes, e.g. in case a prometheus restart would take longer
+    # than 5 minutes
+    # the accumulation is started at 0 if there is no previous accumulated value
+    - record: probe_failure:run:time:total
+      expr: |
+        probe_failure:run:time * 30
+        +
+        (
+          max_over_time(
+            probe_failure:run:time:total[10m]
+          )
+          or
+          probe_failure:run:time * 0
+        )
+
+    # as percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        window: fixed
+        term: day
+      expr: |
+        sum without(day) (
+          probe_failure:run:time:total{day!=""}
+        )
+        / 60 / 60 / 24
+
+    # as percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        window: fixed
+        term: week
+      expr: |
+        sum without(week) (
+          probe_failure:run:time:total{week!=""}
+        )
+        / 60 / 60 / 24 / 7
+
+    # as percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        window: fixed
+        term: week4
+      expr: |
+        sum without(week4) (
+          probe_failure:run:time:total{week4!=""}
+        )
+        / 60 / 60 / 24 / 7 / 4
+
+    # as percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        window: fixed
+        term: year_month
+      expr: |
+        sum without(year, month) (
+          probe_failure:run:time:total{year!="", month!=""}
+        )
+        / 60 / 60 / 24
+        / days_in_month(timestamp(
+          sum without(year, month)
+            (probe_failure:run:time:total{year!="", month!=""})
+        ))
+
+    # moving day window percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        term: day
+      expr: |
+        (
+          probe_failure:run:time:total{window="moving"}
+          -
+          (
+            probe_failure:run:time:total{window="moving"} offset 1d
+            or
+            probe_failure:run:time:total{window="moving"} * 0
+          )
+        )
+        / 60 / 60 / 24
+
+    # moving week window percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        term: week
+      expr: |
+        (
+          probe_failure:run:time:total{window="moving"}
+          -
+          (
+            probe_failure:run:time:total{window="moving"} offset 1w
+            or
+            probe_failure:run:time:total{window="moving"} * 0
+          )
+        )
+        / 60 / 60 / 24 / 7
+
+    # moving week4 window percentage
+    - record: probe_failure:run:time:total:percent
+      labels:
+        term: week4
+      expr: |
+        (
+          probe_failure:run:time:total{window="moving"}
+          -
+          (
+            probe_failure:run:time:total{window="moving"} offset 4w
+            or
+            probe_failure:run:time:total{window="moving"} * 0
+          )
+        )
+        / 60 / 60 / 24 / 7 / 4

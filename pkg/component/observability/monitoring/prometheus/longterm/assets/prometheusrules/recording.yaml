@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: recording
+spec:
+  groups:
+  - name: info
+    rules:
+    - record: iaas:info
+      expr: |
+        count by (iaas) (garden_shoot_info)
+
+    - record: project:info
+      expr: |
+        count by (project) (garden_shoot_info)
+
+    - record: purpose:info
+      expr: |
+        count by (purpose) (garden_shoot_condition)
+
+    - record: window:info
+      expr: |
+        count by (window) (probe_failure:run:time:total:percent)
+
+    - record: term:info
+      expr: |
+        count by (term) (probe_failure:run:time:total:percent)
