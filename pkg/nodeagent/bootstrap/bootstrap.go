@@ -18,6 +18,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/go-logr/logr"
@@ -39,6 +40,11 @@ func Bootstrap(
 	bootstrapConfig *config.BootstrapConfiguration,
 ) error {
 	log.Info("Starting bootstrap procedure")
+
+	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
+	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
+	}
 
 	if bootstrapConfig != nil && bootstrapConfig.KubeletDataVolumeSize != nil {
 		log.Info("Start kubelet data volume formatter", "kubeletDataVolumeSize", *bootstrapConfig.KubeletDataVolumeSize)
