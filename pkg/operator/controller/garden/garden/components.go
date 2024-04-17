@@ -1203,6 +1203,11 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 }
 
 func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+	imageCortex, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCortex)
+	if err != nil {
+		return nil, err
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "longterm",
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
@@ -1220,6 +1225,10 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 			SecretsManager:         secretsManager,
 			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
 			WildcardCertSecretName: wildcardCertSecretName,
+		},
+		Cortex: &prometheus.CortexValues{
+			Image:         imageCortex.String(),
+			CacheValidity: 168 * time.Hour,
 		},
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "availability-prometheus",

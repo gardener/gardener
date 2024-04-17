@@ -16,6 +16,7 @@ package prometheus_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -45,6 +46,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -291,7 +293,6 @@ honor_labels: true`
 
 			return obj
 		}
-		vpaUpdateMode, vpaControlledValuesRequestsOnly, vpaContainerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + name,
@@ -310,7 +311,7 @@ honor_labels: true`
 					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -323,11 +324,11 @@ honor_labels: true`
 								corev1.ResourceCPU:    resource.MustParse("4"),
 								corev1.ResourceMemory: resource.MustParse("28G"),
 							},
-							ControlledValues: &vpaControlledValuesRequestsOnly,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "config-reloader",
-							Mode:          &vpaContainerScalingModeOff,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				},
@@ -697,6 +698,113 @@ honor_labels: true`
 						podMonitor,
 						secretAdditionalScrapeConfigs,
 						additionalConfigMap,
+					))
+				})
+			})
+
+			When("cortex sidecar is enabled", func() {
+				var (
+					cortexImage   = "cortex-image"
+					cacheValidity = time.Second
+				)
+
+				BeforeEach(func() {
+					values.Cortex = &CortexValues{Image: cortexImage, CacheValidity: cacheValidity}
+				})
+
+				It("should successfully deploy all resources", func() {
+					cortexConfigMap := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "prometheus-" + name + "-cortex",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"app":  "prometheus",
+								"role": "monitoring",
+								"name": name,
+							},
+						},
+						Data: map[string]string{"config.yaml": `target: query-frontend
+auth_enabled: false
+http_prefix:
+api:
+  response_compression_enabled: true
+server:
+  http_listen_port: 9091
+frontend:
+  downstream_url: http://localhost:9090
+  log_queries_longer_than: -1s
+query_range:
+  split_queries_by_interval: 24h
+  align_queries_with_step: true
+  cache_results: true
+  results_cache:
+    cache:
+      enable_fifocache: true
+      fifocache:
+        max_size_bytes: ` + storageCapacity.String() + `
+        validity: ` + cacheValidity.String() + `
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(cortexConfigMap)).To(Succeed())
+
+					prometheusObj := prometheusFor("")
+					prometheusObj.Spec.Containers = append(prometheusObj.Spec.Containers, corev1.Container{
+						Name:            "cortex",
+						Image:           cortexImage,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Args: []string{
+							"-target=query-frontend",
+							"-config.file=/etc/cortex/config/config.yaml",
+						},
+						Ports: []corev1.ContainerPort{{
+							Name:          "frontend",
+							ContainerPort: 9091,
+							Protocol:      corev1.ProtocolTCP,
+						}},
+						SecurityContext: &corev1.SecurityContext{ReadOnlyRootFilesystem: ptr.To(true)},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("300Mi"),
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "cortex-config",
+							MountPath: "/etc/cortex/config",
+							ReadOnly:  true,
+						}},
+					})
+					prometheusObj.Spec.Volumes = append(prometheusObj.Spec.Volumes, corev1.Volume{
+						Name:         "cortex-config",
+						VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: cortexConfigMap.Name}}},
+					})
+
+					service.Spec.Ports[0].TargetPort = intstr.FromInt32(9091)
+
+					vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+						ContainerName: "cortex",
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+					})
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(contain(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusObj,
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+						cortexConfigMap,
 					))
 				})
 			})

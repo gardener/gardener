@@ -97,6 +97,8 @@ type Values struct {
 	Alerting *AlertingValues
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
+	// Cortex contains configuration for the cortex frontend sidecar container.
+	Cortex *CortexValues
 
 	// DataMigration is a struct for migrating data from existing disks.
 	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
@@ -140,6 +142,14 @@ type IngressValues struct {
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
+}
+
+// CortexValues contains configuration for the cortex frontend sidecar container.
+type CortexValues struct {
+	// Image defines the container image of cortex.
+	Image string
+	// CacheValidity defines the validity of the FIFO cache.
+	CacheValidity time.Duration
 }
 
 // New creates a new instance of DeployWaiter for the prometheus.
@@ -190,12 +200,20 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		}
 	}
 
+	var cortexConfigMap *corev1.ConfigMap
+	if p.values.Cortex != nil {
+		cortexConfigMap = p.cortexConfigMap()
+		if err := registry.Add(cortexConfigMap); err != nil {
+			return err
+		}
+	}
+
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
-		p.prometheus(takeOverExistingPV),
+		p.prometheus(takeOverExistingPV, cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,

@@ -28,6 +28,11 @@ import (
 )
 
 func (p *prometheus) service() *corev1.Service {
+	var targetPort int32 = port
+	if p.values.Cortex != nil {
+		targetPort = portCortex
+	}
+
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
@@ -41,7 +46,7 @@ func (p *prometheus) service() *corev1.Service {
 				Name:       ServicePortName,
 				Port:       servicePort,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt32(port),
+				TargetPort: intstr.FromInt32(targetPort),
 			}},
 		},
 	}
