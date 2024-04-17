@@ -58,8 +58,6 @@ SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 
-$(shell mkdir -p $(TOOLS_BIN_DIR))
-
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.57.2
@@ -126,6 +124,7 @@ version_gomod = $(shell go list -mod=mod -f '{{ .Version }}' -m $(1))
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.
 $(TOOLS_BIN_DIR)/.version_%:
 	@version_file=$@; rm -f $${version_file%_*}*
+	@mkdir -p $(TOOLS_BIN_DIR)
 	@touch $@
 
 .PHONY: clean-tools-bin
