@@ -12,54 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package varlibmount_test
+package varlibkubeletmount
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 )
 
-var _ = Describe("Component", func() {
-	Describe("#Config", func() {
-		var component components.Component
+// UnitName is the name of the var-lib-kubelet-mount unit.
+const UnitName = "var-lib-kubelet.mount"
 
-		BeforeEach(func() {
-			component = New()
-		})
+type component struct{}
 
-		It("should do nothing because kubelet data volume name is not set", func() {
-			units, files, err := component.Config(components.Context{})
+// New returns a new var-lib-kubelet-mount component.
+func New() *component {
+	return &component{}
+}
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(BeNil())
-			Expect(files).To(BeNil())
-		})
+func (component) Name() string {
+	return "var-lib-kubelet-mount"
+}
 
-		It("should return the expected units and files", func() {
-			units, files, err := component.Config(components.Context{KubeletDataVolumeName: ptr.To("foo")})
+func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	if ctx.KubeletDataVolumeName == nil {
+		return nil, nil, nil
+	}
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name: "var-lib.mount",
-					Content: ptr.To(`[Unit]
-Description=mount /var/lib on kubelet data device
-Before=kubelet.service
+	const pathVarLibKubelet = "/var/lib/kubelet"
+
+	return []extensionsv1alpha1.Unit{
+		{
+			Name: UnitName,
+			Content: ptr.To(`[Unit]
+Description=mount ` + pathVarLibKubelet + ` on kubelet data device
+Before=` + kubelet.UnitName + `
 [Mount]
 What=/dev/disk/by-label/kubeletdev
-Where=/var/lib
+Where=` + pathVarLibKubelet + `
 Type=xfs
 Options=defaults
 [Install]
 WantedBy=local-fs.target`),
-				},
-			))
-			Expect(files).To(BeNil())
-		})
-	})
-})
+		},
+	}, nil, nil
+}
