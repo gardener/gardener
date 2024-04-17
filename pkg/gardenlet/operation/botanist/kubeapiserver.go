@@ -97,7 +97,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		scaleDownDisabledForHvpa  = false
 		defaultReplicas           *int32
 		minReplicas               int32 = 1
-		maxReplicas               int32 = 4
+		maxReplicas               int32 = 3
 		apiServerResources        corev1.ResourceRequirements
 	)
 
@@ -115,6 +115,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
+		maxReplicas = 4
 		scaleDownDisabledForHvpa = true
 	}
 
