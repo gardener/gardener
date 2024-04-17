@@ -425,6 +425,14 @@ spec:
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Env: []corev1.EnvVar{
 								{
+									Name:  "IP_FAMILIES",
+									Value: string(values.ReversedVPN.IPFamilies[0]),
+								},
+								{
+									Name:  "VPN_NETWORK",
+									Value: values.ReversedVPN.VPNCIDR,
+								},
+								{
 									Name:  "IS_SHOOT_CLIENT",
 									Value: "true",
 								},

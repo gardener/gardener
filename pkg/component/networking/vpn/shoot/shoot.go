@@ -544,43 +544,36 @@ func (v *vpnShoot) indexedReversedHeader(index *int) string {
 }
 
 func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
-	var (
-		envVariables []corev1.EnvVar
-		ipFamilies   []string
-	)
-	for _, v := range v.values.ReversedVPN.IPFamilies {
-		ipFamilies = append(ipFamilies, string(v))
-	}
-	envVariables = append(envVariables,
-		corev1.EnvVar{
+	envVariables := []corev1.EnvVar{
+		{
 			Name:  "IP_FAMILIES",
-			Value: strings.Join(ipFamilies, ","),
+			Value: v.getIPFamiliesEnvVar(),
 		},
-		corev1.EnvVar{
+		{
 			Name:  "VPN_NETWORK",
 			Value: v.values.ReversedVPN.VPNCIDR,
 		},
-		corev1.EnvVar{
+		{
 			Name:  "ENDPOINT",
 			Value: v.values.ReversedVPN.Endpoint,
 		},
-		corev1.EnvVar{
+		{
 			Name:  "OPENVPN_PORT",
 			Value: strconv.Itoa(int(v.values.ReversedVPN.OpenVPNPort)),
 		},
-		corev1.EnvVar{
+		{
 			Name:  "REVERSED_VPN_HEADER",
 			Value: v.indexedReversedHeader(index),
 		},
-		corev1.EnvVar{
+		{
 			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
 			Value: "true",
 		},
-		corev1.EnvVar{
+		{
 			Name:  "IS_SHOOT_CLIENT",
 			Value: "true",
 		},
-	)
+	}
 
 	if index != nil {
 		envVariables = append(envVariables,
@@ -601,6 +594,14 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	}
 
 	return envVariables
+}
+
+func (v *vpnShoot) getIPFamiliesEnvVar() string {
+	var ipFamilies []string
+	for _, v := range v.values.ReversedVPN.IPFamilies {
+		ipFamilies = append(ipFamilies, string(v))
+	}
+	return strings.Join(ipFamilies, ",")
 }
 
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
@@ -705,6 +706,14 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env: []corev1.EnvVar{
+			{
+				Name:  "IP_FAMILIES",
+				Value: v.getIPFamiliesEnvVar(),
+			},
+			{
+				Name:  "VPN_NETWORK",
+				Value: v.values.ReversedVPN.VPNCIDR,
+			},
 			{
 				Name:  "IS_SHOOT_CLIENT",
 				Value: "true",
