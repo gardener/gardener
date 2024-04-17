@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package varlibmount_test
+package varlibkubeletmount_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVarLibMount(t *testing.T) {
+func TestVarLibKubeletMount(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components VarLibMount Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components VarLibKubeletMount Suite")
 }
