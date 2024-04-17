@@ -28,7 +28,7 @@ func (gcmx *gardenerCustomMetrics) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
-			Namespace: gcmx.namespaceName,
+			Namespace: gcmx.namespace,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -76,7 +76,7 @@ func (gcmx *gardenerCustomMetrics) roleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener.cloud:gardener-custom-metrics",
-			Namespace: gcmx.namespaceName,
+			Namespace: gcmx.namespace,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -87,7 +87,7 @@ func (gcmx *gardenerCustomMetrics) roleBinding() *rbacv1.RoleBinding {
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gcmx.namespaceName,
+				Namespace: gcmx.namespace,
 			},
 		},
 	}
@@ -122,7 +122,7 @@ func (gcmx *gardenerCustomMetrics) clusterRoleBinding() *rbacv1.ClusterRoleBindi
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gcmx.namespaceName,
+				Namespace: gcmx.namespace,
 			},
 		},
 	}
@@ -142,7 +142,7 @@ func (gcmx *gardenerCustomMetrics) authDelegatorClusterRoleBinding() *rbacv1.Clu
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gcmx.namespaceName,
+				Namespace: gcmx.namespace,
 			},
 		},
 	}
@@ -163,7 +163,7 @@ func (gcmx *gardenerCustomMetrics) authReaderRoleBinding() *rbacv1.RoleBinding {
 			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
-				Namespace: gcmx.namespaceName,
+				Namespace: gcmx.namespace,
 			},
 		},
 	}

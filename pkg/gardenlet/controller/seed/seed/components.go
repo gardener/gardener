@@ -528,8 +528,7 @@ func (r *Reconciler) newGardenerCustomMetics(secretsManager secretsmanager.Inter
 
 	gcmxDeployer := gardenercustommetrics.New(r.GardenNamespace, values, r.SeedClientSet.Client(), secretsManager)
 
-	if !features.DefaultFeatureGate.Enabled(features.BilinearPodAutoscalingForAPIServer) {
-		// Wrap the deployer in a thin wrapper which redirects Deploy calls to Destroy
+	if !features.DefaultFeatureGate.Enabled(features.CustomMetricsHPAForAPIServer) {
 		gcmxDeployer = component.OpDestroyWithoutWait(gcmxDeployer)
 	}
 

@@ -619,7 +619,7 @@ images:
         integrity_requirement: 'high'
         availability_requirement: 'high'
 
-  # Bilinear pod autoscaler
+# Custom metrics HPA autoscaling
 - name: gardener-custom-metrics
   sourceRepository: github.com/gardener/gardener-custom-metrics
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-custom-metrics

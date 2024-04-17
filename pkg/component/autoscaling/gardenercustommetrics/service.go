@@ -31,7 +31,7 @@ func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
-			Namespace: gcmx.namespaceName,
+			Namespace: gcmx.namespace,
 			Annotations: map[string]string{
 				resourcesv1alpha1.NetworkingFromWorldToPorts: `[{"protocol":"TCP","port":6443}]`,
 			},

@@ -43,7 +43,7 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
-			Namespace: gcmx.namespaceName,
+			Namespace: gcmx.namespace,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 			}),
@@ -70,7 +70,7 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 								"--tls-cert-file=/var/run/secrets/gardener.cloud/tls/tls.crt",
 								"--tls-private-key-file=/var/run/secrets/gardener.cloud/tls/tls.key",
 								"--leader-election=true",
-								"--namespace=" + gcmx.namespaceName,
+								"--namespace=" + gcmx.namespace,
 								"--access-ip=$(POD_IP)",
 								"--access-port=6443",
 								"--log-level=74",

@@ -35,6 +35,6 @@ func GetFeatures() []featuregate.Feature {
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,
 		features.ShootManagedIssuer,
-		features.BilinearPodAutoscalingForAPIServer,
+		features.CustomMetricsHPAForAPIServer,
 	}
 }

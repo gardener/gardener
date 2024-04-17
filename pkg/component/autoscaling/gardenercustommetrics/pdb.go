@@ -26,7 +26,7 @@ func (gcmx *gardenerCustomMetrics) pdb() *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-custom-metrics",
-			Namespace: gcmx.namespaceName,
+			Namespace: gcmx.namespace,
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{

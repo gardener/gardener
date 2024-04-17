@@ -28,7 +28,7 @@ func (gcmx *gardenerCustomMetrics) apiService() *apiregistrationv1.APIService {
 		Spec: apiregistrationv1.APIServiceSpec{
 			Service: &apiregistrationv1.ServiceReference{
 				Name:      serviceName,
-				Namespace: gcmx.namespaceName,
+				Namespace: gcmx.namespace,
 				Port:      ptr.To[int32](443),
 			},
 			Group:                "custom.metrics.k8s.io",
