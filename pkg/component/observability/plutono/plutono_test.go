@@ -196,10 +196,10 @@ metadata:
         timeInterval: 1m
 `
 				if values.IsGardenCluster {
-					configMapData += `    - name: availability-prometheus
+					configMapData += `    - name: prometheus-longterm
       type: prometheus
       access: proxy
-      url: http://` + namespace + `-avail-prom:80
+      url: http://prometheus-longterm:80
       basicAuth: false
       isDefault: false
       jsonData:
@@ -241,7 +241,7 @@ metadata:
     resources.gardener.cloud/garbage-collectable-reference: "true"
 `
 				if values.IsGardenCluster {
-					configMap += `  name: plutono-datasources-b7111930
+					configMap += `  name: plutono-datasources-b320ffed
   namespace: some-namespace
 `
 					return configMap
@@ -268,7 +268,7 @@ metadata:
 				}
 				if values.IsGardenCluster {
 					providerConfigMap = "plutono-dashboard-providers-5be2bcda"
-					dataSourceConfigMap = "plutono-datasources-b7111930"
+					dataSourceConfigMap = "plutono-datasources-b320ffed"
 				}
 
 				deployment := &appsv1.Deployment{
@@ -599,7 +599,7 @@ status:
 
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-5be2bcda.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-b7111930.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-b320ffed.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					plutonoDashboardsGardenConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-garden-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
 					plutonoDashboardsGlobalConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-global-[^-]{8}")
@@ -833,8 +833,8 @@ func getPodLabels(values Values) map[string]string {
 
 	if values.IsGardenCluster {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("garden-avail-prom", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):   v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
 		return labels

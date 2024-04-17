@@ -20,7 +20,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -47,7 +47,7 @@
       "type": "text"
     },
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -107,7 +107,7 @@
       "type": "stat"
     },
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -167,7 +167,7 @@
       "type": "stat"
     },
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -232,7 +232,7 @@
       "type": "stat"
     },
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -334,7 +334,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -458,7 +458,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
