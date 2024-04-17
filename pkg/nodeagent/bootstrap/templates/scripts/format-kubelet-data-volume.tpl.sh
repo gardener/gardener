@@ -29,12 +29,12 @@ if ! blkid --label $LABEL >/dev/null; then
   echo "detected kubelet data device $TARGET_DEVICE_NAME"
   mkfs.ext4 -L $LABEL -O quota -E lazy_itable_init=0,lazy_journal_init=0,quotatype=usrquota:grpquota:prjquota  /dev/$TARGET_DEVICE_NAME
   echo "formatted and labeled data device $TARGET_DEVICE_NAME"
-  mkdir /tmp/varlibcp
-  mount LABEL=$LABEL /tmp/varlibcp
+  mkdir /tmp/varlibkubeletcp
+  mount LABEL=$LABEL /tmp/varlibkubeletcp
   echo "mounted temp copy dir on data device $TARGET_DEVICE_NAME"
-  cp -a /var/lib/* /tmp/varlibcp/
-  umount /tmp/varlibcp
-  echo "copied /var/lib to data device $TARGET_DEVICE_NAME"
-  mount LABEL=$LABEL /var/lib -o defaults,prjquota,errors=remount-ro
-  echo "mounted /var/lib on data device $TARGET_DEVICE_NAME"
+  cp -a /var/lib/kubelet/* /tmp/varlibkubeletcp/
+  umount /tmp/varlibkubeletcp
+  echo "copied /var/lib/kubelet to data device $TARGET_DEVICE_NAME"
+  mount LABEL=$LABEL /var/lib/kubelet -o defaults,prjquota,errors=remount-ro
+  echo "mounted /var/lib/kubelet on data device $TARGET_DEVICE_NAME"
 fi
