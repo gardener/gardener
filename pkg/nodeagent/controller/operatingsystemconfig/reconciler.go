@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -233,7 +234,7 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 				return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
 			}
 
-			if err := registry.MoveFile(r.FS, tmpFilePath, file.Path); err != nil {
+			if err := filespkg.Move(r.FS, tmpFilePath, file.Path); err != nil {
 				return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
 			}
 
