@@ -114,7 +114,7 @@ var _ = Describe("Original", func() {
 
 			Expect(order).To(Equal([]string{
 				"valitail",
-				"var-lib-mount",
+				"var-lib-kubelet-mount",
 				"root-certificates",
 				"containerd",
 				"containerd-initializer",
@@ -135,7 +135,7 @@ var _ = Describe("Original", func() {
 
 			Expect(order).To(Equal([]string{
 				"valitail",
-				"var-lib-mount",
+				"var-lib-kubelet-mount",
 				"root-certificates",
 				"containerd",
 				"containerd-initializer",
