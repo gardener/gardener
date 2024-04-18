@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
@@ -97,10 +96,10 @@ var _ = Describe("Actuator", func() {
 			"bucketName": []byte(bucketName),
 			"foo":        []byte("bar"),
 		}
-		etcdBackupSecretKey = client.ObjectKey{Namespace: shootTechnicalID, Name: v1beta1constants.BackupSecretName}
+		etcdBackupSecretKey = client.ObjectKey{Namespace: shootTechnicalID, Name: "etcd-backup"}
 		etcdBackupSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.BackupSecretName,
+				Name:      "etcd-backup",
 				Namespace: shootTechnicalID,
 			},
 			Data: etcdBackupSecretData,
@@ -126,7 +125,7 @@ var _ = Describe("Actuator", func() {
 		})
 
 		Context("seed namespace exist", func() {
-			It("should create secrets", func() {
+			It("should create etcd-backup secret if it does not exist", func() {
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret).Build()
 				mgr.EXPECT().GetClient().Return(fakeClient)
 				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
@@ -136,16 +135,31 @@ var _ = Describe("Actuator", func() {
 
 				actual := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
-				etcdBackupSecret.Annotations = map[string]string{
-					genericactuator.AnnotationKeyCreatedByBackupEntry: backupEntry.Name,
+				Expect(actual.Annotations).To(HaveKeyWithValue("backup.gardener.cloud/created-by", backupEntry.Name))
+				Expect(actual.Data).To(Equal(etcdBackupSecretData))
+			})
+
+			It("should update etcd-backup secret if it already exists", func() {
+				existingEtcdBackupSecret := etcdBackupSecret.DeepCopy()
+				existingEtcdBackupSecret.Data = map[string][]byte{
+					"new-key": []byte("new-value"),
 				}
-				etcdBackupSecret.ResourceVersion = "1"
-				Expect(actual).To(Equal(etcdBackupSecret))
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(seedNamespace, backupEntrySecret, existingEtcdBackupSecret).Build()
+				mgr.EXPECT().GetClient().Return(fakeClient)
+				backupEntryDelegate.EXPECT().GetETCDSecretData(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry, backupProviderSecretData).Return(etcdBackupSecretData, nil)
+
+				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
+				Expect(a.Reconcile(ctx, log, backupEntry)).To(Succeed())
+
+				actual := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
+				Expect(actual.Annotations).To(HaveKeyWithValue("backup.gardener.cloud/created-by", backupEntry.Name))
+				Expect(actual.Data).To(Equal(etcdBackupSecretData))
 			})
 		})
 
 		Context("seed namespace does not exist", func() {
-			It("should not create secrets", func() {
+			It("should not create etcd-backup secret", func() {
 				fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(backupEntrySecret).Build()
 				mgr.EXPECT().GetClient().Return(fakeClient)
 
@@ -168,9 +182,9 @@ var _ = Describe("Actuator", func() {
 			backupEntryDelegate.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(logr.Logger{}), backupEntry).Return(nil)
 		})
 
-		It("should not delete secret if has annotation with different BackupEntry name", func() {
+		It("should not delete etcd-backup secret if has annotation with different BackupEntry name", func() {
 			etcdBackupSecret.Annotations = map[string]string{
-				genericactuator.AnnotationKeyCreatedByBackupEntry: "foo",
+				"backup.gardener.cloud/created-by": "foo",
 			}
 			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
 
@@ -179,13 +193,13 @@ var _ = Describe("Actuator", func() {
 
 			actual := &corev1.Secret{}
 			Expect(fakeClient.Get(ctx, etcdBackupSecretKey, actual)).To(Succeed())
-			etcdBackupSecret.ResourceVersion = "1"
-			Expect(actual).To(Equal(etcdBackupSecret))
+			Expect(actual.Annotations).To(HaveKeyWithValue("backup.gardener.cloud/created-by", "foo"))
+			Expect(actual.Data).To(Equal(etcdBackupSecretData))
 		})
 
-		It("should delete secret if it has annotation with same BackupEntry name", func() {
+		It("should delete etcd-backup secret if it has annotation with same BackupEntry name", func() {
 			etcdBackupSecret.Annotations = map[string]string{
-				genericactuator.AnnotationKeyCreatedByBackupEntry: backupEntry.Name,
+				"backup.gardener.cloud/created-by": backupEntry.Name,
 			}
 			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
 
@@ -195,7 +209,7 @@ var _ = Describe("Actuator", func() {
 			Expect(fakeClient.Get(ctx, etcdBackupSecretKey, &corev1.Secret{})).To(BeNotFoundError())
 		})
 
-		It("should delete secret if it has no annotations", func() {
+		It("should delete etcd-backup secret if it has no annotations", func() {
 			Expect(fakeClient.Create(ctx, etcdBackupSecret)).To(Succeed())
 
 			a = genericactuator.NewActuator(mgr, backupEntryDelegate)
