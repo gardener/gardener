@@ -30,7 +30,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibmount"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -152,7 +152,7 @@ func Script(
 		"cloudConfigFiles":                         strings.Join(files, "\n"),
 		"unitNameCloudConfigDownloader":            downloader.UnitName,
 		"unitNameDocker":                           "docker.service",
-		"unitNameVarLibMount":                      varlibmount.UnitName,
+		"unitNameVarLibMount":                      varlibkubeletmount.UnitName,
 	}
 
 	if kubeletDataVolume != nil {
