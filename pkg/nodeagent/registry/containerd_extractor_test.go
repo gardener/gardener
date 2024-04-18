@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/afero"
 
 	. "github.com/gardener/gardener/pkg/nodeagent/registry"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ContainerdExtractor", func() {
@@ -108,12 +109,104 @@ var _ = Describe("ContainerdExtractor", func() {
 			Expect(CopyFile(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("exists but is not a regular file")))
 		})
 	})
+
+	Describe("#MoveFile", func() {
+		var (
+			sourceFile      string
+			destinationFile string
+			content         string
+			fakeFS          afero.Afero
+			permissions     fs.FileMode
+		)
+
+		BeforeEach(func() {
+			var err error
+
+			fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+			destinationDirectory := "/move-file-destdir"
+
+			sourceDirectory, err := fakeFS.TempDir("", "move-file-sourcedir-")
+			Expect(err).ToNot(HaveOccurred())
+			err = fakeFS.Mkdir(destinationDirectory, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			DeferCleanup(func() {
+				Expect(fakeFS.RemoveAll(sourceDirectory)).To(Succeed())
+				Expect(fakeFS.RemoveAll(destinationDirectory)).To(Succeed())
+			})
+
+			filename := "foobar"
+			sourceFile = path.Join(sourceDirectory, filename)
+			destinationFile = path.Join(destinationDirectory, filename)
+			content = "foobar content"
+			permissions = 0750
+		})
+
+		runTests := func() {
+			It("should move new files into an existing directory", Offset(1), func() {
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				checkFile(fakeFS, destinationFile, content, permissions)
+				checkFileNotFound(fakeFS, sourceFile)
+			})
+
+			It("should copy new files into a new directory", Offset(1), func() {
+				createFile(fakeFS, sourceFile, content, permissions)
+				destinationFile = path.Join(destinationFile, "more-foobar")
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				checkFile(fakeFS, destinationFile, content, permissions)
+				checkFileNotFound(fakeFS, sourceFile)
+			})
+
+			It("should overwrite an existing file in an existing directory", Offset(1), func() {
+				content = "foobar content: existing"
+				createFile(fakeFS, destinationFile, content, permissions)
+				checkFile(fakeFS, destinationFile, content, permissions)
+
+				content = "foobar content: new"
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				checkFile(fakeFS, destinationFile, content, permissions)
+				checkFileNotFound(fakeFS, sourceFile)
+			})
+
+			It("should overwrite an existing file with wrong permissions in an existing directory", Offset(1), func() {
+				createFile(fakeFS, destinationFile, "permissions are 0600", 0600)
+
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				checkFile(fakeFS, destinationFile, content, permissions)
+				checkFileNotFound(fakeFS, sourceFile)
+			})
+
+			It("should not copy a source directory", Offset(1), func() {
+				Expect(fakeFS.Mkdir(sourceFile, permissions)).To(Succeed())
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("is not a regular file")))
+			})
+
+			It("should not overwrite a destination if it is a directory", Offset(1), func() {
+				Expect(fakeFS.Mkdir(destinationFile, permissions)).To(Succeed())
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(MoveFile(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+			})
+		}
+
+		Context("Same device", func() { runTests() })
+
+		Context("Cross-device", func() {
+			JustBeforeEach(func() {
+				DeferCleanup(test.WithVar(&CrossDeviceModeOnly, true))
+			})
+
+			runTests()
+		})
+	})
 })
 
 func createFile(fakeFS afero.Fs, name, content string, permissions os.FileMode) {
 	file, err := fakeFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, permissions)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	defer file.Close()
+	defer func(f afero.File) { Expect(f.Close()).To(Succeed()) }(file)
 
 	_, err = file.WriteString(content)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
@@ -126,10 +219,15 @@ func checkFile(fakeFS afero.Fs, name, content string, permissions fs.FileMode) {
 
 	file, err := fakeFS.Open(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	defer file.Close()
+	defer func(f afero.File) { Expect(f.Close()).To(Succeed()) }(file)
 
 	var fileContent []byte
 	_, err = file.Read(fileContent)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, content).To(Equal(content))
+}
+
+func checkFileNotFound(fakeFS afero.Fs, name string) {
+	_, err := fakeFS.Stat(name)
+	ExpectWithOffset(1, err).To(MatchError(ContainSubstring("file does not exist")))
 }
