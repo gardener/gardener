@@ -1187,6 +1187,7 @@ build:
             - pkg/nodeagent/controller/token
             - pkg/nodeagent/dbus
             - pkg/nodeagent/features
+            - pkg/nodeagent/files
             - pkg/nodeagent/registry
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils

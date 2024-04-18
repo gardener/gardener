@@ -1,4 +1,4 @@
-// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2024 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry_test
+package files_test
 
 import (
 	"io/fs"
@@ -23,11 +23,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 
-	"github.com/gardener/gardener/pkg/nodeagent/files"
+	. "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-var _ = Describe("ContainerdExtractor", func() {
+var _ = Describe("Files", func() {
 	Describe("#Copy", func() {
 		var (
 			sourceFile      string
@@ -62,14 +62,14 @@ var _ = Describe("ContainerdExtractor", func() {
 
 		It("should copy new files into an existing directory", func() {
 			createFile(fakeFS, sourceFile, content, 0755)
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
 			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should copy new files into a new directory", func() {
 			createFile(fakeFS, sourceFile, content, 0755)
 			destinationFile = path.Join(destinationFile, "more-foobar")
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
 			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
@@ -80,13 +80,13 @@ var _ = Describe("ContainerdExtractor", func() {
 
 			content = "foobar content: new"
 			createFile(fakeFS, sourceFile, content, 0755)
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
 			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should copy new files into an existing directory and correct its permissions", func() {
 			createFile(fakeFS, sourceFile, content, 0644)
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
 			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
@@ -94,19 +94,19 @@ var _ = Describe("ContainerdExtractor", func() {
 			createFile(fakeFS, destinationFile, "permissions are 0600", 0600)
 
 			createFile(fakeFS, sourceFile, content, 0755)
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(Succeed())
 			checkFile(fakeFS, destinationFile, content, permissions)
 		})
 
 		It("should not copy a source directory", func() {
 			Expect(fakeFS.Mkdir(sourceFile, 0755)).To(Succeed())
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("is not a regular file")))
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("is not a regular file")))
 		})
 
 		It("should not overwrite a destination if it is a directory", func() {
 			Expect(fakeFS.Mkdir(destinationFile, 0755)).To(Succeed())
 			createFile(fakeFS, sourceFile, content, 0755)
-			Expect(files.Copy(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+			Expect(Copy(fakeFS, sourceFile, destinationFile, permissions)).To(MatchError(ContainSubstring("exists but is not a regular file")))
 		})
 	})
 
@@ -145,7 +145,7 @@ var _ = Describe("ContainerdExtractor", func() {
 		runTests := func() {
 			It("should move new files into an existing directory", Offset(1), func() {
 				createFile(fakeFS, sourceFile, content, permissions)
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
 				checkFile(fakeFS, destinationFile, content, permissions)
 				checkFileNotFound(fakeFS, sourceFile)
 			})
@@ -153,7 +153,7 @@ var _ = Describe("ContainerdExtractor", func() {
 			It("should copy new files into a new directory", Offset(1), func() {
 				createFile(fakeFS, sourceFile, content, permissions)
 				destinationFile = path.Join(destinationFile, "more-foobar")
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
 				checkFile(fakeFS, destinationFile, content, permissions)
 				checkFileNotFound(fakeFS, sourceFile)
 			})
@@ -165,7 +165,7 @@ var _ = Describe("ContainerdExtractor", func() {
 
 				content = "foobar content: new"
 				createFile(fakeFS, sourceFile, content, permissions)
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
 				checkFile(fakeFS, destinationFile, content, permissions)
 				checkFileNotFound(fakeFS, sourceFile)
 			})
@@ -174,20 +174,20 @@ var _ = Describe("ContainerdExtractor", func() {
 				createFile(fakeFS, destinationFile, "permissions are 0600", 0600)
 
 				createFile(fakeFS, sourceFile, content, permissions)
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
 				checkFile(fakeFS, destinationFile, content, permissions)
 				checkFileNotFound(fakeFS, sourceFile)
 			})
 
 			It("should not copy a source directory", Offset(1), func() {
 				Expect(fakeFS.Mkdir(sourceFile, permissions)).To(Succeed())
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("is not a regular file")))
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("is not a regular file")))
 			})
 
 			It("should not overwrite a destination if it is a directory", Offset(1), func() {
 				Expect(fakeFS.Mkdir(destinationFile, permissions)).To(Succeed())
 				createFile(fakeFS, sourceFile, content, permissions)
-				Expect(files.Move(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
 			})
 		}
 
@@ -195,7 +195,7 @@ var _ = Describe("ContainerdExtractor", func() {
 
 		Context("Cross-device", func() {
 			JustBeforeEach(func() {
-				DeferCleanup(test.WithVar(&files.CrossDeviceModeOnly, true))
+				DeferCleanup(test.WithVar(&CrossDeviceModeOnly, true))
 			})
 
 			runTests()
@@ -207,6 +207,7 @@ func createFile(fakeFS afero.Fs, name, content string, permissions os.FileMode) 
 	file, err := fakeFS.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, permissions)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer func(f afero.File) { Expect(f.Close()).To(Succeed()) }(file)
+
 	_, err = file.WriteString(content)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 }
@@ -215,9 +216,11 @@ func checkFile(fakeFS afero.Fs, name, content string, permissions fs.FileMode) {
 	fileInfo, err := fakeFS.Stat(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, fileInfo.Mode()).To(Equal(permissions))
+
 	file, err := fakeFS.Open(name)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	defer func(f afero.File) { Expect(f.Close()).To(Succeed()) }(file)
+
 	var fileContent []byte
 	_, err = file.Read(fileContent)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
