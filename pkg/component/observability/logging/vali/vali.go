@@ -14,6 +14,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -22,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -158,6 +160,8 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 	}
 
+	resources = append(resources, v.getVPA())
+
 	var (
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
@@ -276,6 +280,74 @@ func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
 
 func (v *vali) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, v.namespace)
+}
+
+func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	var (
+		vpaUpdateMode      = vpaautoscalingv1.UpdateModeAuto
+		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
+
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      valiName + "-vpa",
+				Namespace: v.namespace,
+				Labels:    getLabels(),
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					Kind:       "StatefulSet",
+					Name:       valiName,
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: valiName,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("800m"),
+								corev1.ResourceMemory: resource.MustParse("3Gi"),
+							},
+							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName:    curatorName,
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName:    initLargeDirName,
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
+						},
+					},
+				},
+			},
+		}
+	)
+
+	if v.values.ShootNodeLoggingEnabled {
+		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    kubeRBACProxyName,
+				Mode:             &containerPolicyOff,
+				ControlledValues: &controlledValues,
+			},
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    telegrafName,
+				Mode:             &containerPolicyOff,
+				ControlledValues: &controlledValues,
+			},
+		)
+	}
+
+	return vpa
 }
 
 func (v *vali) getIngress(secretName string) *networkingv1.Ingress {

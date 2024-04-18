@@ -14,6 +14,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -169,6 +171,7 @@ var _ = Describe("Vali", func() {
 			Expect(managedResource).To(consistOf(
 				getTelegrafConfigMap(),
 				getValiConfigMap(),
+				getVPA(true),
 				getIngress(),
 				getService(true, "shoot"),
 				getStatefulSet(true),
@@ -263,6 +266,7 @@ var _ = Describe("Vali", func() {
 			Expect(managedResource).To(consistOf(
 				getValiConfigMap(),
 				getService(false, "seed"),
+				getVPA(false),
 				getStatefulSet(false),
 				getServiceMonitor(),
 				getPrometheusRule(),
@@ -959,6 +963,74 @@ wait
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return configMap
+}
+
+func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
+	var (
+		vpaUpdateMode      = vpaautoscalingv1.UpdateModeAuto
+		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
+
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      valiName + "-vpa",
+				Namespace: namespace,
+				Labels:    getLabels(),
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					Kind:       "StatefulSet",
+					Name:       valiName,
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: valiName,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("800m"),
+								corev1.ResourceMemory: resource.MustParse("3Gi"),
+							},
+							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName:    "curator",
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
+						},
+						{
+							ContainerName:    "init-large-dir",
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
+						},
+					},
+				},
+			},
+		}
+	)
+
+	if isRBACProxyEnabled {
+		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    "kube-rbac-proxy",
+				Mode:             &containerPolicyOff,
+				ControlledValues: &controlledValues,
+			},
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    "telegraf",
+				Mode:             &containerPolicyOff,
+				ControlledValues: &controlledValues,
+			},
+		)
+	}
+
+	return vpa
 }
 
 func getIngress() *networkingv1.Ingress {
