@@ -17,11 +17,8 @@ package registry
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/defaults"
@@ -36,6 +33,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/files"
 )
 
 type containerdExtractor struct{}
@@ -92,7 +90,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	}
 
 	source := path.Join(imageMountDirectory, filePathInImage)
-	if err := CopyFile(fs, source, destination, permissions); err != nil {
+	if err := files.Copy(fs, source, destination, permissions); err != nil {
 		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
 	}
 
@@ -131,125 +129,4 @@ func unmountImage(ctx context.Context, snapshotter snapshots.Snapshotter, direct
 	}
 
 	return nil
-}
-
-// CopyFile copies a source file to destination file and sets the given permissions.
-func CopyFile(fs afero.Afero, source, destination string, permissions os.FileMode) error {
-	if destinationFileStat, err := fs.Stat(destination); err == nil {
-		if !destinationFileStat.Mode().IsRegular() {
-			return fmt.Errorf("destination %q exists but is not a regular file", destination)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	if err := fs.MkdirAll(path.Dir(destination), permissions); err != nil {
-		return fmt.Errorf("destination directory %q could not be created", path.Dir(destination))
-	}
-
-	tempDir, err := fs.TempDir(nodeagentv1alpha1.TempDir, "copy-image-")
-	if err != nil {
-		return fmt.Errorf("error creating temp directory: %w", err)
-	}
-
-	defer func() { utilruntime.HandleError(fs.Remove(tempDir)) }()
-
-	tmpFilePath := filepath.Join(tempDir, filepath.Base(destination))
-
-	if err := copyFileAndSync(fs, source, tmpFilePath); err != nil {
-		return err
-	}
-
-	if err := fs.Chmod(tmpFilePath, permissions); err != nil {
-		return err
-	}
-
-	return MoveFile(fs, tmpFilePath, destination)
-}
-
-func copyFileAndSync(fs afero.Afero, source, destination string) error {
-	sourceFileStat, err := fs.Stat(source)
-	if err != nil {
-		return err
-	}
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("source %q is not a regular file", source)
-	}
-
-	if destinationFileStat, err := fs.Stat(destination); err == nil {
-		if !destinationFileStat.Mode().IsRegular() {
-			return fmt.Errorf("destination %q exists but is not a regular file", destination)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	srcFile, err := fs.Open(source)
-	if err != nil {
-		return err
-	}
-	defer func() { utilruntime.HandleError(srcFile.Close()) }()
-
-	if err := fs.MkdirAll(path.Dir(destination), os.ModeDir); err != nil {
-		return fmt.Errorf("destination directory %q could not be created", path.Dir(destination))
-	}
-
-	dstFile, err := fs.OpenFile(destination, os.O_CREATE|os.O_RDWR, 0755)
-	if err != nil {
-		return err
-	}
-	defer func() { utilruntime.HandleError(dstFile.Close()) }()
-
-	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-
-	if err := fs.Chmod(dstFile.Name(), sourceFileStat.Mode()); err != nil {
-		return err
-	}
-
-	return dstFile.Sync()
-}
-
-// CrossDeviceModeOnly is exposed for testing cross-device moving mode
-var CrossDeviceModeOnly = false
-
-// MoveFile moves files on the same or across different devices
-func MoveFile(fs afero.Afero, source, destination string) error {
-	sourceFileStat, err := fs.Stat(source)
-	if err != nil {
-		return err
-	}
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("source %q is not a regular file", source)
-	}
-
-	if destinationFileStat, err := fs.Stat(destination); err == nil {
-		if !destinationFileStat.Mode().IsRegular() {
-			return fmt.Errorf("destination %q exists but is not a regular file", destination)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	if CrossDeviceModeOnly {
-		return moveCrossDevice(fs, source, destination)
-	}
-	err = fs.Rename(source, destination)
-	if err != nil && strings.Contains(err.Error(), "cross-device link") {
-		return moveCrossDevice(fs, source, destination)
-	}
-	return err
-}
-
-func moveCrossDevice(fs afero.Afero, source, destination string) error {
-	tmpFilePath := destination + ".tmp"
-	if err := copyFileAndSync(fs, source, tmpFilePath); err != nil {
-		return err
-	}
-	if err := fs.Rename(tmpFilePath, destination); err != nil {
-		return err
-	}
-
-	return fs.Remove(source)
 }
