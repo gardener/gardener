@@ -885,7 +885,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
             - pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
-            - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
+            - pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
             - pkg/component/garden/backupentry
@@ -1204,6 +1204,7 @@ build:
             - pkg/nodeagent/controller/token
             - pkg/nodeagent/dbus
             - pkg/nodeagent/features
+            - pkg/nodeagent/files
             - pkg/nodeagent/registry
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils

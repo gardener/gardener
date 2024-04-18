@@ -17,10 +17,8 @@ package registry
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/defaults"
@@ -35,6 +33,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/nodeagent/files"
 )
 
 type containerdExtractor struct{}
@@ -91,7 +90,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 	}
 
 	source := path.Join(imageMountDirectory, filePathInImage)
-	if err := CopyFile(fs, source, destination, permissions); err != nil {
+	if err := files.Copy(fs, source, destination, permissions); err != nil {
 		return fmt.Errorf("error copying file %s to %s: %w", source, destination, err)
 	}
 
@@ -130,59 +129,4 @@ func unmountImage(ctx context.Context, snapshotter snapshots.Snapshotter, direct
 	}
 
 	return nil
-}
-
-// CopyFile copies a source file to destination file and sets the given permissions.
-func CopyFile(fs afero.Afero, sourceFile, destinationFile string, permissions os.FileMode) error {
-	sourceFileStat, err := fs.Stat(sourceFile)
-	if err != nil {
-		return err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return fmt.Errorf("source %q is not a regular file", sourceFile)
-	}
-
-	if destinationFileStat, err := fs.Stat(destinationFile); err == nil {
-		if !destinationFileStat.Mode().IsRegular() {
-			return fmt.Errorf("destination %q exists but is not a regular file", destinationFile)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	srcFile, err := fs.Open(sourceFile)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	if err := fs.MkdirAll(path.Dir(destinationFile), permissions); err != nil {
-		return fmt.Errorf("destination directory %q could not be created", path.Dir(destinationFile))
-	}
-
-	tempDir, err := fs.TempDir(nodeagentv1alpha1.TempDir, "copy-image-")
-	if err != nil {
-		return fmt.Errorf("error creating temp directory: %w", err)
-	}
-
-	defer func() { utilruntime.HandleError(fs.Remove(tempDir)) }()
-
-	tmpFilePath := filepath.Join(tempDir, filepath.Base(destinationFile))
-
-	dstFile, err := fs.OpenFile(tmpFilePath, os.O_CREATE|os.O_RDWR, 0755)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-
-	if err := fs.Chmod(dstFile.Name(), permissions); err != nil {
-		return err
-	}
-
-	return fs.Rename(tmpFilePath, destinationFile)
 }
