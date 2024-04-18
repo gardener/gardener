@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package varlibmount
+package varlibkubeletmount
 
 import (
 	"k8s.io/utils/ptr"
@@ -22,18 +22,18 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 )
 
-// UnitName is the name of the var-lib-mount unit.
-const UnitName = "var-lib.mount"
+// UnitName is the name of the var-lib-kubelet-mount unit.
+const UnitName = "var-lib-kubelet.mount"
 
 type component struct{}
 
-// New returns a new var-lib-mount component.
+// New returns a new var-lib-kubelet-mount component.
 func New() *component {
 	return &component{}
 }
 
 func (component) Name() string {
-	return "var-lib-mount"
+	return "var-lib-kubelet-mount"
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
@@ -41,19 +41,19 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, nil
 	}
 
-	const pathVarLib = "/var/lib"
+	const pathVarLibKubelet = "/var/lib/kubelet"
 
 	return []extensionsv1alpha1.Unit{
 		{
-			Name: "var-lib.mount",
+			Name: UnitName,
 			Content: ptr.To(`[Unit]
-Description=mount ` + pathVarLib + ` on kubelet data device
+Description=mount ` + pathVarLibKubelet + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]
-What=/dev/disk/by-label/kubeletdev
-Where=` + pathVarLib + `
-Type=xfs
-Options=defaults
+What=/dev/disk/by-label/KUBEDEV
+Where=` + pathVarLibKubelet + `
+Type=ext4
+Options=defaults,prjquota,errors=remount-ro
 [Install]
 WantedBy=local-fs.target`),
 		},
