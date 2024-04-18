@@ -5,7 +5,6 @@
 package shared
 
 import (
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,8 +25,6 @@ func NewVali(
 	priorityClassName string,
 	storage *resource.Quantity,
 	ingressHost string,
-	hvpaEnabled bool,
-	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
 ) (
 	vali.Interface,
 	error,
@@ -64,8 +61,6 @@ func NewVali(
 		KubeRBACProxyImage:      kubeRBACProxyImage.String(),
 		TelegrafImage:           telegrafImage.String(),
 		Replicas:                replicas,
-		HVPAEnabled:             hvpaEnabled,
-		MaintenanceTimeWindow:   maintenanceTimeWindow,
 		ShootNodeLoggingEnabled: isShootNodeLoggingEnabled,
 		PriorityClassName:       priorityClassName,
 		Storage:                 storage,

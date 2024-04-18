@@ -11,11 +11,9 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -71,9 +69,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 type components struct {
@@ -206,7 +202,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(ctx)
+	c.vali, err = r.newVali()
 	if err != nil {
 		return
 	}
@@ -530,31 +526,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 	), nil
 }
 
-func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
-	maintenanceBegin, maintenanceEnd := "220000-0000", "230000-0000"
-
-	if hvpaEnabled() {
-		shootInfo := &corev1.ConfigMap{}
-		if err := r.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-		} else {
-			shootMaintenanceBegin, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
-			if err != nil {
-				return nil, err
-			}
-
-			shootMaintenanceEnd, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
-			if err != nil {
-				return nil, err
-			}
-
-			maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
-			maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
-		}
-	}
-
+func (r *Reconciler) newVali() (component.Deployer, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
@@ -570,11 +542,6 @@ func (r *Reconciler) newVali(ctx context.Context) (component.Deployer, error) {
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
 		"",
-		hvpaEnabled(),
-		&hvpav1alpha1.MaintenanceTimeWindow{
-			Begin: maintenanceBegin,
-			End:   maintenanceEnd,
-		},
 	)
 	if err != nil {
 		return nil, err

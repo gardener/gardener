@@ -14,7 +14,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -89,11 +88,6 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 
 // DefaultVali returns a deployer for Vali.
 func (b *Botanist) DefaultVali() (vali.Interface, error) {
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -104,7 +98,5 @@ func (b *Botanist) DefaultVali() (vali.Interface, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		b.ComputeValiHost(),
-		hvpaEnabled,
-		nil,
 	)
 }
