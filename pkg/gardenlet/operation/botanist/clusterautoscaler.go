@@ -16,15 +16,18 @@ package botanist
 
 import (
 	"context"
+	"fmt"
+	"math/big"
+	"net"
 
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -36,7 +39,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		return nil, err
 	}
 
-	maxNodesTotal, err := gardenerutils.CalculateMaxNodesForShoot(b.Shoot.GetInfo())
+	maxNodesTotal, err := CalculateMaxNodesForShoot(b.Shoot.GetInfo())
 	if err != nil {
 		return nil, err
 	}
@@ -68,4 +71,82 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 // ScaleClusterAutoscalerToZero scales cluster-autoscaler replicas to zero.
 func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
 	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler), 0))
+}
+
+// CalculateMaxNodesForShoot returns the maximum number of nodes the shoot supports. Function returns nil if there is no limitation.
+func CalculateMaxNodesForShoot(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+	if shoot.Spec.Networking == nil || shoot.Spec.Networking.Pods == nil {
+		return nil, nil
+	}
+	maxNodesForPodsNetwork, err := calculateMaxNodesForPodsNetwork(shoot)
+	if err != nil {
+		return nil, err
+	}
+	maxNodesForNodesNetwork, err := calculateMaxNodesForNodesNetwork(shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	if maxNodesForPodsNetwork == nil {
+		return maxNodesForNodesNetwork, nil
+	}
+	if maxNodesForNodesNetwork == nil {
+		return maxNodesForPodsNetwork, nil
+	}
+
+	return ptr.To(min(*maxNodesForPodsNetwork, *maxNodesForNodesNetwork)), nil
+}
+
+func calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+	_, podNetwork, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
+	if err != nil {
+		return nil, err
+	}
+	podCIDRMaskSize, _ := podNetwork.Mask.Size()
+	if podCIDRMaskSize == 0 {
+		return nil, fmt.Errorf("pod CIDR is not in its canonical form")
+	}
+	// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
+	// This indicates how many Nodes we can host at max from a networking perspective.
+	var maxNodeCount = &big.Int{}
+	exp := int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize) - int64(podCIDRMaskSize)
+	// Bigger numbers than 2^62 do not fit into an int64 variable and big.Int{}.Int64() is undefined in such cases.
+	// The pod network is no limitation in this case anyway.
+	if exp > 62 {
+		return nil, nil
+	}
+	maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
+
+	return ptr.To(maxNodeCount.Int64()), nil
+}
+
+func calculateMaxNodesForNodesNetwork(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+	if shoot.Spec.Networking.Nodes == nil {
+		return nil, nil
+	}
+	_, nodeNetwork, err := net.ParseCIDR(*shoot.Spec.Networking.Nodes)
+	if err != nil {
+		return nil, err
+	}
+	nodeCIDRMaskSize, _ := nodeNetwork.Mask.Size()
+	if nodeCIDRMaskSize == 0 {
+		return nil, fmt.Errorf("node CIDR is not in its canonical form")
+	}
+	ipCIDRMaskSize := int64(32)
+	if gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
+		ipCIDRMaskSize = 128
+	}
+	// Calculate how many "single IP" subnets fit into the node network
+	var maxNodeCount = &big.Int{}
+	exp := ipCIDRMaskSize - int64(nodeCIDRMaskSize)
+	// Bigger numbers than 2^62 do not fit into an int64 variable and big.Int{}.Int64() is undefined in such cases.
+	// The node network is no limitation in this case anyway.
+	if exp > 62 {
+		return nil, nil
+	}
+	maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
+	// Subtract the broadcast addresses
+	maxNodeCount.Sub(maxNodeCount, big.NewInt(2))
+
+	return ptr.To(maxNodeCount.Int64()), nil
 }

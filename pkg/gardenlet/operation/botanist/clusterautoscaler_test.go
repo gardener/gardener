@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -177,4 +178,99 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(MatchError(fakeErr))
 		})
 	})
+
+	DescribeTable("#CalculateMaxNodesForShoot",
+		func(shoot *gardencorev1beta1.Shoot, expectedResult *int64) {
+			maxNode, err := CalculateMaxNodesForShoot(shoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(maxNode).To(Equal(expectedResult))
+		},
+
+		Entry(
+			"no network",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+			}},
+			nil,
+		),
+		Entry(
+			"Pods network only",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods: ptr.To("100.64.0.0/12"),
+				},
+			}},
+			ptr.To[int64](4096),
+		),
+		Entry(
+			"Default Pods network",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods:  ptr.To("100.64.0.0/11"),
+					Nodes: ptr.To("10.250.0.0/16"),
+				},
+			}},
+			ptr.To[int64](8192),
+		),
+		Entry(
+			"Pods network is restriction",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods:  ptr.To("100.64.0.0/12"),
+					Nodes: ptr.To("10.250.0.0/16"),
+				},
+			}},
+			ptr.To[int64](4096),
+		),
+		Entry(
+			"Nodes network is restriction",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods:  ptr.To("100.64.0.0/11"),
+					Nodes: ptr.To("10.250.0.0/20"),
+				},
+			}},
+			ptr.To[int64](4094),
+		),
+		Entry(
+			"IPv6",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](64),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods:       ptr.To("2001:db8:1::/48"),
+					Nodes:      ptr.To("2001:db8:2::/48"),
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+				},
+			}},
+			ptr.To[int64](65536),
+		),
+	)
 })
