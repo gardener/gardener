@@ -51,10 +51,10 @@ var _ = Describe("Component", func() {
 Description=mount /var/lib/kubelet on kubelet data device
 Before=kubelet.service
 [Mount]
-What=/dev/disk/by-label/kubeletdev
+What=/dev/disk/by-label/KUBEDEV
 Where=/var/lib/kubelet
-Type=xfs
-Options=defaults
+Type=ext4
+Options=defaults,prjquota,errors=remount-ro
 [Install]
 WantedBy=local-fs.target`),
 				},
