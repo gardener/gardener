@@ -44,8 +44,6 @@ const (
 	ManagedResourceNameRuntime = "gardener-controller-manager-runtime"
 	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
 	ManagedResourceNameVirtual = "gardener-controller-manager-virtual"
-
-	roleName = "controller-manager"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -179,6 +177,6 @@ func (g *gardenerControllerManager) WaitCleanup(ctx context.Context) error {
 func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
-		v1beta1constants.LabelRole: roleName,
+		v1beta1constants.LabelRole: v1beta1constants.LabelControllerManager,
 	}
 }
