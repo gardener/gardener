@@ -14,7 +14,7 @@
 !test/
 !third_party/
 !vendor/
-!.golangci.yaml
+!.golangci.yaml.in
 !go.mod
 !go.sum
 !Makefile

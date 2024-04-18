@@ -257,6 +257,6 @@ linters-settings:
         alias: applier
   custom:
     logcheck:
-      path: hack/tools/bin/logcheck.so
+      path: <<LOGCHECK_PLUGIN_PATH>>/logcheck.so
       description: Check structured logging calls to logr.Logger instances
       original-url: github.com/gardener/gardener/hack/tools/logcheck
