@@ -50,10 +50,10 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 Description=mount ` + pathVarLibKubelet + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]
-What=/dev/disk/by-label/kubeletdev
+What=/dev/disk/by-label/KUBEDEV
 Where=` + pathVarLibKubelet + `
-Type=xfs
-Options=defaults
+Type=ext4
+Options=defaults,prjquota,errors=remount-ro
 [Install]
 WantedBy=local-fs.target`),
 		},
