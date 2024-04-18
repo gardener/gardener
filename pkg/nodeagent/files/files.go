@@ -89,7 +89,7 @@ func copyAndSync(fs afero.Afero, source, destination string) error {
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destination))
 	}
 
-	dstFile, err := fs.OpenFile(destination, os.O_CREATE|os.O_RDWR, 0755)
+	dstFile, err := fs.OpenFile(destination, os.O_CREATE|os.O_RDWR|os.O_EXCL, 0700)
 	if err != nil {
 		return err
 	}
