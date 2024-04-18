@@ -539,6 +539,9 @@ type GardenerDashboardConfig struct {
 	// FrontendConfigMapRef is the reference to a ConfigMap containing the frontend configuration.
 	// +optional
 	FrontendConfigMapRef *corev1.LocalObjectReference `json:"frontendConfigMapRef,omitempty"`
+	// AssetsConfigMapRef is the reference to a ConfigMap containing the assets (logos/icons).
+	// +optional
+	AssetsConfigMapRef *corev1.LocalObjectReference `json:"assetsConfigMapRef,omitempty"`
 	// GitHub contains configuration for the GitHub ticketing feature.
 	// +optional
 	GitHub *DashboardGitHub `json:"gitHub,omitempty"`

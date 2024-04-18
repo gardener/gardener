@@ -188,9 +188,26 @@ This section highlights the most prominent fields:
          url: https://gardener.cloud
    ```
    Please take a look at [this file](https://github.com/gardener/dashboard/blob/64516ede9110065c24c61ab67f06c866fef10f3c/charts/gardener-dashboard/values.yaml#L154-L376) to get an idea of which values are configurable.
-   This configuration can also include branding, themes, colors, and icons/logos.
+   This configuration can also include branding, themes, and colors.
    Read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/customization.md).
-2. `gitHub`: You can connect a GitHub repository that can be used to create issues for shoot clusters in the cluster details page.
+   Assets (logos/icons) are configured in a separate `ConfigMap`, see below.
+2. `assetsConfigMapRef`: Reference a `ConfigMap` here that contains the assets, for example
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: gardener-dashboard-assets
+     namespace: garden
+   binaryData:
+     favicon-16x16.png: base64(favicon-16x16.png)
+     favicon-32x32.png: base64(favicon-32x32.png)
+     favicon-96x96.png: base64(favicon-96x96.png)
+     favicon.ico: base64(favicon.ico)
+     logo.svg: base64(logo.svg)
+   ```
+   Note that the assets must be provided base64-encoded, hence `binaryData` (instead of `data`) must be used.
+   Please take a look at [this file](https://github.com/gardener/dashboard/blob/master/docs/operations/customization.md#logos-and-icons) to get more information.
+3. `gitHub`: You can connect a GitHub repository that can be used to create issues for shoot clusters in the cluster details page.
    You have to reference a `Secret` that contains the GitHub credentials, for example:
    ```yaml
    apiVersion: v1
@@ -213,7 +230,7 @@ This section highlights the most prominent fields:
    ```
    Note that you should also setup a GitHub webhook to the dashboard such that it receives updates when somebody changes the GitHub issue.
    The `webhookSecret` field is the secret that you enter in GitHub in the webhook configuration. The dashboard uses it to verify that received traffic is indeed originated from GitHub.
-3. `oidc`: The general OIDC configuration is part of `.spec.virtualCluster.kubernetes.kubeAPIServer.oidc`, but this section allows you to define a few specific settings for the dashboard.
+4. `oidc`: The general OIDC configuration is part of `.spec.virtualCluster.kubernetes.kubeAPIServer.oidc`, but this section allows you to define a few specific settings for the dashboard.
    `sessionLifetime` is the duration after which a session is terminated (i.e., after which a user is automatically logged out).
    `additionalScopes` allows to extend the list of scopes of the JWT token that are to be recognized.
    You must reference a `Secret` containing the client ID/secret for the dashboard:
@@ -228,10 +245,10 @@ This section highlights the most prominent fields:
      client_id: <secret>
      client_secret: <secret>
    ```
-4. `enableTokenLogin`: This is enabled by default and allows logging into the dashboard with a JWT token.
+5. `enableTokenLogin`: This is enabled by default and allows logging into the dashboard with a JWT token.
    You can disable it in case you want to only allow OIDC-based login.
    However, at least one of the both login methods must be enabled.
-5. `terminal`: This enables the web terminal feature, read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md).
+6. `terminal`: This enables the web terminal feature, read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md).
    The `allowedHostSourceList` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
    The `container` section allows you to specify a container image and a description that should be used for the web terminals.
 

@@ -1313,6 +1313,20 @@ Kubernetes core/v1.LocalObjectReference
 </tr>
 <tr>
 <td>
+<code>assetsConfigMapRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AssetsConfigMapRef is the reference to a ConfigMap containing the assets (logos/icons).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>gitHub</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DashboardGitHub">

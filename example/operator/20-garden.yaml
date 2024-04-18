@@ -220,6 +220,8 @@ spec:
     #   enableTokenLogin: true
     #   frontendConfigMapRef:
     #     name: gardener-dashboard-frontend
+    #   assetsConfigMapRef:
+    #     name: gardener-dashboard-assets
     #   gitHub:
     #     apiURL: https://github.com/api/v3/
     #     organisation: kubernetes-dev

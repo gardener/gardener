@@ -759,6 +759,18 @@ spec:
                         description: Dashboard contains configuration settings for
                           the gardener-dashboard.
                         properties:
+                          assetsConfigMapRef:
+                            description: AssetsConfigMapRef is the reference to a
+                              ConfigMap containing the assets (logos/icons).
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
                           enableTokenLogin:
                             default: true
                             description: |-

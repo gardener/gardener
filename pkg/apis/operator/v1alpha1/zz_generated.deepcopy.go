@@ -651,6 +651,11 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}
+	if in.AssetsConfigMapRef != nil {
+		in, out := &in.AssetsConfigMapRef, &out.AssetsConfigMapRef
+		*out = new(corev1.LocalObjectReference)
+		**out = **in
+	}
 	if in.GitHub != nil {
 		in, out := &in.GitHub, &out.GitHub
 		*out = new(DashboardGitHub)

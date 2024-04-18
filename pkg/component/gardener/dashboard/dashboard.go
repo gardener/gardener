@@ -70,6 +70,8 @@ type Values struct {
 	GitHub *operatorv1alpha1.DashboardGitHub
 	// FrontendConfigMapName is the name of the ConfigMap containing the frontend configuration.
 	FrontendConfigMapName *string
+	// AssetsConfigMapName is the name of the ConfigMap containing the assets.
+	AssetsConfigMapName *string
 }
 
 // TerminalValues contains the terminal configuration.
@@ -142,12 +144,12 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	configMap, configMapAssets, err := g.configMaps(ctx)
+	configMap, err := g.configMap(ctx)
 	if err != nil {
 		return err
 	}
 
-	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name, configMapAssets)
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name)
 	if err != nil {
 		return err
 	}
@@ -159,7 +161,6 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		configMap,
-		configMapAssets,
 		deployment,
 		g.service(),
 		g.podDisruptionBudget(),

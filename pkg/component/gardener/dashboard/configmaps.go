@@ -31,7 +31,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/dashboard/config"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -43,17 +42,17 @@ const (
 	dataKeyLoginConfig        = "login-config.json"
 )
 
-func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, *corev1.ConfigMap, error) {
+func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	var frontendConfig map[string]interface{}
 	if g.values.FrontendConfigMapName != nil {
 		frontendConfigMap := &corev1.ConfigMap{}
 		if err := g.client.Get(ctx, client.ObjectKey{Name: *g.values.FrontendConfigMapName, Namespace: g.namespace}, frontendConfigMap); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		frontendConfig = make(map[string]interface{})
 		if err := yaml.Unmarshal([]byte(frontendConfigMap.Data[dataKeyFrontendConfig]), &frontendConfig); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -130,8 +129,9 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 		}
 	}
 
-	var configMapAssets *corev1.ConfigMap
 	if frontendConfig != nil {
+		cfg.Frontend = frontendConfig
+
 		if v, ok := frontendConfig["landingPageUrl"]; ok {
 			loginCfg.LandingPageURL = v.(string)
 		}
@@ -141,47 +141,18 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 		if v, ok := frontendConfig["themes"]; ok {
 			loginCfg.Themes = v.(map[string]interface{})
 		}
-
-		if v, ok := frontendConfig["assets"]; ok {
-			configMapAssets = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      configMapAssetsNamePrefix,
-					Namespace: g.namespace,
-					Labels:    GetLabels(),
-				},
-			}
-
-			data := make(map[string][]byte)
-			for fileName, asset := range v.(map[string]interface{}) {
-				var err error
-				data[fileName], err = utils.DecodeBase64(asset.(string))
-				if err != nil {
-					return nil, nil, fmt.Errorf("error decoding asset %s: %w", fileName, err)
-				}
-			}
-
-			configMapAssets.BinaryData = data
-			utilruntime.Must(kubernetesutils.MakeUnique(configMapAssets))
-		}
-
-		cfg.Frontend = make(map[string]interface{})
-		for k, v := range frontendConfig {
-			if k != "assets" {
-				cfg.Frontend[k] = v
-			}
-		}
 	}
 
 	rawConfig := &bytes.Buffer{}
 	yamlEncoder := yaml.NewEncoder(rawConfig)
 	yamlEncoder.SetIndent(2)
 	if err := yamlEncoder.Encode(&cfg); err != nil {
-		return nil, nil, fmt.Errorf("failed marshalling config: %w", err)
+		return nil, fmt.Errorf("failed marshalling config: %w", err)
 	}
 
 	rawLoginConfig, err := json.Marshal(loginCfg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed marshalling login config: %w", err)
+		return nil, fmt.Errorf("failed marshalling login config: %w", err)
 	}
 
 	configMap := &corev1.ConfigMap{
@@ -197,5 +168,5 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return configMap, configMapAssets, nil
+	return configMap, nil
 }

@@ -60,7 +60,6 @@ func (g *gardenerDashboard) deployment(
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
 	configMapName string,
-	configMapAssets *corev1.ConfigMap,
 ) (
 	*appsv1.Deployment,
 	error,
@@ -257,7 +256,13 @@ func (g *gardenerDashboard) deployment(
 		}
 	}
 
-	if configMapAssets != nil {
+	if g.values.AssetsConfigMapName != nil {
+		configMapAssets := &corev1.ConfigMap{}
+		if err := g.client.Get(ctx, client.ObjectKey{Name: *g.values.AssetsConfigMapName, Namespace: g.namespace}, configMapAssets); err != nil {
+			return nil, fmt.Errorf("failed reading assets ConfigMap %s for adding checksum annotation: %w", *g.values.AssetsConfigMapName, err)
+		}
+		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum-configmap-"+configMapAssets.Name, utils.ComputeSecretChecksum(configMapAssets.BinaryData))
+
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name:         volumeNameConfigAssets,
 			VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapAssets.Name}}},

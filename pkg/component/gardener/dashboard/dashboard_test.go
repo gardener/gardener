@@ -74,6 +74,7 @@ var _ = Describe("GardenerDashboard", func() {
 		oidc                  *OIDCValues
 		gitHub                *operatorv1alpha1.DashboardGitHub
 		frontendConfigMapName *string
+		assetsConfigMapName   *string
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -91,7 +92,6 @@ var _ = Describe("GardenerDashboard", func() {
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
 		configMap                 *corev1.ConfigMap
-		configMapAssets           *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
@@ -115,6 +115,7 @@ var _ = Describe("GardenerDashboard", func() {
 		oidc = nil
 		gitHub = nil
 		frontendConfigMapName = nil
+		assetsConfigMapName = nil
 
 		ctx = context.Background()
 
@@ -309,29 +310,7 @@ terminal:
 			utilruntime.Must(kubernetesutils.MakeUnique(obj))
 			return obj
 		}(enableTokenLogin, terminal, oidc, ingressValues.Domains, gitHub, frontendConfigMapName)
-		configMapAssets = func(frontendConfigMapName *string) *corev1.ConfigMap {
-			if frontendConfigMapName == nil {
-				return nil
-			}
-
-			obj := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-dashboard-assets",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"app":  "gardener",
-						"role": "dashboard",
-					},
-				},
-				BinaryData: map[string][]byte{
-					"foo": []byte("bar"),
-				},
-			}
-
-			utilruntime.Must(kubernetesutils.MakeUnique(obj))
-			return obj
-		}(frontendConfigMapName)
-		deployment = func(oidc *OIDCValues, gitHub *operatorv1alpha1.DashboardGitHub, frontendConfigMapName *string) *appsv1.Deployment {
+		deployment = func(oidc *OIDCValues, gitHub *operatorv1alpha1.DashboardGitHub, assetsConfigMapName *string) *appsv1.Deployment {
 			obj := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-dashboard",
@@ -556,10 +535,11 @@ terminal:
 				)
 			}
 
-			if frontendConfigMapName != nil {
+			if assetsConfigMapName != nil {
+				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-configmap-"+*assetsConfigMapName, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name:         "gardener-dashboard-assets",
-					VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMapAssets.Name}}},
+					VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: *assetsConfigMapName}}},
 				})
 				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 					Name:      "gardener-dashboard-assets",
@@ -570,7 +550,7 @@ terminal:
 			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
 			utilruntime.Must(references.InjectAnnotations(obj))
 			return obj
-		}(oidc, gitHub, frontendConfigMapName)
+		}(oidc, gitHub, assetsConfigMapName)
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard",
@@ -893,6 +873,7 @@ terminal:
 			Ingress:               ingressValues,
 			GitHub:                gitHub,
 			FrontendConfigMapName: frontendConfigMapName,
+			AssetsConfigMapName:   assetsConfigMapName,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -1101,8 +1082,6 @@ terminal:
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *frontendConfigMapName, Namespace: namespace},
 						Data: map[string]string{"frontend-config.yaml": `
-assets:
-  foo: YmFy
 foo:
   bar: baz
 landingPageUrl: landing-page-url
@@ -1115,8 +1094,25 @@ themes:
 
 				})
 
-				JustBeforeEach(func() {
-					expectedRuntimeObjects = append(expectedRuntimeObjects, configMapAssets)
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
+			})
+
+			When("assets are configured", func() {
+				BeforeEach(func() {
+					assetsConfigMapName = ptr.To("assets")
+
+					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: *assetsConfigMapName, Namespace: namespace},
+						Data: map[string]string{"assets-config.yaml": `
+assets:
+  foo: YmFy
+  bar: Zm9vCg==
+`}},
+					)).To(Succeed())
+
 				})
 
 				It("should successfully deploy all resources", func() {
