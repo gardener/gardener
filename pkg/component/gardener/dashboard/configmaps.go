@@ -15,6 +15,7 @@
 package dashboard
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -38,6 +39,7 @@ const (
 	configMapNamePrefix       = "gardener-dashboard-config"
 	configMapAssetsNamePrefix = "gardener-dashboard-assets"
 	dataKeyConfig             = "config.yaml"
+	dataKeyFrontendConfig     = "frontend-config.yaml"
 	dataKeyLoginConfig        = "login-config.json"
 )
 
@@ -50,7 +52,7 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 		}
 
 		frontendConfig = make(map[string]interface{})
-		if err := yaml.Unmarshal([]byte(frontendConfigMap.Data[dataKeyConfig]), &frontendConfig); err != nil {
+		if err := yaml.Unmarshal([]byte(frontendConfigMap.Data[dataKeyFrontendConfig]), &frontendConfig); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -170,8 +172,10 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 		}
 	}
 
-	rawConfig, err := yaml.Marshal(cfg)
-	if err != nil {
+	rawConfig := &bytes.Buffer{}
+	yamlEncoder := yaml.NewEncoder(rawConfig)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(&cfg); err != nil {
 		return nil, nil, fmt.Errorf("failed marshalling config: %w", err)
 	}
 
@@ -187,7 +191,7 @@ func (g *gardenerDashboard) configMaps(ctx context.Context) (*corev1.ConfigMap, 
 			Labels:    GetLabels(),
 		},
 		Data: map[string]string{
-			dataKeyConfig:      string(rawConfig),
+			dataKeyConfig:      rawConfig.String(),
 			dataKeyLoginConfig: string(rawLoginConfig),
 		},
 	}

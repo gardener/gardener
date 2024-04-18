@@ -181,13 +181,14 @@ This section highlights the most prominent fields:
      name: gardener-dashboard-frontend
      namespace: garden
    data:
-     config.yaml: |
+     frontend-config.yaml: |
        helpMenuItems:
        - title: Homepage
          icon: mdi-file-document
          url: https://gardener.cloud
    ```
-   This also includes branding, themes, colors, and icons/logos.
+   Please take a look at [this file](https://github.com/gardener/dashboard/blob/64516ede9110065c24c61ab67f06c866fef10f3c/charts/gardener-dashboard/values.yaml#L154-L376) to get an idea of which values are configurable.
+   This configuration can also include branding, themes, colors, and icons/logos.
    Read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/customization.md).
 2. `gitHub`: You can connect a GitHub repository that can be used to create issues for shoot clusters in the cluster details page.
    You have to reference a `Secret` that contains the GitHub credentials, for example:

@@ -212,79 +212,79 @@ apiServerUrl: ` + apiServerURL + `
 maxRequestBodySize: 500kb
 experimentalUseWatchCacheForListShoots: "yes"
 readinessProbe:
-    periodSeconds: 10
+  periodSeconds: 10
 unreachableSeeds:
-    matchLabels:
-        seed.gardener.cloud/network: private
+  matchLabels:
+    seed.gardener.cloud/network: private
 `
 
 			if terminal != nil {
 				configRaw += `contentSecurityPolicy:
-    connectSrc:
-        - self`
+  connectSrc:
+    - self`
 
 				for _, host := range terminal.AllowedHostSourceList {
 					configRaw += `
-        - wss://` + host + `
-        - https://` + host
+    - wss://` + host + `
+    - https://` + host
 				}
 
 				configRaw += `
 terminal:
-    container:
-        image: ` + terminal.Container.Image + `
-    containerImageDescriptions:
-        - image: /.*/
-          description: ` + ptr.Deref(terminal.Container.Description, "") + `
-    gardenTerminalHost:
-        seedRef: ` + terminal.GardenTerminalSeedHost + `
-    garden:
-        operatorCredentials:
-            serviceAccountRef:
-                name: dashboard-terminal-admin
-                namespace: kube-system
+  container:
+    image: ` + terminal.Container.Image + `
+  containerImageDescriptions:
+    - image: /.*/
+      description: ` + ptr.Deref(terminal.Container.Description, "") + `
+  gardenTerminalHost:
+    seedRef: ` + terminal.GardenTerminalSeedHost + `
+  garden:
+    operatorCredentials:
+      serviceAccountRef:
+        name: dashboard-terminal-admin
+        namespace: kube-system
 `
 			}
 
 			if oidc != nil {
 				configRaw += `oidc:
-    issuer: ` + oidc.IssuerURL + `
-    sessionLifetime: 43200
-    redirect_uris:`
+  issuer: ` + oidc.IssuerURL + `
+  sessionLifetime: 43200
+  redirect_uris:`
 
 				for _, domain := range ingressDomains {
 					configRaw += `
-        - https://dashboard.` + domain + `/auth/callback`
+    - https://dashboard.` + domain + `/auth/callback`
 				}
 
 				configRaw += `
-    scope: ` + strings.Join(append([]string{"openid", "email"}, oidc.AdditionalScopes...), " ") + `
-    rejectUnauthorized: true
-    public:
-        clientId: ` + oidc.ClientIDPublic + `
-        usePKCE: true
+  scope: ` + strings.Join(append([]string{"openid", "email"}, oidc.AdditionalScopes...), " ") + `
+  rejectUnauthorized: true
+  public:
+    clientId: ` + oidc.ClientIDPublic + `
+    usePKCE: true
 `
 			}
 
 			if gitHub != nil {
 				configRaw += `gitHub:
-    apiUrl: ` + gitHub.APIURL + `
-    org: ` + gitHub.Organisation + `
-    repository: ` + gitHub.Repository + `
-    syncThrottleSeconds: 20
-    syncConcurrency: 10
+  apiUrl: ` + gitHub.APIURL + `
+  org: ` + gitHub.Organisation + `
+  repository: ` + gitHub.Repository + `
+  syncThrottleSeconds: 20
+  syncConcurrency: 10
 `
 			}
 
 			if frontendConfigMapName != nil {
 				configRaw += `frontend:
-    branding:
-        some: branding
-    foo:
-        bar: baz
-    landingPageUrl: landing-page-url
-    themes:
-        some: themes
+  branding:
+    some: branding
+  foo:
+    bar: baz
+  landingPageUrl: landing-page-url
+  themes:
+    some: themes
 `
 			}
 
@@ -1100,7 +1100,7 @@ terminal:
 
 					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: *frontendConfigMapName, Namespace: namespace},
-						Data: map[string]string{"config.yaml": `
+						Data: map[string]string{"frontend-config.yaml": `
 assets:
   foo: YmFy
 foo:

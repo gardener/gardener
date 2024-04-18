@@ -219,7 +219,7 @@ spec:
         logLevel: info # either {trace,debug,info,warn,error}
     #   enableTokenLogin: true
     #   frontendConfigMapRef:
-    #     name: dashboard-frontend-config
+    #     name: gardener-dashboard-frontend
     #   gitHub:
     #     apiURL: https://github.com/api/v3/
     #     organisation: kubernetes-dev
