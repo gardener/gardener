@@ -52,8 +52,6 @@ import (
 )
 
 const (
-	// LabelRole is a constant for the value of a label with key 'role'.
-	LabelRole = "scheduler"
 	// BinPackingSchedulerName is the scheduler name that is used when the "bin-packing"
 	// scheduling profile is configured.
 	BinPackingSchedulerName = "bin-packing-scheduler"
@@ -399,7 +397,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-		v1beta1constants.LabelRole: LabelRole,
+		v1beta1constants.LabelRole: v1beta1constants.LabelScheduler,
 	}
 }
 

@@ -59,8 +59,6 @@ import (
 )
 
 const (
-	// LabelRole is a constant for the value of a label with key 'role'.
-	LabelRole = "controller-manager"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-kube-controller-manager"
 
@@ -681,7 +679,7 @@ func (k *kubeControllerManager) emptyServiceMonitor() *monitoringv1.ServiceMonit
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-		v1beta1constants.LabelRole: LabelRole,
+		v1beta1constants.LabelRole: v1beta1constants.LabelControllerManager,
 	}
 }
 

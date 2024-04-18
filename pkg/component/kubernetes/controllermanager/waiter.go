@@ -76,7 +76,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 			client.InNamespace(k.namespace),
 			client.MatchingLabels(map[string]string{
 				v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-				v1beta1constants.LabelRole: LabelRole,
+				v1beta1constants.LabelRole: v1beta1constants.LabelControllerManager,
 			}))
 		if err != nil {
 			return retry.SevereError(fmt.Errorf("could not check whether controller %s is active: %w", v1beta1constants.DeploymentNameKubeControllerManager, err))
