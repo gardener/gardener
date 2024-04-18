@@ -231,7 +231,7 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 				return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
 			}
 
-			if err := r.FS.Rename(tmpFilePath, file.Path); err != nil {
+			if err := registry.MoveFile(r.FS, tmpFilePath, file.Path); err != nil {
 				return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
 			}
 
