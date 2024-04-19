@@ -12,14 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/authentication"
-	gardenercorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 // ValidateCredentialsBinding validates a CredentialsBinding.
 func ValidateCredentialsBinding(binding *authentication.CredentialsBinding) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, gardenercorevalidation.ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateCredentialsRef(binding.CredentialsRef, field.NewPath("credentialsRef"))...)
 	allErrs = append(allErrs, ValidateCredentialsBindingProvider(binding.Provider, field.NewPath("provider"))...)
 	for i, quota := range binding.Quotas {
@@ -80,7 +80,6 @@ func validateCredentialsRef(ref authentication.Credentials, fldPath *field.Path)
 		return validateSecret(ref.Secret, fldPath.Child("secret"))
 	}
 	return validateWorkloadIdentity(ref.WorkloadIdentity, fldPath.Child("workloadIdentity"))
-
 }
 
 func validateSecret(ref *corev1.SecretReference, fldPath *field.Path) field.ErrorList {
