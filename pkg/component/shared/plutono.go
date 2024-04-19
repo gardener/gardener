@@ -43,6 +43,11 @@ func NewPlutono(
 		return nil, err
 	}
 
+	dashboardRefresherImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePlutonoDashboardRefresher)
+	if err != nil {
+		return nil, err
+	}
+
 	return plutono.New(
 		c,
 		namespace,
@@ -51,6 +56,7 @@ func NewPlutono(
 			AuthSecretName:             authSecretName,
 			ClusterType:                clusterType,
 			Image:                      plutonoImage.String(),
+			ImageDashboardRefresher:    dashboardRefresherImage.String(),
 			IngressHost:                ingressHost,
 			IncludeIstioDashboards:     includeIstioDashboards,
 			IsGardenCluster:            isGardenCluster,

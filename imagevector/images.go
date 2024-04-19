@@ -103,6 +103,8 @@ const (
 	ImageNamePauseContainer = "pause-container"
 	// ImageNamePlutono is a constant for an image in the image vector with name 'plutono'.
 	ImageNamePlutono = "plutono"
+	// ImageNamePlutonoDashboardRefresher is a constant for an image in the image vector with name 'plutono-dashboard-refresher'.
+	ImageNamePlutonoDashboardRefresher = "plutono-dashboard-refresher"
 	// ImageNamePrometheus is a constant for an image in the image vector with name 'prometheus'.
 	ImageNamePrometheus = "prometheus"
 	// ImageNamePrometheusOperator is a constant for an image in the image vector with name 'prometheus-operator'.

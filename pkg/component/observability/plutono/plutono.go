@@ -105,6 +105,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Image is the container image used for plutono.
 	Image string
+	// ImageDashboardRefresher is the container image used for the sidecar responsible for refreshing the dashboards.
+	ImageDashboardRefresher string
 	// IngressHost is the host name of plutono.
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
