@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fluentoperator
+package fluentbit
 
 import (
 	"context"
+	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,13 +38,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const (
-	// FluentBitManagedResourceName is the name of the managed resource which deploys the custom resources of the operator.
-	FluentBitManagedResourceName = "fluent-bit"
-)
+const managedResourceName = "fluent-bit"
 
-// FluentBitValues is the values for fluent-bit configurations
-type FluentBitValues struct {
+// Values is the values for fluent-bit configurations
+type Values struct {
 	// Image is the fluent-bit image.
 	Image string
 	// InitContainerImage is the fluent-bit init container image.
@@ -57,14 +55,14 @@ type FluentBitValues struct {
 type fluentBit struct {
 	client    client.Client
 	namespace string
-	values    FluentBitValues
+	values    Values
 }
 
-// NewFluentBit creates a new instance of Fluent-bit deployer.
-func NewFluentBit(
+// New creates a new instance of fluent-bit deployer.
+func New(
 	client client.Client,
 	namespace string,
-	values FluentBitValues,
+	values Values,
 ) component.DeployWaiter {
 	return &fluentBit{
 		client:    client,
@@ -140,7 +138,7 @@ end
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),
 			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: getFluentBitLabels()},
+				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
 					RelabelConfigs: []*monitoringv1.RelabelConfig{
@@ -170,7 +168,7 @@ end
 		serviceMonitorPlugin = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", f.namespace, aggregate.Label),
 			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: getFluentBitLabels()},
+				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics-plugin",
 					RelabelConfigs: []*monitoringv1.RelabelConfig{
@@ -286,7 +284,7 @@ end
 
 	resources := []client.Object{
 		configMap,
-		customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass),
+		customresources.GetFluentBit(getLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass),
 		customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels()),
 		serviceMonitor,
 		serviceMonitorPlugin,
@@ -314,28 +312,30 @@ end
 		return err
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, f.client, f.namespace, FluentBitManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
+	return managedresources.CreateForSeedWithLabels(ctx, f.client, f.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, serializedResources)
 }
 
 func (f *fluentBit) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, f.client, f.namespace, FluentBitManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, f.client, f.namespace, managedResourceName)
 }
+
+var timeoutWaitForManagedResources = 2 * time.Minute
 
 func (f *fluentBit) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, f.client, f.namespace, FluentBitManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, f.client, f.namespace, managedResourceName)
 }
 
 func (f *fluentBit) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, f.client, f.namespace, FluentBitManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, f.client, f.namespace, managedResourceName)
 }
 
-func getFluentBitLabels() map[string]string {
+func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:                             v1beta1constants.DaemonSetNameFluentBit,
 		v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
@@ -344,5 +344,11 @@ func getFluentBitLabels() map[string]string {
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100":                v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+}
+
+func getCustomResourcesLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource,
 	}
 }

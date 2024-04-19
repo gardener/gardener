@@ -100,6 +100,7 @@ build:
             - pkg/component/networking/vpn/authzserver
             - pkg/component/networking/vpn/seedserver
             - pkg/component/observability/logging
+            - pkg/component/observability/logging/fluentbit
             - pkg/component/observability/logging/fluentoperator
             - pkg/component/observability/logging/fluentoperator/customresources
             - pkg/component/observability/logging/vali
