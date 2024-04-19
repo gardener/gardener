@@ -29,9 +29,7 @@ func (gcmx *gardenerCustomMetrics) vpa() *vpaautoscalingv1.VerticalPodAutoscaler
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener-custom-metrics",
 			Namespace: gcmx.namespace,
-			Labels: map[string]string{
-				"role": "gardener-custom-metrics-vpa",
-			},
+			Labels:    getLabels(),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{

@@ -27,6 +27,7 @@ func (gcmx *gardenerCustomMetrics) serviceAccount() *corev1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
 			Namespace: gcmx.namespace,
+			Labels:    getLabels(),
 		},
 		AutomountServiceAccountToken: ptr.To(false),
 	}

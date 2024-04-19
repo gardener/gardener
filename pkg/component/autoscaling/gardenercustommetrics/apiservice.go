@@ -23,7 +23,8 @@ import (
 func (gcmx *gardenerCustomMetrics) apiService() *apiregistrationv1.APIService {
 	return &apiregistrationv1.APIService{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "v1beta2.custom.metrics.k8s.io",
+			Name:   "v1beta2.custom.metrics.k8s.io",
+			Labels: getLabels(),
 		},
 		Spec: apiregistrationv1.APIServiceSpec{
 			Service: &apiregistrationv1.ServiceReference{

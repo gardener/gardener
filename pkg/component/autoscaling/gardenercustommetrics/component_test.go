@@ -112,6 +112,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-custom-metrics",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			AutomountServiceAccountToken: ptr.To(false),
 		}
@@ -119,6 +123,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:gardener-custom-metrics",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -154,6 +162,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:gardener-custom-metrics",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
@@ -169,6 +181,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:gardener-custom-metrics",
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -181,6 +197,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:gardener-custom-metrics",
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
@@ -196,6 +216,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 		authDelegatorClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:gardener-custom-metrics:auth-delegator",
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
@@ -214,6 +238,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:gardener-custom-metrics:auth-reader",
 				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
@@ -334,6 +362,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-world-to-ports": `[{"protocol":"TCP","port":6443}]`,
 				},
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
@@ -353,7 +385,8 @@ var _ = Describe("gardenerCustomMetrics", func() {
 				Name:      "gardener-custom-metrics",
 				Namespace: namespace,
 				Labels: map[string]string{
-					"role": "gardener-custom-metrics-vpa",
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
 				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -378,6 +411,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 		apiService = &apiregistrationv1.APIService{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "v1beta2.custom.metrics.k8s.io",
+				Labels: map[string]string{
+					"app":                 "gardener-custom-metrics",
+					"gardener.cloud/role": "gardener-custom-metrics",
+				},
 			},
 			Spec: apiregistrationv1.APIServiceSpec{
 				Service: &apiregistrationv1.ServiceReference{

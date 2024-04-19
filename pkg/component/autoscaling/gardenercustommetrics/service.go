@@ -35,6 +35,7 @@ func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 			Annotations: map[string]string{
 				resourcesv1alpha1.NetworkingFromWorldToPorts: `[{"protocol":"TCP","port":6443}]`,
 			},
+			Labels: getLabels(),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{

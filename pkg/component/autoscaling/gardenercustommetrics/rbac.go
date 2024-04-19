@@ -29,6 +29,7 @@ func (gcmx *gardenerCustomMetrics) role() *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
 			Namespace: gcmx.namespace,
+			Labels:    getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -77,6 +78,7 @@ func (gcmx *gardenerCustomMetrics) roleBinding() *rbacv1.RoleBinding {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener.cloud:gardener-custom-metrics",
 			Namespace: gcmx.namespace,
+			Labels:    getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -96,7 +98,8 @@ func (gcmx *gardenerCustomMetrics) roleBinding() *rbacv1.RoleBinding {
 func (gcmx *gardenerCustomMetrics) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterRoleName,
+			Name:   clusterRoleName,
+			Labels: getLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -111,7 +114,8 @@ func (gcmx *gardenerCustomMetrics) clusterRole() *rbacv1.ClusterRole {
 func (gcmx *gardenerCustomMetrics) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:gardener-custom-metrics",
+			Name:   "gardener.cloud:gardener-custom-metrics",
+			Labels: getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -131,7 +135,8 @@ func (gcmx *gardenerCustomMetrics) clusterRoleBinding() *rbacv1.ClusterRoleBindi
 func (gcmx *gardenerCustomMetrics) authDelegatorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:gardener-custom-metrics:auth-delegator",
+			Name:   "gardener.cloud:gardener-custom-metrics:auth-delegator",
+			Labels: getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -153,6 +158,7 @@ func (gcmx *gardenerCustomMetrics) authReaderRoleBinding() *rbacv1.RoleBinding {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardener.cloud:gardener-custom-metrics:auth-reader",
 			Namespace: metav1.NamespaceSystem,
+			Labels:    getLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
