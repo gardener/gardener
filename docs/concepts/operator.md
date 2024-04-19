@@ -192,7 +192,7 @@ This section highlights the most prominent fields:
 - `enableTokenLogin`: This is enabled by default and allows logging into the dashboard with a JWT token.
   You can disable it in case you want to only allow OIDC-based login.
   However, at least one of the both login methods must be enabled.
-- `frontendConfigMapRef`: Reference a `ConfigMap` in the `garden` namespace containing the frontend configuration, for example
+- `frontendConfigMapRef`: Reference a `ConfigMap` in the `garden` namespace containing the frontend configuration in the data with key `frontend-config.yaml`, for example
   ```yaml
   apiVersion: v1
   kind: ConfigMap
