@@ -623,11 +623,6 @@ const (
 	// Kubernetes resources' step. Concretely, after the specified seconds, all the finalizers of the affected resources
 	// are forcefully removed.
 	AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"
-	// AnnotationShootInfrastructureCleanupWaitPeriodSeconds is a key for an annotation on a Shoot
-	// resource that declares the wait period in seconds for infrastructure resources cleanup. Concretely,
-	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
-	// controllers to gracefully cleanup everything (default behaviour is 300s).
-	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
 	// AnnotationShootCloudConfigExecutionMaxDelaySeconds is a key for an annotation on a Shoot resource that declares
 	// the maximum delay in seconds when potentially updated cloud-config user data is executed on the worker nodes.
 	// Concretely, the gardener-node-agent systemd service running on all worker nodes will wait
