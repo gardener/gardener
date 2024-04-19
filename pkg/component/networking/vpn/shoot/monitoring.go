@@ -54,7 +54,7 @@ const (
       type: shoot
       visibility: all
     annotations:
-      description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
+      description: The API Server proxy functionality is not working. Probably the VPN connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
       summary: API Server Proxy not usable
 `
 )

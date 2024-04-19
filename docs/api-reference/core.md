@@ -9436,7 +9436,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>VPN is the CIDR of the vpn network (spanning vpn-seed-server and vpn-shoot) of shoots on this seed. It must be
+<p>VPN is the CIDR of the VPN network (spanning vpn-seed-server and vpn-shoot) of shoots on this seed. It must be
 disjoint with the Nodes, Pods, and Services networks. It must be a /24 network for IPv4 and /120 for IPv6.
 This field is mutable. Changing it leads to a temporary VPN disconnect during the next reconciliation of all shoots
 on this seed.

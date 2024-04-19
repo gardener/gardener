@@ -91,7 +91,7 @@ var _ = Describe("VPNSeedServer", func() {
 			}
 		})
 
-		It("should successfully create a vpn seed server interface", func() {
+		It("should successfully create a VPN seed server interface", func() {
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version()
 

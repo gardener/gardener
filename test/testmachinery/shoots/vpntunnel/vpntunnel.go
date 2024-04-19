@@ -42,7 +42,7 @@ const (
 	copyLabel      = "vpnTunnelCopyTesting"
 )
 
-var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
+var _ = ginkgo.Describe("Shoot VPN tunnel testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	f.Beta().CIt("should get container logs from logging-pod", func(ctx context.Context) {

@@ -1867,7 +1867,7 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should reject because the shoot node and the seed vpn networks intersect", func() {
+				It("should reject because the shoot node and the seed VPN networks intersect", func() {
 					shoot.Spec.Networking.Nodes = &seedVPNCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1878,10 +1878,10 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot node network intersects with seed vpn network"))))
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot node network intersects with seed VPN network"))))
 				})
 
-				It("should reject because the shoot pod and the seed vpn networks intersect", func() {
+				It("should reject because the shoot pod and the seed VPN networks intersect", func() {
 					shoot.Spec.Networking.Pods = &seedVPNCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1892,10 +1892,10 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot pod network intersects with seed vpn network"))))
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot pod network intersects with seed VPN network"))))
 				})
 
-				It("should reject because the shoot service and the seed vpn networks intersect", func() {
+				It("should reject because the shoot service and the seed VPN networks intersect", func() {
 					shoot.Spec.Networking.Services = &seedVPNCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1906,7 +1906,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot service network intersects with seed vpn network"))))
+					Expect(err).To(And(BeForbiddenError(), MatchError(ContainSubstring("shoot service network intersects with seed VPN network"))))
 				})
 
 				It("should reject because the shoot service and the shoot node networks intersect", func() {

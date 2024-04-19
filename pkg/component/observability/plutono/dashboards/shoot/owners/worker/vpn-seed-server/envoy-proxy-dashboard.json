@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "This dashboard shows data for the reversed vpn seed server envoy-proxy.",
+  "description": "This dashboard shows data for the reversed VPN seed server envoy-proxy.",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
@@ -512,7 +512,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Connections from envoy proxy to vpn shoot.",
+      "description": "Connections from envoy proxy to VPN shoot.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1594,7 +1594,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Traffic from envoy proxy to vpn shoot.",
+      "description": "Traffic from envoy proxy to VPN shoot.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1818,7 +1818,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the client error rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the client error rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1915,7 +1915,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the client error rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the client error rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2012,7 +2012,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the server error rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the server error rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2109,7 +2109,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the server error rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the server error rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2206,7 +2206,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the successful response rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the successful response rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2303,7 +2303,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "This graph shows the successful response rate of the reversed vpn server envoy proxy sidecar container.",
+      "description": "This graph shows the successful response rate of the reversed VPN server envoy proxy sidecar container.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []

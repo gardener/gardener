@@ -150,7 +150,7 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should fail due to overlap of vpn and pod networks", func() {
+		It("should fail due to overlap of VPN and pod networks", func() {
 			var (
 				podsCIDR     = "10.239.0.0/17"
 				servicesCIDR = "10.242.0.0/17"
@@ -172,11 +172,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].pods"),
-				"Detail": ContainSubstring("pod network intersects with seed vpn network"),
+				"Detail": ContainSubstring("pod network intersects with seed VPN network"),
 			}))))
 		})
 
-		It("should fail due to overlap of vpn and service networks", func() {
+		It("should fail due to overlap of VPN and service networks", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.239.0.128/25"
@@ -198,11 +198,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].services"),
-				"Detail": ContainSubstring("service network intersects with seed vpn network"),
+				"Detail": ContainSubstring("service network intersects with seed VPN network"),
 			}))))
 		})
 
-		It("should fail due to overlap of vpn and node networks", func() {
+		It("should fail due to overlap of VPN and node networks", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.242.0.0/17"
@@ -224,7 +224,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].nodes"),
-				"Detail": ContainSubstring("node network intersects with seed vpn network"),
+				"Detail": ContainSubstring("node network intersects with seed VPN network"),
 			}))))
 		})
 
@@ -445,7 +445,7 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should fail due to overlap of vpn and pod networks", func() {
+		It("should fail due to overlap of VPN and pod networks", func() {
 			var (
 				podsCIDR     = "2001:0db8:95a3::/110"
 				servicesCIDR = "2001:0db8:45a3::/113"
@@ -467,11 +467,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].pods"),
-				"Detail": ContainSubstring("pod network intersects with seed vpn network"),
+				"Detail": ContainSubstring("pod network intersects with seed VPN network"),
 			}))))
 		})
 
-		It("should fail due to overlap of vpn and service networks", func() {
+		It("should fail due to overlap of VPN and service networks", func() {
 			var (
 				podsCIDR     = "2001:0db8:35a3::/113"
 				servicesCIDR = "2001:0db8:95a3::80/121"
@@ -493,11 +493,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].services"),
-				"Detail": ContainSubstring("service network intersects with seed vpn network"),
+				"Detail": ContainSubstring("service network intersects with seed VPN network"),
 			}))))
 		})
 
-		It("should fail due to overlap of vpn and node networks", func() {
+		It("should fail due to overlap of VPN and node networks", func() {
 			var (
 				podsCIDR     = "2001:0db8:35a3::/113"
 				servicesCIDR = "2001:0db8:45a3::/113"
@@ -519,7 +519,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].nodes"),
-				"Detail": ContainSubstring("node network intersects with seed vpn network"),
+				"Detail": ContainSubstring("node network intersects with seed VPN network"),
 			}))))
 		})
 

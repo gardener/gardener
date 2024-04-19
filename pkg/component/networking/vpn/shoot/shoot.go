@@ -67,7 +67,7 @@ type Interface interface {
 
 // ReversedVPNValues contains the configuration values for the ReversedVPN.
 type ReversedVPNValues struct {
-	// VPNCIDR is the CIDR of the vpn network.
+	// VPNCIDR is the CIDR of the VPN network.
 	VPNCIDR string
 	// Header is the header for the ReversedVPN.
 	Header string

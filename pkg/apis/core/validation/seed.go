@@ -263,12 +263,12 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 
 	if seedNetworks.VPN != nil {
-		// vpn network must be a valid network and must match the primary IP family (see below)
+		// VPN network must be a valid network and must match the primary IP family (see below)
 		vpnNetwork = cidrvalidation.NewCIDR(*seedNetworks.VPN, fldPath.Child("vpn"))
-		// vpn network must be disjoint with the other networks (see below)
+		// VPN network must be disjoint with the other networks (see below)
 		networks = append(networks, vpnNetwork)
 
-		// vpn network must be a /24 network for IPv4 and /120 for IPv6
+		// VPN network must be a /24 network for IPv4 and /120 for IPv6
 		if vpnCIDR := vpnNetwork.GetIPNet(); vpnCIDR != nil {
 			prefix, _ := vpnCIDR.Mask.Size()
 			if primaryIPFamily == core.IPFamilyIPv4 && prefix != 24 {

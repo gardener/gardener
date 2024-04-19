@@ -673,7 +673,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster due to network overlap with vpn network", func() {
+		It("should fail because it cannot find a seed cluster due to network overlap with VPN network", func() {
 			shoot.Spec.Networking = &gardencorev1beta1.Networking{
 				Pods:     seed.Spec.Networks.VPN,
 				Services: seed.Spec.Networks.VPN,
@@ -685,9 +685,9 @@ var _ = Describe("Scheduler_Control", func() {
 
 			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(MatchError(And(
-				ContainSubstring("shoot pod network intersects with seed vpn network"),
-				ContainSubstring("shoot service network intersects with seed vpn network"),
-				ContainSubstring("shoot node network intersects with seed vpn network"),
+				ContainSubstring("shoot pod network intersects with seed VPN network"),
+				ContainSubstring("shoot service network intersects with seed VPN network"),
+				ContainSubstring("shoot node network intersects with seed VPN network"),
 			)))
 			Expect(bestSeed).To(BeNil())
 		})

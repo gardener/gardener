@@ -50,13 +50,13 @@ const (
 	GatewayPort = 8132
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
 	SecretNameTLSAuth = "vpn-seed-server-tlsauth"
-	// DeploymentName is the name of vpn seed server deployment.
+	// DeploymentName is the name of VPN seed server deployment.
 	DeploymentName = v1beta1constants.DeploymentNameVPNSeedServer
-	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
+	// ServiceName is the name of the VPN seed server service running internally on the control plane in seed.
 	ServiceName = DeploymentName
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
-	// OpenVPNPort is the port exposed by the vpn seed server for tcp tunneling.
+	// OpenVPNPort is the port exposed by the VPN seed server for tcp tunneling.
 	OpenVPNPort = 1194
 	// HighAvailabilityReplicaCount is the replica count used when highly available VPN is configured.
 	HighAvailabilityReplicaCount = 2
@@ -97,7 +97,7 @@ type Interface interface {
 
 // NetworkValues contains the configuration values for the network.
 type NetworkValues struct {
-	// VPNCIDR is the CIDR of the vpn network.
+	// VPNCIDR is the CIDR of the VPN network.
 	VPNCIDR string
 	// PodCIDR is the CIDR of the pod network.
 	PodCIDR string

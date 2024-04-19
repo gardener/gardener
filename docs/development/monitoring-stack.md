@@ -123,7 +123,7 @@ Shoot Alertmanager
 
 ### Alert Inhibition
 
-All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert, make sure to add it to the diagram.
+All alerts related to components running on the Shoot workers are inhibited in case of an issue with the VPN connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert, make sure to add it to the diagram.
 
 ![alertDiagram](content/alertInhibitionGraph.png)
 

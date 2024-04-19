@@ -492,7 +492,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid Seed with overlap to vpn range", func() {
+				It("should forbid Seed with overlap to VPN range", func() {
 					seed.Spec.Networks = core.SeedNetworks{
 						Nodes:    ptr.To("192.168.123.0/27"), // subset of VPN range
 						Pods:     "192.168.123.0/24",         // equal to VPN range

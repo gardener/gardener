@@ -1793,7 +1793,7 @@ rules:
 					})))
 				})
 
-				It("should have the expected pod template labels with vpn enabled", func() {
+				It("should have the expected pod template labels with VPN enabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
@@ -1809,7 +1809,7 @@ rules:
 					})))
 				})
 
-				It("should have the expected pod template labels with ha vpn enabled", func() {
+				It("should have the expected pod template labels with ha VPN enabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
@@ -3014,7 +3014,7 @@ rules:
 					))
 				})
 
-				It("should properly configure the settings related to reversed vpn if enabled", func() {
+				It("should properly configure the settings related to reversed VPN if enabled", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
