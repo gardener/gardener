@@ -102,7 +102,7 @@ build:
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentbit
             - pkg/component/observability/logging/fluentoperator
-            - pkg/component/observability/logging/fluentoperator/customresources
+            - pkg/component/observability/logging/fluentcustomresources
             - pkg/component/observability/logging/vali
             - pkg/component/observability/logging/vali/constants
             - pkg/component/observability/monitoring

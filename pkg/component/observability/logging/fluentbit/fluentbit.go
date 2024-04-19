@@ -34,7 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -301,18 +301,18 @@ end
 	}
 
 	if f.values.ValiEnabled {
-		resources = append(resources, customresources.GetDefaultClusterOutput(getCustomResourcesLabels()))
+		resources = append(resources, fluentcustomresources.GetDefaultClusterOutput(getCustomResourcesLabels()))
 	}
 
-	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {
+	for _, clusterInput := range fluentcustomresources.GetClusterInputs(getCustomResourcesLabels()) {
 		resources = append(resources, clusterInput)
 	}
 
-	for _, clusterFilter := range customresources.GetClusterFilters(configMap.Name, getCustomResourcesLabels()) {
+	for _, clusterFilter := range fluentcustomresources.GetClusterFilters(configMap.Name, getCustomResourcesLabels()) {
 		resources = append(resources, clusterFilter)
 	}
 
-	for _, clusterParser := range customresources.GetClusterParsers(getCustomResourcesLabels()) {
+	for _, clusterParser := range fluentcustomresources.GetClusterParsers(getCustomResourcesLabels()) {
 		resources = append(resources, clusterParser)
 	}
 

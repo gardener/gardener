@@ -12,34 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package customresources
+package fluentcustomresources
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
+	fluentbitv1alpha2input "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
-// GetClusterParsers returns the ClusterParsers used by the Fluent Operator.
-func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterParser {
-	return []*fluentbitv1alpha2.ClusterParser{
+// GetClusterInputs Returns the ClusterInputs used by the Fluent Operator.
+func GetClusterInputs(labels map[string]string) []*fluentbitv1alpha2.ClusterInput {
+	return []*fluentbitv1alpha2.ClusterInput{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "containerd-parser",
+				Name:   "tail-kubernetes",
 				Labels: labels,
 			},
-			Spec: fluentbitv1alpha2.ParserSpec{
-				Regex: &fluentbitv1alpha2parser.Regex{
-					Regex:      "^(?<time>[^ ]+) (stdout|stderr) ([^ ]*) (?<log>.*)$",
-					TimeKey:    "time",
-					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-					TimeKeep:   ptr.To(true),
-				},
-				Decoders: []fluentbitv1alpha2.Decorder{
-					{
-						DecodeFieldAs: "json log",
-					},
+			Spec: fluentbitv1alpha2.InputSpec{
+				Tail: &fluentbitv1alpha2input.Tail{
+					Tag:                    "kubernetes.*",
+					Path:                   "/var/log/containers/*.log",
+					ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
+					RefreshIntervalSeconds: ptr.To[int64](10),
+					MemBufLimit:            "30MB",
+					SkipLongLines:          ptr.To(true),
+					DB:                     "/var/fluentbit/flb_kube.db",
+					IgnoreOlder:            "30m",
 				},
 			},
 		},
