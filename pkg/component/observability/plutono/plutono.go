@@ -60,7 +60,12 @@ const (
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
 
+	volumeNameDataSources        = "datasources"
+	volumeNameDashboardProviders = "dashboard-providers"
 	volumeNameDashboards         = "dashboards"
+	volumeNameStorage            = "storage"
+	volumeMountPathStorage    = "/var/lib/plutono"
+	volumeMountPathDashboards = volumeMountPathStorage + "/dashboards"
 )
 
 var (
@@ -200,8 +205,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 				Namespace: p.namespace,
 				Labels:    getLabels(),
 			},
-			Data: map[string]string{
-				"default.yaml": p.getDashboardsProviders(),
+			Data: map[string]string{"default.yaml": p.getDashboardsProviders()},
 			},
 		}
 
@@ -211,9 +215,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 				Namespace: p.namespace,
 				Labels:    getLabels(),
 			},
-			Data: map[string]string{
-				"datasources.yaml": p.getDataSource(),
-			},
+			Data: map[string]string{"datasources.yaml": p.getDataSource()},
 		}
 	)
 
@@ -231,16 +233,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
-	var (
-		deployment *appsv1.Deployment
-		service    *corev1.Service
-		ingress    *networkingv1.Ingress
-	)
-
-	deployment = p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal)
-	service = p.getService()
-
-	ingress, err = p.getIngress(ctx)
+	ingress, err := p.getIngress(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -248,8 +241,8 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	data, err := registry.AddAllAndSerialize(
 		providerConfigMap,
 		dataSourceConfigMap,
-		deployment,
-		service,
+		p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal),
+		p.getService(),
 		ingress,
 	)
 	if err != nil {
@@ -344,11 +337,9 @@ datasources:
 
 func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
 	var (
-		requiredDashboards   map[string]embed.FS
-		ignorePaths          = sets.Set[string]{}
-		dashboards           = map[string]string{}
-		extensionsDashboards = utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring)
-		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(extensionsDashboards)}
+		requiredDashboards map[string]embed.FS
+		ignorePaths        = sets.Set[string]{}
+		dashboards         = map[string]string{}
 	)
 
 	configMap := &corev1.ConfigMap{
@@ -362,7 +353,7 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 	if p.values.IsGardenCluster {
 		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards, gardenGlobalDashboardsPath: gardenGlobalDashboards}
 
-		additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
+		additionalDashboards, err := p.getAdditionalDashboards(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -399,7 +390,7 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 			}
 		}
 
-		additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard})
+		additionalDashboards, err := p.getAdditionalDashboards(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -443,10 +434,10 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 	}
 
 	// this is necessary to prevent hitting configmap size limit.
-	if dashboards, err := convertToCompactJSON(dashboards); err != nil {
+	var err error
+	configMap.Data, err = convertToCompactJSON(dashboards)
+	if err != nil {
 		return nil, err
-	} else {
-		configMap.Data = dashboards
 	}
 
 	return configMap, nil
@@ -517,24 +508,22 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "plutono-datasources",
+									Name:      volumeNameDataSources,
 									MountPath: "/etc/plutono/provisioning/datasources",
 								},
 								{
-									Name:      "plutono-dashboard-providers",
+									Name:      volumeNameDashboardProviders,
 									MountPath: "/etc/plutono/provisioning/dashboards",
 								},
 								{
-									Name:      "plutono-storage",
-									MountPath: "/var/lib/plutono",
+									Name:      volumeNameStorage,
+									MountPath: volumeMountPathStorage,
 								},
 							},
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "web",
-									ContainerPort: int32(port),
-								},
-							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "web",
+								ContainerPort: int32(port),
+							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -548,7 +537,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "plutono-datasources",
+							Name: volumeNameDataSources,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -558,7 +547,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							},
 						},
 						{
-							Name: "plutono-dashboard-providers",
+							Name: volumeNameDashboardProviders,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -568,7 +557,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							},
 						},
 						{
-							Name: "plutono-storage",
+							Name: volumeNameStorage,
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
 									SizeLimit: ptr.To(resource.MustParse("100Mi")),
@@ -789,17 +778,14 @@ func (p *plutono) getPodLabels() map[string]string {
 	return labels
 }
 
-func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector labels.Selector, keys []string) (map[string]string, error) {
-	var (
-		dashboards           = map[string]string{}
-		additionalDashboards = strings.Builder{}
-	)
-
+// TODO(rfranzke): This function and method of fetching extension dashboards is deprecated. Remove it after v1.100 has been released.
+func (p *plutono) getAdditionalDashboards(ctx context.Context) (map[string]string, error) {
 	// Fetch additional monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := p.client.List(ctx, existingConfigMaps,
 		client.InNamespace(p.namespace),
-		client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
+		client.MatchingLabelsSelector{Selector: client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring))}},
+	); err != nil {
 		return nil, err
 	}
 
@@ -807,14 +793,16 @@ func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector lab
 	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read monitoring configurations
+	additionalDashboards := strings.Builder{}
 	for _, cm := range existingConfigMaps.Items {
-		for _, key := range keys {
+		for _, key := range []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard} {
 			if dashboard, ok := cm.Data[key]; ok && dashboard != "" {
 				additionalDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(dashboard, "Grafana", "Plutono"), "loki", "vali")))
 			}
 		}
 	}
 
+	dashboards := map[string]string{}
 	if additionalDashboards.Len() > 0 {
 		if err := yaml.Unmarshal([]byte(additionalDashboards.String()), &dashboards); err != nil {
 			return nil, err
