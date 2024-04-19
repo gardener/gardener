@@ -57,9 +57,10 @@ const (
 	managedResourceName = "plutono"
 	name                = "plutono"
 
-	plutonoMountPathDashboards    = "/var/lib/plutono/dashboards"
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
+
+	volumeNameDashboards         = "dashboards"
 )
 
 var (
@@ -144,21 +145,19 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	dashboardConfigMaps, data, err := p.computeResourcesData(ctx)
+	dashboardConfigMap, data, err := p.computeResourcesData(ctx, plutonoAdminUserSecret)
 	if err != nil {
 		return err
 	}
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
-	for _, configMap := range dashboardConfigMaps {
-		if configMap != nil {
-			if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
-				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "component", name)
-				metav1.SetMetaDataLabel(&configMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
-				return nil
-			}); err != nil {
-				return err
-			}
+	if dashboardConfigMap != nil {
+		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
+			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
+			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 
@@ -191,10 +190,9 @@ func (p *plutono) SetWildcardCertName(secretName *string) {
 	p.values.WildcardCertName = secretName
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, map[string][]byte, error) {
+func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		err      error
 
 		providerConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -217,30 +215,16 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 				"datasources.yaml": p.getDataSource(),
 			},
 		}
-
-		dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap
 	)
 
+	var suffix string
 	if p.values.IsGardenCluster {
-		if configMap, err := p.getDashboardsConfigMap(ctx, "garden"); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMap = configMap
-		}
+		suffix = "-garden"
+	}
 
-		if configMap, err := p.getDashboardsConfigMap(ctx, "global"); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMapGlobal = configMap
-		}
-
-		utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMapGlobal))
-	} else {
-		if configMap, err := p.getDashboardsConfigMap(ctx, ""); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMap = configMap
-		}
+	dashboardConfigMap, err := p.getDashboardConfigMap(ctx, suffix)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
@@ -272,11 +256,11 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		return nil, nil, err
 	}
 
-	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, data, nil
+	return dashboardConfigMap, data, nil
 }
 
 func (p *plutono) getDashboardsProviders() string {
-	dashboardsProviders := `apiVersion: 1
+	return `apiVersion: 1
 providers:
 - name: 'default'
   orgId: 1
@@ -285,34 +269,7 @@ providers:
   disableDeletion: false
   editable: false
   options:
-    path: ` + plutonoMountPathDashboards + `
-`
-
-	if p.values.IsGardenCluster {
-		dashboardsProviders = `apiVersion: 1
-providers:
-- name: 'global'
-  orgId: 1
-  folder: 'Global'
-  type: file
-  disableDeletion: false
-  editable: false
-  updateIntervalSeconds: 120
-  options:
-    path: ` + plutonoMountPathDashboards + `/global
-- name: 'garden'
-  orgId: 1
-  folder: 'Garden'
-  type: file
-  disableDeletion: false
-  editable: false
-  updateIntervalSeconds: 120
-  options:
-    path: ` + plutonoMountPathDashboards + `/garden
-`
-	}
-
-	return dashboardsProviders
+    path: ` + volumeMountPathDashboards
 }
 
 func (p *plutono) getDataSource() string {
@@ -385,9 +342,8 @@ datasources:
 	return datasource
 }
 
-func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
+func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
 	var (
-		configMap            *corev1.ConfigMap
 		requiredDashboards   map[string]embed.FS
 		ignorePaths          = sets.Set[string]{}
 		dashboards           = map[string]string{}
@@ -395,33 +351,23 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(extensionsDashboards)}
 	)
 
-	configMap = &corev1.ConfigMap{
+	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plutono-dashboards",
+			Name:      "plutono-dashboards" + suffix,
 			Namespace: p.namespace,
 			Labels:    getLabels(),
 		},
 	}
 
-	if suffix != "" {
-		configMap.Name = configMap.Name + "-" + suffix
-	}
-
 	if p.values.IsGardenCluster {
-		if suffix == "garden" {
-			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards, gardenGlobalDashboardsPath: gardenGlobalDashboards}
 
-			additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
-			if err != nil {
-				return nil, err
-			}
-			if additionalDashboards != nil {
-				dashboards = additionalDashboards
-			}
+		additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
+		if err != nil {
+			return nil, err
 		}
-
-		if suffix == "global" {
-			requiredDashboards = map[string]embed.FS{gardenGlobalDashboardsPath: gardenGlobalDashboards}
+		if additionalDashboards != nil {
+			dashboards = additionalDashboards
 		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
