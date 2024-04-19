@@ -89,7 +89,7 @@ func copyAndSync(fs afero.Afero, source, destination string) error {
 		return fmt.Errorf("destination directory %q could not be created", path.Dir(destination))
 	}
 
-	dstFile, err := fs.OpenFile(destination, os.O_CREATE|os.O_RDWR|os.O_EXCL, 0700)
+	dstFile, err := fs.OpenFile(destination, os.O_CREATE|os.O_RDWR|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
@@ -140,6 +140,14 @@ func Move(fs afero.Afero, source, destination string) error {
 
 func moveCrossDevice(fs afero.Afero, source, destination string) error {
 	tmpFilePath := destination + ".tmp"
+
+	if tmpFile, err := fs.Stat(tmpFilePath); err == nil && tmpFile.Mode().IsRegular() {
+		if err := fs.Remove(tmpFilePath); err != nil {
+			return fmt.Errorf("error removing previously existing temporary file %q: %w", tmpFilePath, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 
 	if err := copyAndSync(fs, source, tmpFilePath); err != nil {
 		return err
