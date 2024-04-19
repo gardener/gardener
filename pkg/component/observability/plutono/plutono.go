@@ -626,6 +626,40 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								},
 							},
 						},
+						{
+							Name:            "dashboard-refresher",
+							Image:           p.values.ImageDashboardRefresher,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Env: []corev1.EnvVar{
+								{Name: "LOG_LEVEL", Value: "INFO"},
+								{Name: "RESOURCE", Value: "configmap"},
+								{Name: "NAMESPACE", Value: p.namespace},
+								{Name: "FOLDER", Value: volumeMountPathDashboards},
+								{Name: "LABEL", Value: p.dashboardLabel()},
+								{Name: "LABEL_VALUE", Value: dashboardLabelValue},
+								{Name: "METHOD", Value: "WATCH"},
+								{Name: "REQ_URL", Value: "http://localhost:" + strconv.Itoa(port) + "/api/admin/provisioning/dashboards/reload"},
+								{Name: "REQ_METHOD", Value: "POST"},
+								{Name: "REQ_USERNAME", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
+									Key:                  secretsutils.DataKeyUserName,
+								}}},
+								{Name: "REQ_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
+									Key:                  secretsutils.DataKeyPassword,
+								}}},
+							},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      volumeNameStorage,
+								MountPath: volumeMountPathStorage,
+							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
+						},
 					},
 					Volumes: []corev1.Volume{
 						{
@@ -664,61 +698,16 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								},
 							},
 						},
+						{
+							Name: volumeNameDashboards,
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
 					},
 				},
 			},
 		},
-	}
-
-	if p.values.IsGardenCluster {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-			{
-				Name: "plutono-dashboards-garden",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: dashboardConfigMap.Name,
-						},
-					},
-				},
-			},
-			{
-				Name: "plutono-dashboards-global",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: dashboardConfigMapGlobal.Name,
-						},
-					},
-				},
-			}}...)
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-			{
-				Name:      "plutono-dashboards-garden",
-				MountPath: plutonoMountPathDashboards + "/garden",
-			},
-			{
-				Name:      "plutono-dashboards-global",
-				MountPath: plutonoMountPathDashboards + "/global",
-			},
-		}...)
-	} else {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "plutono-dashboards",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: dashboardConfigMap.Name,
-					},
-				},
-			},
-		})
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "plutono-dashboards",
-			MountPath: plutonoMountPathDashboards,
-		})
 	}
 
 	if p.values.ClusterType == component.ClusterTypeSeed {
