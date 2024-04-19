@@ -83,7 +83,7 @@ const (
 	// determining how shoot kube-apiserver pods are scaled.
 	// This feature is incompatible with the HVPA and HVPAForShootedSeed features.
 	// owner: @andrerun, @ialidzhikov, @plkokanov
-	// alpha: v1.93.0
+	// alpha: v1.94.0
 	CustomMetricsHPAForAPIServer featuregate.Feature = "CustomMetricsHPAForAPIServer"
 )
 

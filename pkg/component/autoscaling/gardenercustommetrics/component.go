@@ -77,14 +77,14 @@ func New(
 	}
 }
 
-// Deploy implements [component.Deployer.Deploy]()
+// Deploy implements [component.Deployer.Deploy].
 func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 	serverCertificateSecret, err := gcmx.deployServerCertificate(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delpoy the gardener-custom-metrics server TLS certificate: %w", err)
 	}
 
-	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	resources, err := registry.AddAllAndSerialize(
 		gcmx.serviceAccount(),
@@ -118,7 +118,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 	return nil
 }
 
-// Destroy implements [component.Deployer.Destroy]()
+// Destroy implements [component.Deployer.Destroy].
 func (gcmx *gardenerCustomMetrics) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForSeed(ctx, gcmx.client, gcmx.namespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed to delete ManagedResource '%s/%s': %w", gcmx.namespace, managedResourceName, err)
@@ -127,7 +127,7 @@ func (gcmx *gardenerCustomMetrics) Destroy(ctx context.Context) error {
 	return nil
 }
 
-// Wait implements [component.Waiter.Wait]()
+// Wait implements [component.Waiter.Wait].
 func (gcmx *gardenerCustomMetrics) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
@@ -139,7 +139,7 @@ func (gcmx *gardenerCustomMetrics) Wait(ctx context.Context) error {
 	return nil
 }
 
-// WaitCleanup implements [component.Waiter.WaitCleanup]()
+// WaitCleanup implements [component.Waiter.WaitCleanup].
 func (gcmx *gardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, managedResourceTimeout)
 	defer cancel()
@@ -152,15 +152,16 @@ func (gcmx *gardenerCustomMetrics) WaitCleanup(ctx context.Context) error {
 }
 
 const (
-	// The implementing artifacts are deployed to the seed via this MR
+	// managedResourceName is the name of the ManagedResource containing the resource specifications.
 	managedResourceName = "gardener-custom-metrics"
-	// GCMx's HTTPS serving certificate
+	// serverCertificateSecretName is the name of the Secret containing gardener-custom-metrics's HTTPS serving certificate.
 	serverCertificateSecretName = "gardener-custom-metrics-tls"
-	// Timeout for ManagedResources to become healthy or deleted
+	// managedResourceTimeout is the timeout used while waiting for the ManagedResources to become healthy or deleted.
 	managedResourceTimeout = 2 * time.Minute
 )
 
-// Deploys the GCMx server TLS certificate to a secret and returns the name of the created secret
+// deployServerCertificate deploys the gardener-custom-metric's server TLS certificate to a secret and returns the name
+// of the created secret.
 func (gcmx *gardenerCustomMetrics) deployServerCertificate(ctx context.Context) (*corev1.Secret, error) {
 	_, found := gcmx.secretsManager.Get(v1beta1constants.SecretNameCASeed)
 	if !found {

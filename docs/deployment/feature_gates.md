@@ -30,7 +30,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion              | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile       | `false` | `Alpha` | `1.92` |        |
 | ShootManagedIssuer              | `false` | `Alpha` | `1.93` |        |
-| CustomMetricsHPAForAPIServer    | `false` | `Alpha` | `1.93` |        |
+| CustomMetricsHPAForAPIServer    | `false` | `Alpha` | `1.94` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 

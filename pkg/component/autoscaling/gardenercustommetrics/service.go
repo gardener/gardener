@@ -25,9 +25,9 @@ import (
 const serviceName = "gardener-custom-metrics"
 
 func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
-	//This service intentionally does not contain a pod selector. As a result, KCM does not perform any endpoint management.
-	//Endpoint management is instead done by the gardener-custom-metrics leader instance, which ensures a single endpoint,
-	//directing all traffic to the leader.
+	// This service intentionally does not contain a pod selector. As a result, KCM does not perform any endpoint management.
+	// Endpoint management is instead done by the gardener-custom-metrics leader instance, which ensures a single endpoint,
+	// directing all traffic to the leader.
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
