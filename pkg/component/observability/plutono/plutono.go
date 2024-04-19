@@ -63,9 +63,13 @@ const (
 	volumeNameDataSources        = "datasources"
 	volumeNameDashboardProviders = "dashboard-providers"
 	volumeNameDashboards         = "dashboards"
+	volumeNameConfig             = "config"
 	volumeNameStorage            = "storage"
+
+	dataKeyConfig             = "plutono.ini"
 	volumeMountPathStorage    = "/var/lib/plutono"
 	volumeMountPathDashboards = volumeMountPathStorage + "/dashboards"
+	volumeMountPathConfig     = "/usr/local/etc/plutono"
 )
 
 var (
@@ -152,6 +156,16 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
+	plutonoAdminUserSecret, err := p.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           "plutono-admin",
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Rotate(secretsmanager.InPlace), secretsmanager.Validity(24*time.Hour*30))
+	if err != nil {
+		return err
+	}
+
 	dashboardConfigMap, data, err := p.computeResourcesData(ctx, plutonoAdminUserSecret)
 	if err != nil {
 		return err
@@ -197,7 +211,7 @@ func (p *plutono) SetWildcardCertName(secretName *string) {
 	p.values.WildcardCertName = secretName
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, map[string][]byte, error) {
+func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecret *corev1.Secret) (*corev1.ConfigMap, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -208,7 +222,16 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 				Labels:    getLabels(),
 			},
 			Data: map[string]string{"default.yaml": p.getDashboardsProviders()},
+		}
+
+		plutonoConfigSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "plutono-config",
+				Namespace: p.namespace,
+				Labels:    getLabels(),
 			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{dataKeyConfig: []byte(p.getConfig(plutonoAdminUserSecret.Data))},
 		}
 
 		dataSourceConfigMap = &corev1.ConfigMap{
@@ -231,6 +254,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 		return nil, nil, err
 	}
 
+	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
@@ -241,9 +265,10 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	}
 
 	data, err := registry.AddAllAndSerialize(
+		plutonoConfigSecret,
 		providerConfigMap,
 		dataSourceConfigMap,
-		p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal),
+		p.getDeployment(providerConfigMap, dataSourceConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
 		p.getService(),
 		ingress,
 	)
@@ -252,6 +277,14 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 	}
 
 	return dashboardConfigMap, data, nil
+}
+
+func (p *plutono) getConfig(adminUserData map[string][]byte) string {
+	return `[auth.basic]
+enabled = true
+[security]
+admin_user = ` + string(adminUserData[secretsutils.DataKeyUserName]) + `
+admin_password = ` + string(adminUserData[secretsutils.DataKeyPassword])
 }
 
 func (p *plutono) getDashboardsProviders() string {
@@ -473,7 +506,7 @@ func (p *plutono) getService() *corev1.Service {
 	return service
 }
 
-func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap) *appsv1.Deployment {
+func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.ConfigMap, plutonoConfigSecret, plutonoAdminUserSecret *corev1.Secret) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -502,11 +535,11 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 								{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
 								{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
 								{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-								{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
 								{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 								{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
 								{Name: "PL_ALERTING_ENABLED", Value: "false"},
 								{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+								{Name: "PL_PATHS_CONFIG", Value: volumeMountPathConfig + "/" + dataKeyConfig},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -520,6 +553,10 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 								{
 									Name:      volumeNameStorage,
 									MountPath: volumeMountPathStorage,
+								},
+								{
+									Name:      volumeNameConfig,
+									MountPath: volumeMountPathConfig,
 								},
 							},
 							Ports: []corev1.ContainerPort{{
@@ -555,6 +592,14 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: providerConfigMap.Name,
 									},
+								},
+							},
+						},
+						{
+							Name: volumeNameConfig,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: plutonoConfigSecret.Name,
 								},
 							},
 						},
@@ -689,6 +734,9 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 				"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
 				"nginx.ingress.kubernetes.io/auth-secret": credentialsSecretName,
 				"nginx.ingress.kubernetes.io/auth-type":   "basic",
+				"nginx.ingress.kubernetes.io/server-snippet": `location /api/admin/ {
+  return 403;
+}`,
 			},
 		},
 		Spec: networkingv1.IngressSpec{
