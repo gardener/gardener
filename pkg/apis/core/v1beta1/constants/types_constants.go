@@ -425,6 +425,9 @@ const (
 	LabelLogging = "logging"
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
+	// LabelPrefixMonitoringDashboard is the prefix of a label key on ConfigMaps for indicating that the data contains a
+	// dashboard.
+	LabelPrefixMonitoringDashboard = "dashboard.monitoring.gardener.cloud/"
 	// LabelKeyCustomLoggingResource is the key of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
 	// TODO(nickytd): the label key has to be migrated to "fluentbit.gardener.cloud/type".
 	LabelKeyCustomLoggingResource = "fluentbit.gardener/type"

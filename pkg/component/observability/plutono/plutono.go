@@ -60,6 +60,7 @@ const (
 
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
+	dashboardLabelValue           = "true"
 
 	volumeNameDataSources        = "datasources"
 	volumeNameDashboardProviders = "dashboard-providers"
@@ -385,7 +386,7 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "plutono-dashboards" + suffix,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dashboardLabel(): dashboardLabelValue}),
 		},
 	}
 
@@ -826,6 +827,20 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	}
 
 	return ingress, nil
+}
+
+func (p *plutono) dashboardLabel() string {
+	label := v1beta1constants.LabelPrefixMonitoringDashboard
+
+	if p.values.IsGardenCluster {
+		label += "garden"
+	} else if p.values.ClusterType == component.ClusterTypeSeed {
+		label += "seed"
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		label += "shoot"
+	}
+
+	return label
 }
 
 func getLabels() map[string]string {
