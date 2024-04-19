@@ -437,6 +437,22 @@ Kubernetes core/v1.LocalObjectReference
 <p>SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pollInterval</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is only
+meaningful when there is no GitHub webhook configuration, i.e., when the referenced secret does not contain the
+&lsquo;webhookSecret&rsquo; key. In this case, if this field is not provided, it will be implicitly defaulted with <code>15m</code>.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.DashboardOIDC">DashboardOIDC

@@ -120,10 +120,23 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 	}
 
 	if g.values.GitHub != nil {
+		secret := &corev1.Secret{}
+		if err := g.client.Get(ctx, client.ObjectKey{Name: g.values.GitHub.SecretRef.Name, Namespace: g.namespace}, secret); err != nil {
+			return nil, fmt.Errorf("failed reading referenced GitHub secret %q: %w", g.values.GitHub.SecretRef.Name, err)
+		}
+
+		var pollIntervalSeconds *int64
+		if _, ok := secret.Data["webhookSecret"]; !ok {
+			pollIntervalSeconds = ptr.To(int64(ptr.Deref(g.values.GitHub.PollInterval, metav1.Duration{Duration: 15 * time.Minute}).Duration.Seconds()))
+		} else if g.values.GitHub.PollInterval != nil {
+			return nil, fmt.Errorf("pollInterval must be unset in the GitHub configuration when the referenced secret contains a webhook secret")
+		}
+
 		cfg.GitHub = &config.GitHub{
 			APIURL:              g.values.GitHub.APIURL,
 			Org:                 g.values.GitHub.Organisation,
 			Repository:          g.values.GitHub.Repository,
+			PollIntervalSeconds: pollIntervalSeconds,
 			SyncThrottleSeconds: 20,
 			SyncConcurrency:     10,
 		}

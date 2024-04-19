@@ -105,6 +105,7 @@ type GitHub struct {
 	APIURL              string `yaml:"apiUrl"`
 	Org                 string `yaml:"org"`
 	Repository          string `yaml:"repository"`
+	PollIntervalSeconds *int64 `yaml:"pollIntervalSeconds,omitempty"`
 	SyncThrottleSeconds int    `yaml:"syncThrottleSeconds"`
 	SyncConcurrency     int    `yaml:"syncConcurrency"`
 }

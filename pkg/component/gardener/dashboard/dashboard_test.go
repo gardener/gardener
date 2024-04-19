@@ -16,7 +16,9 @@ package dashboard_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -271,7 +273,14 @@ terminal:
 				configRaw += `gitHub:
   apiUrl: ` + gitHub.APIURL + `
   org: ` + gitHub.Organisation + `
-  repository: ` + gitHub.Repository + `
+  repository: ` + gitHub.Repository
+
+				if gitHub.PollInterval != nil {
+					configRaw += `
+  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Duration.Seconds()))
+				}
+
+				configRaw += `
   syncThrottleSeconds: 20
   syncConcurrency: 10
 `
@@ -513,18 +522,20 @@ terminal:
 			}
 
 			if gitHub != nil {
-				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "d2b606ed2270efcdfc3b280981262dd0eeba4ae7ad2ac5d69c3d7bdbd2adf8c3")
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
-						Name: "GITHUB_AUTHENTICATION_TOKEN",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
-								Key:                  "authentication.token",
-							},
+				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "db37d21181592000efad06f87a00afba59f9c99b11e119d118be2b929c3387ce")
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name: "GITHUB_AUTHENTICATION_TOKEN",
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
+							Key:                  "authentication.token",
 						},
 					},
-					corev1.EnvVar{
+				})
+
+				if gitHub.PollInterval == nil {
+					metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "d2b606ed2270efcdfc3b280981262dd0eeba4ae7ad2ac5d69c3d7bdbd2adf8c3")
+					obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 						Name: "GITHUB_WEBHOOK_SECRET",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
@@ -532,8 +543,8 @@ terminal:
 								Key:                  "webhookSecret",
 							},
 						},
-					},
-				)
+					})
+				}
 			}
 
 			if assetsConfigMapName != nil {
@@ -1056,11 +1067,6 @@ terminal:
 						Repository:   "repo",
 						SecretRef:    corev1.LocalObjectReference{Name: "some-github-secret"},
 					}
-
-					Expect(fakeClient.Create(ctx, &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{Name: gitHub.SecretRef.Name, Namespace: namespace},
-						Data:       map[string][]byte{"authentication.token": []byte("token"), "webhookSecret": []byte("webhookSecret")},
-					})).To(Succeed())
 				})
 
 				JustBeforeEach(func() {
@@ -1071,9 +1077,34 @@ terminal:
 					)
 				})
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				Context("with webhook secret", func() {
+					BeforeEach(func() {
+						Expect(fakeClient.Create(ctx, &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: gitHub.SecretRef.Name, Namespace: namespace},
+							Data:       map[string][]byte{"authentication.token": []byte("token"), "webhookSecret": []byte("webhookSecret")},
+						})).To(Succeed())
+					})
+
+					It("should successfully deploy all resources", func() {
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
+				})
+
+				Context("without webhook secret and poll interval", func() {
+					BeforeEach(func() {
+						gitHub.PollInterval = &metav1.Duration{Duration: 10 * time.Minute}
+
+						Expect(fakeClient.Create(ctx, &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: gitHub.SecretRef.Name, Namespace: namespace},
+							Data:       map[string][]byte{"authentication.token": []byte("token")},
+						})).To(Succeed())
+					})
+
+					It("should successfully deploy all resources", func() {
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
 				})
 			})
 

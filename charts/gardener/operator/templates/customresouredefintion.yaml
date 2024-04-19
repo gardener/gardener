@@ -805,6 +805,13 @@ spec:
                                   organisation.
                                 minLength: 1
                                 type: string
+                              pollInterval:
+                                description: |-
+                                  PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is only
+                                  meaningful when there is no GitHub webhook configuration, i.e., when the referenced secret does not contain the
+                                  'webhookSecret' key. In this case, if this field is not provided, it will be implicitly defaulted with `15m`.
+                                pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                                type: string
                               repository:
                                 description: Repository is the name of the GitHub
                                   repository.

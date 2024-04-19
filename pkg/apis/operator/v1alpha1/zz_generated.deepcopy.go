@@ -210,6 +210,11 @@ func (in *DNS) DeepCopy() *DNS {
 func (in *DashboardGitHub) DeepCopyInto(out *DashboardGitHub) {
 	*out = *in
 	out.SecretRef = in.SecretRef
+	if in.PollInterval != nil {
+		in, out := &in.PollInterval, &out.PollInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 
@@ -659,7 +664,7 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 	if in.GitHub != nil {
 		in, out := &in.GitHub, &out.GitHub
 		*out = new(DashboardGitHub)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.LogLevel != nil {
 		in, out := &in.LogLevel, &out.LogLevel
