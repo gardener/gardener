@@ -5,8 +5,6 @@
 package botanist
 
 import (
-	"k8s.io/utils/ptr"
-
 	"github.com/gardener/gardener/imagevector"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
@@ -24,7 +22,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		Image:      image.String(),
 		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
 		ReversedVPN: vpnshoot.ReversedVPNValues{
-			VPNCIDR:     ptr.Deref(b.Seed.GetInfo().Spec.Networks.VPN, ""),
+			VPNCIDR:     *b.Seed.GetInfo().Spec.Networks.VPN,
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
 			OpenVPNPort: 8132,
