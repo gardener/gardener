@@ -574,9 +574,11 @@ type DashboardGitHub struct {
 	Repository string `json:"repository"`
 	// SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
-	// PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is only
-	// meaningful when there is no GitHub webhook configuration, i.e., when the referenced secret does not contain the
-	// 'webhookSecret' key. In this case, if this field is not provided, it will be implicitly defaulted with `15m`.
+	// PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a
+	// fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a
+	// webhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.
+	// If this field is not provided and there is no 'webhookSecret' key in the referenced secret, it will be
+	// implicitly defaulted to `15m`.
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	// +optional

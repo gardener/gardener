@@ -448,9 +448,11 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is only
-meaningful when there is no GitHub webhook configuration, i.e., when the referenced secret does not contain the
-&lsquo;webhookSecret&rsquo; key. In this case, if this field is not provided, it will be implicitly defaulted with <code>15m</code>.</p>
+<p>PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a
+fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a
+webhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.
+If this field is not provided and there is no &lsquo;webhookSecret&rsquo; key in the referenced secret, it will be
+implicitly defaulted to <code>15m</code>.</p>
 </td>
 </tr>
 </tbody>

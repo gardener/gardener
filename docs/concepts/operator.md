@@ -250,7 +250,11 @@ This section highlights the most prominent fields:
   Note that you can also set up a GitHub webhook to the dashboard such that it receives updates when somebody changes the GitHub issue.
   The `webhookSecret` field is the secret that you enter in GitHub in the [webhook configuration](https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries#creating-a-secret-token).
   The dashboard uses it to verify that received traffic is indeed originated from GitHub.
-  If you don't want to set up such webhook, or if the dashboard is not reachable by the GitHub webhook (e.g., in restricted environments), you can configure `gitHub.pollInterval` instead (if not provided, an implicit default value of `15m` is used).
+  If you don't want to set up such webhook, or if the dashboard is not reachable by the GitHub webhook (e.g., in restricted environments) you can also configure `gitHub.pollInterval`.
+  It is the interval of how often the GitHub API is polled for issue updates.
+  This field is used as a fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration.
+  If a webhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.
+  If this field is not provided and there is no `webhookSecret` key in the referenced secret, it will be implicitly defaulted to `15m`.
   The dashboard will use this to regularly poll the GitHub API for updates on issues.
 - `terminal`: This enables the web terminal feature, read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md).
   The `allowedHosts` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
