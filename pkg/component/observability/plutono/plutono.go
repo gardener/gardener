@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -271,6 +272,9 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 		p.getDeployment(providerConfigMap, dataSourceConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
 		p.getService(),
 		ingress,
+		p.getServiceAccount(),
+		p.getRole(),
+		p.getRoleBinding(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -478,6 +482,54 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 	return configMap, nil
 }
 
+func (p *plutono) getServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+}
+
+const rbacNameDashboardRefresher = name + "-dashboard-refresher"
+
+func (p *plutono) getRole() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rbacNameDashboardRefresher,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups: []string{""},
+			Resources: []string{"configmaps"},
+			Verbs:     []string{"get", "list", "watch"},
+		}},
+	}
+}
+
+func (p *plutono) getRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rbacNameDashboardRefresher,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     rbacNameDashboardRefresher,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      name,
+			Namespace: p.namespace,
+		}},
+	}
+}
+
 func (p *plutono) getService() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -524,8 +576,8 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 					Labels: utils.MergeStringMaps(getLabels(), p.getPodLabels()),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
-					PriorityClassName:            p.values.PriorityClassName,
+					ServiceAccountName: name,
+					PriorityClassName:  p.values.PriorityClassName,
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -800,6 +852,7 @@ func (p *plutono) getPodLabels() map[string]string {
 	labels := map[string]string{
 		v1beta1constants.LabelObservabilityApplication:                                      name,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
