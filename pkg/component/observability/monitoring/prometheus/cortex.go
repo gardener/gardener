@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	containerNameCortex = "cortex"
-	configMapNamePrefix = "cortex"
-	portCortex          = 9091
+	containerNameCortex   = "cortex"
+	cortexConfigNameInfix = "cortex"
+	portCortex            = 9091
 
 	dataKeyCortexConfig         = "config.yaml"
 	volumeNameCortexConfig      = "cortex-config"
@@ -77,7 +77,7 @@ func (p *prometheus) cortexVolume(configMapName string) corev1.Volume {
 func (p *prometheus) cortexConfigMap() *corev1.ConfigMap {
 	obj := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.name() + "-" + configMapNamePrefix,
+			Name:      p.name() + "-" + cortexConfigNameInfix,
 			Namespace: p.namespace,
 			Labels:    p.getLabels(),
 		},

@@ -203,9 +203,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 	var cortexConfigMap *corev1.ConfigMap
 	if p.values.Cortex != nil {
 		cortexConfigMap = p.cortexConfigMap()
-		if err := registry.Add(cortexConfigMap); err != nil {
-			return err
-		}
 	}
 
 	resources, err := registry.AddAllAndSerialize(
@@ -213,6 +210,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
+		cortexConfigMap,
 		p.prometheus(takeOverExistingPV, cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),

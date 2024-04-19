@@ -1236,7 +1236,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		},
 		Cortex: &prometheus.CortexValues{
 			Image:         imageCortex.String(),
-			CacheValidity: 168 * time.Hour,
+			CacheValidity: 7 * 24 * time.Hour, // 1 week
 		},
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "availability-prometheus",
