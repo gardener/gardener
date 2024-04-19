@@ -677,8 +677,14 @@ const (
 	// PrometheusConfigMapScrapeConfig is a constant for the Prometheus scrape config tag in provider-specific monitoring configuration
 	PrometheusConfigMapScrapeConfig = "scrape_config"
 	// PlutonoConfigMapUserDashboard is a constant for the Plutono user dashboard tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PlutonoConfigMapUserDashboard = "dashboard_users"
 	// PlutonoConfigMapOperatorDashboard is a constant for the Plutono operator dashboard tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PlutonoConfigMapOperatorDashboard = "dashboard_operators"
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.

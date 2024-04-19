@@ -14,7 +14,9 @@ This guide is about the roles and extensibility options of the logging and monit
 
 ## Monitoring
 
-### Cache Prometheus
+### Seed Cluster
+
+#### Cache Prometheus
 
 The central Prometheus instance in the `garden` namespace (called "cache Prometheus") fetches metrics and data from all seed cluster nodes and all seed cluster pods.
 It uses the [federation](https://prometheus.io/docs/prometheus/latest/federation/) concept to allow the shoot-specific instances to scrape only the metrics for the pods of the control plane they are responsible for.
@@ -44,7 +46,7 @@ spec:
     port: metrics
 ```
 
-### Seed Prometheus
+#### Seed Prometheus
 
 Another Prometheus instance in the `garden` namespace (called "seed Prometheus") fetches metrics and data from seed system components, kubelets, cAdvisors, and extensions.
 If you want your extension pods to be scraped then they must be annotated with `prometheus.io/scrape=true` and `prometheus.io/port=<metrics-port>`.
@@ -73,7 +75,7 @@ spec:
     port: metrics
 ```
 
-### Aggregate Prometheus
+#### Aggregate Prometheus
 
 Another Prometheus instance in the `garden` namespace (called "aggregate Prometheus") stores pre-aggregated data from the cache Prometheus and shoot Prometheis.
 An ingress exposes this Prometheus instance allowing it to be scraped from another cluster.
@@ -102,7 +104,26 @@ spec:
     port: metrics
 ```
 
-### Shoot Cluster Prometheus
+#### Plutono
+
+A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the seed cluster's `garden` namespace for visualizing monitoring metrics and logs via dashboards.
+In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/seed=true` that contains the respective JSON documents, for example:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    dashboard.monitoring.gardener.cloud/seed: "true"
+  name: extension-foo-my-custom-dashboard
+  namespace: garden
+data:
+  my-metrics.json: <dashboard-JSON-document>
+```
+
+### Shoot Cluster
+
+#### Shoot Prometheus
 
 The shoot-specific metrics are then made available to operators and users in the shoot Plutono, using the shoot Prometheus as data source.
 
@@ -116,8 +137,11 @@ Such `ConfigMap`s may contain four fields in their `data`:
 
 * `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
 * `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
-* `dashboard_operators`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
-* `dashboard_users`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
+* (DEPRECATED) `dashboard_operators`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
+* (DEPRECATED) `dashboard_users`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
+
+> [!CAUTION]
+> Providing Plutono dashboards this way is deprecated and will be removed in a future release. Consult [this section](#plutono-dashboards) for information about how to provide the dashboards.
 
 **Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules, dashboards, and logging configuration for exposing logs to the end users.
 
@@ -174,6 +198,23 @@ data:
           annotations:
             description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
             summary: Cloud controller manager is down.
+```
+
+##### Plutono Dashboards
+
+A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the shoot cluster's namespace for visualizing monitoring metrics and logs via dashboards.
+In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/shoot=true` that contains the respective JSON documents, for example:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    dashboard.monitoring.gardener.cloud/shoot: "true"
+  name: extension-foo-my-custom-dashboard
+  namespace: shoot--project--name
+data:
+  my-metrics.json: <dashboard-JSON-document>
 ```
 
 ## Logging

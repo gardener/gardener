@@ -368,6 +368,23 @@ spec:
       sendResolved: true
 ```
 
+###### Plutono
+
+A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardener-operator` into the `garden` namespace for visualizing monitoring metrics and logs via dashboards.
+In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/garden=true` that contains the respective JSON documents, for example:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    dashboard.monitoring.gardener.cloud/garden: "true"
+  name: my-custom-dashboard
+  namespace: garden
+data:
+  my-metrics.json: <dashboard-JSON-document>
+```
+
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 
 This reconciler performs four "care" actions related to `Garden`s.
@@ -495,7 +512,7 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 - certificate authorities (and related server and client certificates)
 - ETCD encryption key
-- observability password For Plutono
+- observability password for Plutono
 - `ServiceAccount` token signing key
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
