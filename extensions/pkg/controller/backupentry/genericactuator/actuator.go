@@ -89,9 +89,9 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	}
 
 	etcdSecret := emptyEtcdBackupSecret(be.Name)
-	metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
+		metav1.SetMetaDataAnnotation(&etcdSecret.ObjectMeta, AnnotationKeyCreatedByBackupEntry, be.Name)
 		etcdSecret.Data = etcdSecretData
 		return nil
 	})
@@ -100,13 +100,13 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 
 // Delete deletes the BackupEntry.
 func (a *actuator) Delete(ctx context.Context, log logr.Logger, be *extensionsv1alpha1.BackupEntry) error {
-	if err := a.deleteEtcdBackupSecret(ctx, be.Name); err != nil {
+	if err := a.deleteEtcdBackupSecret(ctx, log, be.Name); err != nil {
 		return err
 	}
 	return a.backupEntryDelegate.Delete(ctx, log, be)
 }
 
-func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, backupEntryName string) error {
+func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, log logr.Logger, backupEntryName string) error {
 	etcdSecret := emptyEtcdBackupSecret(backupEntryName)
 	if err := a.client.Get(ctx, client.ObjectKeyFromObject(etcdSecret), etcdSecret); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -117,9 +117,11 @@ func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, backupEntryName s
 	}
 
 	if createdBy, ok := etcdSecret.Annotations[AnnotationKeyCreatedByBackupEntry]; ok && createdBy != backupEntryName {
+		log.Info("Skipping etcd-backup Secret deletion because it was not created by the currently deleting BackupEntry", "createdBy", createdBy)
 		return nil
 	}
 
+	log.Info("Deleting etcd-backup Secret")
 	return kubernetesutils.DeleteObject(ctx, a.client, etcdSecret)
 }
 
