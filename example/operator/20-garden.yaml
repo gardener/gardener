@@ -215,8 +215,8 @@ spec:
     #   featureGates:
     #     SomeGardenerFeature: true
     #   logLevel: info # either {debug,info,error}
-      gardenerDashboard:
-        logLevel: info # either {trace,debug,info,warn,error}
+      gardenerDashboard: {}
+    #   logLevel: info # either {trace,debug,info,warn,error}
     #   enableTokenLogin: true
     #   frontendConfigMapRef:
     #     name: gardener-dashboard-frontend
@@ -228,13 +228,13 @@ spec:
     #     repository: issues-dev
     #     secretRef:
     #       name: gardener-dashboard-github
-    #   oidc:
+    #   oidcConfig:
     #     sessionLifetime: 12h
     #     additionalScopes: [ profile, offline_access ]
     #     secretRef:
     #       name: gardener-dashboard-oidc
     #   terminal:
-    #     allowedHostSourceList:
+    #     allowedHostsList:
     #     - "*.seed.local.gardener.cloud"
     #     container:
     #       image: busybox:latest

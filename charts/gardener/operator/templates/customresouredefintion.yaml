@@ -761,7 +761,8 @@ spec:
                         properties:
                           assetsConfigMapRef:
                             description: AssetsConfigMapRef is the reference to a
-                              ConfigMap containing the assets (logos/icons).
+                              ConfigMap in the garden namespace containing the assets
+                              (logos/icons).
                             properties:
                               name:
                                 description: |-
@@ -774,12 +775,13 @@ spec:
                           enableTokenLogin:
                             default: true
                             description: |-
-                              EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. Either this or OIDC
+                              EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC
                               must be configured.
                             type: boolean
                           frontendConfigMapRef:
-                            description: FrontendConfigMapRef is the reference to
-                              a ConfigMap containing the frontend configuration.
+                            description: |-
+                              FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend
+                              configuration.
                             properties:
                               name:
                                 description: |-
@@ -794,6 +796,7 @@ spec:
                               ticketing feature.
                             properties:
                               apiURL:
+                                default: https://api.github.com
                                 description: APIURL is the URL to the GitHub API.
                                 minLength: 1
                                 type: string
@@ -809,7 +812,7 @@ spec:
                                 type: string
                               secretRef:
                                 description: SecretRef is the reference to a secret
-                                  containing the GitHub credentials.
+                                  in the garden namespace containing the GitHub credentials.
                                 properties:
                                   name:
                                     description: |-
@@ -837,9 +840,10 @@ spec:
                             - warn
                             - error
                             type: string
-                          oidc:
+                          oidcConfig:
                             description: OIDC contains configuration for the OIDC
-                              settings.
+                              provider. This field must be provided when EnableTokenLogin
+                              is false.
                             properties:
                               additionalScopes:
                                 description: AdditionalScopes is the list of additional
@@ -849,8 +853,8 @@ spec:
                                 type: array
                               secretRef:
                                 description: SecretRef is the reference to a secret
-                                  containing the OIDC client ID and secret for the
-                                  dashboard.
+                                  in the garden namespace containing the OIDC client
+                                  ID and secret for the dashboard.
                                 properties:
                                   name:
                                     description: |-
@@ -872,11 +876,12 @@ spec:
                             description: Terminal contains configuration for the terminal
                               settings.
                             properties:
-                              allowedHostSourceList:
+                              allowedHosts:
                                 description: |-
-                                  AllowedHostSourceList should consist of permitted hostnames (without the scheme) for terminal connections.
+                                  AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
                                   It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
-                                  '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'.
+                                  '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'. For more information, see
+                                  https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts.
                                 items:
                                   type: string
                                 type: array

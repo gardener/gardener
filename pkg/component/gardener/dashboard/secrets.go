@@ -28,7 +28,7 @@ func (g *gardenerDashboard) newVirtualGardenAccessSecret() *gardenerutils.Access
 	return gardenerutils.NewShootAccessSecret(deploymentName, g.namespace)
 }
 
-func (g *gardenerDashboard) reconcileSecretSession(ctx context.Context) (*corev1.Secret, error) {
+func (g *gardenerDashboard) reconcileSessionSecret(ctx context.Context) (*corev1.Secret, error) {
 	// TODO(rfranzke): Auto-rotate this secret after https://github.com/gardener/dashboard/issues/1790 is implemented.
 	return g.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
 		Name:           "gardener-dashboard-session-secret",

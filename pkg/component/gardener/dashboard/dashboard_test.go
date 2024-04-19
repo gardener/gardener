@@ -224,7 +224,7 @@ unreachableSeeds:
   connectSrc:
     - self`
 
-				for _, host := range terminal.AllowedHostSourceList {
+				for _, host := range terminal.AllowedHosts {
 					configRaw += `
     - wss://` + host + `
     - https://` + host
@@ -337,6 +337,7 @@ terminal:
 								"role":                             "dashboard",
 								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.gardener.cloud/to-public-networks":                                 "allowed",
+								"networking.gardener.cloud/to-private-networks":                                "allowed",
 								"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
 							},
 						},
@@ -622,7 +623,8 @@ terminal:
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "*",
+							ContainerName:    "*",
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -1011,7 +1013,7 @@ terminal:
 								Image:       "some-image:latest",
 								Description: ptr.To("cool image"),
 							},
-							AllowedHostSourceList: []string{"first", "second"},
+							AllowedHosts: []string{"first", "second"},
 						},
 						GardenTerminalSeedHost: "terminal-host",
 					}

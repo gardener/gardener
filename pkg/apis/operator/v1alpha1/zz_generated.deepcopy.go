@@ -254,8 +254,8 @@ func (in *DashboardOIDC) DeepCopy() *DashboardOIDC {
 func (in *DashboardTerminal) DeepCopyInto(out *DashboardTerminal) {
 	*out = *in
 	in.Container.DeepCopyInto(&out.Container)
-	if in.AllowedHostSourceList != nil {
-		in, out := &in.AllowedHostSourceList, &out.AllowedHostSourceList
+	if in.AllowedHosts != nil {
+		in, out := &in.AllowedHosts, &out.AllowedHosts
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

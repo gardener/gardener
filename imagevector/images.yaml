@@ -39,7 +39,7 @@ images:
   resourceId:
     name: node-agent
 - name: gardener-dashboard
-  sourceRepository: github.com/gardener/gardener
+  sourceRepository: github.com/gardener/dashboard
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dashboard
   tag: "1.74.0"
 

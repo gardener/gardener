@@ -531,15 +531,16 @@ type GardenerSchedulerConfig struct {
 
 // GardenerDashboardConfig contains configuration settings for the gardener-dashboard.
 type GardenerDashboardConfig struct {
-	// EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. Either this or OIDC
+	// EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC
 	// must be configured.
 	// +kubebuilder:default=true
 	// +optional
 	EnableTokenLogin *bool `json:"enableTokenLogin,omitempty"`
-	// FrontendConfigMapRef is the reference to a ConfigMap containing the frontend configuration.
+	// FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend
+	// configuration.
 	// +optional
 	FrontendConfigMapRef *corev1.LocalObjectReference `json:"frontendConfigMapRef,omitempty"`
-	// AssetsConfigMapRef is the reference to a ConfigMap containing the assets (logos/icons).
+	// AssetsConfigMapRef is the reference to a ConfigMap in the garden namespace containing the assets (logos/icons).
 	// +optional
 	AssetsConfigMapRef *corev1.LocalObjectReference `json:"assetsConfigMapRef,omitempty"`
 	// GitHub contains configuration for the GitHub ticketing feature.
@@ -551,9 +552,9 @@ type GardenerDashboardConfig struct {
 	// +kubebuilder:default=info
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
-	// OIDC contains configuration for the OIDC settings.
+	// OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.
 	// +optional
-	OIDC *DashboardOIDC `json:"oidc,omitempty"`
+	OIDC *DashboardOIDC `json:"oidcConfig,omitempty"`
 	// Terminal contains configuration for the terminal settings.
 	// +optional
 	Terminal *DashboardTerminal `json:"terminal,omitempty"`
@@ -562,6 +563,7 @@ type GardenerDashboardConfig struct {
 // DashboardGitHub contains configuration for the GitHub ticketing feature.
 type DashboardGitHub struct {
 	// APIURL is the URL to the GitHub API.
+	// +kubebuilder:default=`https://api.github.com`
 	// +kubebuilder:validation:MinLength=1
 	APIURL string `json:"apiURL"`
 	// Organisation is the name of the GitHub organisation.
@@ -570,7 +572,7 @@ type DashboardGitHub struct {
 	// Repository is the name of the GitHub repository.
 	// +kubebuilder:validation:MinLength=1
 	Repository string `json:"repository"`
-	// SecretRef is the reference to a secret containing the GitHub credentials.
+	// SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
@@ -584,7 +586,7 @@ type DashboardOIDC struct {
 	// AdditionalScopes is the list of additional OIDC scopes.
 	// +optional
 	AdditionalScopes []string `json:"additionalScopes,omitempty"`
-	// SecretRef is the reference to a secret containing the OIDC client ID and secret for the dashboard.
+	// SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
@@ -592,11 +594,12 @@ type DashboardOIDC struct {
 type DashboardTerminal struct {
 	// Container contains configuration for the dashboard terminal container.
 	Container DashboardTerminalContainer `json:"container"`
-	// AllowedHostSourceList should consist of permitted hostnames (without the scheme) for terminal connections.
+	// AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
 	// It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
-	// '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'.
+	// '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'. For more information, see
+	// https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts.
 	// +optional
-	AllowedHostSourceList []string `json:"allowedHostSourceList,omitempty"`
+	AllowedHosts []string `json:"allowedHosts,omitempty"`
 }
 
 // DashboardTerminalContainer contains configuration for the dashboard terminal container.

@@ -54,7 +54,7 @@ type Values struct {
 	Image string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
-	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// LogLevel is the level/severity for the logs.
 	LogLevel string
 	// APIServerURL is the URL of the API server of the virtual garden cluster.
 	APIServerURL string
@@ -139,7 +139,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
-	secretSession, err := g.reconcileSecretSession(ctx)
+	sessionSecret, err := g.reconcileSessionSecret(ctx)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, secretSession.Name, configMap.Name)
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, sessionSecret.Name, configMap.Name)
 	if err != nil {
 		return err
 	}

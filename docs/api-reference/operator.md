@@ -434,7 +434,7 @@ Kubernetes core/v1.LocalObjectReference
 </em>
 </td>
 <td>
-<p>SecretRef is the reference to a secret containing the GitHub credentials.</p>
+<p>SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.</p>
 </td>
 </tr>
 </tbody>
@@ -492,7 +492,7 @@ Kubernetes core/v1.LocalObjectReference
 </em>
 </td>
 <td>
-<p>SecretRef is the reference to a secret containing the OIDC client ID and secret for the dashboard.</p>
+<p>SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.</p>
 </td>
 </tr>
 </tbody>
@@ -529,16 +529,17 @@ DashboardTerminalContainer
 </tr>
 <tr>
 <td>
-<code>allowedHostSourceList</code></br>
+<code>allowedHosts</code></br>
 <em>
 []string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>AllowedHostSourceList should consist of permitted hostnames (without the scheme) for terminal connections.
+<p>AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
 It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
-&lsquo;<em>.seed.local.gardener.cloud&rsquo;, or &lsquo;</em>.other-seeds.local.gardener.cloud&rsquo;.</p>
+&lsquo;<em>.seed.local.gardener.cloud&rsquo;, or &lsquo;</em>.other-seeds.local.gardener.cloud&rsquo;. For more information, see
+<a href="https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts">https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -1293,7 +1294,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. Either this or OIDC
+<p>EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC
 must be configured.</p>
 </td>
 </tr>
@@ -1308,7 +1309,8 @@ Kubernetes core/v1.LocalObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>FrontendConfigMapRef is the reference to a ConfigMap containing the frontend configuration.</p>
+<p>FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend
+configuration.</p>
 </td>
 </tr>
 <tr>
@@ -1322,7 +1324,7 @@ Kubernetes core/v1.LocalObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>AssetsConfigMapRef is the reference to a ConfigMap containing the assets (logos/icons).</p>
+<p>AssetsConfigMapRef is the reference to a ConfigMap in the garden namespace containing the assets (logos/icons).</p>
 </td>
 </tr>
 <tr>
@@ -1354,7 +1356,7 @@ Defaults to info.</p>
 </tr>
 <tr>
 <td>
-<code>oidc</code></br>
+<code>oidcConfig</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DashboardOIDC">
 DashboardOIDC
@@ -1363,7 +1365,7 @@ DashboardOIDC
 </td>
 <td>
 <em>(Optional)</em>
-<p>OIDC contains configuration for the OIDC settings.</p>
+<p>OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.</p>
 </td>
 </tr>
 <tr>
