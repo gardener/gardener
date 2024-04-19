@@ -184,7 +184,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerCustomMetrics, err = r.newGardenerCustomMetics(secretsManager)
+	c.gardenerCustomMetrics, err = r.newGardenerCustomMetrics(secretsManager)
 	if err != nil {
 		return
 	}
@@ -508,15 +508,15 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	return
 }
 
-// newGardenerCustomMetics creates a [component.Deployer] for the gardener-custom-metrics component.
-func (r *Reconciler) newGardenerCustomMetics(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+// newGardenerCustomMetrics creates a [component.Deployer] for the gardener-custom-metrics component.
+func (r *Reconciler) newGardenerCustomMetrics(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(
-		imagevector.ImageNameGardenerCustomMetics, imagevectorutils.TargetVersion(r.SeedVersion.String()))
+		imagevector.ImageNameGardenerCustomMetrics, imagevectorutils.TargetVersion(r.SeedVersion.String()))
 	if err != nil {
 		return nil, fmt.Errorf("An error occurred while creating the %s component - "+
 			"failed to find an image version suitable for seed version '%s' in the image vector. "+
 			"The error message reported by the underlying operation follows: %w",
-			imagevector.ImageNameGardenerCustomMetics,
+			imagevector.ImageNameGardenerCustomMetrics,
 			r.SeedVersion,
 			err)
 	}
