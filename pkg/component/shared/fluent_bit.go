@@ -50,7 +50,7 @@ func NewFluentBit(
 			Image:              fluentBitImage.String(),
 			InitContainerImage: fluentBitInitImage.String(),
 			ValiEnabled:        valiEnabled,
-			PriorityClass:      priorityClassName,
+			PriorityClassName:  priorityClassName,
 		},
 	)
 

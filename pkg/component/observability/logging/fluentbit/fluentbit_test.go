@@ -54,7 +54,7 @@ var _ = Describe("Fluent Bit", func() {
 			Image:              image,
 			InitContainerImage: image,
 			ValiEnabled:        true,
-			PriorityClass:      priorityClassName,
+			PriorityClassName:  priorityClassName,
 		}
 
 		c         client.Client
