@@ -49,15 +49,14 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "plutono"
+	managedResourceName = "plutono"
+	name                = "plutono"
 
-	name                          = "plutono"
 	plutonoMountPathDashboards    = "/var/lib/plutono/dashboards"
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
@@ -163,11 +162,11 @@ func (p *plutono) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, ManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -178,14 +177,14 @@ func (p *plutono) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, managedResourceName)
 }
 
 func (p *plutono) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, managedResourceName)
 }
 
 func (p *plutono) SetWildcardCertName(secretName *string) {
@@ -730,12 +729,12 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	if p.values.WildcardCertName != nil {
 		ingressTLSSecretName = *p.values.WildcardCertName
 	} else {
-		ingressTLSSecret, err := p.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		ingressTLSSecret, err := p.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "plutono-tls",
 			CommonName:                  "plutono",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.IngressHost},
-			CertType:                    secrets.ServerCert,
+			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
