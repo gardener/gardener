@@ -248,12 +248,13 @@ metadata:
   namespace: garden-local
 provider:
   type: aws # {aws,azure,gcp,...}
-secretRef: # unlike SecretBindings, this field will be optional and mutable
-  name: static
-  # namespace: "...", allow reference across namespaces
-workloadIdentityRef:
-  name: banana-testing
-  # namespace: "...", allow reference across namespaces
+credentialsRef:
+  secret: # unlike SecretBindings, this field will be optional and mutable
+    name: static
+    # namespace: "...", allow reference across namespaces
+  workloadIdentity:
+    name: banana-testing
+    # namespace: "...", allow reference across namespaces
 quotas: []
 # - name: quota-1
 # # namespace: garden-quotas
