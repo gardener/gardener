@@ -672,6 +672,9 @@ spec:
                   type:
                     description: Type name
                     type: string
+                  writeOperation:
+                    description: Operation to use to write in bulk requests.
+                    type: string
                 type: object
               file:
                 description: File defines File Output configuration.
@@ -2507,6 +2510,9 @@ spec:
                       a later chunk, resulting in data shuffling. This feature prevents
                       this shuffling by using a queue logic for uploads.
                     type: boolean
+                  Profile:
+                    description: Option to specify an AWS Profile for credentials.
+                    type: string
                   Region:
                     description: The AWS region of your S3 bucket
                     type: string
@@ -2569,6 +2575,73 @@ spec:
                     description: Use the S3 PutObject API, instead of the multipart
                       upload API.
                     type: boolean
+                  tls:
+                    description: Fluent Bit provides integrated support for Transport
+                      Layer Security (TLS) and it predecessor Secure Sockets Layer
+                      (SSL) respectively.
+                    properties:
+                      caFile:
+                        description: Absolute path to CA certificate file
+                        type: string
+                      caPath:
+                        description: Absolute path to scan for certificate files
+                        type: string
+                      crtFile:
+                        description: Absolute path to Certificate file
+                        type: string
+                      debug:
+                        description: |-
+                          Set TLS debug verbosity level.
+                          It accept the following values: 0 (No debug), 1 (Error), 2 (State change), 3 (Informational) and 4 Verbose
+                        enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        format: int32
+                        type: integer
+                      keyFile:
+                        description: Absolute path to private Key file
+                        type: string
+                      keyPassword:
+                        description: Optional password for tls.key_file file
+                        properties:
+                          valueFrom:
+                            description: ValueSource defines how to find a value's
+                              key.
+                            properties:
+                              secretKeyRef:
+                                description: Selects a key of a secret in the pod's
+                                  namespace
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must
+                                      be a valid secret key.
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name of the referent.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      TODO: Add other useful fields. apiVersion, kind, uid?
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its
+                                      key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                                x-kubernetes-map-type: atomic
+                            type: object
+                        type: object
+                      verify:
+                        description: Force certificate validation
+                        type: boolean
+                      vhost:
+                        description: Hostname to be used for TLS SNI extension
+                        type: string
+                    type: object
                 required:
                 - Bucket
                 - Region

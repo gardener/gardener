@@ -1,0 +1,87 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: clustermultilineparsers.fluentbit.fluent.io
+spec:
+  group: fluentbit.fluent.io
+  names:
+    kind: ClusterMultilineParser
+    listKind: ClusterMultilineParserList
+    plural: clustermultilineparsers
+    shortNames:
+    - cfbmp
+    singular: clustermultilineparser
+  scope: Cluster
+  versions:
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: ClusterMultilineParser is the Schema for the cluster-level multiline
+          parser API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              flushTimeout:
+                default: 5000
+                description: Timeout in milliseconds to flush a non-terminated multiline
+                  buffer. Default is set to 5 seconds.
+                type: integer
+              keyContent:
+                description: For an incoming structured message, specify the key that
+                  contains the data that should be processed by the regular expression
+                  and possibly concatenated.
+                type: string
+              parser:
+                description: Name of a pre-defined parser that must be applied to
+                  the incoming content before applying the regex rule. If no parser
+                  is defined, it's assumed that's a raw text and not a structured
+                  message.
+                type: string
+              rules:
+                description: Configure a rule to match a multiline pattern. The rule
+                  has a specific format described below. Multiple rules can be defined.
+                items:
+                  properties:
+                    next:
+                      type: string
+                    regex:
+                      type: string
+                    start:
+                      type: string
+                  required:
+                  - next
+                  - regex
+                  - start
+                  type: object
+                type: array
+              type:
+                default: regex
+                description: Set the multiline mode, for now, we support the type
+                  regex.
+                enum:
+                - regex
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
