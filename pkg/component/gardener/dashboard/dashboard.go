@@ -187,8 +187,9 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 			// TODO(rfranzke): Remove this `Lease` once https://github.com/gardener/dashboard/issues/1806 is fixed.
 			&coordinationv1.Lease{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-dashboard-github-webhook",
-					Namespace: metav1.NamespaceSystem,
+					Name: "gardener-dashboard-github-webhook",
+					// Must be in 'garden' namespace, see https://github.com/gardener/gardener/pull/9583#discussion_r1572529328
+					Namespace: v1beta1constants.GardenNamespace,
 					Labels:    GetLabels(),
 				},
 			},

@@ -831,7 +831,7 @@ terminal:
 		roleGitHub = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:system:dashboard-github-webhook",
-				Namespace: "kube-system",
+				Namespace: "garden",
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "dashboard",
@@ -847,7 +847,7 @@ terminal:
 		roleBindingGitHub = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:system:dashboard-github-webhook",
-				Namespace: "kube-system",
+				Namespace: "garden",
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "dashboard",
@@ -867,7 +867,7 @@ terminal:
 		leaseGitHub = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-dashboard-github-webhook",
-				Namespace: "kube-system",
+				Namespace: "garden",
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "dashboard",

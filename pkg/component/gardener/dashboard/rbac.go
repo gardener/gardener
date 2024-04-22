@@ -136,8 +136,9 @@ func (g *gardenerDashboard) clusterRoleTerminalProjectMember() *rbacv1.ClusterRo
 func (g *gardenerDashboard) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gitHubWebhookRoleName,
-			Namespace: metav1.NamespaceSystem,
+			Name: gitHubWebhookRoleName,
+			// Must be in 'garden' namespace, see https://github.com/gardener/gardener/pull/9583#discussion_r1572529328
+			Namespace: v1beta1constants.GardenNamespace,
 			Labels:    GetLabels(),
 		},
 		Rules: []rbacv1.PolicyRule{{
@@ -152,8 +153,9 @@ func (g *gardenerDashboard) role() *rbacv1.Role {
 func (g *gardenerDashboard) roleBinding(serviceAccountName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gitHubWebhookRoleBindingName,
-			Namespace: metav1.NamespaceSystem,
+			Name: gitHubWebhookRoleBindingName,
+			// Must be in 'garden' namespace, see https://github.com/gardener/gardener/pull/9583#discussion_r1572529328
+			Namespace: v1beta1constants.GardenNamespace,
 			Labels:    GetLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
