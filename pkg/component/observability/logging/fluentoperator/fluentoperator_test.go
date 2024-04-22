@@ -108,7 +108,7 @@ var _ = Describe("Fluent Operator", func() {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{"fluentbit.fluent.io"},
-					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers", "collectors", "fluentbitconfigs", "filters", "outputs", "parsers"},
+					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers", "clustermultilineparsers", "collectors", "fluentbitconfigs", "filters", "outputs", "parsers", "multilineparsers"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
