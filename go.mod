@@ -27,7 +27,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.33.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2
 	github.com/prometheus/blackbox_exporter v0.24.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common v0.45.0
