@@ -12,6 +12,8 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
+	authenticationclientset "github.com/gardener/gardener/pkg/client/authentication/clientset/versioned"
+	authenticationinformers "github.com/gardener/gardener/pkg/client/authentication/informers/externalversions"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
@@ -87,6 +89,9 @@ type pluginInitializer struct {
 	seedManagementClient    seedmanagementclientset.Interface
 
 	settingsInformers settingsinformers.SharedInformerFactory
+
+	authenticationInformers authenticationinformers.SharedInformerFactory
+	authenticationClient    authenticationclientset.Interface
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface
