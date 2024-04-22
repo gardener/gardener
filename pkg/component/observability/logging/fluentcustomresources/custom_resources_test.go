@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fluentoperator_test
+package fluentcustomresources_test
 
 import (
 	"context"
@@ -36,7 +36,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -49,7 +49,7 @@ var _ = Describe("Custom Resources", func() {
 		ctx = context.TODO()
 
 		namespace = "some-namespace"
-		values    = CustomResourcesValues{
+		values    = Values{
 			Suffix: "-garden",
 			Inputs: []*fluentbitv1alpha2.ClusterInput{
 				{
@@ -156,7 +156,7 @@ var _ = Describe("Custom Resources", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = NewCustomResources(c, namespace, values)
+		component = New(c, namespace, values)
 	})
 
 	JustBeforeEach(func() {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fluentoperator_test
+package fluentbit_test
 
 import (
 	"context"
@@ -34,7 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentbit"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -50,11 +50,11 @@ var _ = Describe("Fluent Bit", func() {
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
-		values            = FluentBitValues{
+		values            = Values{
 			Image:              image,
 			InitContainerImage: image,
 			ValiEnabled:        true,
-			PriorityClass:      priorityClassName,
+			PriorityClassName:  priorityClassName,
 		}
 
 		c         client.Client
@@ -228,7 +228,7 @@ var _ = Describe("Fluent Bit", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = NewFluentBit(c, namespace, values)
+		component = New(c, namespace, values)
 		contains = NewManagedResourceContainsObjectsMatcher(c)
 	})
 

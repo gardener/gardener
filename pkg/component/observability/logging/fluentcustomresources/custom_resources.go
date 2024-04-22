@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fluentoperator
+package fluentcustomresources
 
 import (
 	"context"
+	"time"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,12 +28,11 @@ import (
 )
 
 const (
-	// CustomResourcesManagedResourceName is the name of the managed resource which deploys the custom resources of the operator.
-	CustomResourcesManagedResourceName = OperatorManagedResourceName + "-custom-resources"
+	managedResourceName = "fluent-operator-custom-resources"
 )
 
-// CustomResourcesValues are the values for the custom resources.
-type CustomResourcesValues struct {
+// Values are the values for the custom resources.
+type Values struct {
 	Suffix  string
 	Inputs  []*fluentbitv1alpha2.ClusterInput
 	Filters []*fluentbitv1alpha2.ClusterFilter
@@ -43,14 +43,14 @@ type CustomResourcesValues struct {
 type customResources struct {
 	client    client.Client
 	namespace string
-	values    CustomResourcesValues
+	values    Values
 }
 
-// NewCustomResources creates a new instance of Fluent Operator Custom Resources.
-func NewCustomResources(
+// New creates a new instance of Fluent Operator Custom Resources.
+func New(
 	client client.Client,
 	namespace string,
-	values CustomResourcesValues,
+	values Values,
 ) component.DeployWaiter {
 	return &customResources{
 		client:    client,
@@ -93,6 +93,8 @@ func (c *customResources) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, c.client, c.namespace, c.getManagedResourceName())
 }
 
+var timeoutWaitForManagedResources = 2 * time.Minute
+
 func (c *customResources) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
@@ -108,11 +110,5 @@ func (c *customResources) WaitCleanup(ctx context.Context) error {
 }
 
 func (c *customResources) getManagedResourceName() string {
-	return CustomResourcesManagedResourceName + c.values.Suffix
-}
-
-func getCustomResourcesLabels() map[string]string {
-	return map[string]string{
-		v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource,
-	}
+	return managedResourceName + c.values.Suffix
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package customresources_test
+package fluentcustomresources_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator/customresources"
+	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 )
 
 var _ = Describe("Logging", func() {

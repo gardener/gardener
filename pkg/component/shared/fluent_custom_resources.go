@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 )
 
 // NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
@@ -65,10 +65,10 @@ func NewFluentOperatorCustomResources(
 		outputs = append(outputs, output)
 	}
 
-	deployer = fluentoperator.NewCustomResources(
+	deployer = fluentcustomresources.New(
 		c,
 		gardenNamespaceName,
-		fluentoperator.CustomResourcesValues{
+		fluentcustomresources.Values{
 			Suffix:  suffix,
 			Inputs:  inputs,
 			Filters: filters,

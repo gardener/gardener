@@ -61,8 +61,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
@@ -775,7 +775,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 
 	var output *fluentbitv1alpha2.ClusterOutput
 	if gardenlethelper.IsValiEnabled(&r.Config) {
-		output = customresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource})
+		output = fluentcustomresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource})
 	}
 
 	return sharedcomponent.NewFluentOperatorCustomResources(

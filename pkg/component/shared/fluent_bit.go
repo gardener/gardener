@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/observability/logging/fluentbit"
 )
 
 // NewFluentBit instantiates a new `Fluent-bit` component.
@@ -43,14 +43,14 @@ func NewFluentBit(
 		return nil, err
 	}
 
-	deployer = fluentoperator.NewFluentBit(
+	deployer = fluentbit.New(
 		c,
 		gardenNamespaceName,
-		fluentoperator.FluentBitValues{
+		fluentbit.Values{
 			Image:              fluentBitImage.String(),
 			InitContainerImage: fluentBitInitImage.String(),
 			ValiEnabled:        valiEnabled,
-			PriorityClass:      priorityClassName,
+			PriorityClassName:  priorityClassName,
 		},
 	)
 
