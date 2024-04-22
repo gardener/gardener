@@ -60,6 +60,7 @@ import (
 	gardeneradmissioncontroller "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
+	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -122,6 +123,7 @@ type components struct {
 	gardenerAdmissionController component.DeployWaiter
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
+	gardenerDashboard           gardenerdashboard.Interface
 
 	gardenerMetricsExporter       component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
@@ -238,6 +240,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1015,6 +1021,58 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
+func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDashboard)
+	if err != nil {
+		return nil, err
+	}
+
+	values := gardenerdashboard.Values{
+		Image:            image.String(),
+		LogLevel:         logger.InfoLevel,
+		RuntimeVersion:   r.RuntimeVersion,
+		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+		EnableTokenLogin: true,
+		Ingress: gardenerdashboard.IngressValues{
+			Domains:                garden.Spec.RuntimeCluster.Ingress.Domains,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+
+		if config.EnableTokenLogin != nil {
+			values.EnableTokenLogin = *config.EnableTokenLogin
+		}
+
+		if config.Terminal != nil {
+			values.Terminal = &gardenerdashboard.TerminalValues{DashboardTerminal: *config.Terminal}
+		}
+
+		if config.OIDC != nil {
+			values.OIDC = &gardenerdashboard.OIDCValues{
+				DashboardOIDC:  *config.OIDC,
+				IssuerURL:      *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL,
+				ClientIDPublic: *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID,
+			}
+		}
+
+		values.GitHub = config.GitHub
+
+		if config.FrontendConfigMapRef != nil {
+			values.FrontendConfigMapName = &config.FrontendConfigMapRef.Name
+		}
+		if config.AssetsConfigMapRef != nil {
+			values.AssetsConfigMapName = &config.AssetsConfigMapRef.Name
+		}
+	}
+
+	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.RuntimeClientSet.Client(),
@@ -1140,7 +1198,10 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 }
 
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (blackboxexporter.Interface, error) {
-	kubeAPIServerTargets := []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
+	var (
+		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")
+	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
 		for _, domainPattern := range garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns {
@@ -1166,7 +1227,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
-			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets),
+			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
 		},
 	)
 }

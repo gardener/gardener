@@ -28,6 +28,7 @@ const (
 	httpGardenerAPIServerModuleName    = "http_gardener_apiserver"
 	httpKubeAPIServerModuleName        = "http_kube_apiserver"
 	httpKubeAPIServerRootCAsModuleName = "http_kube_apiserver_root_cas"
+	httpGardenerDashboardModuleName    = "http_gardener_dashboard"
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
@@ -50,6 +51,7 @@ func Config() blackboxexporterconfig.Config {
 		httpGardenerAPIServerModule    = defaultModuleConfig()
 		httpKubeAPIServerModule        = defaultModuleConfig()
 		httpKubeAPIServerRootCAsModule = defaultModuleConfig()
+		httpGardenerDashboardModule    = defaultModuleConfig()
 
 		pathGardenerAPIServerCABundle = blackboxexporter.VolumeMountPathGardenerCA + "/" + secretsutils.DataKeyCertificateBundle
 		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
@@ -65,5 +67,6 @@ func Config() blackboxexporterconfig.Config {
 		httpGardenerAPIServerModuleName:    httpGardenerAPIServerModule,
 		httpKubeAPIServerModuleName:        httpKubeAPIServerModule,
 		httpKubeAPIServerRootCAsModuleName: httpKubeAPIServerRootCAsModule,
+		httpGardenerDashboardModuleName:    httpGardenerDashboardModule,
 	}}
 }

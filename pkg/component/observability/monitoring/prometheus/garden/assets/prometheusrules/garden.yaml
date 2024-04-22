@@ -6,6 +6,28 @@ spec:
   groups:
   - name: garden
     rules:
+    - alert: DashboardDown
+      expr: |
+        probe_success{job     = "blackbox-dashboard",
+                      purpose = "availability"}
+        == 0
+      for: 5m
+      labels:
+        severity: critical
+        topology: garden
+        service: dashboard
+      annotations:
+        summary: Dashboard is Down in landscape {{$externalLabels.landscape}}
+        description: >
+          The http health probe to the Gardener Dashboard failed for at least 5
+          minutes (instance is {{$labels.instance}}).
+          (Status code is
+          {{printf `probe_http_status_code{job      = "blackbox-dashboard"
+          ,                                purpose  = "availability"
+          ,                                instance = "%s"}`
+          $labels.instance
+          | query | first | value}}).
+
     - alert: ApiServerDown
       expr: |
         probe_success{job     = "blackbox-apiserver",

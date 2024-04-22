@@ -151,17 +151,29 @@ func MakeUnique(obj runtime.Object) error {
 			}
 			return "-"
 		}
+		mergeMaps = func(a map[string]string, b map[string][]byte) map[string][]byte {
+			out := make(map[string][]byte, len(a)+len(b))
+
+			for k, v := range a {
+				out[k] = []byte(v)
+			}
+			for k, v := range b {
+				out[k] = v
+			}
+
+			return out
+		}
 	)
 
 	switch o := obj.(type) {
 	case *corev1.Secret:
 		o.Immutable = ptr.To(true)
-		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(o.Data)[:numberOfChecksumChars]
+		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(mergeMaps(o.StringData, o.Data))[:numberOfChecksumChars]
 		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 
 	case *corev1.ConfigMap:
 		o.Immutable = ptr.To(true)
-		o.Name += prependHyphen(o.Name) + utils.ComputeConfigMapChecksum(o.Data)[:numberOfChecksumChars]
+		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(mergeMaps(o.Data, o.BinaryData))[:numberOfChecksumChars]
 		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 
 	default:

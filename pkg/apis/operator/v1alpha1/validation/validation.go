@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
+	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -197,7 +198,7 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeControllerManager(coreKubeControllerManagerConfig, nil, virtualCluster.Kubernetes.Version, true, path)...)
 	}
 
-	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, fldPath.Child("gardener"))...)
+	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, virtualCluster.Kubernetes, fldPath.Child("gardener"))...)
 
 	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "cannot parse service network cidr: "+err.Error()))
@@ -215,13 +216,14 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 	return allErrs
 }
 
-func validateGardener(config operatorv1alpha1.Gardener, fldPath *field.Path) field.ErrorList {
+func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateGardenerAPIServerConfig(config.APIServer, fldPath.Child("gardenerAPIServer"))...)
-	allErrs = append(allErrs, validateGardenerAdmissionController(config.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
-	allErrs = append(allErrs, validateGardenerControllerManagerConfig(config.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
-	allErrs = append(allErrs, validateGardenerSchedulerConfig(config.Scheduler, fldPath.Child("gardenerScheduler"))...)
+	allErrs = append(allErrs, validateGardenerAPIServerConfig(gardener.APIServer, fldPath.Child("gardenerAPIServer"))...)
+	allErrs = append(allErrs, validateGardenerAdmissionController(gardener.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
+	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
+	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
+	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
 
 	return allErrs
 }
@@ -366,6 +368,24 @@ func validateGardenerFeatureGates(featureGates map[string]bool, fldPath *field.P
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("cannot set feature gate to %v, feature is locked to %v", featureGates[featureGate], spec.Default)))
 			}
 		}
+	}
+
+	return allErrs
+}
+
+func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardConfig, kubeAPIServerConfig *operatorv1alpha1.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if !ptr.Deref(config.EnableTokenLogin, true) && config.OIDC == nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableTokenLogin"), "OIDC must be configured when token login is disabled"))
+	}
+
+	if config.OIDC != nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidc"), config.OIDC, "must set .spec.virtualCluster.kubernetes.kubeAPIServer.oidcConfig when configuring OIDC config for dashboard"))
 	}
 
 	return allErrs

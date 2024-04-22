@@ -92,7 +92,7 @@ var _ = Describe("Plutono", func() {
 			},
 		}
 
-		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: namespace}})).To(Succeed())
 

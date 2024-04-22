@@ -374,6 +374,236 @@ The first given domain in this list is immutable.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.DashboardGitHub">DashboardGitHub
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">GardenerDashboardConfig</a>)
+</p>
+<p>
+<p>DashboardGitHub contains configuration for the GitHub ticketing feature.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiURL</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>APIURL is the URL to the GitHub API.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>organisation</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Organisation is the name of the GitHub organisation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>repository</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Repository is the name of the GitHub repository.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pollInterval</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a
+fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a
+webhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.
+If this field is not provided and there is no &lsquo;webhookSecret&rsquo; key in the referenced secret, it will be
+implicitly defaulted to <code>15m</code>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DashboardOIDC">DashboardOIDC
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">GardenerDashboardConfig</a>)
+</p>
+<p>
+<p>DashboardOIDC contains configuration for the OIDC settings.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>sessionLifetime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SessionLifetime is the maximum duration of a session.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>additionalScopes</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdditionalScopes is the list of additional OIDC scopes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DashboardTerminal">DashboardTerminal
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">GardenerDashboardConfig</a>)
+</p>
+<p>
+<p>DashboardTerminal contains configuration for the terminal settings.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>container</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardTerminalContainer">
+DashboardTerminalContainer
+</a>
+</em>
+</td>
+<td>
+<p>Container contains configuration for the dashboard terminal container.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>allowedHosts</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
+It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
+&lsquo;<em>.seed.local.gardener.cloud&rsquo;, or &lsquo;</em>.other-seeds.local.gardener.cloud&rsquo;. For more information, see
+<a href="https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts">https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts</a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DashboardTerminalContainer">DashboardTerminalContainer
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardTerminal">DashboardTerminal</a>)
+</p>
+<p>
+<p>DashboardTerminalContainer contains configuration for the dashboard terminal container.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Image is the container image for the dashboard terminal container.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>description</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Description is a description for the dashboard terminal container with hints for the user.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
 </h3>
 <p>
@@ -809,6 +1039,20 @@ GardenerSchedulerConfig
 <p>Scheduler contains configuration settings for the gardener-scheduler.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>gardenerDashboard</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">
+GardenerDashboardConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Dashboard contains configuration settings for the gardener-dashboard.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
@@ -1038,6 +1282,122 @@ string
 <em>(Optional)</em>
 <p>LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
 Defaults to info.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">GardenerDashboardConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerDashboardConfig contains configuration settings for the gardener-dashboard.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enableTokenLogin</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC
+must be configured.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>frontendConfigMapRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend
+configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>assetsConfigMapRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AssetsConfigMapRef is the reference to a ConfigMap in the garden namespace containing the assets (logos/icons).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gitHub</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardGitHub">
+DashboardGitHub
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GitHub contains configuration for the GitHub ticketing feature.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level. Must be one of [trace,debug,info,warn,error].
+Defaults to info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidcConfig</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardOIDC">
+DashboardOIDC
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>terminal</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardTerminal">
+DashboardTerminal
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Terminal contains configuration for the terminal settings.</p>
 </td>
 </tr>
 </tbody>

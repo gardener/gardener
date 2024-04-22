@@ -412,6 +412,9 @@ type Gardener struct {
 	// Scheduler contains configuration settings for the gardener-scheduler.
 	// +optional
 	Scheduler *GardenerSchedulerConfig `json:"gardenerScheduler,omitempty"`
+	// Dashboard contains configuration settings for the gardener-dashboard.
+	// +optional
+	Dashboard *GardenerDashboardConfig `json:"gardenerDashboard,omitempty"`
 }
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
@@ -524,6 +527,97 @@ type GardenerSchedulerConfig struct {
 	// +kubebuilder:default=info
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
+}
+
+// GardenerDashboardConfig contains configuration settings for the gardener-dashboard.
+type GardenerDashboardConfig struct {
+	// EnableTokenLogin specifies whether it is possible to log into the dashboard with a JWT token. If disabled, OIDC
+	// must be configured.
+	// +kubebuilder:default=true
+	// +optional
+	EnableTokenLogin *bool `json:"enableTokenLogin,omitempty"`
+	// FrontendConfigMapRef is the reference to a ConfigMap in the garden namespace containing the frontend
+	// configuration.
+	// +optional
+	FrontendConfigMapRef *corev1.LocalObjectReference `json:"frontendConfigMapRef,omitempty"`
+	// AssetsConfigMapRef is the reference to a ConfigMap in the garden namespace containing the assets (logos/icons).
+	// +optional
+	AssetsConfigMapRef *corev1.LocalObjectReference `json:"assetsConfigMapRef,omitempty"`
+	// GitHub contains configuration for the GitHub ticketing feature.
+	// +optional
+	GitHub *DashboardGitHub `json:"gitHub,omitempty"`
+	// LogLevel is the configured log level. Must be one of [trace,debug,info,warn,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=trace;debug;info;warn;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+	// OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.
+	// +optional
+	OIDC *DashboardOIDC `json:"oidcConfig,omitempty"`
+	// Terminal contains configuration for the terminal settings.
+	// +optional
+	Terminal *DashboardTerminal `json:"terminal,omitempty"`
+}
+
+// DashboardGitHub contains configuration for the GitHub ticketing feature.
+type DashboardGitHub struct {
+	// APIURL is the URL to the GitHub API.
+	// +kubebuilder:default=`https://api.github.com`
+	// +kubebuilder:validation:MinLength=1
+	APIURL string `json:"apiURL"`
+	// Organisation is the name of the GitHub organisation.
+	// +kubebuilder:validation:MinLength=1
+	Organisation string `json:"organisation"`
+	// Repository is the name of the GitHub repository.
+	// +kubebuilder:validation:MinLength=1
+	Repository string `json:"repository"`
+	// SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	// PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a
+	// fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a
+	// webhook event is missed or not successfully delivered, the polling will help catch up on any missed updates.
+	// If this field is not provided and there is no 'webhookSecret' key in the referenced secret, it will be
+	// implicitly defaulted to `15m`.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +optional
+	PollInterval *metav1.Duration `json:"pollInterval,omitempty"`
+}
+
+// DashboardOIDC contains configuration for the OIDC settings.
+type DashboardOIDC struct {
+	// SessionLifetime is the maximum duration of a session.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +optional
+	SessionLifetime *metav1.Duration `json:"sessionLifetime,omitempty"`
+	// AdditionalScopes is the list of additional OIDC scopes.
+	// +optional
+	AdditionalScopes []string `json:"additionalScopes,omitempty"`
+	// SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+}
+
+// DashboardTerminal contains configuration for the terminal settings.
+type DashboardTerminal struct {
+	// Container contains configuration for the dashboard terminal container.
+	Container DashboardTerminalContainer `json:"container"`
+	// AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
+	// It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
+	// '*.seed.local.gardener.cloud', or '*.other-seeds.local.gardener.cloud'. For more information, see
+	// https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#allowlist-for-hosts.
+	// +optional
+	AllowedHosts []string `json:"allowedHosts,omitempty"`
+}
+
+// DashboardTerminalContainer contains configuration for the dashboard terminal container.
+type DashboardTerminalContainer struct {
+	// Image is the container image for the dashboard terminal container.
+	Image string `json:"image"`
+	// Description is a description for the dashboard terminal container with hints for the user.
+	// +optional
+	Description *string `json:"description,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

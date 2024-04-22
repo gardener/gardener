@@ -74,7 +74,7 @@ var _ = Describe("KubeProxy", func() {
 		fakeShootKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeShootClient).Build()
 		sm = fakesecretsmanager.New(fakeSeedClient, namespace)
 
-		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
 		Expect(fakeSeedClient.Create(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 
 		botanist = &Botanist{

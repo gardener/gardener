@@ -248,11 +248,13 @@ var _ = Describe("Object", func() {
 						Name:   name,
 						Labels: labels,
 					},
+					Data:       map[string]string{"foo": "bar"},
+					BinaryData: map[string][]byte{"bar": []byte("foo")},
 				}
 				expectedConfigMap = configMap.DeepCopy()
 			)
 
-			expectedConfigMap.Name += "-e3b0c442"
+			expectedConfigMap.Name += "-ec321de5"
 			expectedConfigMap.Immutable = ptr.To(true)
 			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
@@ -267,11 +269,13 @@ var _ = Describe("Object", func() {
 						Name:   nameWithHyphenSuffix,
 						Labels: labels,
 					},
+					Data:       map[string][]byte{"foo": []byte("bar")},
+					StringData: map[string]string{"bar": "foo"},
 				}
 				expectedSecret = secret.DeepCopy()
 			)
 
-			expectedSecret.Name += "e3b0c442"
+			expectedSecret.Name += "ec321de5"
 			expectedSecret.Immutable = ptr.To(true)
 			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
