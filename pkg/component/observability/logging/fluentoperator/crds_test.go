@@ -76,6 +76,8 @@ var _ = Describe("CRDs", func() {
 		Entry("Filter", "filters.fluentbit.fluent.io"),
 		Entry("Parser", "parsers.fluentbit.fluent.io"),
 		Entry("Output", "outputs.fluentbit.fluent.io"),
+		Entry("ClusterMultilineParser", "clustermultilineparsers.fluentbit.fluent.io"),
+		Entry("MultilineParser", "multilineparsers.fluentbit.fluent.io"),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -97,5 +99,7 @@ var _ = Describe("CRDs", func() {
 		Entry("Filter", "filters.fluentbit.fluent.io"),
 		Entry("Parser", "parsers.fluentbit.fluent.io"),
 		Entry("Output", "outputs.fluentbit.fluent.io"),
+		Entry("ClusterMultilineParser", "clustermultilineparsers.fluentbit.fluent.io"),
+		Entry("MultilineParser", "multilineparsers.fluentbit.fluent.io"),
 	)
 })

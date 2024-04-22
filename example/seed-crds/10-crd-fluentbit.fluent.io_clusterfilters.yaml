@@ -291,6 +291,10 @@ spec:
                             Lua function name that will be triggered to do filtering.
                             It's assumed that the function is declared inside the Script defined above.
                           type: string
+                        code:
+                          description: Inline LUA code instead of loading from a path
+                            via script.
+                          type: string
                         protectedMode:
                           description: |-
                             If enabled, Lua script will be executed in protected mode.
@@ -344,7 +348,6 @@ spec:
                           type: array
                       required:
                       - call
-                      - script
                       type: object
                     modify:
                       description: Modify defines Modify Filter configuration.
@@ -489,10 +492,44 @@ spec:
                         alias:
                           description: Alias for the plugin
                           type: string
+                        buffer:
+                          default: false
+                          type: boolean
+                        emitterMemBufLimit:
+                          default: 10
+                          description: Set a limit on the amount of memory in MB the
+                            emitter can consume if the outputs provide backpressure.
+                            The default for this limit is 10M. The pipeline will pause
+                            once the buffer exceeds the value of this setting. For
+                            example, if the value is set to 10MB then the pipeline
+                            will pause if the buffer exceeds 10M. The pipeline will
+                            remain paused until the output drains the buffer below
+                            the 10M limit.
+                          type: integer
+                        emitterName:
+                          description: Name for the emitter input instance which re-emits
+                            the completed records at the beginning of the pipeline.
+                          type: string
+                        emitterType:
+                          default: memory
+                          description: The storage type for the emitter input instance.
+                            This option supports the values memory (default) and filesystem.
+                          enum:
+                          - memory
+                          - filesystem
+                          type: string
+                        flushMs:
+                          default: 2000
+                          type: integer
                         keyContent:
                           description: |-
                             Key name that holds the content to process.
                             Note that a Multiline Parser definition can already specify the key_content to use, but this option allows to overwrite that value for the purpose of the filter.
+                          type: string
+                        mode:
+                          enum:
+                          - parser
+                          - partial_message
                           type: string
                         parser:
                           description: |-
@@ -644,11 +681,15 @@ spec:
                         alias:
                           description: Alias for the plugin
                           type: string
+                        emitterMemBufLimit:
+                          type: string
                         emitterName:
                           description: |-
                             When the filter emits a record under the new Tag, there is an internal emitter
                             plugin that takes care of the job. Since this emitter expose metrics as any other
                             component of the pipeline, you can use this property to configure an optional name for it.
+                          type: string
+                        emitterStorageType:
                           type: string
                         retryLimit:
                           description: 'RetryLimit describes how many times fluent-bit

@@ -41,6 +41,50 @@ spec:
           spec:
             description: NamespacedFluentBitCfgSpec defines the desired state of FluentBit
             properties:
+              clusterMultilineParserSelector:
+                description: Select cluster level multiline parser config
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
               clusterParserSelector:
                 description: Select cluster level parser config
                 properties:
@@ -87,6 +131,50 @@ spec:
                 x-kubernetes-map-type: atomic
               filterSelector:
                 description: Select filter plugins
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              multilineParserSelector:
+                description: Select multiline parser plugins
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -217,6 +305,145 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              service:
+                description: Service defines the global behaviour of the Fluent Bit
+                  engine.
+                properties:
+                  daemon:
+                    description: If true go to background on start
+                    type: boolean
+                  emitterMemBufLimit:
+                    type: string
+                  emitterName:
+                    description: Per-namespace re-emitter configuration
+                    type: string
+                  emitterStorageType:
+                    type: string
+                  flushSeconds:
+                    description: Interval to flush output
+                    format: int64
+                    type: integer
+                  graceSeconds:
+                    description: Wait time on exit
+                    format: int64
+                    type: integer
+                  hcErrorsCount:
+                    description: 'the error count to meet the unhealthy requirement,
+                      this is a sum for all output plugins in a defined HC_Period,
+                      example for output error: [2022/02/16 10:44:10] [ warn] [engine]
+                      failed to flush chunk ''1-1645008245.491540684.flb'', retry
+                      in 7 seconds: task_id=0, input=forward.1 > output=cloudwatch_logs.3
+                      (out_id=3)'
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  hcPeriod:
+                    description: The time period by second to count the error and
+                      retry failure data point
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  hcRetryFailureCount:
+                    description: 'the retry failure count to meet the unhealthy requirement,
+                      this is a sum for all output plugins in a defined HC_Period,
+                      example for retry failure: [2022/02/16 20:11:36] [ warn] [engine]
+                      chunk ''1-1645042288.260516436.flb'' cannot be retried: task_id=0,
+                      input=tcp.3 > output=cloudwatch_logs.1'
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  healthCheck:
+                    description: 'enable Health check feature at http://127.0.0.1:2020/api/v1/health
+                      Note: Enabling this will not automatically configure kubernetes
+                      to use fluentbit''s healthcheck endpoint'
+                    type: boolean
+                  httpListen:
+                    description: Address to listen
+                    pattern: ^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}$
+                    type: string
+                  httpPort:
+                    description: Port to listen
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  httpServer:
+                    description: If true enable statistics HTTP server
+                    type: boolean
+                  logFile:
+                    description: File to log diagnostic output
+                    type: string
+                  logLevel:
+                    description: Diagnostic level (error/warning/info/debug/trace)
+                    enum:
+                    - "off"
+                    - error
+                    - warning
+                    - info
+                    - debug
+                    - trace
+                    type: string
+                  parsersFile:
+                    description: Optional 'parsers' config file (can be multiple)
+                    type: string
+                  parsersFiles:
+                    description: backward compatible
+                    items:
+                      type: string
+                    type: array
+                  storage:
+                    description: Configure a global environment for the storage layer
+                      in Service. It is recommended to configure the volume and volumeMount
+                      separately for this storage. The hostPath type should be used
+                      for that Volume in Fluentbit daemon set.
+                    properties:
+                      backlogMemLimit:
+                        description: This option configure a hint of maximum value
+                          of memory to use when processing these records
+                        type: string
+                      checksum:
+                        description: Enable the data integrity check when writing
+                          and reading data from the filesystem
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      deleteIrrecoverableChunks:
+                        description: When enabled, irrecoverable chunks will be deleted
+                          during runtime, and any other irrecoverable chunk located
+                          in the configured storage path directory will be deleted
+                          when Fluent-Bit starts.
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      maxChunksUp:
+                        description: If the input plugin has enabled filesystem storage
+                          type, this property sets the maximum number of Chunks that
+                          can be up in memory
+                        format: int64
+                        type: integer
+                      metrics:
+                        description: If http_server option has been enabled in the
+                          Service section, this option registers a new endpoint where
+                          internal metrics of the storage layer can be consumed
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      path:
+                        description: Select an optional location in the file system
+                          to store streams and chunks of data/
+                        type: string
+                      sync:
+                        description: Configure the synchronization mode used to store
+                          the data into the file system
+                        enum:
+                        - normal
+                        - full
+                        type: string
+                    type: object
+                type: object
             type: object
         type: object
     served: true

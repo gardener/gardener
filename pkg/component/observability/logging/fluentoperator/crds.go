@@ -48,6 +48,10 @@ var (
 	fluentBitParserCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_outputs.yaml
 	fluentBitOutputCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_clustermultilineparsers.yaml
+	fluentBitClusterMultilineParserCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_multilineparsers.yaml
+	fluentBitMultilineParserCRD string
 
 	resources []string
 )
@@ -65,6 +69,8 @@ func init() {
 		fluentBitFilterCRD,
 		fluentBitParserCRD,
 		fluentBitOutputCRD,
+		fluentBitClusterMultilineParserCRD,
+		fluentBitMultilineParserCRD,
 	)
 }
 

@@ -151,12 +151,14 @@ rules:
   - clusterinputs.fluentbit.fluent.io
   - clusteroutputs.fluentbit.fluent.io
   - clusterparsers.fluentbit.fluent.io
+  - clustermultilineparsers.fluentbit.fluent.io
   - fluentbits.fluentbit.fluent.io
   - collectors.fluentbit.fluent.io
   - fluentbitconfigs.fluentbit.fluent.io
   - filters.fluentbit.fluent.io
   - outputs.fluentbit.fluent.io
   - parsers.fluentbit.fluent.io
+  - multilineparsers.fluentbit.fluent.io
   verbs:
   - delete
 - apiGroups:
