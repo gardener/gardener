@@ -17,7 +17,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -518,44 +517,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deleteContainerRuntimeResources),
 		})
 
-		// Services (and other objects that have a footprint in the infrastructure) still don't have finalizers yet. There is no way to
-		// determine whether all the resources have been deleted successfully yet, whether there was an error, or whether they are still
-		// pending. While most providers have implemented custom clean up already (basically, duplicated the code in the CCM) not everybody
-		// has, especially not for all objects.
-		// Until service finalizers are enabled by default with Kubernetes 1.16 and our minimum supported seed version is raised to 1.16 we
-		// can not do much more than best-effort waiting until everything has been cleaned up. That's what the following task is doing.
-		timeForInfrastructureResourceCleanup = g.Add(flow.Task{
-			Name: "Waiting until time for infrastructure resource cleanup has elapsed",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				waitFor := 5 * time.Minute
-
-				if v, ok := botanist.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds]; ok {
-					seconds, err := strconv.Atoi(v)
-					if err != nil {
-						return err
-					}
-
-					if newWaitFor := time.Duration(seconds) * time.Second; newWaitFor < waitFor {
-						waitFor = newWaitFor
-					}
-				}
-
-				ctx, cancel := context.WithTimeout(ctx, waitFor)
-				defer cancel()
-
-				<-ctx.Done()
-				return nil
-			}),
-			SkipIf:       botanist.Shoot.IsWorkerless || !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deleteManagedResources),
-		})
-
 		syncPointCleaned = flow.NewTaskIDs(
 			syncPointCleanedKubernetesResources,
 			deleteAllOperatingSystemConfigs,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
-			timeForInfrastructureResourceCleanup,
 			destroyNetwork,
 			waitUntilNetworkIsDestroyed,
 			waitUntilExtensionResourcesBeforeKubeAPIServerDeleted,

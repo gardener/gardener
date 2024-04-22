@@ -4,7 +4,6 @@ metadata:
   name: managedseed
   namespace: garden
   annotations:
-    shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds: "0"
     shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
 spec:
   cloudProfileName: local

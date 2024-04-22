@@ -68,9 +68,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
-				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
-				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds:    "0",
-				v1beta1constants.AnnotationAuthenticationIssuer:                        v1beta1constants.AnnotationAuthenticationIssuerManaged,
+				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds: "0",
+				v1beta1constants.AnnotationAuthenticationIssuer:                     v1beta1constants.AnnotationAuthenticationIssuerManaged,
 			},
 		},
 		Spec: gardencorev1beta1.ShootSpec{
