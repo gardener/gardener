@@ -128,6 +128,8 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 		var pollIntervalSeconds *int64
 		if _, ok := secret.Data["webhookSecret"]; !ok {
 			pollIntervalSeconds = ptr.To(int64(ptr.Deref(g.values.GitHub.PollInterval, metav1.Duration{Duration: 15 * time.Minute}).Duration.Seconds()))
+		} else if g.values.GitHub.PollInterval != nil {
+			pollIntervalSeconds = ptr.To(int64(g.values.GitHub.PollInterval.Duration.Seconds()))
 		}
 
 		cfg.GitHub = &config.GitHub{
