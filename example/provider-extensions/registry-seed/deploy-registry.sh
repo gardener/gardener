@@ -93,30 +93,30 @@ stringData:
     ExecStopPost=bash /var/opt/docker/stop-seed-registry-cache.sh\n
   start-seed-registry-cache.sh: |
     #!/usr/bin/env bash
-    if [[ "\$(/usr/bin/ctr task ls | grep seed-registry-cache | awk '{print \$3}')" == "RUNNING" ]]; then
+    if [[ "\$(ctr task ls | grep seed-registry-cache | awk '{print \$3}')" == "RUNNING" ]]; then
       echo "seed-registry-cache is already running"
       exit 0
     fi
-    if [[ "\$(/usr/bin/ctr container ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
+    if [[ "\$(ctr container ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
       echo "removing old seed-registry-cache container"
-      /usr/bin/ctr task kill seed-registry-cache
-      /usr/bin/ctr task rm seed-registry-cache
-      /usr/bin/ctr container rm seed-registry-cache
+      ctr task kill seed-registry-cache
+      ctr task rm seed-registry-cache
+      ctr container rm seed-registry-cache
     fi
-    if [[ "\$(/usr/bin/ctr snapshot ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
+    if [[ "\$(ctr snapshot ls | grep seed-registry-cache | awk '{print \$1}')" == "seed-registry-cache" ]]; then
       echo "removing old seed-registry-cache snapshot"
-      /usr/bin/ctr snapshot rm seed-registry-cache
+      ctr snapshot rm seed-registry-cache
     fi
     echo "Pulling registry-cache image"
-    /usr/bin/ctr image pull ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev
+    ctr image pull ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev
     echo "Starting registry-cache"
-    /usr/bin/ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/docker/registry/config.yml,options=rbind:ro --net-host ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev seed-registry-cache
+    ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/docker/registry/config.yml,options=rbind:ro --net-host ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev seed-registry-cache
   stop-seed-registry-cache.sh: |
     #!/usr/bin/env bash
     echo "stopping seed-registry-cache"
-    /usr/bin/ctr task kill seed-registry-cache
-    /usr/bin/ctr task rm seed-registry-cache
-    /usr/bin/ctr container rm seed-registry-cache
+    ctr task kill seed-registry-cache
+    ctr task rm seed-registry-cache
+    ctr container rm seed-registry-cache
 EOF
 
 echo "Creating pull secret in garden namespace"
