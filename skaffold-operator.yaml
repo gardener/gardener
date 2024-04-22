@@ -352,6 +352,9 @@ build:
             - pkg/apiserver/admission/initializer
             - pkg/apiserver/features
             - pkg/apiserver/openapi
+            - pkg/apiserver/registry/authentication/credentialsbinding
+            - pkg/apiserver/registry/authentication/credentialsbinding/storage
+            - pkg/apiserver/registry/authentication/rest
             - pkg/apiserver/registry/core/backupbucket
             - pkg/apiserver/registry/core/backupbucket/storage
             - pkg/apiserver/registry/core/backupentry
@@ -398,6 +401,14 @@ build:
             - pkg/apiserver/registry/settings/rest
             - pkg/apiserver/storage
             - pkg/chartrenderer
+            - pkg/client/authentication/clientset/versioned
+            - pkg/client/authentication/clientset/versioned/scheme
+            - pkg/client/authentication/clientset/versioned/typed/authentication/v1alpha1
+            - pkg/client/authentication/informers/externalversions
+            - pkg/client/authentication/informers/externalversions/authentication
+            - pkg/client/authentication/informers/externalversions/authentication/v1alpha1
+            - pkg/client/authentication/informers/externalversions/internalinterfaces
+            - pkg/client/authentication/listers/authentication/v1alpha1
             - pkg/client/core/clientset/versioned
             - pkg/client/core/clientset/versioned/scheme
             - pkg/client/core/clientset/versioned/typed/core/v1beta1

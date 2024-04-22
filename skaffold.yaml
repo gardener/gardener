@@ -75,6 +75,9 @@ build:
             - pkg/apiserver/admission/initializer
             - pkg/apiserver/features
             - pkg/apiserver/openapi
+            - pkg/apiserver/registry/authentication/credentialsbinding
+            - pkg/apiserver/registry/authentication/credentialsbinding/storage
+            - pkg/apiserver/registry/authentication/rest
             - pkg/apiserver/registry/core/backupbucket
             - pkg/apiserver/registry/core/backupbucket/storage
             - pkg/apiserver/registry/core/backupentry
