@@ -17,7 +17,7 @@
 # This file was copied from the kubernetes/kubernetes project
 # https://github.com/kubernetes/kubernetes/blob/v1.20.0/hack/cherry_pick_pull.sh
 #
-# Modifications Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved.
+# Modifications Copyright SAP SE or an SAP affiliate company and Gardener contributors
 
 # Usage Instructions: https://github.com/gardener/gardener/blob/master/docs/development/process.md#cherry-picks
 
