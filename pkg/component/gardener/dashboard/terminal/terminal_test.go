@@ -6,8 +6,10 @@ package terminal_test
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/Masterminds/semver/v3"
+	terminalv1alpha1 "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -15,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,6 +28,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard/terminal"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -59,6 +63,7 @@ var _ = Describe("Terminal", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		service                   *corev1.Service
+		configMap                 *corev1.ConfigMap
 	)
 
 	BeforeEach(func() {
@@ -147,6 +152,31 @@ var _ = Describe("Terminal", func() {
 				},
 			},
 		}
+
+		config := &terminalv1alpha1.ControllerManagerConfiguration{
+			APIVersion: "dashboard.gardener.cloud/v1alpha1",
+			Kind:       "ControllerManagerConfiguration",
+			Server: terminalv1alpha1.ServerConfiguration{
+				HealthProbes: &terminalv1alpha1.Server{Port: 8081},
+				Metrics:      &terminalv1alpha1.Server{Port: 8443},
+			},
+			LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+				LeaderElect:       ptr.To(true),
+				ResourceNamespace: "kube-system",
+			},
+			HonourServiceAccountRefHostCluster: ptr.To(false),
+		}
+		rawConfig, err := json.Marshal(config)
+		Expect(err).NotTo(HaveOccurred())
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "terminal-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+			},
+			Data: map[string]string{"config.yaml": string(rawConfig)},
+		}
+		utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	})
 
 	JustBeforeEach(func() {
@@ -237,6 +267,7 @@ var _ = Describe("Terminal", func() {
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 				expectedRuntimeObjects = []client.Object{
 					service,
+					configMap,
 				}
 				expectedVirtualObjects = []client.Object{}
 
