@@ -13,6 +13,7 @@ import (
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +41,9 @@ var _ = Describe("Terminal", func() {
 		managedResourceNameVirtual = "terminal-virtual"
 		namespace                  = "some-namespace"
 
+		runtimeVersion       *semver.Version
+		topologyAwareRouting bool
+
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
 		deployer          component.DeployWaiter
@@ -54,16 +58,17 @@ var _ = Describe("Terminal", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		virtualGardenAccessSecret *corev1.Secret
+		service                   *corev1.Service
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 
+		runtimeVersion = semver.MustParse("1.30.1")
+		topologyAwareRouting = false
+
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
-		values = Values{
-			RuntimeVersion: semver.MustParse("1.26.4"),
-		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -113,15 +118,48 @@ var _ = Describe("Terminal", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "terminal-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":9443}]`,
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{"app": "terminal-controller-manager"},
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "webhook",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       443,
+						TargetPort: intstr.FromInt32(9443),
+					},
+					{
+						Name:       "metrics",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       8443,
+						TargetPort: intstr.FromInt32(8443),
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
+		values = Values{
+			RuntimeVersion:              runtimeVersion,
+			TopologyAwareRoutingEnabled: topologyAwareRouting,
+		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 	})
 
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
-			var expectedRuntimeObject []client.Object
+			var expectedRuntimeObjects, expectedVirtualObjects []client.Object
 
 			BeforeEach(func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
@@ -197,7 +235,10 @@ var _ = Describe("Terminal", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
 				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
-				expectedRuntimeObject = []client.Object{}
+				expectedRuntimeObjects = []client.Object{
+					service,
+				}
+				expectedVirtualObjects = []client.Object{}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
@@ -205,7 +246,6 @@ var _ = Describe("Terminal", func() {
 				Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				Expect(managedResourceVirtual).To(consistOf())
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
@@ -215,7 +255,8 @@ var _ = Describe("Terminal", func() {
 				_, ok := fakeSecretManager.Get("terminal-controller-manager")
 				ExpectWithOffset(1, ok).To(BeTrue())
 
-				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
+				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})
 
 			Context("secrets", func() {
@@ -224,6 +265,38 @@ var _ = Describe("Terminal", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), actualAccessSecret)).To(Succeed())
 					virtualGardenAccessSecret.ResourceVersion = "1"
 					Expect(actualAccessSecret).To(Equal(virtualGardenAccessSecret))
+				})
+			})
+
+			When("topology aware routing is configured", func() {
+				BeforeEach(func() {
+					topologyAwareRouting = true
+
+					metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+				})
+
+				When("runtime version >= 1.27", func() {
+					BeforeEach(func() {
+						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+					})
+
+					It("should successfully deploy all resources", func() {
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
+				})
+
+				When("runtime version < 1.27", func() {
+					BeforeEach(func() {
+						runtimeVersion = semver.MustParse("1.26.4")
+
+						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
+					})
+
+					It("should successfully deploy all resources", func() {
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
 				})
 			})
 		})

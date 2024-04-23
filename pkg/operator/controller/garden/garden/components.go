@@ -1087,8 +1087,9 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 	}
 
 	values := terminal.Values{
-		Image:          image.String(),
-		RuntimeVersion: r.RuntimeVersion,
+		Image:                       image.String(),
+		RuntimeVersion:              r.RuntimeVersion,
+		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
 	deployer := terminal.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values)

@@ -26,6 +26,11 @@ const (
 	managedResourceNameVirtual = "terminal-virtual"
 
 	name = "terminal-controller-manager"
+
+	portNameAdmission = "webhook"
+	portAdmission     = 9443
+	portNameMetrics   = "metrics"
+	portMetrics       = 8443
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -38,6 +43,8 @@ type Values struct {
 	Image string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended.
+	TopologyAwareRoutingEnabled bool
 }
 
 // New creates a new instance of DeployWaiter for the terminal-controller-manager.
@@ -73,7 +80,9 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		t.service(),
+	)
 	if err != nil {
 		return err
 	}
