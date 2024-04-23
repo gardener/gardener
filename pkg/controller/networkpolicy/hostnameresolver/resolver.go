@@ -58,6 +58,7 @@ type Provider interface {
 
 // HostResolver is used for getting endpoint subsets with resolved IPs.
 type HostResolver interface {
+	HasSynced() bool
 	Subset() []corev1.EndpointSubset
 }
 
