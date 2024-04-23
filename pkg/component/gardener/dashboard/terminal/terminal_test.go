@@ -212,6 +212,9 @@ var _ = Describe("Terminal", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
+				_, ok := fakeSecretManager.Get("terminal-controller-manager")
+				ExpectWithOffset(1, ok).To(BeTrue())
+
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObject...))
 			})
 

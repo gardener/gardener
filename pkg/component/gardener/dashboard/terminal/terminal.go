@@ -68,6 +68,11 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	_, err := t.reconcileSecretServerCert(ctx)
+	if err != nil {
+		return err
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
 	if err != nil {
 		return err
