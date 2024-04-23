@@ -226,7 +226,7 @@ var _ = Describe("CreateForCluster", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p).NotTo(BeNil())
 
-		_, ok := p.(*noOpResover)
-		Expect(ok).To(BeTrue(), "cast to noOpResover succeeds")
+		_, ok := p.(*noOpResolver)
+		Expect(ok).To(BeTrue(), "cast to noOpResolver succeeds")
 	})
 })
