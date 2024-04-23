@@ -47,7 +47,7 @@ func Copy(fs afero.Afero, source, destination string, permissions os.FileMode) e
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}
 
-	defer func() { runtime.HandleError(fs.Remove(tempDir)) }()
+	defer func() { runtime.HandleError(fs.RemoveAll(tempDir)) }()
 
 	tmpFilePath := filepath.Join(tempDir, filepath.Base(destination))
 
