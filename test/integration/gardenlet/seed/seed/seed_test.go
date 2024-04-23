@@ -196,6 +196,7 @@ var _ = Describe("Seed controller tests", func() {
 			&resourcemanager.SkipWebhookDeployment, true,
 		))
 		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CustomMetricsHPAForAPIServer, true))
 
 		By("Create DNS provider secret in garden namespace")
 		dnsProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
@@ -649,6 +650,7 @@ var _ = Describe("Seed controller tests", func() {
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("cluster-autoscaler")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-weeder")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dependency-watchdog-prober")})}),
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-custom-metrics")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machine-controller-manager")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("system")})}),
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("prometheus-cache")})}),
