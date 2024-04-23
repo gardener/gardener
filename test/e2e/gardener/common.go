@@ -20,7 +20,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -114,19 +113,11 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				{
 					Type: "local-ext-shoot",
 				},
+				{
+					Type: "local-ext-shoot-after-worker",
+				},
 			},
 		},
-	}
-
-	if ginkgo.Label("default").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) {
-		// TODO(maboehm): Add permanently to default shoot after v1.92
-		// The extension is not available in the previous gardener
-		// version (so during upgrade tests), so only set it for default tests.
-		shoot.Spec.Extensions = append(shoot.Spec.Extensions,
-			gardencorev1beta1.Extension{
-				Type: "local-ext-shoot-after-worker",
-			},
-		)
 	}
 	return shoot
 }
