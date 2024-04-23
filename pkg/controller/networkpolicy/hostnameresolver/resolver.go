@@ -41,7 +41,7 @@ type resolver struct {
 	lookup lookup
 }
 
-type noOpResover struct{}
+type noOpResolver struct{}
 
 type lookup interface {
 	LookupHost(ctx context.Context, host string) (addrs []string, err error)
@@ -58,6 +58,7 @@ type Provider interface {
 
 // HostResolver is used for getting endpoint subsets with resolved IPs.
 type HostResolver interface {
+	HasSynced() bool
 	Subset() []corev1.EndpointSubset
 }
 
@@ -205,21 +206,21 @@ func CreateForCluster(restConfig *rest.Config, log logr.Logger) (Provider, error
 }
 
 // NewNoOpProvider returns a no-op Provider.
-func NewNoOpProvider() Provider { return &noOpResover{} }
+func NewNoOpProvider() Provider { return &noOpResolver{} }
 
 // HasSynced always returns true.
-func (*noOpResover) HasSynced() bool { return true }
+func (*noOpResolver) HasSynced() bool { return true }
 
 // Start does nothing.
-func (*noOpResover) Start(_ context.Context) error {
+func (*noOpResolver) Start(_ context.Context) error {
 	return nil
 }
 
 // Subset returns an empty slice.
-func (*noOpResover) Subset() []corev1.EndpointSubset { return []corev1.EndpointSubset{} }
+func (*noOpResolver) Subset() []corev1.EndpointSubset { return []corev1.EndpointSubset{} }
 
 // WithCallback does nothing.
-func (*noOpResover) WithCallback(_ func()) {}
+func (*noOpResolver) WithCallback(_ func()) {}
 
 func equal(a, b []string) bool {
 	if (a == nil) != (b == nil) {

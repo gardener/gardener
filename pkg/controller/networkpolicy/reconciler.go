@@ -280,6 +280,13 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 		return err
 	}
 
+	if !r.Resolver.HasSynced() {
+		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", "allow-to-runtime-apiserver")
+		// The resolver triggers an event after it has been synced, which starts a new reconciliation.
+		// No need to raise an error here.
+		return nil
+	}
+
 	egressRules, err := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.Resolver.Subset()...)...)
 	if err != nil {
 		return err
