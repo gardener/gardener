@@ -109,7 +109,12 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 	)
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize()
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(
+		t.clusterRole(),
+		t.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
+		t.role(),
+		t.roleBinding(virtualGardenAccessSecret.ServiceAccountName),
+	)
 	if err != nil {
 		return err
 	}

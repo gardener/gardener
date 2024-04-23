@@ -15,6 +15,7 @@ import (
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -69,6 +70,10 @@ var _ = Describe("Terminal", func() {
 		service                   *corev1.Service
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
+		clusterRole               *rbacv1.ClusterRole
+		clusterRoleBinding        *rbacv1.ClusterRoleBinding
+		role                      *rbacv1.Role
+		roleBinding               *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -323,6 +328,122 @@ var _ = Describe("Terminal", func() {
 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-terminal-controller-manager"))
 		utilruntime.Must(references.InjectAnnotations(deployment))
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:terminal-controller-manager",
+				Labels: map[string]string{"app": "terminal-controller-manager"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"serviceaccounts"},
+					Verbs:     []string{"get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"serviceaccounts/token"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"admissionregistration.k8s.io"},
+					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+					Verbs:     []string{"list"},
+				},
+				{
+					APIGroups: []string{"authentication.k8s.io"},
+					Resources: []string{"tokenreviews"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"authorization.k8s.io"},
+					Resources: []string{"subjectaccessreviews"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"projects"},
+					Verbs:     []string{"get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"shoots/adminkubeconfig"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"dashboard.gardener.cloud"},
+					Resources: []string{"terminals"},
+					Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"dashboard.gardener.cloud"},
+					Resources: []string{"terminals/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:terminal-controller-manager",
+				Labels: map[string]string{"app": "terminal-controller-manager"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:terminal-controller-manager",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "terminal-controller-manager",
+				Namespace: "kube-system",
+			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:terminal-controller-manager",
+				Namespace: "kube-system",
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:terminal-controller-manager",
+				Namespace: "kube-system",
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:system:terminal-controller-manager",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "terminal-controller-manager",
+				Namespace: "kube-system",
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -420,7 +541,12 @@ var _ = Describe("Terminal", func() {
 					configMap,
 					deployment,
 				}
-				expectedVirtualObjects = []client.Object{}
+				expectedVirtualObjects = []client.Object{
+					clusterRole,
+					clusterRoleBinding,
+					role,
+					roleBinding,
+				}
 
 				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
