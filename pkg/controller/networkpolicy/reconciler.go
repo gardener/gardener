@@ -281,7 +281,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 	}
 
 	if !r.Resolver.HasSynced() {
-		log.Info("resolver has not synced yet. Skipping update of NetworkPolicyAllowToAPIServer.")
+		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", "allow-to-runtime-apiserver")
 		// The resolver triggers an event after it has been synced, which starts a new reconciliation.
 		// No need to raise an error here.
 		return nil
