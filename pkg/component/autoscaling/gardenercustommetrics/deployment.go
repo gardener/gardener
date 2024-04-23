@@ -45,6 +45,7 @@ func getLabels() map[string]string {
 
 func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.Deployment {
 	const tlsSecretMountPath = "/var/run/secrets/gardener.cloud/tls"
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
@@ -71,13 +72,13 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 					Containers: []corev1.Container{
 						{
 							Args: []string{
-								fmt.Sprintf("--secure-port=%d", metricsServerPort),
+								fmt.Sprintf("--secure-port=%d", servingPort),
 								"--tls-cert-file=" + filepath.Join(tlsSecretMountPath, secretsutils.DataKeyCertificate),
 								"--tls-private-key-file=" + filepath.Join(tlsSecretMountPath, secretsutils.DataKeyPrivateKey),
 								"--leader-election=true",
 								"--namespace=" + gcmx.namespace,
 								"--access-ip=$(POD_IP)",
-								fmt.Sprintf("--access-port=%d", metricsServerPort),
+								fmt.Sprintf("--access-port=%d", servingPort),
 								"--log-level=74",
 							},
 							Env: []corev1.EnvVar{
@@ -103,7 +104,7 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 							Name:            gcmxContainerName,
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: metricsServerPort,
+									ContainerPort: servingPort,
 									Name:          "metrics-server",
 									Protocol:      corev1.ProtocolTCP,
 								},

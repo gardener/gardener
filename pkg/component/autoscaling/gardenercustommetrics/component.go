@@ -79,11 +79,6 @@ func New(
 
 // Deploy implements [component.Deployer.Deploy].
 func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
-	serverCertificateSecret, err := gcmx.deployServerCertificate(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delpoy the gardener-custom-metrics server TLS certificate: %w", err)
-	}
-
 	caSecret, found := gcmx.secretsManager.Get(v1beta1constants.SecretNameCASeed)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
@@ -91,6 +86,11 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 	caBundle := caSecret.Data[secretsutils.DataKeyCertificateBundle]
 	if caBundle == nil {
 		return fmt.Errorf("secret %q does not contain a certificate bundle", v1beta1constants.SecretNameCASeed)
+	}
+
+	serverCertificateSecret, err := gcmx.deployServerCertificate(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delpoy the gardener-custom-metrics server TLS certificate: %w", err)
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -171,12 +171,9 @@ const (
 
 // deployServerCertificate deploys the gardener-custom-metric's server TLS certificate to a secret and returns the name
 // of the created secret.
+//
+// Remarks: This function requires the "ca-seed" secret to be present in the gardenerCustomMetrics.secretsManager
 func (gcmx *gardenerCustomMetrics) deployServerCertificate(ctx context.Context) (*corev1.Secret, error) {
-	_, found := gcmx.secretsManager.Get(v1beta1constants.SecretNameCASeed)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
-	}
-
 	serverCertificateSecret, err := gcmx.secretsManager.Generate(
 		ctx,
 		&secretsutils.CertificateSecretConfig{

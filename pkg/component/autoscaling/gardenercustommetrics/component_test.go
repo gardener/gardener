@@ -84,9 +84,10 @@ var _ = Describe("gardenerCustomMetrics", func() {
 	)
 
 	BeforeEach(func() {
+		const caBundle = "dummy bundle"
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		caBundle := "dummy bundle"
 
 		values := Values{
 			Image:             image,

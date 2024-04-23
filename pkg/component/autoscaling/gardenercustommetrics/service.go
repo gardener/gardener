@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	serviceName       = "gardener-custom-metrics"
-	metricsServerPort = 6443
+	serviceName = "gardener-custom-metrics"
+	servingPort = 6443
 )
 
 func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
@@ -45,7 +45,7 @@ func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 				{
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt32(metricsServerPort),
+					TargetPort: intstr.FromInt32(servingPort),
 				},
 			},
 			PublishNotReadyAddresses: true,
