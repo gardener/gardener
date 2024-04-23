@@ -110,6 +110,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("gardener-scheduler-virtual"),
 				healthyManagedResource("gardener-dashboard-runtime"),
 				healthyManagedResource("gardener-dashboard-virtual"),
+				healthyManagedResource("terminal-runtime"),
+				healthyManagedResource("terminal-virtual"),
 				healthyManagedResource("gardener-metrics-exporter-runtime"),
 				healthyManagedResource("gardener-metrics-exporter-virtual"),
 			))
