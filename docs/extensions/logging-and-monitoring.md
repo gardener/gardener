@@ -107,7 +107,7 @@ spec:
 #### Plutono
 
 A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the seed cluster's `garden` namespace for visualizing monitoring metrics and logs via dashboards.
-In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/seed=true` that contains the respective JSON documents, for example:
+In order to provide custom dashboards, create a `ConfigMap` in the `garden` namespace labelled with `dashboard.monitoring.gardener.cloud/seed=true` that contains the respective JSON documents, for example:
 
 ```yaml
 apiVersion: v1
@@ -118,7 +118,7 @@ metadata:
   name: extension-foo-my-custom-dashboard
   namespace: garden
 data:
-  my-metrics.json: <dashboard-JSON-document>
+  my-custom-dashboard.json: <dashboard-JSON-document>
 ```
 
 ### Shoot Cluster
@@ -203,7 +203,7 @@ data:
 ##### Plutono Dashboards
 
 A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the shoot cluster's namespace for visualizing monitoring metrics and logs via dashboards.
-In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/shoot=true` that contains the respective JSON documents, for example:
+In order to provide custom dashboards, create a `ConfigMap` in the shoot cluster's namespace labelled with `dashboard.monitoring.gardener.cloud/shoot=true` that contains the respective JSON documents, for example:
 
 ```yaml
 apiVersion: v1
@@ -214,7 +214,7 @@ metadata:
   name: extension-foo-my-custom-dashboard
   namespace: shoot--project--name
 data:
-  my-metrics.json: <dashboard-JSON-document>
+  my-custom-dashboard.json: <dashboard-JSON-document>
 ```
 
 ## Logging

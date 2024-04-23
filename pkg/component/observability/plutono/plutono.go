@@ -75,10 +75,8 @@ const (
 )
 
 var (
-	//go:embed dashboards/garden/garden
+	//go:embed dashboards/garden
 	gardenDashboards embed.FS
-	//go:embed dashboards/garden/global
-	gardenGlobalDashboards embed.FS
 	//go:embed dashboards/seed
 	seedDashboards embed.FS
 	//go:embed dashboards/shoot
@@ -88,8 +86,7 @@ var (
 	//go:embed dashboards/common
 	commonDashboards embed.FS
 
-	gardenDashboardsPath         = filepath.Join("dashboards", "garden", "garden")
-	gardenGlobalDashboardsPath   = filepath.Join("dashboards", "garden", "global")
+	gardenDashboardsPath         = filepath.Join("dashboards", "garden")
 	seedDashboardsPath           = filepath.Join("dashboards", "seed")
 	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
 	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
@@ -391,7 +388,7 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 	}
 
 	if p.values.IsGardenCluster {
-		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards, gardenGlobalDashboardsPath: gardenGlobalDashboards}
+		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
 
 		additionalDashboards, err := p.getAdditionalDashboards(ctx)
 		if err != nil {

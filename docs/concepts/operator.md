@@ -371,7 +371,7 @@ spec:
 ###### Plutono
 
 A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardener-operator` into the `garden` namespace for visualizing monitoring metrics and logs via dashboards.
-In order to provide custom dashboards, create a `ConfigMap` labelled with `dashboard.monitoring.gardener.cloud/garden=true` that contains the respective JSON documents, for example:
+In order to provide custom dashboards, create a `ConfigMap` in the `garden` namespace labelled with `dashboard.monitoring.gardener.cloud/garden=true` that contains the respective JSON documents, for example:
 
 ```yaml
 apiVersion: v1
@@ -382,7 +382,7 @@ metadata:
   name: my-custom-dashboard
   namespace: garden
 data:
-  my-metrics.json: <dashboard-JSON-document>
+  my-custom-dashboard.json: <dashboard-JSON-document>
 ```
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
