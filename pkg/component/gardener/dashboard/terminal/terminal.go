@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -82,6 +83,11 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
+	secretCARuntime, found := t.secretsManager.Get(operatorv1alpha1.SecretNameCARuntime)
+	if !found {
+		return fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCARuntime)
+	}
+
 	serverCertSecret, err := t.reconcileSecretServerCert(ctx)
 	if err != nil {
 		return err
@@ -117,6 +123,8 @@ func (t *terminal) Deploy(ctx context.Context) error {
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		crd,
+		t.mutatingWebhookConfiguration(secretCARuntime.Data[secretsutils.DataKeyCertificateBundle]),
+		t.validatingWebhookConfiguration(secretCARuntime.Data[secretsutils.DataKeyCertificateBundle]),
 		t.clusterRole(),
 		t.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
 		t.role(),

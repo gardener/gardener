@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -78,11 +79,14 @@ var _ = Describe("Terminal", func() {
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		serviceMonitor            *monitoringv1.ServiceMonitor
-		clusterRole               *rbacv1.ClusterRole
-		clusterRoleBinding        *rbacv1.ClusterRoleBinding
-		role                      *rbacv1.Role
-		roleBinding               *rbacv1.RoleBinding
-		crd                       *apiextensionsv1.CustomResourceDefinition
+
+		crd                            *apiextensionsv1.CustomResourceDefinition
+		mutatingWebhookConfiguration   *admissionregistrationv1.MutatingWebhookConfiguration
+		validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
+		clusterRole                    *rbacv1.ClusterRole
+		clusterRoleBinding             *rbacv1.ClusterRoleBinding
+		role                           *rbacv1.Role
+		roleBinding                    *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -369,6 +373,62 @@ var _ = Describe("Terminal", func() {
 			},
 		}
 
+		obj, err := runtime.Decode(crdCodec, []byte(rawCRD))
+		Expect(err).NotTo(HaveOccurred())
+		crd = obj.(*apiextensionsv1.CustomResourceDefinition)
+
+		mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "terminal-mutating-webhook-configuration",
+				Labels: map[string]string{
+					"app":                         "terminal-controller-manager",
+					"app.kubernetes.io/name":      "terminal",
+					"app.kubernetes.io/component": "admission-controller",
+				},
+			},
+			Webhooks: []admissionregistrationv1.MutatingWebhook{{
+				Name:                    "mutating-create-update-terminal.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: ptr.To("https://terminal-controller-manager." + namespace + ".svc/mutate-terminal")},
+				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"dashboard.gardener.cloud"},
+						APIVersions: []string{"v1alpha1"},
+						Resources:   []string{"terminals"},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				}},
+			}},
+		}
+
+		validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "terminal-validating-webhook-configuration",
+				Labels: map[string]string{
+					"app":                         "terminal-controller-manager",
+					"app.kubernetes.io/name":      "terminal",
+					"app.kubernetes.io/component": "admission-controller",
+				},
+			},
+			Webhooks: []admissionregistrationv1.ValidatingWebhook{{
+				Name:                    "validating-create-update-terminal.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				ClientConfig:            admissionregistrationv1.WebhookClientConfig{URL: ptr.To("https://terminal-controller-manager." + namespace + ".svc/validate-terminal")},
+				FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+				SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"dashboard.gardener.cloud"},
+						APIVersions: []string{"v1alpha1"},
+						Resources:   []string{"terminals"},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				}},
+			}},
+		}
+
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:system:terminal-controller-manager",
@@ -484,10 +544,6 @@ var _ = Describe("Terminal", func() {
 				Namespace: "kube-system",
 			}},
 		}
-
-		obj, err := runtime.Decode(crdCodec, []byte(rawCRD))
-		Expect(err).NotTo(HaveOccurred())
-		crd = obj.(*apiextensionsv1.CustomResourceDefinition)
 	})
 
 	JustBeforeEach(func() {
@@ -500,6 +556,7 @@ var _ = Describe("Terminal", func() {
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-garden-runtime", Namespace: namespace}})).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -588,6 +645,8 @@ var _ = Describe("Terminal", func() {
 				}
 				expectedVirtualObjects = []client.Object{
 					crd,
+					mutatingWebhookConfiguration,
+					validatingWebhookConfiguration,
 					clusterRole,
 					clusterRoleBinding,
 					role,
