@@ -16,6 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -58,9 +59,14 @@ type terminal struct {
 
 func (t *terminal) Deploy(ctx context.Context) error {
 	var (
-		runtimeRegistry       = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
-		managedResourceLabels = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
+		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		managedResourceLabels     = map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)}
+		virtualGardenAccessSecret = t.newVirtualGardenAccessSecret()
 	)
+
+	if err := virtualGardenAccessSecret.Reconcile(ctx, t.client); err != nil {
+		return err
+	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
 	if err != nil {
@@ -106,7 +112,7 @@ func (t *terminal) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return kubernetesutils.DeleteObjects(ctx, t.client, t.newVirtualGardenAccessSecret().Secret)
 }
 
 func (t *terminal) WaitCleanup(ctx context.Context) error {
