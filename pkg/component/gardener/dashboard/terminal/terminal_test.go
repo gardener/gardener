@@ -13,7 +13,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -28,6 +30,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/dashboard/terminal"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -45,6 +48,7 @@ var _ = Describe("Terminal", func() {
 		managedResourceNameVirtual = "terminal-virtual"
 		namespace                  = "some-namespace"
 
+		image                string
 		runtimeVersion       *semver.Version
 		topologyAwareRouting bool
 
@@ -64,11 +68,13 @@ var _ = Describe("Terminal", func() {
 		virtualGardenAccessSecret *corev1.Secret
 		service                   *corev1.Service
 		configMap                 *corev1.ConfigMap
+		deployment                *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 
+		image = "terminal-image:latest"
 		runtimeVersion = semver.MustParse("1.30.1")
 		topologyAwareRouting = false
 
@@ -177,14 +183,158 @@ var _ = Describe("Terminal", func() {
 			Data: map[string]string{"config.yaml": string(rawConfig)},
 		}
 		utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "terminal-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "terminal-controller-manager",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             ptr.To[int32](1),
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": "terminal-controller-manager"},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                              "terminal-controller-manager",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":                               "allowed",
+							"networking.gardener.cloud/to-public-networks":                                 "allowed",
+							"networking.gardener.cloud/to-private-networks":                                "allowed",
+							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
+						},
+					},
+					Spec: corev1.PodSpec{
+						PriorityClassName:            "gardener-garden-system-200",
+						AutomountServiceAccountToken: ptr.To(false),
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65532),
+						},
+						TerminationGracePeriodSeconds: ptr.To(int64(10)),
+						Containers: []corev1.Container{{
+							Name:            "terminal-controller-manager",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args: []string{
+								"--config-file=/etc/terminal-controller-manager/config.yaml",
+								"--zap-devel=false",
+							},
+							Env: []corev1.EnvVar{{
+								Name:  "KUBECONFIG",
+								Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: map[corev1.ResourceName]resource.Quantity{
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("50Mi"),
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "webhook",
+									ContainerPort: 9443,
+									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									Name:          "metrics",
+									ContainerPort: 8443,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.FromInt32(8081),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
+								FailureThreshold:    6,
+								SuccessThreshold:    1,
+								PeriodSeconds:       20,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt32(8081),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 5,
+								TimeoutSeconds:      5,
+								FailureThreshold:    6,
+								SuccessThreshold:    1,
+								PeriodSeconds:       10,
+							},
+							SecurityContext: &corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config",
+									MountPath: "/etc/terminal-controller-manager",
+								},
+								{
+									Name:      "server-cert",
+									MountPath: "/tmp/k8s-webhook-server/serving-certs",
+									ReadOnly:  true,
+								},
+								{
+									Name:      "server-cert",
+									MountPath: "/tmp/k8s-metrics-server/serving-certs",
+									ReadOnly:  true,
+								},
+							},
+						}},
+						Volumes: []corev1.Volume{
+							{
+								Name: "config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+										Items: []corev1.KeyToPath{{
+											Key:  "config.yaml",
+											Path: "config.yaml",
+										}},
+									},
+								},
+							},
+							{
+								Name: "server-cert",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "terminal-controller-manager",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-terminal-controller-manager"))
+		utilruntime.Must(references.InjectAnnotations(deployment))
 	})
 
 	JustBeforeEach(func() {
 		values = Values{
+			Image:                       image,
 			RuntimeVersion:              runtimeVersion,
 			TopologyAwareRoutingEnabled: topologyAwareRouting,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
+
+		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -268,6 +418,7 @@ var _ = Describe("Terminal", func() {
 				expectedRuntimeObjects = []client.Object{
 					service,
 					configMap,
+					deployment,
 				}
 				expectedVirtualObjects = []client.Object{}
 

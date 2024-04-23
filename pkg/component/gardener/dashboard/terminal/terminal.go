@@ -6,6 +6,7 @@ package terminal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -76,7 +77,12 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	_, err := t.reconcileSecretServerCert(ctx)
+	secretGenericTokenKubeconfig, found := t.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
+	serverCertSecret, err := t.reconcileSecretServerCert(ctx)
 	if err != nil {
 		return err
 	}
@@ -89,6 +95,7 @@ func (t *terminal) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		t.service(),
 		configMap,
+		t.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, serverCertSecret.Name, configMap.Name),
 	)
 	if err != nil {
 		return err
