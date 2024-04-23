@@ -6,6 +6,7 @@ package terminal_test
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 
 	"github.com/Masterminds/semver/v3"
@@ -16,8 +17,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -40,6 +43,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
+
+//go:embed assets/crd-dashboard.gardener.cloud_terminals.yaml
+var rawCRD string
 
 var _ = Describe("Terminal", func() {
 	var (
@@ -74,6 +80,7 @@ var _ = Describe("Terminal", func() {
 		clusterRoleBinding        *rbacv1.ClusterRoleBinding
 		role                      *rbacv1.Role
 		roleBinding               *rbacv1.RoleBinding
+		crd                       *apiextensionsv1.CustomResourceDefinition
 	)
 
 	BeforeEach(func() {
@@ -444,6 +451,10 @@ var _ = Describe("Terminal", func() {
 				Namespace: "kube-system",
 			}},
 		}
+
+		obj, err := runtime.Decode(crdCodec, []byte(rawCRD))
+		Expect(err).NotTo(HaveOccurred())
+		crd = obj.(*apiextensionsv1.CustomResourceDefinition)
 	})
 
 	JustBeforeEach(func() {
@@ -542,6 +553,7 @@ var _ = Describe("Terminal", func() {
 					deployment,
 				}
 				expectedVirtualObjects = []client.Object{
+					crd,
 					clusterRole,
 					clusterRoleBinding,
 					role,

@@ -2,13 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package terminal_test
+package terminal
 
 import (
-	"testing"
+	_ "embed"
+	"fmt"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -17,14 +16,12 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-func TestTerminal(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Gardener Dashboard Terminal Suite")
-}
-
 var (
 	crdScheme *runtime.Scheme
 	crdCodec  runtime.Codec
+
+	//go:embed assets/crd-dashboard.gardener.cloud_terminals.yaml
+	rawCRD string
 )
 
 func init() {
@@ -32,9 +29,27 @@ func init() {
 	utilruntime.Must(apiextensionsv1.AddToScheme(crdScheme))
 
 	var (
-		ser      = json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
 		versions = schema.GroupVersions([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 	)
 
 	crdCodec = serializer.NewCodecFactory(crdScheme).CodecForVersions(ser, ser, versions, versions)
+}
+
+func (t *terminal) crd() (*apiextensionsv1.CustomResourceDefinition, error) {
+	obj, err := runtime.Decode(crdCodec, []byte(rawCRD))
+	if err != nil {
+		return nil, err
+	}
+
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition but got %T", obj)
+	}
+
+	return crd, nil
 }

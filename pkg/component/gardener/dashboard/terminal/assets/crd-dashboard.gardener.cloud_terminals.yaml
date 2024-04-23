@@ -1,0 +1,668 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    app.kubernetes.io/component: controller-manager
+    app.kubernetes.io/name: terminal
+  name: terminals.dashboard.gardener.cloud
+spec:
+  group: dashboard.gardener.cloud
+  names:
+    kind: Terminal
+    listKind: TerminalList
+    plural: terminals
+    singular: terminal
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Terminal is the Schema for the terminals API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TerminalSpec defines the desired state of Terminal
+            properties:
+              host:
+                description: HostCluster defines the desired state of the resources
+                  related to the host cluster
+                properties:
+                  credentials:
+                    description: ClusterCredentials define the credentials to the
+                      host cluster
+                    properties:
+                      secretRef:
+                        description: |-
+                          SecretRef is a reference to a secret that contains the cluster specific credentials
+                          Either ShootRef, SecretRef or ServiceAccountRef is mandatory. ShootRef will be used if more than one ref is provided.
+                        properties:
+                          name:
+                            description: name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      serviceAccountRef:
+                        description: ServiceAccountRef is a reference to a service
+                          account that should be used, usually to manage resources
+                          on the same cluster as the service account is residing in
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                              TODO: this design is not final and this field is subject to change in the future.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      shootRef:
+                        description: ShootRef references the shoot cluster. The admin
+                          kubeconfig retrieved from the shoots/adminkubeconfig endpoint
+                          is used
+                        properties:
+                          name:
+                            description: Name is the name of the shoot cluster
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace of the shoot cluster
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
+                    type: object
+                  namespace:
+                    description: |-
+                      Namespace is the namespace where the pod resides in
+                      This field should not be set if TemporaryNamespace is set to true but must be set in case TemporaryNamespace is set to false.
+                    type: string
+                  pod:
+                    description: Pod defines the desired state of the pod
+                    properties:
+                      container:
+                        description: |-
+                          Container belonging to the pod.
+                          Cannot be updated.
+                        properties:
+                          args:
+                            description: |-
+                              Arguments to the entrypoint.
+                              The docker image's CMD is used if this is not provided.
+                              Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                              cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax
+                              can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded,
+                              regardless of whether the variable exists or not.
+                              Cannot be updated.
+                              More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+                            items:
+                              type: string
+                            type: array
+                          command:
+                            description: |-
+                              Entrypoint array. Not executed within a shell.
+                              The docker image's ENTRYPOINT is used if this is not provided.
+                              Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                              cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax
+                              can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded,
+                              regardless of whether the variable exists or not.
+                              Cannot be updated.
+                              More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+                            items:
+                              type: string
+                            type: array
+                          image:
+                            description: |-
+                              Image defines the image used for the container.
+                              As this image is also used for the "setup" init container, the `/bin/cp` binary has to be part of the image
+                            type: string
+                          privileged:
+                            description: |-
+                              Run container in privileged mode.
+                              Processes in privileged containers are essentially equivalent to root on the host.
+                              Defaults to false.
+                            type: boolean
+                          resources:
+                            description: |-
+                              Compute Resources required by this container.
+                              Cannot be updated.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+                            properties:
+                              claims:
+                                description: |-
+                                  Claims lists the names of resources, defined in spec.resourceClaims,
+                                  that are used by this container.
+
+
+                                  This is an alpha field and requires enabling the
+                                  DynamicResourceAllocation feature gate.
+
+
+                                  This field is immutable. It can only be set for containers.
+                                items:
+                                  description: ResourceClaim references one entry
+                                    in PodSpec.ResourceClaims.
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name must match the name of one entry in pod.spec.resourceClaims of
+                                        the Pod where this field is used. It makes that resource available
+                                        inside a container.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Limits describes the maximum amount of compute resources allowed.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Requests describes the minimum amount of compute resources required.
+                                  If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                                  otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                            type: object
+                        required:
+                        - image
+                        type: object
+                      containerImage:
+                        description: |-
+                          ContainerImage defines the image used for the container.
+                          ContainerImage is ignored if Container is set.
+                          Deprecated: Use `Container.Image` instead.
+                        type: string
+                      hostNetwork:
+                        description: |-
+                          Host networking requested for this pod. Use the host's network namespace.
+                          Default to false.
+                        type: boolean
+                      hostPID:
+                        description: |-
+                          Use the host's pid namespace.
+                          Default to false.
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Map of string keys and values that can be used to organize and categorize
+                          (scope and select) objects. Will be set as labels of the pod
+                        type: object
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          NodeSelector is a selector which must be true for the pod to fit on a node.
+                          Selector which must match a node's labels for the pod to be scheduled on that node.
+                        type: object
+                      privileged:
+                        description: |-
+                          Run container in privileged mode.
+                          Privileged is ignored if Container is set.
+                          Processes in privileged containers are essentially equivalent to root on the host.
+                          Defaults to false.
+                          Deprecated: Use `Container.Privileged` instead.
+                        type: boolean
+                    type: object
+                  temporaryNamespace:
+                    description: |-
+                      TemporaryNamespace is a flag to indicate if the namespace should be ephemeral. If true, the namespace will be created and when the terminal is deleted, the namespace is also deleted.
+                      If true, the mutating webhook makes sure that a temporary namespace is set; in this case you cannot choose the namespace
+                      This field should be false if Namespace is set. You cannot define the name of the temporary namespace.
+                    type: boolean
+                required:
+                - credentials
+                - pod
+                type: object
+              identifier:
+                type: string
+              target:
+                description: TargetCluster defines the desired state of the resources
+                  related to the target cluster
+                properties:
+                  apiServer:
+                    description: APIServer references the kube-apiserver of the target
+                      cluster.
+                    properties:
+                      caData:
+                        description: CAData holds PEM-encoded bytes (typically read
+                          from a root certificates bundle).
+                        format: byte
+                        nullable: true
+                        type: string
+                      server:
+                        description: Server is the address of the target kubernetes
+                          cluster (https://hostname:port). The address should be accessible
+                          from the terminal pod within the host cluster.
+                        type: string
+                      serviceRef:
+                        description: ServiceRef is a reference to the kube-apiserver
+                          service on the host cluster that points to the kube-apiserver
+                          of the target cluster. If no namespace is set on the object
+                          reference, it is defaulted to Spec.Host.Namespace.
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                              TODO: this design is not final and this field is subject to change in the future.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  apiServerServiceRef:
+                    description: |-
+                      APIServerServiceRef is a reference to the kube-apiserver service on the host cluster that points to the kube-apiserver of the target cluster. If no namespace is set on the object reference, it is defaulted to Spec.Host.Namespace.
+                      Deprecated: use APIServer.ServiceRef instead
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      fieldPath:
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
+                        type: string
+                      kind:
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                        type: string
+                      resourceVersion:
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                        type: string
+                      uid:
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  authorization:
+                    description: |-
+                      Authorization the desired (temporary) privileges the "access" service account should receive.
+                      Either rbac role bindings can be defined, or the service account can be added as member to a gardener project with specific roles. In the latter case, gardener manages the rbac.
+                    properties:
+                      projectMemberships:
+                        description: ProjectMemberships defines the (temporary) project
+                          memberships of the "access" service account. Each project
+                          is updated by using the target.credential, hence the target
+                          has the be the (virtual) garden cluster.
+                        items:
+                          description: ProjectMembership defines the (temporary) project
+                            membership of the "access" service account. The project
+                            is updated by using the target.credential, hence the target
+                            has the be the (virtual) garden cluster.
+                          properties:
+                            projectName:
+                              description: ProjectName is the name of the project,
+                                the "access" service account should be member of
+                              type: string
+                            roles:
+                              description: Roles defines the gardener roles the "access"
+                                service account should receive, e.g. admin, viewer,
+                                uam.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - projectName
+                          - roles
+                          type: object
+                        type: array
+                      roleBindings:
+                        description: RoleBindings defines the desired (temporary)
+                          rbac role bindings the "access" service account should be
+                          assigned to
+                        items:
+                          properties:
+                            bindingKind:
+                              description: BindingKind defines the desired role binding.
+                                ClusterRoleBinding will result in a ClusterRoleBinding.
+                                RoleBinding will result in a RoleBinding.
+                              enum:
+                              - ClusterRoleBinding
+                              - RoleBinding
+                              - ""
+                              type: string
+                            nameSuffix:
+                              description: NameSuffix is the name suffix of the temporary
+                                (Cluster)RoleBinding that will be created. NameSuffix
+                                should be unique
+                              type: string
+                            roleRef:
+                              description: RoleRef can reference a Role in the current
+                                namespace or a ClusterRole in the global namespace.
+                              properties:
+                                apiGroup:
+                                  description: APIGroup is the group for the resource
+                                    being referenced
+                                  type: string
+                                kind:
+                                  description: Kind is the type of resource being
+                                    referenced
+                                  type: string
+                                name:
+                                  description: Name is the name of resource being
+                                    referenced
+                                  type: string
+                              required:
+                              - apiGroup
+                              - kind
+                              - name
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          required:
+                          - bindingKind
+                          - nameSuffix
+                          - roleRef
+                          type: object
+                        type: array
+                    type: object
+                  bindingKind:
+                    description: |-
+                      BindingKind defines the desired role binding. ClusterRoleBinding will result in a ClusterRoleBinding. RoleBinding will result in a RoleBinding.
+                      Deprecated: use Authorization.RoleBindings[].BindingKind instead
+                    enum:
+                    - ClusterRoleBinding
+                    - RoleBinding
+                    - ""
+                    type: string
+                  cleanupProjectMembership:
+                    description: |-
+                      CleanupProjectMembership indicates if the service account referenced by credentials.serviceAccountRef should be removed as project member if not referenced anymore by a Terminal resource.
+                      If true, the credentials.serviceAccountRef.namespace must be the same as the Terminal resource.
+                    type: boolean
+                  credentials:
+                    description: ClusterCredentials define the credentials to the
+                      target cluster
+                    properties:
+                      secretRef:
+                        description: |-
+                          SecretRef is a reference to a secret that contains the cluster specific credentials
+                          Either ShootRef, SecretRef or ServiceAccountRef is mandatory. ShootRef will be used if more than one ref is provided.
+                        properties:
+                          name:
+                            description: name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      serviceAccountRef:
+                        description: ServiceAccountRef is a reference to a service
+                          account that should be used, usually to manage resources
+                          on the same cluster as the service account is residing in
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                              TODO: this design is not final and this field is subject to change in the future.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      shootRef:
+                        description: ShootRef references the shoot cluster. The admin
+                          kubeconfig retrieved from the shoots/adminkubeconfig endpoint
+                          is used
+                        properties:
+                          name:
+                            description: Name is the name of the shoot cluster
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace of the shoot cluster
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
+                    type: object
+                  kubeconfigContextNamespace:
+                    description: KubeconfigContextNamespace is a reference to the
+                      namespace within the host cluster that should be used as default
+                      in the kubeconfig context
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is a reference to the namespace within the target cluster in which the resources should be placed.
+                      This field should not be set if TemporaryNamespace is set to true
+                    type: string
+                  roleName:
+                    description: |-
+                      RoleName is the name of the ClusterRole the "access" service account is bound to.
+                      Deprecated: use Authorization.RoleBindings[].RoleRef.NameSuffix instead
+                    type: string
+                  temporaryNamespace:
+                    description: |-
+                      TemporaryNamespace is a flag to indicate if the namespace should be ephemeral. If true, the namespace will be created and when the terminal is deleted, the namespace is also deleted.
+                      If true, the mutating webhook makes sure that a temporary namespace is set; in this case you cannot choose the namespace
+                      This field should be false if Namespace is set. You cannot define the name of the temporary namespace.
+                    type: boolean
+                required:
+                - credentials
+                - kubeconfigContextNamespace
+                type: object
+            required:
+            - host
+            - identifier
+            - target
+            type: object
+          status:
+            description: TerminalStatus defines the observed state of Terminal
+            properties:
+              attachServiceAccountName:
+                description: AttachServiceAccountName is the name of service account
+                  on the host cluster
+                type: string
+              lastError:
+                description: LastError contains details about the last error that
+                  occurred.
+                properties:
+                  description:
+                    description: Description is a human-readable message indicating
+                      details about the last error.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the error was reported
+                    format: date-time
+                    type: string
+                required:
+                - description
+                type: object
+              lastOperation:
+                description: LastOperation indicates the type and the state of the
+                  last operation, along with a description message.
+                properties:
+                  description:
+                    description: A human-readable message indicating details about
+                      the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the operation state transitioned from one
+                      to another.
+                    format: date-time
+                    type: string
+                  state:
+                    description: Status of the last operation, one of Processing,
+                      Succeeded, Error.
+                    type: string
+                  type:
+                    description: Type of the last operation, one of Reconcile, Delete.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - state
+                - type
+                type: object
+              podName:
+                description: PodName is the name of the pod on the host cluster
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
