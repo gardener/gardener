@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -76,6 +77,7 @@ var _ = Describe("Terminal", func() {
 		service                   *corev1.Service
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
+		serviceMonitor            *monitoringv1.ServiceMonitor
 		clusterRole               *rbacv1.ClusterRole
 		clusterRoleBinding        *rbacv1.ClusterRoleBinding
 		role                      *rbacv1.Role
@@ -336,6 +338,37 @@ var _ = Describe("Terminal", func() {
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-terminal-controller-manager"))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-terminal-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port:      "metrics",
+					Scheme:    "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+						Key:                  "token",
+					}},
+					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+						{
+							Action: "labeldrop",
+							Regex:  `url`,
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^()$`,
+						},
+					},
+				}},
+			},
+		}
+
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:system:terminal-controller-manager",
@@ -551,6 +584,7 @@ var _ = Describe("Terminal", func() {
 					service,
 					configMap,
 					deployment,
+					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
 					crd,
