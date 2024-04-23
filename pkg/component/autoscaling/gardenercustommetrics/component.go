@@ -84,6 +84,15 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to delpoy the gardener-custom-metrics server TLS certificate: %w", err)
 	}
 
+	caSecret, found := gcmx.secretsManager.Get(v1beta1constants.SecretNameCASeed)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
+	}
+	caBundle := caSecret.Data[secretsutils.DataKeyCertificateBundle]
+	if caBundle == nil {
+		return fmt.Errorf("secret %q does not contain a certificate bundle", v1beta1constants.SecretNameCASeed)
+	}
+
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	resources, err := registry.AddAllAndSerialize(
@@ -96,7 +105,7 @@ func (gcmx *gardenerCustomMetrics) Deploy(ctx context.Context) error {
 		gcmx.authReaderRoleBinding(),
 		gcmx.deployment(serverCertificateSecret.Name),
 		gcmx.service(),
-		gcmx.apiService(),
+		gcmx.apiService(caBundle),
 		gcmx.pdb(),
 		gcmx.vpa(),
 	)

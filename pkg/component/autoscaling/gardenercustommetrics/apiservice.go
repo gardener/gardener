@@ -20,13 +20,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func (gcmx *gardenerCustomMetrics) apiService() *apiregistrationv1.APIService {
+func (gcmx *gardenerCustomMetrics) apiService(caBundle []byte) *apiregistrationv1.APIService {
 	return &apiregistrationv1.APIService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "v1beta2.custom.metrics.k8s.io",
 			Labels: getLabels(),
 		},
 		Spec: apiregistrationv1.APIServiceSpec{
+			CABundle: caBundle,
 			Service: &apiregistrationv1.ServiceReference{
 				Name:      serviceName,
 				Namespace: gcmx.namespace,
@@ -36,9 +37,6 @@ func (gcmx *gardenerCustomMetrics) apiService() *apiregistrationv1.APIService {
 			Version:              "v1beta2",
 			GroupPriorityMinimum: 100,
 			VersionPriority:      200,
-			// The following enables MITM attack between seed kube-apiserver and GCMx. Not ideal, but it's on par with
-			// the metrics-server setup. For more information, see https://github.com/kubernetes-sigs/metrics-server/issues/544
-			InsecureSkipTLSVerify: true,
 		},
 	}
 }

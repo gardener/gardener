@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -85,6 +86,8 @@ var _ = Describe("gardenerCustomMetrics", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
+		caBundle := "dummy bundle"
+
 		values := Values{
 			Image:             image,
 			KubernetesVersion: semver.MustParse("1.25.5"),
@@ -93,7 +96,13 @@ var _ = Describe("gardenerCustomMetrics", func() {
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace}})).To(Succeed())
+		caSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace},
+			Data: map[string][]byte{
+				secretsutils.DataKeyCertificateBundle: []byte(caBundle),
+			},
+		}
+		Expect(c.Create(ctx, caSecret)).To(Succeed())
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -417,16 +426,16 @@ var _ = Describe("gardenerCustomMetrics", func() {
 				},
 			},
 			Spec: apiregistrationv1.APIServiceSpec{
+				CABundle: []byte(caBundle),
 				Service: &apiregistrationv1.ServiceReference{
 					Name:      "gardener-custom-metrics",
 					Namespace: namespace,
 					Port:      ptr.To[int32](443),
 				},
-				Group:                 "custom.metrics.k8s.io",
-				Version:               "v1beta2",
-				GroupPriorityMinimum:  100,
-				VersionPriority:       200,
-				InsecureSkipTLSVerify: true,
+				Group:                "custom.metrics.k8s.io",
+				Version:              "v1beta2",
+				GroupPriorityMinimum: 100,
+				VersionPriority:      200,
 			},
 		}
 		podDisruptionBudgetFor = func(k8sVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
