@@ -22,7 +22,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
-const serviceName = "gardener-custom-metrics"
+const (
+	serviceName       = "gardener-custom-metrics"
+	metricsServerPort = 6443
+)
 
 func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 	// This service intentionally does not contain a pod selector. As a result, KCM does not perform any endpoint management.
@@ -42,7 +45,7 @@ func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 				{
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt32(6443),
+					TargetPort: intstr.FromInt32(metricsServerPort),
 				},
 			},
 			PublishNotReadyAddresses: true,
