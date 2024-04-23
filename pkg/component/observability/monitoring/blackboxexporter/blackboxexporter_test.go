@@ -232,6 +232,7 @@ spec:
       priorityClassName: ` + priorityClassName + `
       securityContext:
         fsGroup: 65534
+        runAsNonRoot: true
         runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault

@@ -978,6 +978,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 				PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystemCritical,
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
+					RunAsNonRoot: ptr.To(true),
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},

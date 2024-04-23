@@ -288,6 +288,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 					Spec: corev1.PodSpec{
 						PriorityClassName: "system-cluster-critical",
 						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot:       ptr.To(true),
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](65534),
 							SupplementalGroups: []int64{1},
