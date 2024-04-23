@@ -5,40 +5,21 @@
 package terminal
 
 import (
-	"encoding/json"
-	"fmt"
+	"strconv"
 
-	terminalv1alpha1 "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/ptr"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const dataKeyConfig = "config.yaml"
 
-func (t *terminal) configMap() (*corev1.ConfigMap, error) {
-	config := &terminalv1alpha1.ControllerManagerConfiguration{
-		APIVersion: "dashboard.gardener.cloud/v1alpha1",
-		Kind:       "ControllerManagerConfiguration",
-		Server: terminalv1alpha1.ServerConfiguration{
-			HealthProbes: &terminalv1alpha1.Server{Port: portProbes},
-			Metrics:      &terminalv1alpha1.Server{Port: portMetrics},
-		},
-		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-			LeaderElect:       ptr.To(true),
-			ResourceNamespace: metav1.NamespaceSystem,
-		},
-		HonourServiceAccountRefHostCluster: ptr.To(false),
-	}
-
-	rawConfig, err := json.Marshal(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed marshalling config: %w", err)
-	}
+func (t *terminal) configMap() *corev1.ConfigMap {
+	// This is the name of ServiceAccounts when the Gardener Dashboard creates Terminal resources, see
+	// https://github.com/gardener/dashboard/blob/b99a6ef584eec26dee95028d755f5ebdf5973b2c/backend/lib/services/terminals/index.js#L45-L46
+	dashboardServiceAccountName := "dashboard-webterminal"
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -46,9 +27,25 @@ func (t *terminal) configMap() (*corev1.ConfigMap, error) {
 			Namespace: t.namespace,
 			Labels:    getLabels(),
 		},
-		Data: map[string]string{dataKeyConfig: string(rawConfig)},
+		Data: map[string]string{dataKeyConfig: `apiVersion: dashboard.gardener.cloud/v1alpha1
+kind: ControllerManagerConfiguration
+controllers:
+  serviceAccount:
+    allowedServiceAccountNames:
+    - ` + dashboardServiceAccountName + `
+honourCleanupProjectMembership: true
+honourServiceAccountRefHostCluster: false
+leaderElection:
+  leaderElect: true
+  resourceNamespace: ` + metav1.NamespaceSystem + `
+server:
+  healthProbes:
+    port: ` + strconv.Itoa(portProbes) + `
+  metrics:
+    port: ` + strconv.Itoa(portMetrics) + `
+`},
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return configMap, nil
+	return configMap
 }

@@ -7,10 +7,8 @@ package terminal_test
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 
 	"github.com/Masterminds/semver/v3"
-	terminalv1alpha1 "github.com/gardener/terminal-controller-manager/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -25,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -177,28 +174,29 @@ var _ = Describe("Terminal", func() {
 			},
 		}
 
-		config := &terminalv1alpha1.ControllerManagerConfiguration{
-			APIVersion: "dashboard.gardener.cloud/v1alpha1",
-			Kind:       "ControllerManagerConfiguration",
-			Server: terminalv1alpha1.ServerConfiguration{
-				HealthProbes: &terminalv1alpha1.Server{Port: 8081},
-				Metrics:      &terminalv1alpha1.Server{Port: 8443},
-			},
-			LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:       ptr.To(true),
-				ResourceNamespace: "kube-system",
-			},
-			HonourServiceAccountRefHostCluster: ptr.To(false),
-		}
-		rawConfig, err := json.Marshal(config)
-		Expect(err).NotTo(HaveOccurred())
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "terminal-controller-manager",
 				Namespace: namespace,
 				Labels:    map[string]string{"app": "terminal-controller-manager"},
 			},
-			Data: map[string]string{"config.yaml": string(rawConfig)},
+			Data: map[string]string{"config.yaml": `apiVersion: dashboard.gardener.cloud/v1alpha1
+kind: ControllerManagerConfiguration
+controllers:
+  serviceAccount:
+    allowedServiceAccountNames:
+    - dashboard-webterminal
+honourCleanupProjectMembership: true
+honourServiceAccountRefHostCluster: false
+leaderElection:
+  leaderElect: true
+  resourceNamespace: kube-system
+server:
+  healthProbes:
+    port: 8081
+  metrics:
+    port: 8443
+`},
 		}
 		utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 

@@ -93,10 +93,7 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	configMap, err := t.configMap()
-	if err != nil {
-		return err
-	}
+	configMap := t.configMap()
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		t.service(),
