@@ -11,6 +11,9 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"internal/v1alpha1": {
 		"storage-version-gc": {},
 	},
+	"admissionregistration/v1beta1": {
+		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.28"},
+	},
 	"apps/v1": {
 		"daemonset":   {},
 		"deployment":  {},
@@ -57,6 +60,9 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"extensions/v1beta1": {
 		"disruption": {},
 	},
+	"networking/v1alpha1": {
+		"service-cidr-controller": {AddedInVersion: "1.29"},
+	},
 	"policy/v1": {
 		"disruption": {},
 	},
@@ -69,6 +75,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"v1": {
 		"attachdetach":                         {},
 		"bootstrapsigner":                      {},
+		"cloud-node":                           {},
 		"cloud-node-lifecycle":                 {},
 		"cronjob":                              {},
 		"csrapproving":                         {},
@@ -98,10 +105,11 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"root-ca-cert-publisher":               {},
 		"route":                                {},
 		"service":                              {},
-		"service-cidr":                         {AddedInVersion: "1.29"},
+		"service-cidr-controller":              {AddedInVersion: "1.29"},
 		"serviceaccount":                       {},
 		"serviceaccount-token":                 {},
 		"statefulset":                          {},
+		"taint-eviction-controller":            {AddedInVersion: "1.29"},
 		"tokencleaner":                         {},
 		"ttl":                                  {},
 		"ttl-after-finished":                   {},
