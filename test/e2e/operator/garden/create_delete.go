@@ -96,6 +96,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("prometheus-operator"),
 				healthyManagedResource("alertmanager-garden"),
 				healthyManagedResource("prometheus-garden"),
+				healthyManagedResource("prometheus-longterm"),
 				healthyManagedResource("blackbox-exporter"),
 				healthyManagedResource("garden-system"),
 				healthyManagedResource("garden-system-virtual"),

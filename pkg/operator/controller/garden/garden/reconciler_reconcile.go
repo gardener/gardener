@@ -452,17 +452,24 @@ func (r *Reconciler) reconcile(
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
 		})
-		deployPrometheus = g.Add(flow.Task{
-			Name: "Deploying Prometheus",
+		deployPrometheusGarden = g.Add(flow.Task{
+			Name: "Deploying Garden Prometheus",
 			Fn: func(ctx context.Context) error {
-				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheus, virtualClusterClient)
+				return r.deployGardenPrometheus(ctx, log, secretsManager, c.prometheusGarden, virtualClusterClient)
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD, waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
 		_ = g.Add(flow.Task{
+			Name: "Deploying long-term Prometheus",
+			Fn: func(ctx context.Context) error {
+				return r.deployLongTermPrometheus(ctx, secretsManager, c.prometheusLongTerm)
+			},
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD, deployPrometheusGarden),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploying blackbox-exporter",
 			Fn:           c.blackboxExporter.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady, deployPrometheus),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAPIServerIsReady, deployPrometheusGarden),
 		})
 
 		_ = g.Add(flow.Task{
@@ -711,6 +718,16 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 	}
 
 	return component.OpWait(dashboard).Deploy(ctx)
+}
+
+func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, secretsManager secretsmanager.Interface, prometheus prometheus.Interface) error {
+	// fetch auth secret for ingress
+	credentialsSecret, found := secretsManager.Get(v1beta1constants.SecretNameObservabilityIngress)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngress)
+	}
+	prometheus.SetIngressAuthSecret(credentialsSecret)
+	return prometheus.Deploy(ctx)
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

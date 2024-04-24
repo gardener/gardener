@@ -27,6 +27,8 @@ const (
 	ImageNameConfigmapReloader = "configmap-reloader"
 	// ImageNameCoredns is a constant for an image in the image vector with name 'coredns'.
 	ImageNameCoredns = "coredns"
+	// ImageNameCortex is a constant for an image in the image vector with name 'cortex'.
+	ImageNameCortex = "cortex"
 	// ImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
 	ImageNameDependencyWatchdog = "dependency-watchdog"
 	// ImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.

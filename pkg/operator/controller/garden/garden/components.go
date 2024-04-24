@@ -79,6 +79,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -134,7 +135,8 @@ type components struct {
 	vali                          component.Deployer
 	prometheusOperator            component.DeployWaiter
 	alertManager                  alertmanager.Interface
-	prometheus                    prometheus.Interface
+	prometheusGarden              prometheus.Interface
+	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              blackboxexporter.Interface
 }
 
@@ -285,7 +287,11 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.prometheus, err = r.newPrometheus(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.prometheusGarden, err = r.newPrometheusGarden(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.prometheusLongTerm, err = r.newPrometheusLongTerm(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1154,7 +1160,7 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 	})
 }
 
-func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
 	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "garden",
 		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
@@ -1192,6 +1198,52 @@ func (r *Reconciler) newPrometheus(log logr.Logger, garden *operatorv1alpha1.Gar
 			PVCNames: []string{
 				"prometheus-db-garden-prometheus-0",
 				"prometheus-db-garden-prometheus-1",
+			},
+		},
+	})
+}
+
+func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
+	imageCortex, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCortex)
+	if err != nil {
+		return nil, err
+	}
+
+	return sharedcomponent.NewPrometheus(log, r.RuntimeClientSet.Client(), r.GardenNamespace, prometheus.Values{
+		Name:              "longterm",
+		PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
+		StorageCapacity:   resource.MustParse(getValidVolumeSize(garden.Spec.RuntimeCluster.Volume, "100Gi")),
+		Replicas:          2,
+		RetentionSize:     "80GB",
+		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
+		RuntimeVersion:    r.RuntimeVersion,
+		VPAMaxAllowed: &corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("4"),
+			corev1.ResourceMemory: resource.MustParse("50G"),
+		},
+		AdditionalPodLabels: map[string]string{
+			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		CentralConfigs: prometheus.CentralConfigs{
+			PrometheusRules: longtermprometheus.CentralPrometheusRules(),
+			ScrapeConfigs:   longtermprometheus.CentralScrapeConfigs(),
+		},
+		Ingress: &prometheus.IngressValues{
+			Host:                   "prometheus-longterm." + ingressDomain,
+			SecretsManager:         secretsManager,
+			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
+			WildcardCertSecretName: wildcardCertSecretName,
+		},
+		Cortex: &prometheus.CortexValues{
+			Image:         imageCortex.String(),
+			CacheValidity: 7 * 24 * time.Hour, // 1 week
+		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "availability-prometheus",
+			OldSubPath:      ptr.To("/"),
+			PVCNames: []string{
+				"prometheus-availability-db-availability-prometheus-0",
+				"prometheus-availability-db-availability-prometheus-1",
 			},
 		},
 	})

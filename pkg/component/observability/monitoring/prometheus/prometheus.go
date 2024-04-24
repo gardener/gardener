@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
+func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.ConfigMap) *monitoringv1.Prometheus {
 	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.Name,
@@ -137,6 +137,11 @@ func (p *prometheus) prometheus(takeOverOldPV bool) *monitoringv1.Prometheus {
 			Command:         []string{"/bin/sh", "-c"},
 			Args:            []string{arg},
 		})
+	}
+
+	if p.values.Cortex != nil {
+		obj.Spec.Containers = append(obj.Spec.Containers, p.cortexContainer())
+		obj.Spec.Volumes = append(obj.Spec.Volumes, p.cortexVolume(cortexConfigMap.Name))
 	}
 
 	return obj

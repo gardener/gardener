@@ -28,9 +28,7 @@ import (
 )
 
 func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	updateMode, controlledValuesRequestsOnly, containerScalingModeOff := vpaautoscalingv1.UpdateModeAuto, vpaautoscalingv1.ContainerControlledValuesRequestsOnly, vpaautoscalingv1.ContainerScalingModeOff
-
-	return &vpaautoscalingv1.VerticalPodAutoscaler{
+	obj := &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
 			Namespace: p.namespace,
@@ -45,7 +43,7 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 				Name:       p.values.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &updateMode,
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
@@ -58,14 +56,23 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 							corev1.ResourceCPU:    resource.MustParse("4"),
 							corev1.ResourceMemory: resource.MustParse("28G"),
 						}),
-						ControlledValues: &controlledValuesRequestsOnly,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
 						ContainerName: "config-reloader",
-						Mode:          &containerScalingModeOff,
+						Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 					},
 				},
 			},
 		},
 	}
+
+	if p.values.Cortex != nil {
+		obj.Spec.ResourcePolicy.ContainerPolicies = append(obj.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName: containerNameCortex,
+			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+		})
+	}
+
+	return obj
 }

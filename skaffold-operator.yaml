@@ -117,6 +117,7 @@ build:
             - pkg/component/observability/monitoring/prometheus/aggregate
             - pkg/component/observability/monitoring/prometheus/cache
             - pkg/component/observability/monitoring/prometheus/garden
+            - pkg/component/observability/monitoring/prometheus/longterm
             - pkg/component/observability/monitoring/prometheus/seed
             - pkg/component/observability/monitoring/prometheusoperator
             - pkg/component/observability/monitoring/utils

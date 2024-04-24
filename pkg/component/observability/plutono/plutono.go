@@ -351,10 +351,10 @@ datasources:
 `
 
 	if p.values.IsGardenCluster {
-		datasource += `- name: availability-prometheus
+		datasource += `- name: prometheus-longterm
   type: prometheus
   access: proxy
-  url: http://` + p.namespace + `-avail-prom:80
+  url: http://prometheus-longterm:80
   basicAuth: false
   isDefault: false
   jsonData:
@@ -821,8 +821,8 @@ func (p *plutono) getPodLabels() map[string]string {
 
 	if p.values.IsGardenCluster {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("garden-avail-prom", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-garden", 9090):   v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("prometheus-longterm", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
 		return labels

@@ -215,6 +215,22 @@ images:
     value:
     - type: 'githubTeam'
       teamname: 'gardener/monitoring-maintainers'
+- name: cortex
+  repository: quay.io/cortexproject/cortex
+  tag: v1.15.3
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: public
+      authentication_enforced: true
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics

@@ -36,7 +36,7 @@
       "type": "text"
     },
     {
-      "datasource": "availability-prometheus",
+      "datasource": "prometheus-longterm",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -101,7 +101,7 @@
       "id": 27,
       "panels": [
         {
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -311,7 +311,7 @@
           "type": "table"
         },
         {
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "description": "No data means that no shoot cluster exceeds the SLO",
           "fieldConfig": {
             "defaults": {
@@ -404,7 +404,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -546,7 +546,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -749,7 +749,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -945,7 +945,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1142,7 +1142,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1339,7 +1339,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1536,7 +1536,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1733,7 +1733,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -1930,7 +1930,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -2127,7 +2127,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -2324,7 +2324,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -2536,7 +2536,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -2754,7 +2754,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -2976,7 +2976,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -3198,7 +3198,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -3420,7 +3420,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -3642,7 +3642,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -3864,7 +3864,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -4086,7 +4086,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -4308,7 +4308,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "availability-prometheus",
+          "datasource": "prometheus-longterm",
           "decimals": 2,
           "description": "",
           "fieldConfig": {
@@ -4529,7 +4529,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "availability-prometheus",
+        "datasource": "prometheus-longterm",
         "definition": "label_values(probe_failure, iaas)",
         "error": null,
         "hide": 0,
@@ -4556,7 +4556,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "availability-prometheus",
+        "datasource": "prometheus-longterm",
         "definition": "label_values(probe_failure, purpose)",
         "error": null,
         "hide": 0,
@@ -4583,7 +4583,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "availability-prometheus",
+        "datasource": "prometheus-longterm",
         "definition": "label_values(probe_failure, project)",
         "error": null,
         "hide": 0,
@@ -4610,7 +4610,7 @@
           "text": "fixed",
           "value": "fixed"
         },
-        "datasource": "availability-prometheus",
+        "datasource": "prometheus-longterm",
         "definition": "label_values(probe_failure:run:time:total:percent, window)",
         "error": null,
         "hide": 0,
@@ -4648,7 +4648,7 @@
           "text": "day",
           "value": "day"
         },
-        "datasource": "availability-prometheus",
+        "datasource": "prometheus-longterm",
         "definition": "label_values(probe_failure:run:time:total:percent,term)",
         "error": null,
         "hide": 0,
