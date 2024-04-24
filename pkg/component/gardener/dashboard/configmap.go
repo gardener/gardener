@@ -62,6 +62,20 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 		loginCfg = &config.LoginConfig{}
 	)
 
+	if frontendConfig != nil {
+		cfg.Frontend = frontendConfig
+
+		if v, ok := frontendConfig["landingPageUrl"]; ok {
+			loginCfg.LandingPageURL = v.(string)
+		}
+		if v, ok := frontendConfig["branding"]; ok {
+			loginCfg.Branding = v.(map[string]interface{})
+		}
+		if v, ok := frontendConfig["themes"]; ok {
+			loginCfg.Themes = v.(map[string]interface{})
+		}
+	}
+
 	if g.values.EnableTokenLogin {
 		loginCfg.LoginTypes = append(loginCfg.LoginTypes, "token")
 	}
@@ -87,6 +101,14 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 				Namespace: metav1.NamespaceSystem,
 			}}},
 		}
+
+		if cfg.Frontend == nil {
+			cfg.Frontend = make(map[string]interface{})
+		}
+		if cfg.Frontend["features"] == nil {
+			cfg.Frontend["features"] = make(map[string]bool)
+		}
+		cfg.Frontend["features"].(map[string]bool)["terminalEnabled"] = true
 	}
 
 	if g.values.OIDC != nil {
@@ -130,20 +152,6 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			PollIntervalSeconds: pollIntervalSeconds,
 			SyncThrottleSeconds: 20,
 			SyncConcurrency:     10,
-		}
-	}
-
-	if frontendConfig != nil {
-		cfg.Frontend = frontendConfig
-
-		if v, ok := frontendConfig["landingPageUrl"]; ok {
-			loginCfg.LandingPageURL = v.(string)
-		}
-		if v, ok := frontendConfig["branding"]; ok {
-			loginCfg.Branding = v.(map[string]interface{})
-		}
-		if v, ok := frontendConfig["themes"]; ok {
-			loginCfg.Themes = v.(map[string]interface{})
 		}
 	}
 

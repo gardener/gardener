@@ -235,6 +235,9 @@ terminal:
       serviceAccountRef:
         name: dashboard-terminal-admin
         namespace: kube-system
+frontend:
+  features:
+    terminalEnabled: true
 `
 			}
 
