@@ -726,7 +726,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, r.getLabels())
 
 		portMetrics := networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt32(metricsPort),
+			Port:     ptr.To(intstr.FromInt32(metricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
@@ -736,7 +736,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-				Port:     utils.IntStrPtrFromInt32(resourcemanagerconstants.ServerPort),
+				Port:     ptr.To(intstr.FromInt32(resourcemanagerconstants.ServerPort)),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
@@ -1101,7 +1101,7 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
 		pdb.Labels = r.getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},

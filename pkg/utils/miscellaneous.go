@@ -124,12 +124,6 @@ func IDForKeyWithOptionalValue(key string, value *string) string {
 	return key + v
 }
 
-// IntStrPtrFromInt32 returns an intstr.IntOrString pointer to its argument.
-func IntStrPtrFromInt32(port int32) *intstr.IntOrString {
-	v := intstr.FromInt32(port)
-	return &v
-}
-
 // IntStrPtrFromString returns an intstr.IntOrString pointer to its argument.
 func IntStrPtrFromString(port string) *intstr.IntOrString {
 	v := intstr.FromString(port)

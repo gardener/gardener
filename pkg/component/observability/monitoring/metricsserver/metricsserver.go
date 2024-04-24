@@ -375,7 +375,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Labels:    getLabels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       deployment.Spec.Selector,
 			},
 		}

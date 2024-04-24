@@ -321,7 +321,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       deployment.Spec.Selector,
 			},
 		}

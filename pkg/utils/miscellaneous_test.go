@@ -130,12 +130,6 @@ baz`, spaces)).To(Equal(`foo
 		Entry("condition is false", false, "false"),
 	)
 
-	Describe("#IntStrPtrFromInt32", func() {
-		It("should return a pointer", func() {
-			Expect(IntStrPtrFromInt32(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt32(1234))))
-		})
-	})
-
 	Describe("#IntStrPtrFromString", func() {
 		It("should return a pointer", func() {
 			Expect(IntStrPtrFromString("foo")).Should(gstruct.PointTo(Equal(intstr.FromString("foo"))))

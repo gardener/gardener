@@ -157,7 +157,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		service.Labels = utils.MergeStringMaps(service.Labels, getLabels())
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt32(portMetrics),
+			Port:     ptr.To(intstr.FromInt32(portMetrics)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
@@ -259,7 +259,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector:       deployment.Spec.Selector,
 		}
 

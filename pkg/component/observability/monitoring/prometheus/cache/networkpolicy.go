@@ -20,10 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // NetworkPolicyToNodeExporter returns a NetworkPolicy that allows traffic from the cache Prometheus to the
@@ -48,7 +48,7 @@ func NetworkPolicyToNodeExporter(namespace string) *networkingv1.NetworkPolicy {
 				// TODO: Is it possible to restrict the traffic to the nodes network CIDR of the seed?
 				//  Ref https://github.com/gardener/gardener/pull/9128#discussion_r1483236610
 				To:    []networkingv1.NetworkPolicyPeer{},
-				Ports: []networkingv1.NetworkPolicyPort{{Port: utils.IntStrPtrFromInt32(16909), Protocol: ptr.To(corev1.ProtocolTCP)}},
+				Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(16909)), Protocol: ptr.To(corev1.ProtocolTCP)}},
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

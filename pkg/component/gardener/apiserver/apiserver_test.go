@@ -194,7 +194,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 							"app":  "gardener",
 							"role": "apiserver",
@@ -439,7 +439,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
 						MaxSurge:       gardenerutils.IntStrPtrFromString("100%"),
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(0),
+						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
 					},
 				},
 				Template: corev1.PodTemplateSpec{

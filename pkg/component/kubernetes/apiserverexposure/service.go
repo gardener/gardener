@@ -152,7 +152,7 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from istio-ingress components to kube-apiserver.
-		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(kubeapiserverconstants.Port), Protocol: ptr.To(corev1.ProtocolTCP)}
+		networkPolicyPort := networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)), Protocol: ptr.To(corev1.ProtocolTCP)}
 		if isShootNamespace(obj.Namespace) {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkPolicyPort))
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)

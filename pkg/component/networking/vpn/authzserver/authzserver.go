@@ -288,7 +288,7 @@ func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *pol
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},

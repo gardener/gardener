@@ -328,7 +328,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Labels:    labels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
@@ -365,7 +365,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 
 	portMetrics := networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt32(metricsPort),
+		Port:     ptr.To(intstr.FromInt32(metricsPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 

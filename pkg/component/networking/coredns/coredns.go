@@ -356,8 +356,8 @@ import custom/*.server
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       utils.IntStrPtrFromInt32(1),
-						MaxUnavailable: utils.IntStrPtrFromInt32(0),
+						MaxSurge:       ptr.To(intstr.FromInt32(1)),
+						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -643,7 +643,7 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
