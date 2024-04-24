@@ -380,7 +380,7 @@ var _ = Describe("KubeAPIServer", func() {
 					{
 						ContainerName: "kube-apiserver",
 						MinAllowed: corev1.ResourceList{
-							"memory": resource.MustParse("400M"),
+							"memory": resource.MustParse("200M"),
 						},
 						MaxAllowed: corev1.ResourceList{
 							"cpu":    resource.MustParse("8"),

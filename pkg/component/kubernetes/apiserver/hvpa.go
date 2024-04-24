@@ -63,7 +63,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			{
 				ContainerName: ContainerNameKubeAPIServer,
 				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("400M"),
+					corev1.ResourceMemory: resource.MustParse("200M"),
 				},
 				MaxAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("8"),
