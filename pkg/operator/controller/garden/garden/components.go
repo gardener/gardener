@@ -1031,7 +1031,7 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
 		RuntimeVersion:   r.RuntimeVersion,
-		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+		APIServerURL:     "https://" + gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
 			Domains:                garden.Spec.RuntimeCluster.Ingress.Domains,
