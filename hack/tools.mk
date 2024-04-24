@@ -75,7 +75,7 @@ SKAFFOLD_VERSION ?= v2.11.1
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.43.1
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.4
+VGOPATH_VERSION ?= v0.1.5
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
