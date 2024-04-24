@@ -41,7 +41,7 @@ images:
 - name: gardener-dashboard
   sourceRepository: github.com/gardener/dashboard
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dashboard
-  tag: "1.74.0"
+  tag: "1.74.1"
 
 # Seed bootstrap
 - name: pause-container
