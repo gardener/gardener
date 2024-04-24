@@ -140,10 +140,10 @@ var _ = Describe("helper", func() {
 		Entry("rotation nil", &operatorv1alpha1.Credentials{}, BeFalse()),
 		Entry("observability nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, BeFalse()),
 		Entry("lastInitiationTime nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{}}}, BeFalse()),
-		Entry("lastCompletionTime nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time)}}}, BeTrue()),
-		Entry("lastCompletionTime before lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(-time.Minute))}}}, BeTrue()),
-		Entry("lastCompletionTime equal lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
-		Entry("lastCompletionTime after lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
+		Entry("lastCompletionTime nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeTrue()),
+		Entry("lastCompletionTime before lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(-time.Minute)}}}}, BeTrue()),
+		Entry("lastCompletionTime equal lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeFalse()),
+		Entry("lastCompletionTime after lastInitiationTime", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{Observability: &gardencorev1beta1.ObservabilityRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(time.Minute)}}}}, BeFalse()),
 	)
 
 	Describe("#MutateObservabilityRotation", func() {
@@ -192,7 +192,3 @@ var _ = Describe("helper", func() {
 		Entry("topology-aware routing disabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 })
-
-func timePointer(t time.Time) *metav1.Time {
-	return &metav1.Time{Time: t}
-}
