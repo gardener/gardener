@@ -32,6 +32,7 @@ import (
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -66,6 +67,7 @@ var (
 		hvpav1alpha1.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
+		extensionsv1alpha1.AddToScheme,
 		monitoringv1.AddToScheme,
 		monitoringv1beta1.AddToScheme,
 		monitoringv1alpha1.AddToScheme,
