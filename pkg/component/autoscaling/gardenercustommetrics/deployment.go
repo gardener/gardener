@@ -44,7 +44,10 @@ func getLabels() map[string]string {
 }
 
 func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.Deployment {
-	const tlsSecretMountPath = "/var/run/secrets/gardener.cloud/tls"
+	const (
+		tlsSecretMountPath  = "/var/run/secrets/gardener.cloud/tls"
+		tlsSecretVolumeName = "gardener-custom-metrics-tls"
+	)
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,7 +121,7 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									MountPath: tlsSecretMountPath,
-									Name:      "gardener-custom-metrics-tls",
+									Name:      tlsSecretVolumeName,
 									ReadOnly:  true,
 								},
 							},
@@ -128,7 +131,7 @@ func (gcmx *gardenerCustomMetrics) deployment(serverSecretName string) *appsv1.D
 					ServiceAccountName: serviceAccountName,
 					Volumes: []corev1.Volume{
 						{
-							Name: "gardener-custom-metrics-tls",
+							Name: tlsSecretVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: serverSecretName,

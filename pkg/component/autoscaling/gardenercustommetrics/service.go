@@ -15,6 +15,8 @@
 package gardenercustommetrics
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -36,7 +38,7 @@ func (gcmx *gardenerCustomMetrics) service() *corev1.Service {
 			Name:      serviceName,
 			Namespace: gcmx.namespace,
 			Annotations: map[string]string{
-				resourcesv1alpha1.NetworkingFromWorldToPorts: `[{"protocol":"TCP","port":6443}]`,
+				resourcesv1alpha1.NetworkingFromWorldToPorts: fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, servingPort),
 			},
 			Labels: getLabels(),
 		},
