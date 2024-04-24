@@ -468,6 +468,7 @@ spec:
       priorityClassName: gardener-system-600
       securityContext:
         fsGroup: 65534
+        runAsNonRoot: true
         runAsUser: 65534
       terminationGracePeriodSeconds: 60
 status: {}
@@ -573,6 +574,7 @@ spec:
             - SYS_CHROOT` + `
             drop:
             - ALL
+          runAsNonRoot: true
           runAsUser: 101
           seccompProfile:
             type: Unconfined
@@ -1040,6 +1042,7 @@ spec:
       priorityClassName: gardener-shoot-system-600
       securityContext:
         fsGroup: 65534
+        runAsNonRoot: true
         runAsUser: 65534
         seccompProfile:
           type: RuntimeDefault
@@ -1149,6 +1152,7 @@ spec:
             - SYS_CHROOT
             drop:
             - ALL
+          runAsNonRoot: true
           runAsUser: 101
           seccompProfile:
             type: Unconfined

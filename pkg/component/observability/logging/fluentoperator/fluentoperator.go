@@ -208,6 +208,12 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  f.values.PriorityClassName,
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65532),
+							RunAsGroup:   ptr.To[int64](65532),
+							FSGroup:      ptr.To[int64](65532),
+						},
 						Containers: []corev1.Container{
 							{
 								Name:            name,

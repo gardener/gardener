@@ -454,8 +454,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						PriorityClassName: n.values.PriorityClassName,
 						NodeSelector:      nodeSelector,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: ptr.To[int64](65534),
-							FSGroup:   ptr.To[int64](65534),
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65534),
+							FSGroup:      ptr.To[int64](65534),
 						},
 						Containers: []corev1.Container{{
 							Name:            n.getName("Container", true),
@@ -526,6 +527,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Drop: []corev1.Capability{"ALL"},
 									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
+								RunAsNonRoot:             ptr.To(true),
 								RunAsUser:                ptr.To[int64](101),
 								AllowPrivilegeEscalation: ptr.To(true),
 								SeccompProfile:           &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeUnconfined},

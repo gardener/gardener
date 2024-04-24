@@ -238,6 +238,12 @@ var _ = Describe("Fluent Operator", func() {
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  priorityClassName,
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65532),
+							RunAsGroup:   ptr.To[int64](65532),
+							FSGroup:      ptr.To[int64](65532),
+						},
 						Containers: []corev1.Container{{
 							Name:            name,
 							Image:           image,

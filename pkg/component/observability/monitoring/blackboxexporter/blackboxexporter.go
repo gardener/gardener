@@ -224,6 +224,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 						ServiceAccountName: serviceAccount.Name,
 						PriorityClassName:  b.values.PriorityClassName,
 						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot:       ptr.To(true),
 							RunAsUser:          ptr.To[int64](65534),
 							FSGroup:            ptr.To[int64](65534),
 							SupplementalGroups: []int64{1},

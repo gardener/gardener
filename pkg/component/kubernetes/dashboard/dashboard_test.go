@@ -305,6 +305,7 @@ spec:
       securityContext:
         fsGroup: 1
         runAsGroup: 2001
+        runAsNonRoot: true
         runAsUser: 1001
         seccompProfile:
           type: RuntimeDefault
@@ -365,6 +366,7 @@ spec:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           runAsGroup: 2001
+          runAsNonRoot: true
           runAsUser: 1001
           seccompProfile:
             type: RuntimeDefault

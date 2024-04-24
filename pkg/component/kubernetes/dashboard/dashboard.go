@@ -294,6 +294,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 					},
 					Spec: corev1.PodSpec{
 						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot:       ptr.To(true),
 							RunAsUser:          ptr.To[int64](1001),
 							RunAsGroup:         ptr.To[int64](2001),
 							FSGroup:            ptr.To[int64](1),
@@ -421,6 +422,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
 									ReadOnlyRootFilesystem:   ptr.To(true),
+									RunAsNonRoot:             ptr.To(true),
 									RunAsUser:                ptr.To[int64](1001),
 									RunAsGroup:               ptr.To[int64](2001),
 									SeccompProfile: &corev1.SeccompProfile{
