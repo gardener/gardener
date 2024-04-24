@@ -547,7 +547,7 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	envVariables := []corev1.EnvVar{
 		{
 			Name:  "IP_FAMILIES",
-			Value: v.getIPFamiliesEnvVar(),
+			Value: v.getIPFamiliesEnvVarValue(),
 		},
 		{
 			Name:  "VPN_NETWORK",
@@ -596,7 +596,7 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	return envVariables
 }
 
-func (v *vpnShoot) getIPFamiliesEnvVar() string {
+func (v *vpnShoot) getIPFamiliesEnvVarValue() string {
 	var ipFamilies []string
 	for _, v := range v.values.ReversedVPN.IPFamilies {
 		ipFamilies = append(ipFamilies, string(v))
@@ -708,7 +708,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		Env: []corev1.EnvVar{
 			{
 				Name:  "IP_FAMILIES",
-				Value: v.getIPFamiliesEnvVar(),
+				Value: v.getIPFamiliesEnvVarValue(),
 			},
 			{
 				Name:  "VPN_NETWORK",
