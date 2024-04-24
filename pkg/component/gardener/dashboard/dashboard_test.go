@@ -224,7 +224,7 @@ unreachableSeeds:
 			if terminal != nil {
 				configRaw += `contentSecurityPolicy:
   connectSrc:
-    - self`
+    - '''self'''`
 
 				for _, host := range terminal.AllowedHosts {
 					configRaw += `

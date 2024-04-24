@@ -76,7 +76,7 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 	}
 
 	if g.values.Terminal != nil {
-		cfg.ContentSecurityPolicy = &config.ContentSecurityPolicy{ConnectSources: []string{"self"}}
+		cfg.ContentSecurityPolicy = &config.ContentSecurityPolicy{ConnectSources: []string{"'self'"}}
 		for _, host := range g.values.Terminal.AllowedHosts {
 			cfg.ContentSecurityPolicy.ConnectSources = append(cfg.ContentSecurityPolicy.ConnectSources,
 				"wss://"+host,
