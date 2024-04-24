@@ -535,55 +535,6 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 	return allErrs
 }
 
-// ValidateTotalNodeCountWithPodCIDR validates if the podCIDRs in the Pod Network can support the maximum number of nodes configured in the worker pools of the shoot
-func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	nodeCIDRMaskSize := int64(defaultNodeCIDRMaskSizeV4)
-	if core.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
-		nodeCIDRMaskSize = defaultNodeCIDRMaskSizeV6
-	}
-	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
-		nodeCIDRMaskSize = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize)
-	}
-
-	// calculate maximum number of total nodes
-	totalNodes := int64(0)
-	for _, worker := range shoot.Spec.Provider.Workers {
-		totalNodes += int64(worker.Maximum)
-	}
-
-	podNetworkCIDR := core.DefaultPodNetworkCIDR
-	if shoot.Spec.Networking.Pods != nil {
-		podNetworkCIDR = *shoot.Spec.Networking.Pods
-	}
-
-	_, podNetwork, err := net.ParseCIDR(podNetworkCIDR)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetworkCIDR, fmt.Sprintf("cannot parse shoot's pod network cidr : %s", podNetworkCIDR)))
-		return allErrs
-	}
-
-	podCIDRMaskSize, _ := podNetwork.Mask.Size()
-	if podCIDRMaskSize == 0 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetwork.String(), fmt.Sprintf("incorrect pod network mask : %s. Please ensure the mask is in proper form", podNetwork.String())))
-		return allErrs
-	}
-
-	// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
-	// This indicates how many Nodes we can host at max from a networking perspective.
-	var bitLen, maxNodeCount = &big.Int{}, &big.Int{}
-
-	bitLen.Sub(big.NewInt(nodeCIDRMaskSize), big.NewInt(int64(podCIDRMaskSize)))
-	maxNodeCount.Exp(big.NewInt(2), bitLen, nil)
-
-	if maxNodeCount.Cmp(big.NewInt(totalNodes)) < 0 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
-	}
-
-	return allErrs
-}
-
 // ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
 func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig, currentEncryptedResources sets.Set[string], etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, isClusterInHibernation bool, fldPath *field.Path) field.ErrorList {
 	var (

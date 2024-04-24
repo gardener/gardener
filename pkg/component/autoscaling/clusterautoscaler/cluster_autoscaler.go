@@ -77,6 +77,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	maxNodesTotal int64,
 	runtimeVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
@@ -86,6 +87,7 @@ func New(
 		image:          image,
 		replicas:       replicas,
 		config:         config,
+		maxNodesTotal:  maxNodesTotal,
 		runtimeVersion: runtimeVersion,
 	}
 }
@@ -97,6 +99,7 @@ type clusterAutoscaler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
+	maxNodesTotal  int64
 	runtimeVersion *semver.Version
 
 	namespaceUID       types.UID
@@ -395,6 +398,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--v=%d", *c.config.Verbosity),
 		fmt.Sprintf("--max-empty-bulk-delete=%d", *c.config.MaxEmptyBulkDelete),
 		fmt.Sprintf("--new-pod-scale-up-delay=%s", c.config.NewPodScaleUpDelay.Duration),
+		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
 	)
 
 	for _, taint := range c.config.IgnoreTaints {
