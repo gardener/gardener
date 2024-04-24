@@ -24,7 +24,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
@@ -122,12 +121,6 @@ func IDForKeyWithOptionalValue(key string, value *string) string {
 		v = "=" + *value
 	}
 	return key + v
-}
-
-// IntStrPtrFromString returns an intstr.IntOrString pointer to its argument.
-func IntStrPtrFromString(port string) *intstr.IntOrString {
-	v := intstr.FromString(port)
-	return &v
 }
 
 // Indent indents the given string with the given number of spaces.
