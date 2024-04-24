@@ -3,6 +3,8 @@ imagePullPolicy: IfNotPresent
 
 replicaCount: 1
 
+#podLabels: {}
+
 logLevel: info
 logFormat: json
 
