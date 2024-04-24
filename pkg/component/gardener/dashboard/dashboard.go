@@ -58,6 +58,8 @@ type Values struct {
 	LogLevel string
 	// APIServerURL is the URL of the API server of the virtual garden cluster.
 	APIServerURL string
+	// APIServerCABundle is the CA bundle of the API server of the virtual garden cluster.
+	APIServerCABundle *string
 	// EnableTokenLogin specifies whether token-based login is enabled.
 	EnableTokenLogin bool
 	// Ingress contains the ingress configuration.
@@ -104,6 +106,8 @@ type Interface interface {
 	component.DeployWaiter
 	// SetGardenTerminalSeedHost sets the terminal seed host field.
 	SetGardenTerminalSeedHost(string)
+	// SetAPIServerCABundle sets the API server CA bundle field.
+	SetAPIServerCABundle(*string)
 }
 
 // New creates a new instance of DeployWaiter for the gardener-dashboard.
@@ -256,6 +260,10 @@ func (g *gardenerDashboard) SetGardenTerminalSeedHost(host string) {
 	if g.values.Terminal != nil {
 		g.values.Terminal.GardenTerminalSeedHost = host
 	}
+}
+
+func (g *gardenerDashboard) SetAPIServerCABundle(bundle *string) {
+	g.values.APIServerCABundle = bundle
 }
 
 // GetLabels returns the labels for the gardener-dashboard.

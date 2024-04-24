@@ -1031,12 +1031,16 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
 		RuntimeVersion:   r.RuntimeVersion,
-		APIServerURL:     "https://" + gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
 			Domains:                garden.Spec.RuntimeCluster.Ingress.Domains,
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
+	}
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
+		values.APIServerURL = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI.DomainPatterns[0]
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config != nil {
