@@ -69,6 +69,7 @@ declare -A path_map=(
   ["serviceaccount-token-controller"]="pkg/controller/serviceaccount/tokens_controller.go"
   ["statefulset-controller"]="pkg/controller/statefulset/stateful_set.go"
   ["storageversion-garbage-collector-controller"]="pkg/controller/storageversiongc/gc_controller.go"
+  ["storage-version-migrator-controller"]="pkg/controller/storageversionmigrator/storageversionmigrator.go"
   ["taint-eviction-controller"]="pkg/controller/tainteviction/taint_eviction.go"
   ["token-cleaner-controller"]="pkg/controller/bootstrap/tokencleaner.go"
   ["ttl-controller"]="pkg/controller/ttl/ttl_controller.go"

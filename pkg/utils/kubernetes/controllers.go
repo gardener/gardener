@@ -12,7 +12,10 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"storage-version-gc": {},
 	},
 	"admissionregistration/v1beta1": {
-		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.28"},
+		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.28", RemovedInVersion: "1.30"},
+	},
+	"admissionregistration/v1": {
+		"validatingadmissionpolicy-status-controller": {AddedInVersion: "1.30"},
 	},
 	"apps/v1": {
 		"daemonset":   {},
@@ -72,6 +75,9 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 	"resource/v1alpha2": {
 		"resource-claim-controller": {AddedInVersion: "1.27"},
 	},
+	"storagemigration/v1alpha1": {
+		"storage-version-migrator-controller": {AddedInVersion: "1.30"},
+	},
 	"v1": {
 		"attachdetach":                         {},
 		"bootstrapsigner":                      {},
@@ -87,7 +93,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"endpointslice":                        {},
 		"endpointslicemirroring":               {},
 		"ephemeral-volume":                     {},
-		"garbagecollector":                     {},
+		"garbagecollector":                     {RemovedInVersion: "1.30"},
 		"horizontalpodautoscaling":             {},
 		"job":                                  {},
 		"legacy-service-account-token-cleaner": {AddedInVersion: "1.28"},
