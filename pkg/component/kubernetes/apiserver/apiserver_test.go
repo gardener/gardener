@@ -222,14 +222,14 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
 				},
 
-				Entry("HVPA is enabled", apiserver.AutoscalingConfig{HVPAEnabled: true}),
-				Entry("replicas is nil", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
-				Entry("replicas is 0", apiserver.AutoscalingConfig{HVPAEnabled: false, Replicas: ptr.To[int32](0)}),
+				Entry("autoscaling mode is HVPA", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}),
+				Entry("replicas is nil", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline, Replicas: nil}),
+				Entry("replicas is 0", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline, Replicas: ptr.To[int32](0)}),
 			)
 
 			BeforeEach(func() {
 				autoscalingConfig = apiserver.AutoscalingConfig{
-					HVPAEnabled: false,
+					Mode:        apiserver.AutoscalingModeBaseline,
 					Replicas:    ptr.To[int32](2),
 					MinReplicas: 4,
 					MaxReplicas: 6,
@@ -284,9 +284,9 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("VerticalPodAutoscaler", func() {
-			Context("HVPAEnabled = true", func() {
+			Context("autoscaling mode is HVPA", func() {
 				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{HVPAEnabled: true}
+					autoscalingConfig = apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}
 				})
 
 				It("should delete the VPA resource", func() {
@@ -297,9 +297,9 @@ var _ = Describe("KubeAPIServer", func() {
 				})
 			})
 
-			Context("HVPAEnabled = false", func() {
+			Context("autoscaling mode is baseline", func() {
 				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{HVPAEnabled: false}
+					autoscalingConfig = apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline}
 				})
 
 				It("should successfully deploy the VPA resource", func() {
@@ -350,9 +350,9 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 				},
 
-				Entry("HVPA disabled", apiserver.AutoscalingConfig{HVPAEnabled: false}),
-				Entry("HVPA enabled but replicas nil", apiserver.AutoscalingConfig{HVPAEnabled: true}),
-				Entry("HVPA enabled but replicas zero", apiserver.AutoscalingConfig{HVPAEnabled: true, Replicas: ptr.To[int32](0)}),
+				Entry("autoscaling mode is baseline", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline}),
+				Entry("autoscaling mode is HVPA but replicas nil", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}),
+				Entry("autoscaling mode is HVPA but replicas zero", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA, Replicas: ptr.To[int32](0)}),
 			)
 
 			var (
@@ -516,7 +516,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour",
 					apiserver.AutoscalingConfig{
-						HVPAEnabled: true,
+						Mode:        apiserver.AutoscalingModeHVPA,
 						Replicas:    ptr.To[int32](2),
 						MinReplicas: 5,
 						MaxReplicas: 5,
@@ -529,7 +529,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("UseMemoryMetricForHvpaHPA is true",
 					apiserver.AutoscalingConfig{
-						HVPAEnabled:               true,
+						Mode:                      apiserver.AutoscalingModeHVPA,
 						Replicas:                  ptr.To[int32](2),
 						UseMemoryMetricForHvpaHPA: true,
 						MinReplicas:               5,
@@ -558,7 +558,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("scale down is disabled",
 					apiserver.AutoscalingConfig{
-						HVPAEnabled:              true,
+						Mode:                     apiserver.AutoscalingModeHVPA,
 						Replicas:                 ptr.To[int32](2),
 						MinReplicas:              5,
 						MaxReplicas:              5,
@@ -572,7 +572,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("max replicas > min replicas",
 					apiserver.AutoscalingConfig{
-						HVPAEnabled: true,
+						Mode:        apiserver.AutoscalingModeHVPA,
 						Replicas:    ptr.To[int32](2),
 						MinReplicas: 3,
 						MaxReplicas: 5,

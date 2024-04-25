@@ -15,11 +15,12 @@ import (
 	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
-	if !g.values.Autoscaling.HVPAEnabled {
+	if g.values.Autoscaling.Mode != apiserver.AutoscalingModeHVPA {
 		return nil
 	}
 

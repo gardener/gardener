@@ -220,7 +220,7 @@ func DeployKubeAPIServer(
 
 	kubeAPIServer.SetAutoscalingReplicas(computeKubeAPIServerReplicas(values.Autoscaling, deployment, wantScaleDown))
 
-	if deployment != nil && values.Autoscaling.HVPAEnabled {
+	if deployment != nil && values.Autoscaling.Mode == apiserver.AutoscalingModeHVPA {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
 				// Only set requests to allow limits to be removed

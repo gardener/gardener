@@ -186,8 +186,8 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: false},
 					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
@@ -200,13 +200,13 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPA: true,
 					},
 					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeHVPA,
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("500m"),
 								corev1.ResourceMemory: resource.MustParse("1Gi"),
 							},
 						},
-						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
@@ -219,8 +219,8 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						HVPAEnabled:               false,
 						MinReplicas:               2,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
@@ -233,8 +233,8 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						HVPAEnabled:               false,
 						MinReplicas:               4,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -247,8 +247,8 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: true,
@@ -270,13 +270,13 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPAForShootedSeed: true,
 					},
 					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeHVPA,
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("500m"),
 								corev1.ResourceMemory: resource.MustParse("1Gi"),
 							},
 						},
-						HVPAEnabled:               true,
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						UseMemoryMetricForHvpaHPA: true,
@@ -296,13 +296,13 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeBaseline,
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 						},
-						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						Replicas:                  ptr.To[int32](24),
@@ -325,13 +325,13 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPAForShootedSeed: false,
 					},
 					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeBaseline,
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 						},
-						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						Replicas:                  ptr.To[int32](24),
@@ -349,8 +349,8 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						HVPAEnabled:               false,
 						MinReplicas:               3,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,

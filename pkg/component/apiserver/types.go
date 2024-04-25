@@ -76,12 +76,24 @@ type AuditWebhook struct {
 	Version *string
 }
 
+// AutoscalingMode represents the different autoscaling modes for an API Server.
+type AutoscalingMode int8
+
+const (
+	// AutoscalingModeBaseline differs substantially between kube-apiserver and gardener-apiserver.
+	// For kube-apiserver, it is active HPA, plus VPA in passive, recommend-only mode.
+	// For gardener-apiserver, it is VPA only.
+	AutoscalingModeBaseline = 0 + iota
+	// AutoscalingModeHVPA uses Gardener's custom HVPA autoscaler.
+	AutoscalingModeHVPA
+)
+
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.
 type AutoscalingConfig struct {
+	// Mode is the strategy for scaling the API server.
+	Mode AutoscalingMode
 	// APIServerResources are the resource requirements for the API server container.
 	APIServerResources corev1.ResourceRequirements
-	// HVPAEnabled states whether an HVPA object shall be deployed. If false, HPA and VPA will be used.
-	HVPAEnabled bool
 	// Replicas is the number of pod replicas for the API server.
 	Replicas *int32
 	// MinReplicas are the minimum Replicas for horizontal autoscaling.

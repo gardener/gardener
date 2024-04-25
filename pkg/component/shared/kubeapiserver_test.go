@@ -980,7 +980,7 @@ exemptions:
 				apiserver.AutoscalingConfig{},
 				nil,
 			),
-			Entry("nothing is set because HVPA is disabled",
+			Entry("nothing is set because autoscaling mode is baseline",
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
@@ -999,10 +999,10 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{HVPAEnabled: false},
+				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline},
 				nil,
 			),
-			Entry("set the existing requirements because deployment found and HVPA enabled",
+			Entry("set the existing requirements because deployment found and autoscaling mode is HVPA",
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1021,7 +1021,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{HVPAEnabled: true},
+				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA},
 				&apiServerResources,
 			),
 		)
