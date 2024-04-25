@@ -99,6 +99,7 @@ func (t *terminal) Deploy(ctx context.Context) error {
 		t.service(),
 		configMap,
 		t.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, serverCertSecret.Name, configMap.Name),
+		t.podDisruptionBudget(),
 		t.serviceMonitor(),
 	)
 	if err != nil {

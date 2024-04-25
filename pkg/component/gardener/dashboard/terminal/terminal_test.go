@@ -16,6 +16,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -75,6 +76,7 @@ var _ = Describe("Terminal", func() {
 		service                   *corev1.Service
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
+		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		crd                            *apiextensionsv1.CustomResourceDefinition
@@ -340,6 +342,18 @@ server:
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-terminal-controller-manager"))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "terminal-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				Selector:                   &metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
+		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "garden-terminal-controller-manager",
@@ -639,6 +653,7 @@ server:
 					service,
 					configMap,
 					deployment,
+					podDisruptionBudget,
 					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
