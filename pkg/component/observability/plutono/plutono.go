@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -49,25 +50,33 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "plutono"
+	managedResourceName = "plutono"
+	name                = "plutono"
 
-	name                          = "plutono"
-	plutonoMountPathDashboards    = "/var/lib/plutono/dashboards"
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
+	dashboardLabelValue           = "true"
+
+	volumeNameDataSources        = "datasources"
+	volumeNameDashboardProviders = "dashboard-providers"
+	volumeNameDashboards         = "dashboards"
+	volumeNameConfig             = "config"
+	volumeNameStorage            = "storage"
+
+	dataKeyConfig             = "plutono.ini"
+	volumeMountPathStorage    = "/var/lib/plutono"
+	volumeMountPathDashboards = volumeMountPathStorage + "/dashboards"
+	volumeMountPathConfig     = "/usr/local/etc/plutono"
 )
 
 var (
-	//go:embed dashboards/garden/garden
+	//go:embed dashboards/garden
 	gardenDashboards embed.FS
-	//go:embed dashboards/garden/global
-	gardenGlobalDashboards embed.FS
 	//go:embed dashboards/seed
 	seedDashboards embed.FS
 	//go:embed dashboards/shoot
@@ -77,8 +86,7 @@ var (
 	//go:embed dashboards/common
 	commonDashboards embed.FS
 
-	gardenDashboardsPath         = filepath.Join("dashboards", "garden", "garden")
-	gardenGlobalDashboardsPath   = filepath.Join("dashboards", "garden", "global")
+	gardenDashboardsPath         = filepath.Join("dashboards", "garden")
 	seedDashboardsPath           = filepath.Join("dashboards", "seed")
 	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
 	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
@@ -100,6 +108,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Image is the container image used for plutono.
 	Image string
+	// ImageDashboardRefresher is the container image used for the sidecar responsible for refreshing the dashboards.
+	ImageDashboardRefresher string
 	// IngressHost is the host name of plutono.
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
@@ -145,29 +155,37 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	dashboardConfigMaps, data, err := p.computeResourcesData(ctx)
+	plutonoAdminUserSecret, err := p.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
+		Name:           "plutono-admin",
+		Format:         secretsutils.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}, secretsmanager.Rotate(secretsmanager.InPlace), secretsmanager.Validity(24*time.Hour*30))
+	if err != nil {
+		return err
+	}
+
+	dashboardConfigMap, data, err := p.computeResourcesData(ctx, plutonoAdminUserSecret)
 	if err != nil {
 		return err
 	}
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
-	for _, configMap := range dashboardConfigMaps {
-		if configMap != nil {
-			if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
-				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "component", name)
-				metav1.SetMetaDataLabel(&configMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
-				return nil
-			}); err != nil {
-				return err
-			}
+	if dashboardConfigMap != nil {
+		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
+			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
+			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 
-	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, ManagedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
+	return managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, managedResourceName, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -178,24 +196,23 @@ func (p *plutono) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, p.client, p.namespace, managedResourceName)
 }
 
 func (p *plutono) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, managedResourceName)
 }
 
 func (p *plutono) SetWildcardCertName(secretName *string) {
 	p.values.WildcardCertName = secretName
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, map[string][]byte, error) {
+func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecret *corev1.Secret) (*corev1.ConfigMap, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		err      error
 
 		providerConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -203,9 +220,17 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 				Namespace: p.namespace,
 				Labels:    getLabels(),
 			},
-			Data: map[string]string{
-				"default.yaml": p.getDashboardsProviders(),
+			Data: map[string]string{"default.yaml": p.getDashboardsProviders()},
+		}
+
+		plutonoConfigSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "plutono-config",
+				Namespace: p.namespace,
+				Labels:    getLabels(),
 			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{dataKeyConfig: []byte(p.getConfig(plutonoAdminUserSecret.Data))},
 		}
 
 		dataSourceConfigMap = &corev1.ConfigMap{
@@ -214,70 +239,58 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 				Namespace: p.namespace,
 				Labels:    getLabels(),
 			},
-			Data: map[string]string{
-				"datasources.yaml": p.getDataSource(),
-			},
+			Data: map[string]string{"datasources.yaml": p.getDataSource()},
 		}
-
-		dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap
 	)
 
+	var suffix string
 	if p.values.IsGardenCluster {
-		if configMap, err := p.getDashboardsConfigMap(ctx, "garden"); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMap = configMap
-		}
-
-		if configMap, err := p.getDashboardsConfigMap(ctx, "global"); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMapGlobal = configMap
-		}
-
-		utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMapGlobal))
-	} else {
-		if configMap, err := p.getDashboardsConfigMap(ctx, ""); err != nil {
-			return nil, nil, err
-		} else {
-			dashboardConfigMap = configMap
-		}
+		suffix = "-garden"
 	}
 
+	dashboardConfigMap, err := p.getDashboardConfigMap(ctx, suffix)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
-	var (
-		deployment *appsv1.Deployment
-		service    *corev1.Service
-		ingress    *networkingv1.Ingress
-	)
-
-	deployment = p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal)
-	service = p.getService()
-
-	ingress, err = p.getIngress(ctx)
+	ingress, err := p.getIngress(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	data, err := registry.AddAllAndSerialize(
+		plutonoConfigSecret,
 		providerConfigMap,
 		dataSourceConfigMap,
-		deployment,
-		service,
+		p.getDeployment(providerConfigMap, dataSourceConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
+		p.getService(),
 		ingress,
+		p.getServiceAccount(),
+		p.getRole(),
+		p.getRoleBinding(),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, data, nil
+	return dashboardConfigMap, data, nil
+}
+
+func (p *plutono) getConfig(adminUserData map[string][]byte) string {
+	return `[auth.basic]
+enabled = true
+[security]
+admin_user = ` + string(adminUserData[secretsutils.DataKeyUserName]) + `
+admin_password = ` + string(adminUserData[secretsutils.DataKeyPassword])
 }
 
 func (p *plutono) getDashboardsProviders() string {
-	dashboardsProviders := `apiVersion: 1
+	return `apiVersion: 1
 providers:
 - name: 'default'
   orgId: 1
@@ -286,34 +299,7 @@ providers:
   disableDeletion: false
   editable: false
   options:
-    path: ` + plutonoMountPathDashboards + `
-`
-
-	if p.values.IsGardenCluster {
-		dashboardsProviders = `apiVersion: 1
-providers:
-- name: 'global'
-  orgId: 1
-  folder: 'Global'
-  type: file
-  disableDeletion: false
-  editable: false
-  updateIntervalSeconds: 120
-  options:
-    path: ` + plutonoMountPathDashboards + `/global
-- name: 'garden'
-  orgId: 1
-  folder: 'Garden'
-  type: file
-  disableDeletion: false
-  editable: false
-  updateIntervalSeconds: 120
-  options:
-    path: ` + plutonoMountPathDashboards + `/garden
-`
-	}
-
-	return dashboardsProviders
+    path: ` + volumeMountPathDashboards
 }
 
 func (p *plutono) getDataSource() string {
@@ -386,43 +372,30 @@ datasources:
 	return datasource
 }
 
-func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
+func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
 	var (
-		configMap            *corev1.ConfigMap
-		requiredDashboards   map[string]embed.FS
-		ignorePaths          = sets.Set[string]{}
-		dashboards           = map[string]string{}
-		extensionsDashboards = utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring)
-		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(extensionsDashboards)}
+		requiredDashboards map[string]embed.FS
+		ignorePaths        = sets.Set[string]{}
+		dashboards         = map[string]string{}
 	)
 
-	configMap = &corev1.ConfigMap{
+	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plutono-dashboards",
+			Name:      "plutono-dashboards" + suffix,
 			Namespace: p.namespace,
-			Labels:    getLabels(),
+			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dashboardLabel(): dashboardLabelValue}),
 		},
 	}
 
-	if suffix != "" {
-		configMap.Name = configMap.Name + "-" + suffix
-	}
-
 	if p.values.IsGardenCluster {
-		if suffix == "garden" {
-			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
 
-			additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
-			if err != nil {
-				return nil, err
-			}
-			if additionalDashboards != nil {
-				dashboards = additionalDashboards
-			}
+		additionalDashboards, err := p.getAdditionalDashboards(ctx)
+		if err != nil {
+			return nil, err
 		}
-
-		if suffix == "global" {
-			requiredDashboards = map[string]embed.FS{gardenGlobalDashboardsPath: gardenGlobalDashboards}
+		if additionalDashboards != nil {
+			dashboards = additionalDashboards
 		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
@@ -454,7 +427,7 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			}
 		}
 
-		additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard})
+		additionalDashboards, err := p.getAdditionalDashboards(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -498,13 +471,61 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 	}
 
 	// this is necessary to prevent hitting configmap size limit.
-	if dashboards, err := convertToCompactJSON(dashboards); err != nil {
+	var err error
+	configMap.Data, err = convertToCompactJSON(dashboards)
+	if err != nil {
 		return nil, err
-	} else {
-		configMap.Data = dashboards
 	}
 
 	return configMap, nil
+}
+
+func (p *plutono) getServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+}
+
+const rbacNameDashboardRefresher = name + "-dashboard-refresher"
+
+func (p *plutono) getRole() *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rbacNameDashboardRefresher,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		Rules: []rbacv1.PolicyRule{{
+			APIGroups: []string{""},
+			Resources: []string{"configmaps"},
+			Verbs:     []string{"get", "list", "watch"},
+		}},
+	}
+}
+
+func (p *plutono) getRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rbacNameDashboardRefresher,
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     rbacNameDashboardRefresher,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      name,
+			Namespace: p.namespace,
+		}},
+	}
 }
 
 func (p *plutono) getService() *corev1.Service {
@@ -535,7 +556,7 @@ func (p *plutono) getService() *corev1.Service {
 	return service
 }
 
-func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap) *appsv1.Deployment {
+func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.ConfigMap, plutonoConfigSecret, plutonoAdminUserSecret *corev1.Secret) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -553,8 +574,8 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 					Labels: utils.MergeStringMaps(getLabels(), p.getPodLabels()),
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: ptr.To(false),
-					PriorityClassName:            p.values.PriorityClassName,
+					ServiceAccountName: name,
+					PriorityClassName:  p.values.PriorityClassName,
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -564,32 +585,34 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 								{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
 								{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
 								{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-								{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
 								{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 								{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
 								{Name: "PL_ALERTING_ENABLED", Value: "false"},
 								{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+								{Name: "PL_PATHS_CONFIG", Value: volumeMountPathConfig + "/" + dataKeyConfig},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "plutono-datasources",
+									Name:      volumeNameDataSources,
 									MountPath: "/etc/plutono/provisioning/datasources",
 								},
 								{
-									Name:      "plutono-dashboard-providers",
+									Name:      volumeNameDashboardProviders,
 									MountPath: "/etc/plutono/provisioning/dashboards",
 								},
 								{
-									Name:      "plutono-storage",
-									MountPath: "/var/lib/plutono",
+									Name:      volumeNameStorage,
+									MountPath: volumeMountPathStorage,
 								},
-							},
-							Ports: []corev1.ContainerPort{
 								{
-									Name:          "web",
-									ContainerPort: int32(port),
+									Name:      volumeNameConfig,
+									MountPath: volumeMountPathConfig,
 								},
 							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "web",
+								ContainerPort: int32(port),
+							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -600,10 +623,44 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 								},
 							},
 						},
+						{
+							Name:            "dashboard-refresher",
+							Image:           p.values.ImageDashboardRefresher,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Env: []corev1.EnvVar{
+								{Name: "LOG_LEVEL", Value: "INFO"},
+								{Name: "RESOURCE", Value: "configmap"},
+								{Name: "NAMESPACE", Value: p.namespace},
+								{Name: "FOLDER", Value: volumeMountPathDashboards},
+								{Name: "LABEL", Value: p.dashboardLabel()},
+								{Name: "LABEL_VALUE", Value: dashboardLabelValue},
+								{Name: "METHOD", Value: "WATCH"},
+								{Name: "REQ_URL", Value: "http://localhost:" + strconv.Itoa(port) + "/api/admin/provisioning/dashboards/reload"},
+								{Name: "REQ_METHOD", Value: "POST"},
+								{Name: "REQ_USERNAME", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
+									Key:                  secretsutils.DataKeyUserName,
+								}}},
+								{Name: "REQ_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
+									Key:                  secretsutils.DataKeyPassword,
+								}}},
+							},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      volumeNameStorage,
+								MountPath: volumeMountPathStorage,
+							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
+						},
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "plutono-datasources",
+							Name: volumeNameDataSources,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -613,7 +670,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							},
 						},
 						{
-							Name: "plutono-dashboard-providers",
+							Name: volumeNameDashboardProviders,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
@@ -623,68 +680,31 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							},
 						},
 						{
-							Name: "plutono-storage",
+							Name: volumeNameConfig,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: plutonoConfigSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameStorage,
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
 									SizeLimit: ptr.To(resource.MustParse("100Mi")),
 								},
 							},
 						},
+						{
+							Name: volumeNameDashboards,
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
 					},
 				},
 			},
 		},
-	}
-
-	if p.values.IsGardenCluster {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-			{
-				Name: "plutono-dashboards-garden",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: dashboardConfigMap.Name,
-						},
-					},
-				},
-			},
-			{
-				Name: "plutono-dashboards-global",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: dashboardConfigMapGlobal.Name,
-						},
-					},
-				},
-			}}...)
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-			{
-				Name:      "plutono-dashboards-garden",
-				MountPath: plutonoMountPathDashboards + "/garden",
-			},
-			{
-				Name:      "plutono-dashboards-global",
-				MountPath: plutonoMountPathDashboards + "/global",
-			},
-		}...)
-	} else {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "plutono-dashboards",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: dashboardConfigMap.Name,
-					},
-				},
-			},
-		})
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "plutono-dashboards",
-			MountPath: plutonoMountPathDashboards,
-		})
 	}
 
 	if p.values.ClusterType == component.ClusterTypeSeed {
@@ -730,12 +750,12 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	if p.values.WildcardCertName != nil {
 		ingressTLSSecretName = *p.values.WildcardCertName
 	} else {
-		ingressTLSSecret, err := p.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		ingressTLSSecret, err := p.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "plutono-tls",
 			CommonName:                  "plutono",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{p.values.IngressHost},
-			CertType:                    secrets.ServerCert,
+			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(caName))
@@ -753,6 +773,9 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 				"nginx.ingress.kubernetes.io/auth-realm":  "Authentication Required",
 				"nginx.ingress.kubernetes.io/auth-secret": credentialsSecretName,
 				"nginx.ingress.kubernetes.io/auth-type":   "basic",
+				"nginx.ingress.kubernetes.io/server-snippet": `location /api/admin/ {
+  return 403;
+}`,
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -792,6 +815,20 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	return ingress, nil
 }
 
+func (p *plutono) dashboardLabel() string {
+	label := v1beta1constants.LabelPrefixMonitoringDashboard
+
+	if p.values.IsGardenCluster {
+		label += "garden"
+	} else if p.values.ClusterType == component.ClusterTypeSeed {
+		label += "seed"
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		label += "shoot"
+	}
+
+	return label
+}
+
 func getLabels() map[string]string {
 	return map[string]string{
 		"component": name,
@@ -816,6 +853,7 @@ func (p *plutono) getPodLabels() map[string]string {
 	labels := map[string]string{
 		v1beta1constants.LabelObservabilityApplication:                                      name,
 		v1beta1constants.LabelNetworkPolicyToDNS:                                            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                               v1beta1constants.LabelNetworkPolicyAllowed,
 		gardenerutils.NetworkPolicyLabel(valiconstants.ServiceName, valiconstants.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
@@ -844,17 +882,14 @@ func (p *plutono) getPodLabels() map[string]string {
 	return labels
 }
 
-func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector labels.Selector, keys []string) (map[string]string, error) {
-	var (
-		dashboards           = map[string]string{}
-		additionalDashboards = strings.Builder{}
-	)
-
+// TODO(rfranzke): This function and method of fetching extension dashboards is deprecated. Remove it after v1.100 has been released.
+func (p *plutono) getAdditionalDashboards(ctx context.Context) (map[string]string, error) {
 	// Fetch additional monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := p.client.List(ctx, existingConfigMaps,
 		client.InNamespace(p.namespace),
-		client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
+		client.MatchingLabelsSelector{Selector: client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring))}},
+	); err != nil {
 		return nil, err
 	}
 
@@ -862,14 +897,16 @@ func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector lab
 	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read monitoring configurations
+	additionalDashboards := strings.Builder{}
 	for _, cm := range existingConfigMaps.Items {
-		for _, key := range keys {
+		for _, key := range []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard} {
 			if dashboard, ok := cm.Data[key]; ok && dashboard != "" {
 				additionalDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(dashboard, "Grafana", "Plutono"), "loki", "vali")))
 			}
 		}
 	}
 
+	dashboards := map[string]string{}
 	if additionalDashboards.Len() > 0 {
 		if err := yaml.Unmarshal([]byte(additionalDashboards.String()), &dashboards); err != nil {
 			return nil, err

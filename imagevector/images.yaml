@@ -304,6 +304,23 @@ images:
     value:
     - type: 'githubTeam'
       teamname: 'gardener/monitoring-maintainers'
+- name: plutono-dashboard-refresher
+  sourceRepository: github.com/kiwigrid/k8s-sidecar
+  repository: quay.io/kiwigrid/k8s-sidecar
+  tag: "1.26.1"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter

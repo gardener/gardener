@@ -425,6 +425,9 @@ const (
 	LabelLogging = "logging"
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
+	// LabelPrefixMonitoringDashboard is the prefix of a label key on ConfigMaps for indicating that the data contains a
+	// dashboard.
+	LabelPrefixMonitoringDashboard = "dashboard.monitoring.gardener.cloud/"
 	// LabelKeyCustomLoggingResource is the key of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
 	// TODO(nickytd): the label key has to be migrated to "fluentbit.gardener.cloud/type".
 	LabelKeyCustomLoggingResource = "fluentbit.gardener/type"
@@ -677,8 +680,14 @@ const (
 	// PrometheusConfigMapScrapeConfig is a constant for the Prometheus scrape config tag in provider-specific monitoring configuration
 	PrometheusConfigMapScrapeConfig = "scrape_config"
 	// PlutonoConfigMapUserDashboard is a constant for the Plutono user dashboard tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PlutonoConfigMapUserDashboard = "dashboard_users"
 	// PlutonoConfigMapOperatorDashboard is a constant for the Plutono operator dashboard tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PlutonoConfigMapOperatorDashboard = "dashboard_operators"
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.

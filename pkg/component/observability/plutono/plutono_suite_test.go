@@ -19,9 +19,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestPlutono(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Component Observability Plutono Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
+})

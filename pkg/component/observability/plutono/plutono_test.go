@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,15 +51,17 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("Plutono", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "plutono"
-		namespace           = "some-namespace"
-		image               = "some-image:some-tag"
+		managedResourceName     = "plutono"
+		namespace               = "some-namespace"
+		image                   = "some-image:some-tag"
+		imageDashboardRefresher = "some-other-image:some-other-tag"
 
 		c                 client.Client
 		component         comp.DeployWaiter
@@ -75,8 +78,9 @@ var _ = Describe("Plutono", func() {
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 
 		values = Values{
-			Image:    image,
-			Replicas: int32(1),
+			Image:                   image,
+			ImageDashboardRefresher: imageDashboardRefresher,
+			Replicas:                int32(1),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -107,9 +111,70 @@ var _ = Describe("Plutono", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			providerConfigMapYAMLFor = func(values Values) string {
-				configMapName := "plutono-dashboard-providers-29d306e7"
-				configMapData := `  apiVersion: 1
+			plutonoConfigSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plutono-config-fd97f886",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"component": "plutono",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+				},
+				Type:      corev1.SecretTypeOpaque,
+				Immutable: ptr.To(true),
+				Data: map[string][]byte{
+					"plutono.ini": []byte(`[auth.basic]
+enabled = true
+[security]
+admin_user = admin
+admin_password = ________________________________`),
+				},
+			}
+
+			serviceAccount = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plutono",
+					Namespace: namespace,
+					Labels:    map[string]string{"component": "plutono"},
+				},
+				AutomountServiceAccountToken: ptr.To(false),
+			}
+
+			role = &rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plutono-dashboard-refresher",
+					Namespace: namespace,
+					Labels:    map[string]string{"component": "plutono"},
+				},
+				Rules: []rbacv1.PolicyRule{{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list", "watch"},
+				}},
+			}
+
+			roleBinding = &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "plutono-dashboard-refresher",
+					Namespace: namespace,
+					Labels:    map[string]string{"component": "plutono"},
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Role",
+					Name:     "plutono-dashboard-refresher",
+				},
+				Subjects: []rbacv1.Subject{{
+					Kind:      "ServiceAccount",
+					Name:      "plutono",
+					Namespace: namespace,
+				}},
+			}
+
+			providerConfigMapYAML = `apiVersion: v1
+data:
+  default.yaml: |-
+    apiVersion: 1
     providers:
     - name: 'default'
       orgId: 1
@@ -118,36 +183,7 @@ var _ = Describe("Plutono", func() {
       disableDeletion: false
       editable: false
       options:
-        path: /var/lib/plutono/dashboards`
-
-				if values.IsGardenCluster {
-					configMapName = "plutono-dashboard-providers-5be2bcda"
-					configMapData = `  apiVersion: 1
-    providers:
-    - name: 'global'
-      orgId: 1
-      folder: 'Global'
-      type: file
-      disableDeletion: false
-      editable: false
-      updateIntervalSeconds: 120
-      options:
-        path: /var/lib/plutono/dashboards/global
-    - name: 'garden'
-      orgId: 1
-      folder: 'Garden'
-      type: file
-      disableDeletion: false
-      editable: false
-      updateIntervalSeconds: 120
-      options:
-        path: /var/lib/plutono/dashboards/garden`
-				}
-
-				configMap := `apiVersion: v1
-data:
-  default.yaml: |
-  ` + configMapData + `
+        path: /var/lib/plutono/dashboards
 immutable: true
 kind: ConfigMap
 metadata:
@@ -155,22 +191,16 @@ metadata:
   labels:
     component: plutono
     resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + configMapName + `
+  name: plutono-dashboard-providers-140e41f3
   namespace: some-namespace
 `
 
-				return configMap
-			}
-
 			dataSourceConfigMapYAMLFor = func(values Values) string {
-				url := "http://prometheus-web:80"
-				maxLine := "1000"
+				url, maxLine := "http://prometheus-web:80", "1000"
 				if values.IsGardenCluster {
-					url = "http://prometheus-garden:80"
-					maxLine = "5000"
+					url, maxLine = "http://prometheus-garden:80", "5000"
 				} else if values.ClusterType == comp.ClusterTypeSeed {
-					url = "http://prometheus-aggregate:80"
-					maxLine = "5000"
+					url, maxLine = "http://prometheus-aggregate:80", "5000"
 				}
 
 				configMapData := `apiVersion: 1
@@ -260,15 +290,13 @@ metadata:
 				return configMap
 			}
 
-			deploymentYAMLFor = func(values Values, dashboardConfigMaps []string) *appsv1.Deployment {
-				providerConfigMap := "plutono-dashboard-providers-29d306e7"
-				dataSourceConfigMap := "plutono-datasources-be28eaa6"
+			deploymentYAMLFor = func(values Values) *appsv1.Deployment {
+				dataSourceConfigMap, labelKey := "plutono-datasources-be28eaa6", "seed"
 				if values.ClusterType == comp.ClusterTypeShoot {
-					dataSourceConfigMap = "plutono-datasources-0fd41775"
+					dataSourceConfigMap, labelKey = "plutono-datasources-0fd41775", "shoot"
 				}
 				if values.IsGardenCluster {
-					providerConfigMap = "plutono-dashboard-providers-5be2bcda"
-					dataSourceConfigMap = "plutono-datasources-b320ffed"
+					dataSourceConfigMap, labelKey = "plutono-datasources-b320ffed", "garden"
 				}
 
 				deployment := &appsv1.Deployment{
@@ -292,8 +320,8 @@ metadata:
 								Labels: utils.MergeStringMaps(getLabels(), getPodLabels(values)),
 							},
 							Spec: corev1.PodSpec{
-								AutomountServiceAccountToken: ptr.To(false),
-								PriorityClassName:            values.PriorityClassName,
+								ServiceAccountName: "plutono",
+								PriorityClassName:  values.PriorityClassName,
 								Containers: []corev1.Container{
 									{
 										Name:            "plutono",
@@ -303,24 +331,28 @@ metadata:
 											{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
 											{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
 											{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-											{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
 											{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 											{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
 											{Name: "PL_ALERTING_ENABLED", Value: "false"},
 											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+											{Name: "PL_PATHS_CONFIG", Value: "/usr/local/etc/plutono/plutono.ini"},
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
-												Name:      "plutono-datasources",
+												Name:      "datasources",
 												MountPath: "/etc/plutono/provisioning/datasources",
 											},
 											{
-												Name:      "plutono-dashboard-providers",
+												Name:      "dashboard-providers",
 												MountPath: "/etc/plutono/provisioning/dashboards",
 											},
 											{
-												Name:      "plutono-storage",
+												Name:      "storage",
 												MountPath: "/var/lib/plutono",
+											},
+											{
+												Name:      "config",
+												MountPath: "/usr/local/etc/plutono",
 											},
 										},
 										Ports: []corev1.ContainerPort{
@@ -339,10 +371,44 @@ metadata:
 											},
 										},
 									},
+									{
+										Name:            "dashboard-refresher",
+										Image:           values.ImageDashboardRefresher,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Env: []corev1.EnvVar{
+											{Name: "LOG_LEVEL", Value: "INFO"},
+											{Name: "RESOURCE", Value: "configmap"},
+											{Name: "NAMESPACE", Value: namespace},
+											{Name: "FOLDER", Value: "/var/lib/plutono/dashboards"},
+											{Name: "LABEL", Value: "dashboard.monitoring.gardener.cloud/" + labelKey},
+											{Name: "LABEL_VALUE", Value: "true"},
+											{Name: "METHOD", Value: "WATCH"},
+											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/dashboards/reload"},
+											{Name: "REQ_METHOD", Value: "POST"},
+											{Name: "REQ_USERNAME", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "plutono-admin-68aadabd"},
+												Key:                  "username",
+											}}},
+											{Name: "REQ_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+												LocalObjectReference: corev1.LocalObjectReference{Name: "plutono-admin-68aadabd"},
+												Key:                  "password",
+											}}},
+										},
+										VolumeMounts: []corev1.VolumeMount{{
+											Name:      "storage",
+											MountPath: "/var/lib/plutono",
+										}},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("5m"),
+												corev1.ResourceMemory: resource.MustParse("64Mi"),
+											},
+										},
+									},
 								},
 								Volumes: []corev1.Volume{
 									{
-										Name: "plutono-datasources",
+										Name: "datasources",
 										VolumeSource: corev1.VolumeSource{
 											ConfigMap: &corev1.ConfigMapVolumeSource{
 												LocalObjectReference: corev1.LocalObjectReference{
@@ -352,78 +418,41 @@ metadata:
 										},
 									},
 									{
-										Name: "plutono-dashboard-providers",
+										Name: "dashboard-providers",
 										VolumeSource: corev1.VolumeSource{
 											ConfigMap: &corev1.ConfigMapVolumeSource{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: providerConfigMap,
+													Name: "plutono-dashboard-providers-140e41f3",
 												},
 											},
 										},
 									},
 									{
-										Name: "plutono-storage",
+										Name: "config",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: "plutono-config-fd97f886",
+											},
+										},
+									},
+									{
+										Name: "storage",
 										VolumeSource: corev1.VolumeSource{
 											EmptyDir: &corev1.EmptyDirVolumeSource{
 												SizeLimit: ptr.To(resource.MustParse("100Mi")),
 											},
 										},
 									},
+									{
+										Name: "dashboards",
+										VolumeSource: corev1.VolumeSource{
+											EmptyDir: &corev1.EmptyDirVolumeSource{},
+										},
+									},
 								},
 							},
 						},
 					},
-				}
-
-				if values.IsGardenCluster {
-					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-						{
-							Name: "plutono-dashboards-garden",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: dashboardConfigMaps[0],
-									},
-								},
-							},
-						},
-						{
-							Name: "plutono-dashboards-global",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: dashboardConfigMaps[1],
-									},
-								},
-							},
-						}}...)
-
-					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-						{
-							Name:      "plutono-dashboards-garden",
-							MountPath: "/var/lib/plutono/dashboards/garden",
-						},
-						{
-							Name:      "plutono-dashboards-global",
-							MountPath: "/var/lib/plutono/dashboards/global",
-						},
-					}...)
-				} else {
-					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-						Name: "plutono-dashboards",
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: dashboardConfigMaps[0],
-								},
-							},
-						},
-					})
-
-					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-						Name:      "plutono-dashboards",
-						MountPath: "/var/lib/plutono/dashboards",
-					})
 				}
 
 				if values.ClusterType == comp.ClusterTypeSeed {
@@ -486,7 +515,11 @@ metadata:
     nginx.ingress.kubernetes.io/auth-type: basic
 `
 				}
-				out += `  creationTimestamp: null
+				out += `    nginx.ingress.kubernetes.io/server-snippet: |-
+      location /api/admin/ {
+        return 403;
+      }
+  creationTimestamp: null
 `
 				if values.ClusterType == comp.ClusterTypeShoot {
 					out += `  labels:
@@ -559,7 +592,7 @@ status:
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			Expect(managedResourceSecret.Data).To(HaveLen(9))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
@@ -577,16 +610,20 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__plutono.yaml"])).To(Equal(testruntime.Serialize(serviceAccount, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["role__some-namespace__plutono-dashboard-refresher.yaml"])).To(Equal(testruntime.Serialize(role, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["rolebinding__some-namespace__plutono-dashboard-refresher.yaml"])).To(Equal(testruntime.Serialize(roleBinding, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-be28eaa6.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 22)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 22, values)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{plutonoDashboardsConfigMap.Name})
+					deployment := deploymentYAMLFor(values)
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -598,19 +635,17 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-5be2bcda.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-b320ffed.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-					plutonoDashboardsGardenConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-garden-[^-]{8}")
+					plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-garden-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
-					plutonoDashboardsGlobalConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-global-[^-]{8}")
-					Expect(err).ToNot(HaveOccurred())
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsGardenConfigMap.Name}, 16)
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsGlobalConfigMap.Name}, 7)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 23, values)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{plutonoDashboardsGardenConfigMap.Name, plutonoDashboardsGlobalConfigMap.Name})
+					deployment := deploymentYAMLFor(values)
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -624,16 +659,17 @@ status:
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 				plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-[^-]{8}")
 				Expect(err).ToNot(HaveOccurred())
-				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 35)
+				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 35, values)
 				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 				managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 				Expect(err).ToNot(HaveOccurred())
-				deployment := deploymentYAMLFor(values, []string{plutonoDashboardsConfigMap.Name})
+				deployment := deploymentYAMLFor(values)
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				Expect(deployment).To(DeepEqual(managedResourceDeployment))
 			})
@@ -647,16 +683,17 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 39)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 39, values)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{plutonoDashboardsConfigMap.Name})
+					deployment := deploymentYAMLFor(values)
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -668,16 +705,17 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					plutonoDashboardsConfigMap, err := getDashboardConfigMaps(ctx, c, namespace, "plutono-dashboards-[^-]{8}")
 					Expect(err).ToNot(HaveOccurred())
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 27)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: plutonoDashboardsConfigMap.Name}, 27, values)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{plutonoDashboardsConfigMap.Name})
+					deployment := deploymentYAMLFor(values)
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -789,15 +827,24 @@ status:
 	})
 })
 
-func testDashboardConfigMap(ctx context.Context, c client.Client, namespaceName types.NamespacedName, dashboardCount int) {
+func testDashboardConfigMap(ctx context.Context, c client.Client, namespaceName types.NamespacedName, dashboardCount int, values Values) {
 	var (
-		configmap           = &corev1.ConfigMap{}
+		configMap           = &corev1.ConfigMap{}
 		availableDashboards = sets.Set[string]{}
 	)
 
-	ExpectWithOffset(1, c.Get(ctx, namespaceName, configmap)).To(Succeed())
+	labelKey := "seed"
+	if values.ClusterType == comp.ClusterTypeShoot {
+		labelKey = "shoot"
+	}
+	if values.IsGardenCluster {
+		labelKey = "garden"
+	}
 
-	for key := range configmap.Data {
+	ExpectWithOffset(1, c.Get(ctx, namespaceName, configMap)).To(Succeed())
+	ExpectWithOffset(1, configMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+labelKey, "true"))
+
+	for key := range configMap.Data {
 		availableDashboards.Insert(key)
 	}
 	ExpectWithOffset(1, availableDashboards).To(HaveLen(dashboardCount))
@@ -826,9 +873,10 @@ func getLabels() map[string]string {
 
 func getPodLabels(values Values) map[string]string {
 	labels := map[string]string{
-		v1beta1constants.LabelObservabilityApplication:    "plutono",
-		v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
-		gardenerutils.NetworkPolicyLabel("logging", 3100): v1beta1constants.LabelNetworkPolicyAllowed,
+		"observability.gardener.cloud/app":                "plutono",
+		"networking.gardener.cloud/to-dns":                "allowed",
+		"networking.gardener.cloud/to-runtime-apiserver":  "allowed",
+		gardenerutils.NetworkPolicyLabel("logging", 3100): "allowed",
 	}
 
 	if values.IsGardenCluster {
