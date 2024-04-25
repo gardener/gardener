@@ -92,7 +92,8 @@ config:
         # Those CIDRs must match those specified in the kind Cluster configuration.
         pods: 10.1.0.0/16
         services: 10.2.0.0/16
-        vpn: 10.5.0.0/24
+        # This seed purposely doesn't specify a non-default VPN network to test the default configuration in e2e tests.
+        # The local2 seed uses a non-default VPN network so that the configuration options is also tested in e2e tests.
         shootDefaults:
           pods: 10.3.0.0/16
           services: 10.4.0.0/16

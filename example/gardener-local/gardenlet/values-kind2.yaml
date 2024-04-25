@@ -31,3 +31,5 @@ config:
     spec:
       ingress:
         domain: ingress.local2.seed.local.gardener.cloud
+      networks:
+        vpn: 10.5.0.0/24
