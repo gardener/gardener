@@ -619,6 +619,35 @@ var _ = Describe("ManagedSeed", func() {
 					))
 				})
 
+				It("should forbid updating VPN network to overlap with shoot networks", func() {
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.Networks.VPN = ptr.To("10.4.0.0/24")
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+						SeedName: &newManagedSeed.Name,
+						Networking: &gardencorev1beta1.Networking{
+							Nodes:    ptr.To("10.2.0.0/16"),
+							Pods:     ptr.To("10.3.0.0/16"),
+							Services: ptr.To("10.4.0.0/16"),
+						},
+					}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.networks"),
+							"Detail": ContainSubstring("networks must not be changed to overlap with networks of shoots that are scheduled onto seed"),
+						})),
+					))
+				})
+
 				It("should forbid adding a new zone that is not part of shoot workers", func() {
 					// add a new zone to shoot workers
 					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-bar")

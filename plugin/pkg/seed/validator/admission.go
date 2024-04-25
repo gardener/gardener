@@ -125,7 +125,11 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
-	return admissionutils.ValidateZoneRemovalFromSeeds(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed")
+	if err := admissionutils.ValidateZoneRemovalFromSeeds(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {
+		return err
+	}
+
+	return admissionutils.ValidateSeedNetworksUpdateWithShoots(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed")
 }
 
 func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {

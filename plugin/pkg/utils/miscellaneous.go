@@ -7,6 +7,7 @@ package utils
 import (
 	"fmt"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -15,7 +16,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
 // SkipVerification is a common function to skip object verification during admission
@@ -83,6 +86,38 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 			return apierrors.NewInternalError(err)
 		} else if isUsed {
 			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName))
+		}
+	}
+
+	return nil
+}
+
+// ValidateSeedNetworksUpdateWithShoots returns an error when seed networks are changed so that they are incompatible
+// with shoots scheduled on this seed.
+func ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+	// for now, we only need to validate changes to the VPN network, the other seed networks are immutable.
+	if apiequality.Semantic.DeepEqual(oldSeedSpec.Networks.VPN, newSeedSpec.Networks.VPN) {
+		return nil
+	}
+
+	shoots, err := ListShootsUsingSeed(seedName, shootLister)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	for _, shoot := range shoots {
+		if len(cidrvalidation.ValidateNetworkDisjointedness(
+			nil,
+			shoot.Spec.Networking.Nodes,
+			shoot.Spec.Networking.Pods,
+			shoot.Spec.Networking.Services,
+			newSeedSpec.Networks.Nodes,
+			newSeedSpec.Networks.VPN,
+			newSeedSpec.Networks.Pods,
+			newSeedSpec.Networks.Services,
+			v1beta1helper.IsWorkerless(shoot),
+		)) > 0 {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot update networks of %s %s as there are Shoots with overlapping networks scheduled to this Seed", kind, seedName))
 		}
 	}
 

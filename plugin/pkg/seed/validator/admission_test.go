@@ -37,6 +37,14 @@ var _ = Describe("validator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
+				Spec: core.SeedSpec{
+					Networks: core.SeedNetworks{
+						Nodes:    ptr.To("10.0.0.0/16"),
+						Pods:     "10.1.0.0/16",
+						Services: "10.2.0.0/16",
+						VPN:      ptr.To("10.3.0.0/24"),
+					},
+				},
 			}
 			shootBase = gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -48,6 +56,11 @@ var _ = Describe("validator", func() {
 					Region:            "europe",
 					SecretBindingName: ptr.To("my-secret"),
 					SeedName:          &seedName,
+					Networking: &gardencorev1beta1.Networking{
+						Nodes:    ptr.To("10.4.0.0/16"),
+						Pods:     ptr.To("10.5.0.0/16"),
+						Services: ptr.To("10.6.0.0/16"),
+					},
 				},
 			}
 
@@ -72,25 +85,62 @@ var _ = Describe("validator", func() {
 		Context("Seed Update", func() {
 			var oldSeed, newSeed *core.Seed
 
-			BeforeEach(func() {
-				oldSeed = seedBase.DeepCopy()
-				newSeed = seedBase.DeepCopy()
+			Describe("zone updates", func() {
+				BeforeEach(func() {
+					oldSeed = seedBase.DeepCopy()
+					newSeed = seedBase.DeepCopy()
 
-				oldSeed.Spec.Provider.Zones = []string{"1", "2"}
-				newSeed.Spec.Provider.Zones = []string{"2"}
+					oldSeed.Spec.Provider.Zones = []string{"1", "2"}
+					newSeed.Spec.Provider.Zones = []string{"2"}
+				})
+
+				It("should allow zone removal when there are no shoots", func() {
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid zone removal when there are shoots", func() {
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
 			})
 
-			It("should allow zone removal when there are no shoots", func() {
-				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Describe("network updates", func() {
+				BeforeEach(func() {
+					oldSeed = seedBase.DeepCopy()
+					newSeed = seedBase.DeepCopy()
+				})
 
-				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
-			})
+				It("should allow the update if VPN network was not changed", func() {
+					oldSeed.Spec.DNS.Provider = &core.SeedDNSProvider{Type: "aws-route53"}
+					newSeed.Spec.DNS.Provider = &core.SeedDNSProvider{Type: "google-clouddns"}
 
-			It("should forbid zone removal when there are shoots", func() {
-				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
-				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should allow VPN network update if there are no overlapping shoots", func() {
+					newSeed.Spec.Networks.VPN = ptr.To("100.0.0.0/24")
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid VPN network update if there are overlapping shoots", func() {
+					newSeed.Spec.Networks.VPN = ptr.To("10.4.0.0/24")
+
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(And(BeForbiddenError(), MatchError(ContainSubstring("overlapping networks"))))
+				})
 			})
 		})
 

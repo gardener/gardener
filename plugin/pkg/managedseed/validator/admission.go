@@ -270,8 +270,13 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 }
 
 func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
-	allErrs := field.ErrorList{}
-	zonesFieldPath := field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones")
+	var (
+		allErrs = field.ErrorList{}
+
+		specFieldPath     = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+		zonesFieldPath    = specFieldPath.Child("provider", "zones")
+		networksFieldPath = specFieldPath.Child("networks")
+	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
 	if err != nil {
@@ -284,6 +289,10 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 
 	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
 		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
+	}
+
+	if err := admissionutils.ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(networksFieldPath, "networks must not be changed to overlap with networks of shoots that are scheduled onto seed"))
 	}
 
 	shootZones := v1beta1helper.GetAllZonesFromShoot(shoot)

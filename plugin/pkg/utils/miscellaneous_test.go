@@ -207,4 +207,58 @@ var _ = Describe("Miscellaneous", func() {
 			Expect(ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot remove zones")))
 		})
 	})
+
+	Describe("#ValidateSeedNetworksUpdateWithShoots", func() {
+		var (
+			seedName = "foo"
+			kind     = "foo"
+
+			oldSeedSpec, newSeedSpec *core.SeedSpec
+			shoot                    *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			oldSeedSpec = &core.SeedSpec{
+				Networks: core.SeedNetworks{
+					Nodes:    ptr.To("10.0.0.0/16"),
+					Pods:     "10.1.0.0/16",
+					Services: "10.2.0.0/16",
+					VPN:      ptr.To("10.3.0.0/24"),
+				},
+			}
+			newSeedSpec = oldSeedSpec.DeepCopy()
+
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: &seedName,
+					Networking: &gardencorev1beta1.Networking{
+						Nodes:    ptr.To("10.4.0.0/16"),
+						Pods:     ptr.To("10.5.0.0/16"),
+						Services: ptr.To("10.6.0.0/16"),
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: &seedName,
+				},
+			}
+
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+		})
+
+		It("should do nothing because networks were not changed", func() {
+			Expect(ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should allow VPN network update if there are no overlapping shoots", func() {
+			newSeedSpec.Networks.VPN = ptr.To("100.0.0.0/24")
+
+			Expect(ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should forbid VPN network update if there are overlapping shoots", func() {
+			newSeedSpec.Networks.VPN = ptr.To("10.4.0.0/24")
+
+			Expect(ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("overlapping networks")))
+		})
+	})
 })
