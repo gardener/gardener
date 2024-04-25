@@ -454,7 +454,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       botanist.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerDeleted),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilOperatingSystemConfigsAreDeleted = g.Add(flow.Task{
 			Name: "Waiting until all operating system config resources are deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanup(ctx)
@@ -483,7 +483,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteExtensionResourcesBeforeKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extension resources before kube-apiserver",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilOperatingSystemConfigsAreDeleted, waitUntilManagedResourcesDeleted),
 		})
 		waitUntilExtensionResourcesBeforeKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources that should be handled before kube-apiserver have been deleted",

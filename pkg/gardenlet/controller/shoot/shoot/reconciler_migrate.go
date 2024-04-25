@@ -244,7 +244,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		deleteExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting extensions before kube-apiserver",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer,
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionsBeforeKubeAPIServerMigrated),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted, waitUntilExtensionsBeforeKubeAPIServerMigrated),
 		})
 		waitUntilExtensionsBeforeKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extensions that should be handled before kube-apiserver have been deleted",
