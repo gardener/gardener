@@ -74,6 +74,7 @@ func NewRuntimeGardenerResourceManager(
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                           ptr.To(20),
+		AlwaysUpdate:                              ptr.To(true),
 		DefaultSeccompProfileEnabled:              defaultSeccompProfileEnabled,
 		DefaultNotReadyToleration:                 defaultNotReadyToleration,
 		DefaultUnreachableToleration:              defaultUnreachableToleration,
