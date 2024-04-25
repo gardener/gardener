@@ -269,6 +269,7 @@ build:
             - pkg/resourcemanager/controller/managedresource
             - pkg/resourcemanager/controller/networkpolicy
             - pkg/resourcemanager/controller/node
+            - pkg/resourcemanager/controller/node/agentreconciliationdelay
             - pkg/resourcemanager/controller/node/criticalcomponents
             - pkg/resourcemanager/controller/node/criticalcomponents/helper
             - pkg/resourcemanager/controller/tokeninvalidator

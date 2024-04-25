@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/agentreconciliationdelay"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 )
 
@@ -21,6 +22,14 @@ func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg config
 			Config: cfg.Controllers.NodeCriticalComponents,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding node-critical-components controller: %w", err)
+		}
+	}
+
+	if cfg.Controllers.NodeAgentReconciliationDelay.Enabled {
+		if err := (&agentreconciliationdelay.Reconciler{
+			Config: cfg.Controllers.NodeAgentReconciliationDelay,
+		}).AddToManager(mgr, targetCluster); err != nil {
+			return fmt.Errorf("failed adding node-agent-reconciliation-delay controller: %w", err)
 		}
 	}
 
