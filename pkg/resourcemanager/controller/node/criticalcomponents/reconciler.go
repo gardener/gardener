@@ -35,7 +35,7 @@ import (
 // components are ready.
 type Reconciler struct {
 	TargetClient client.Client
-	Config       config.NodeControllerConfig
+	Config       config.NodeCriticalComponentsControllerConfig
 	Recorder     record.EventRecorder
 }
 

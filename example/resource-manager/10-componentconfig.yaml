@@ -62,7 +62,7 @@ controllers:
       podSelector:
         matchLabels:
           foo: bar
-  node:
+  nodeCriticalComponents:
     enabled: true
     concurrentSyncs: 5
     backoff: 10s

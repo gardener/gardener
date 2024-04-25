@@ -16,9 +16,9 @@ import (
 
 // AddToManager adds all node controllers to the given manager.
 func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg config.ResourceManagerConfiguration) error {
-	if cfg.Controllers.Node.Enabled {
+	if cfg.Controllers.NodeCriticalComponents.Enabled {
 		if err := (&criticalcomponents.Reconciler{
-			Config: cfg.Controllers.Node,
+			Config: cfg.Controllers.NodeCriticalComponents,
 		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding node-critical-components controller: %w", err)
 		}

@@ -408,28 +408,28 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("NodeControllerConfig defaulting", func() {
-		It("should not default the NodeControllerConfig because it is disabled", func() {
-			obj.Controllers.Node = NodeControllerConfig{}
+	Describe("NodeCriticalComponentsControllerConfig defaulting", func() {
+		It("should not default the NodeCriticalComponentsControllerConfig because it is disabled", func() {
+			obj.Controllers.NodeCriticalComponents = NodeCriticalComponentsControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Node.ConcurrentSyncs).To(BeNil())
+			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the NodeControllerConfig because it is enabled", func() {
-			obj.Controllers.Node = NodeControllerConfig{
+		It("should default the NodeCriticalComponentsControllerConfig because it is enabled", func() {
+			obj.Controllers.NodeCriticalComponents = NodeCriticalComponentsControllerConfig{
 				Enabled: true,
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Node.ConcurrentSyncs).To(PointTo(Equal(5)))
-			Expect(obj.Controllers.Node.Backoff).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
+			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.NodeCriticalComponents.Backoff).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
 		})
 
-		It("should not overwrite already set values for NodeControllerConfig", func() {
-			obj.Controllers.Node = NodeControllerConfig{
+		It("should not overwrite already set values for NodeCriticalComponentsControllerConfig", func() {
+			obj.Controllers.NodeCriticalComponents = NodeCriticalComponentsControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: ptr.To(2),
 				Backoff:         &metav1.Duration{Duration: time.Minute},
@@ -437,8 +437,8 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Node.ConcurrentSyncs).To(PointTo(Equal(2)))
-			Expect(obj.Controllers.Node.Backoff).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Controllers.NodeCriticalComponents.Backoff).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})
 

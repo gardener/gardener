@@ -39,7 +39,7 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_KubeletCSRApproverControllerConfig(&in.Controllers.KubeletCSRApprover)
 	SetDefaults_ManagedResourceControllerConfig(&in.Controllers.ManagedResource)
 	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
-	SetDefaults_NodeControllerConfig(&in.Controllers.Node)
+	SetDefaults_NodeCriticalComponentsControllerConfig(&in.Controllers.NodeCriticalComponents)
 	SetDefaults_TokenInvalidatorControllerConfig(&in.Controllers.TokenInvalidator)
 	SetDefaults_TokenRequestorControllerConfig(&in.Controllers.TokenRequestor)
 	SetDefaults_PodSchedulerNameWebhookConfig(&in.Webhooks.PodSchedulerName)

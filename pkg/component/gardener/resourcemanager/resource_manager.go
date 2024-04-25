@@ -643,7 +643,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			PodTolerations: r.values.SystemComponentTolerations,
 		}
 
-		config.Controllers.Node.Enabled = true
+		config.Controllers.NodeCriticalComponents.Enabled = true
 	}
 
 	// this function should be called at the last to make sure we disable
@@ -2082,7 +2082,7 @@ type Secrets struct {
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
 	// disable unneeded controllers
 	config.Controllers.KubeletCSRApprover.Enabled = false
-	config.Controllers.Node.Enabled = false
+	config.Controllers.NodeCriticalComponents.Enabled = false
 
 	// disable unneeded webhooks
 	config.Webhooks.PodSchedulerName.Enabled = false

@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&criticalcomponents.Reconciler{
-		Config: config.NodeControllerConfig{
+		Config: config.NodeCriticalComponentsControllerConfig{
 			ConcurrentSyncs: ptr.To(5),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
 		},

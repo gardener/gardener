@@ -152,8 +152,8 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 	}
 }
 
-// SetDefaults_NodeControllerConfig sets defaults for the NodeControllerConfig object.
-func SetDefaults_NodeControllerConfig(obj *NodeControllerConfig) {
+// SetDefaults_NodeCriticalComponentsControllerConfig sets defaults for the NodeCriticalComponentsControllerConfig object.
+func SetDefaults_NodeCriticalComponentsControllerConfig(obj *NodeCriticalComponentsControllerConfig) {
 	if obj.Enabled {
 		if obj.ConcurrentSyncs == nil {
 			obj.ConcurrentSyncs = ptr.To(5)
