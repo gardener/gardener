@@ -14,6 +14,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,7 +23,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	networkpolicyhelper "github.com/gardener/gardener/pkg/controller/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -554,10 +554,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							},
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(53)},
-							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(53)},
-							{Protocol: ptr.To(corev1.ProtocolUDP), Port: utils.IntStrPtrFromInt32(8053)},
-							{Protocol: ptr.To(corev1.ProtocolTCP), Port: utils.IntStrPtrFromInt32(8053)},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(53))},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(53))},
+							{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(8053))},
+							{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(8053))},
 						},
 					}},
 				}

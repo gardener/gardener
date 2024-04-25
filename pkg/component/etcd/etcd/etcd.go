@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
@@ -266,8 +267,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
-		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortEtcdClient), Protocol: ptr.To(corev1.ProtocolTCP)},
-		{Port: utils.IntStrPtrFromInt32(etcdconstants.PortBackupRestore), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
+		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortBackupRestore)), Protocol: ptr.To(corev1.ProtocolTCP)},
 	}
 	if e.values.NamePrefix != "" {
 		// etcd deployed for garden cluster

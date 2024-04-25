@@ -624,7 +624,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",
@@ -658,7 +658,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: utils.IntStrPtrFromInt32(1),
+							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app":  "kubernetes",

@@ -178,7 +178,7 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 	service.Labels = k.getLabels()
 
 	metricsPort := networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt32(port),
+		Port:     ptr.To(intstr.FromInt32(port)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
@@ -357,7 +357,7 @@ func (k *kubeStateMetrics) emptyPodDisruptionBudget() *policyv1.PodDisruptionBud
 func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable: utils.IntStrPtrFromInt32(1),
+		MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 		Selector:       deployment.Spec.Selector,
 	}
 

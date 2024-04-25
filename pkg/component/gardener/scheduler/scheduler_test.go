@@ -143,7 +143,7 @@ var _ = Describe("GardenerScheduler", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 							"app":  "gardener",
 							"role": "scheduler",

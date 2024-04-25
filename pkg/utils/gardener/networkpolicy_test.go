@@ -20,9 +20,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -33,8 +33,8 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForScrapeTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: ptr.To(corev1.ProtocolTCP)},
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: ptr.To(corev1.ProtocolUDP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(1234)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromString("foo")), Protocol: ptr.To(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(
@@ -49,8 +49,8 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForGardenScrapeTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: ptr.To(corev1.ProtocolTCP)},
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: ptr.To(corev1.ProtocolUDP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(1234)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromString("foo")), Protocol: ptr.To(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(
@@ -65,8 +65,8 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForSeedScrapeTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: ptr.To(corev1.ProtocolTCP)},
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: ptr.To(corev1.ProtocolUDP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(1234)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromString("foo")), Protocol: ptr.To(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(
@@ -81,8 +81,8 @@ var _ = Describe("NetworkPolicy", func() {
 
 			Expect(InjectNetworkPolicyAnnotationsForWebhookTargets(
 				obj,
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(1234), Protocol: ptr.To(corev1.ProtocolTCP)},
-				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: ptr.To(corev1.ProtocolUDP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(1234)), Protocol: ptr.To(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromString("foo")), Protocol: ptr.To(corev1.ProtocolUDP)},
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(

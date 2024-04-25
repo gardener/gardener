@@ -22,7 +22,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -56,7 +55,7 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 	}
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt32(serverPort),
+		Port:     ptr.To(intstr.FromInt32(serverPort)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

@@ -20,10 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("NetworkPolicy", func() {
@@ -40,7 +40,7 @@ var _ = Describe("NetworkPolicy", func() {
 					},
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To:    []networkingv1.NetworkPolicyPeer{},
-						Ports: []networkingv1.NetworkPolicyPort{{Port: utils.IntStrPtrFromInt32(16909), Protocol: ptr.To(corev1.ProtocolTCP)}},
+						Ports: []networkingv1.NetworkPolicyPort{{Port: ptr.To(intstr.FromInt32(16909)), Protocol: ptr.To(corev1.ProtocolTCP)}},
 					}},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

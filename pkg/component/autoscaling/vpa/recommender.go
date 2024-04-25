@@ -299,7 +299,7 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt32(recommenderPortMetrics),
+			Port:     ptr.To(intstr.FromInt32(recommenderPortMetrics)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 

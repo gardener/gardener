@@ -218,7 +218,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeCIDRMaskSize: ptr.To[int32](22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
-								SyncPeriod: makeDurationPointer(30 * time.Second),
+								SyncPeriod: &metav1.Duration{Duration: 30 * time.Second},
 								Tolerance:  ptr.To(float64(0.1)),
 							},
 						},
@@ -2424,9 +2424,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid unsupported HPA configuration", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(-1 * time.Second)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(-1 * time.Second)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = &metav1.Duration{Duration: -1 * time.Second}
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = &metav1.Duration{Duration: -1 * time.Second}
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = &metav1.Duration{Duration: -1 * time.Second}
 
 				errorList := ValidateShoot(shoot)
 
@@ -2443,9 +2443,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed when using valid configuration parameters", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(5 * time.Minute)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(30 * time.Second)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(5 * time.Minute)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = &metav1.Duration{Duration: 5 * time.Minute}
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = &metav1.Duration{Duration: 30 * time.Second}
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = &metav1.Duration{Duration: 5 * time.Minute}
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())

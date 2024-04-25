@@ -46,7 +46,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -194,7 +193,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						},
 					},
 					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 							"app":  "gardener",
 							"role": "apiserver",
@@ -438,8 +437,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       gardenerutils.IntStrPtrFromString("100%"),
-						MaxUnavailable: gardenerutils.IntStrPtrFromInt32(0),
+						MaxSurge:       ptr.To(intstr.FromString("100%")),
+						MaxUnavailable: ptr.To(intstr.FromInt32(0)),
 					},
 				},
 				Template: corev1.PodTemplateSpec{

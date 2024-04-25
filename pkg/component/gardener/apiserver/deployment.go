@@ -69,8 +69,8 @@ func (g *gardenerAPIServer) deployment(
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       utils.IntStrPtrFromString("100%"),
-					MaxUnavailable: utils.IntStrPtrFromInt32(0),
+					MaxSurge:       ptr.To(intstr.FromString("100%")),
+					MaxUnavailable: ptr.To(intstr.FromInt32(0)),
 				},
 			},
 			Template: corev1.PodTemplateSpec{

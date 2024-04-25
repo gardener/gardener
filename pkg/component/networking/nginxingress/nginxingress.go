@@ -644,7 +644,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Labels:    n.getLabels(LabelValueController, false),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: utils.IntStrPtrFromInt32(1),
+				MinAvailable: ptr.To(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},

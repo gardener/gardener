@@ -21,8 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
@@ -129,18 +127,6 @@ baz`, spaces)).To(Equal(`foo
 		Entry("condition is true", true, "true"),
 		Entry("condition is false", false, "false"),
 	)
-
-	Describe("#IntStrPtrFromInt32", func() {
-		It("should return a pointer", func() {
-			Expect(IntStrPtrFromInt32(1234)).Should(gstruct.PointTo(Equal(intstr.FromInt32(1234))))
-		})
-	})
-
-	Describe("#IntStrPtrFromString", func() {
-		It("should return a pointer", func() {
-			Expect(IntStrPtrFromString("foo")).Should(gstruct.PointTo(Equal(intstr.FromString("foo"))))
-		})
-	})
 
 	Describe("#InterfaceMapToStringMap", func() {
 		input := map[string]interface{}{

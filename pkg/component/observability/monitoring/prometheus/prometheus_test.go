@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -461,7 +460,7 @@ honor_labels: true`
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "prometheus",
 					"role": "monitoring",

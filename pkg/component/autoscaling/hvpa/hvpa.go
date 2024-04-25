@@ -304,7 +304,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: utils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       deployment.Spec.Selector,
 			},
 		}
@@ -335,7 +335,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, h.values.KubernetesVersion)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt32(portMetrics),
+		Port:     ptr.To(intstr.FromInt32(portMetrics)),
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 

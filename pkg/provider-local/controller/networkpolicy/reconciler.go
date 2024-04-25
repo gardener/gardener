@@ -22,6 +22,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,7 +31,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // Reconciler creates the required networkpolicies in the shoot namespace.
@@ -68,8 +69,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt32(9053), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt32(9053), Protocol: &protocolUDP},
+				{Port: ptr.To(intstr.FromInt32(9053)), Protocol: &protocolTCP},
+				{Port: ptr.To(intstr.FromInt32(9053)), Protocol: &protocolUDP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{
@@ -89,9 +90,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				}},
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt32(8132), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt32(8443), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt32(9443), Protocol: &protocolTCP},
+				{Port: ptr.To(intstr.FromInt32(8132)), Protocol: &protocolTCP},
+				{Port: ptr.To(intstr.FromInt32(8443)), Protocol: &protocolTCP},
+				{Port: ptr.To(intstr.FromInt32(9443)), Protocol: &protocolTCP},
 			},
 		}},
 		PodSelector: metav1.LabelSelector{

@@ -618,7 +618,7 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector:       &metav1.LabelSelector{MatchLabels: podLabels},
 		}
 
@@ -667,7 +667,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt32(MetricsPort), Protocol: ptr.To(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(MetricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{

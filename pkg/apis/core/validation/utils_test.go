@@ -15,12 +15,9 @@
 package validation_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -28,10 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
-
-func makeDurationPointer(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
 
 var _ = Describe("Utils tests", func() {
 	Describe("#ValidateFailureToleranceTypeValue", func() {

@@ -181,7 +181,7 @@ var _ = Describe("validation", func() {
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
 				GloballyEnabled:  ptr.To(true),
-				ReconcileTimeout: makeDurationPointer(10 * time.Second),
+				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
 				Lifecycle: &core.ControllerResourceLifecycle{
 					Reconcile: &strat,
 				},
@@ -196,7 +196,7 @@ var _ = Describe("validation", func() {
 		It("should forbid to set certain fields for kind != Extension", func() {
 			strat := core.BeforeKubeAPIServer
 			ctrlResource.GloballyEnabled = ptr.To(true)
-			ctrlResource.ReconcileTimeout = makeDurationPointer(10 * time.Second)
+			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
 				Reconcile: &strat,
 			}

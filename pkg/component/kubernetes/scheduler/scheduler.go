@@ -196,7 +196,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		service.Labels = getLabels()
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     utils.IntStrPtrFromInt32(port),
+			Port:     ptr.To(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
 
@@ -351,7 +351,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector:       deployment.Spec.Selector,
 		}
 

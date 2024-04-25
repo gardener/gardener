@@ -772,7 +772,7 @@ func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) *policyv1.Po
 				Labels:    GetLabels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: gardenerutils.IntStrPtrFromInt32(1),
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 				Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
 			},
 		}

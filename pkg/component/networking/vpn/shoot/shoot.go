@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -408,7 +407,7 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		},
 	}

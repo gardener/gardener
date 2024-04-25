@@ -17,8 +17,9 @@ package admissioncontroller
 import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -30,7 +31,7 @@ func (a *gardenerAdmissionController) podDisruptionBudget() *policyv1.PodDisrupt
 			Labels:    GetLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: utils.IntStrPtrFromInt32(1),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
 		},
 	}
