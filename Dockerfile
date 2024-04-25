@@ -31,7 +31,6 @@ ENTRYPOINT ["/gardener-scheduler"]
 # gardenlet
 FROM distroless-static AS gardenlet
 COPY --from=builder /go/bin/gardenlet /gardenlet
-USER nonroot
 WORKDIR /
 ENTRYPOINT ["/gardenlet"]
 
