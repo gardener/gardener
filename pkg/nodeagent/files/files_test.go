@@ -199,6 +199,21 @@ var _ = Describe("Files", func() {
 			})
 
 			runTests()
+
+			It("should work if a tmp file from a previous run still exists", func() {
+				createFile(fakeFS, destinationFile+".tmp", content, permissions)
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(Succeed())
+				checkFile(fakeFS, destinationFile, content, permissions)
+				checkFileNotFound(fakeFS, sourceFile)
+				checkFileNotFound(fakeFS, destinationFile+".tmp")
+			})
+
+			It("should not delete if there .tmp file exists and is a directory", func() {
+				Expect(fakeFS.Mkdir(destinationFile, permissions)).To(Succeed())
+				createFile(fakeFS, sourceFile, content, permissions)
+				Expect(Move(fakeFS, sourceFile, destinationFile)).To(MatchError(ContainSubstring("exists but is not a regular file")))
+			})
 		})
 	})
 })
