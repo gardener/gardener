@@ -33,6 +33,9 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-kind-network: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
+        {{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+        {{- end }}
 {{ include "labels" . | indent 8 }}
     spec:
       priorityClassName: gardener-system-900
