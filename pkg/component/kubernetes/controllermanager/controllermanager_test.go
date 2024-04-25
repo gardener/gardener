@@ -153,7 +153,7 @@ var _ = Describe("KubeControllerManager", func() {
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 						ContainerName: "kube-controller-manager",
 						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
 						},
 						MaxAllowed: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("4"),
@@ -278,7 +278,7 @@ var _ = Describe("KubeControllerManager", func() {
 									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 										ContainerName: "kube-controller-manager",
 										MinAllowed: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("100Mi"),
+											corev1.ResourceMemory: resource.MustParse("50Mi"),
 										},
 										MaxAllowed: corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("4"),

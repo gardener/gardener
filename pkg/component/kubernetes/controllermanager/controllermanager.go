@@ -268,7 +268,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
 				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
 				},
 				MaxAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("4"),
@@ -281,7 +281,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
 				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
 				},
 				MaxAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("4"),
