@@ -23,34 +23,41 @@ func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 	return operation == admission.Update && metadata.DeletionTimestamp != nil
 }
 
-// IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
-func IsSeedUsedByShoot(seedName string, shoots []*gardencorev1beta1.Shoot) bool {
-	for _, shoot := range shoots {
-		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
-			return true
-		}
-		if shoot.Status.SeedName != nil && *shoot.Status.SeedName == seedName {
-			return true
+// ListShootsUsingSeed lists all shoots referencing the given seed name.
+func ListShootsUsingSeed(seedName string, shootLister gardencorev1beta1listers.ShootLister) ([]*gardencorev1beta1.Shoot, error) {
+	allShoots, err := shootLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	var shoots []*gardencorev1beta1.Shoot
+	for _, shoot := range allShoots {
+		if IsSeedUsedByShoot(seedName, shoot) {
+			shoots = append(shoots, shoot)
 		}
 	}
-	return false
+	return shoots, nil
 }
 
-// GetFilteredShootList returns shoots returned by the shootLister filtered via the predicateFn.
-func GetFilteredShootList(shootLister gardencorev1beta1listers.ShootLister, predicateFn func(*gardencorev1beta1.Shoot) bool) ([]*gardencorev1beta1.Shoot, error) {
-	var matchingShoots []*gardencorev1beta1.Shoot
-
-	shoots, err := shootLister.List(labels.Everything())
+// IsSeedUsedByAnyShoot checks whether there is any shoot referencing the given seed name.
+func IsSeedUsedByAnyShoot(seedName string, shootLister gardencorev1beta1listers.ShootLister) (bool, error) {
+	shoots, err := ListShootsUsingSeed(seedName, shootLister)
 	if err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("failed to list shoots: %w", err))
+		return false, err
 	}
 
-	for _, shoot := range shoots {
-		if predicateFn(shoot) {
-			matchingShoots = append(matchingShoots, shoot)
-		}
+	return len(shoots) > 0, nil
+}
+
+// IsSeedUsedByShoot checks whether the shoot references the given seed name.
+func IsSeedUsedByShoot(seedName string, shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
+		return true
 	}
-	return matchingShoots, nil
+	if shoot.Status.SeedName != nil && *shoot.Status.SeedName == seedName {
+		return true
+	}
+	return false
 }
 
 // NewAttributesWithName returns admission.Attributes with the given name and all other attributes kept same.
@@ -72,12 +79,9 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 // shoots.
 func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
 	if removedZones := sets.New(oldSeedSpec.Provider.Zones...).Difference(sets.New(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
-		shoots, err := shootLister.List(labels.Everything())
-		if err != nil {
-			return err
-		}
-
-		if IsSeedUsedByShoot(seedName, shoots) {
+		if isUsed, err := IsSeedUsedByAnyShoot(seedName, shootLister); err != nil {
+			return apierrors.NewInternalError(err)
+		} else if isUsed {
 			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName))
 		}
 	}

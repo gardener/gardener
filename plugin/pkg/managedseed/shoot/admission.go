@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -139,12 +138,9 @@ func (v *Shoot) validateDeleteCollection(ctx context.Context, a admission.Attrib
 func (v *Shoot) validateDelete(_ context.Context, a admission.Attributes) error {
 	seedName := a.GetName()
 
-	shoots, err := v.getShoots(labels.Everything())
-	if err != nil {
-		return err
-	}
-
-	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
+	if isUsed, err := admissionutils.IsSeedUsedByAnyShoot(seedName, v.shootLister); err != nil {
+		return apierrors.NewInternalError(err)
+	} else if isUsed {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete managed seed %s/%s since its seed %s is still used by shoot(s)", a.GetNamespace(), a.GetName(), a.GetName()))
 	}
 
@@ -171,13 +167,4 @@ func (v *Shoot) getManagedSeeds(ctx context.Context, selector labels.Selector) (
 		return nil, err
 	}
 	return managedSeedList.Items, nil
-}
-
-func (v *Shoot) getShoots(selector labels.Selector) ([]*gardencorev1beta1.Shoot, error) {
-	shoots, err := v.shootLister.List(selector)
-	if err != nil {
-		return nil, apierrors.NewInternalError(err)
-	}
-
-	return shoots, nil
 }

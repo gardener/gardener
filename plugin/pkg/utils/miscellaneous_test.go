@@ -7,6 +7,7 @@ package utils_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
@@ -20,7 +21,13 @@ import (
 
 var _ = Describe("Miscellaneous", func() {
 	var (
-		shoot1 = gardencorev1beta1.Shoot{
+		now metav1.Time
+
+		coreInformerFactory gardencoreinformers.SharedInformerFactory
+		shootLister         gardencorev1beta1listers.ShootLister
+
+		shoots []*gardencorev1beta1.Shoot
+		shoot1 = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot1",
 				Namespace: "garden-pr1",
@@ -30,7 +37,7 @@ var _ = Describe("Miscellaneous", func() {
 			},
 		}
 
-		shoot2 = gardencorev1beta1.Shoot{
+		shoot2 = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot2",
 				Namespace: "garden-pr1",
@@ -43,7 +50,7 @@ var _ = Describe("Miscellaneous", func() {
 			},
 		}
 
-		shoot3 = gardencorev1beta1.Shoot{
+		shoot3 = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot3",
 				Namespace: "garden-pr1",
@@ -54,22 +61,18 @@ var _ = Describe("Miscellaneous", func() {
 		}
 	)
 
-	shoots := []*gardencorev1beta1.Shoot{
-		&shoot1,
-		&shoot2,
-		&shoot3,
-	}
-	now := metav1.Now()
+	BeforeEach(func() {
+		now = metav1.Now()
 
-	coreShoot1 := core.Shoot{}
-	err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot1, &coreShoot1, nil)
-	Expect(err).NotTo(HaveOccurred())
-	coreShoot2 := core.Shoot{}
-	err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot2, &coreShoot2, nil)
-	Expect(err).NotTo(HaveOccurred())
-	coreShoot3 := core.Shoot{}
-	err = gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(&shoot3, &coreShoot3, nil)
-	Expect(err).NotTo(HaveOccurred())
+		coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+		shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
+
+		shoots = []*gardencorev1beta1.Shoot{
+			shoot1,
+			shoot2,
+			shoot3,
+		}
+	})
 
 	DescribeTable("#SkipVerification",
 		func(operation admission.Operation, metadata metav1.ObjectMeta, expected bool) {
@@ -83,19 +86,64 @@ var _ = Describe("Miscellaneous", func() {
 		Entry("operation update and object without deletion timestamp", admission.Update, metav1.ObjectMeta{Name: "obj1"}, false),
 	)
 
-	DescribeTable("#IsSeedUsedByShoot",
+	Describe("#ListShootsUsingSeed", func() {
+		BeforeEach(func() {
+			for _, shoot := range shoots {
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			}
+		})
+
+		It("should consider spec.seedName", func() {
+			Expect(ListShootsUsingSeed("seed1", shootLister)).To(ConsistOf(
+				PointTo(HaveField("ObjectMeta.Name", "shoot1")),
+				PointTo(HaveField("ObjectMeta.Name", "shoot2")),
+			))
+		})
+
+		It("should consider status.seedName", func() {
+			Expect(ListShootsUsingSeed("seed2", shootLister)).To(ConsistOf(
+				PointTo(HaveField("ObjectMeta.Name", "shoot2")),
+			))
+		})
+
+		It("should return empty list if there is no referencing shoot", func() {
+			Expect(ListShootsUsingSeed("non-existing", shootLister)).To(BeEmpty())
+		})
+	})
+
+	DescribeTable("#IsSeedUsedByAnyShoot",
 		func(seedName string, expected bool) {
-			Expect(IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
+			for _, shoot := range shoots {
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			}
+
+			Expect(IsSeedUsedByAnyShoot(seedName, shootLister)).To(Equal(expected))
 		},
 		Entry("is used by shoot", "seed1", true),
 		Entry("is used by shoot in migration", "seed2", true),
 		Entry("is unused", "seed3", false),
 	)
 
+	Describe("#IsSeedUsedByShoot", func() {
+		It("should consider spec.seedName", func() {
+			Expect(IsSeedUsedByShoot("seed1", shoot1)).To(BeTrue())
+			Expect(IsSeedUsedByShoot("seed1", shoot2)).To(BeTrue())
+		})
+
+		It("should consider status.seedName", func() {
+			Expect(IsSeedUsedByShoot("seed2", shoot1)).To(BeFalse())
+			Expect(IsSeedUsedByShoot("seed2", shoot2)).To(BeTrue())
+		})
+
+		It("should handle unscheduled shoots", func() {
+			Expect(IsSeedUsedByShoot("foo", shoot3)).To(BeFalse())
+		})
+	})
+
 	Describe("#NewAttributesWithName", func() {
 		It("should return admission.Attributes with the given name", func() {
 			name := "name"
-			attrs := admission.NewAttributesRecord(&shoot1, nil, core.Kind("Shoot").WithVersion("version"), shoot1.Namespace, "", core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shoot1, nil, core.Kind("Shoot").WithVersion("version"), shoot1.Namespace, "", core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			newAttrs := NewAttributesWithName(attrs, name)
 
@@ -108,17 +156,11 @@ var _ = Describe("Miscellaneous", func() {
 			seedName = "foo"
 			kind     = "foo"
 
-			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			shootLister         gardencorev1beta1listers.ShootLister
-
 			oldSeedSpec, newSeedSpec *core.SeedSpec
 			shoot                    *gardencorev1beta1.Shoot
 		)
 
 		BeforeEach(func() {
-			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
-
 			oldSeedSpec = &core.SeedSpec{
 				Provider: core.SeedProvider{
 					Zones: []string{"1", "2"},

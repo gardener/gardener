@@ -11,7 +11,6 @@ import (
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -132,12 +131,9 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 	seedName := a.GetName()
 
-	shoots, err := v.shootLister.List(labels.Everything())
-	if err != nil {
+	if isUsed, err := admissionutils.IsSeedUsedByAnyShoot(seedName, v.shootLister); err != nil {
 		return apierrors.NewInternalError(err)
-	}
-
-	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
+	} else if isUsed {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed %s since it is still used by shoot(s)", seedName))
 	}
 	return nil
