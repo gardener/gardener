@@ -54,19 +54,16 @@ var _ = Describe("Defaults", func() {
 					SetDefaults_OperatingSystemConfigControllerConfig(obj)
 
 					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-					Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 				})
 
 				It("should not overwrite existing values", func() {
 					obj := &OperatingSystemConfigControllerConfig{
-						SyncPeriod:       &metav1.Duration{Duration: time.Second},
-						SyncJitterPeriod: &metav1.Duration{Duration: time.Minute},
+						SyncPeriod: &metav1.Duration{Duration: time.Second},
 					}
 
 					SetDefaults_OperatingSystemConfigControllerConfig(obj)
 
 					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
-					Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 				})
 			})
 

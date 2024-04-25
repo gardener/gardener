@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	. "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
 )
@@ -89,7 +88,6 @@ var _ = Describe("Add", func() {
 			queue      *mockworkqueue.MockRateLimitingInterface
 			obj        *corev1.Secret
 			req        reconcile.Request
-			cfg        config.OperatingSystemConfigControllerConfig
 
 			nodeName string
 		)
@@ -101,13 +99,8 @@ var _ = Describe("Add", func() {
 		})
 
 		JustBeforeEach(func() {
-			cfg = config.OperatingSystemConfigControllerConfig{
-				SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Second},
-			}
-
 			hdlr = (&Reconciler{
 				Client:   fakeClient,
-				Config:   cfg,
 				NodeName: nodeName,
 			}).EnqueueWithJitterDelay(ctx, log)
 			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))

@@ -121,8 +121,6 @@ type OriginalValues struct {
 	ValiIngressHostName string
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
-	// SyncJitterPeriod is the duration of how the operating system config sync will be jittered on updates.
-	SyncJitterPeriod *metav1.Duration
 	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
 	PrimaryIPFamily gardencorev1beta1.IPFamily
 }
@@ -530,7 +528,6 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		valiIngressHostName:     o.values.ValiIngressHostName,
 		valitailEnabled:         o.values.ValitailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
-		oscSyncJitterPeriod:     o.values.SyncJitterPeriod,
 		primaryIPFamily:         o.values.PrimaryIPFamily,
 	}, nil
 }
@@ -594,7 +591,6 @@ type deployer struct {
 	valiIngressHostName     string
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
-	oscSyncJitterPeriod     *metav1.Duration
 	primaryIPFamily         gardencorev1beta1.IPFamily
 }
 
@@ -632,7 +628,6 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ValiIngress:             d.valiIngressHostName,
 		APIServerURL:            d.apiServerURL,
 		Sysctls:                 d.worker.Sysctls,
-		OSCSyncJitterPeriod:     d.oscSyncJitterPeriod,
 		PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 	}
 
@@ -641,7 +636,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, d.oscSyncJitterPeriod, nil),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil),
 		)
 		if err != nil {
 			return nil, err

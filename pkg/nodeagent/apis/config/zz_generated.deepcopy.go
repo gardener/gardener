@@ -130,11 +130,6 @@ func (in *OperatingSystemConfigControllerConfig) DeepCopyInto(out *OperatingSyst
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.SyncJitterPeriod != nil {
-		in, out := &in.SyncJitterPeriod, &out.SyncJitterPeriod
-		*out = new(v1.Duration)
-		**out = **in
-	}
 	if in.KubernetesVersion != nil {
 		in, out := &in.KubernetesVersion, &out.KubernetesVersion
 		*out = new(v3.Version)
