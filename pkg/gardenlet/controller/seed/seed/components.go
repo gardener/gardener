@@ -634,9 +634,6 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
 		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "prometheus",
-		},
 	})
 }
 
@@ -660,9 +657,6 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		CentralConfigs: prometheus.CentralConfigs{
 			PodMonitors:   seedprometheus.CentralPodMonitors(),
 			ScrapeConfigs: seedprometheus.CentralScrapeConfigs(),
-		},
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "seed-prometheus",
 		},
 	})
 }
@@ -692,9 +686,6 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			Host:           seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
 			SecretsManager: secretsManager,
 			SigningCA:      v1beta1constants.SecretNameCASeed,
-		},
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "aggregate-prometheus",
 		},
 	}
 

@@ -1253,6 +1253,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 			Image:         imageCortex.String(),
 			CacheValidity: 7 * 24 * time.Hour, // 1 week
 		},
+		// TODO(rfranzke): Remove this after v1.96 has been released.
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "availability-prometheus",
 			OldSubPath:      ptr.To("/"),
