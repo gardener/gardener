@@ -40,7 +40,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		vpaLabels           = map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer + "-vpa"}
 		updateModeAuto      = hvpav1alpha1.UpdateModeAuto
 		scaleDownUpdateMode = updateModeAuto
-		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		hpaMetrics          = []autoscalingv2beta1.MetricSpec{
 			{
 				Type: autoscalingv2beta1.ResourceMetricSourceType,
@@ -50,18 +49,12 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				},
 			},
 		}
-		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
-			{
-				ContainerName: ContainerNameKubeAPIServer,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("200M"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("8"),
-					corev1.ResourceMemory: resource.MustParse("25G"),
-				},
-				ControlledValues: &controlledValues,
-			},
+		kubeAPIServerMinAllowed = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("200M"),
+		}
+		kubeAPIServerMaxAllowed = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("25G"),
 		}
 		weightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 			{
@@ -82,7 +75,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		})
 	}
 
-	if k.values.Autoscaling.ScaleDownDisabledForHvpa {
+	if k.values.Autoscaling.ScaleDownDisabled {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
@@ -91,25 +84,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			VpaWeight:         hvpav1alpha1.HpaOnly,
 			StartReplicaCount: k.values.Autoscaling.MinReplicas,
 			LastReplicaCount:  k.values.Autoscaling.MaxReplicas - 1,
-		})
-	}
-
-	if k.values.VPN.HighAvailabilityEnabled {
-		for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
-			vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
-				ContainerName: fmt.Sprintf("%s-%d", containerNameVPNSeedClient, i),
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("20Mi"),
-				},
-				ControlledValues: &controlledValues,
-			})
-		}
-		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
-			ContainerName: containerNameVPNPathController,
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("20Mi"),
-			},
-			ControlledValues: &controlledValues,
 		})
 	}
 
@@ -191,7 +165,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				},
 				Spec: hvpav1alpha1.VpaTemplateSpec{
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: vpaContainerResourcePolicies,
+						ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),
 					},
 				},
 			},
@@ -205,4 +179,39 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		return nil
 	})
 	return err
+}
+
+func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed corev1.ResourceList) []vpaautoscalingv1.ContainerResourcePolicy {
+	var (
+		controlledValues             = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
+			{
+				ContainerName:    ContainerNameKubeAPIServer,
+				MinAllowed:       kubeAPIServerMinAllowed,
+				MaxAllowed:       kubeAPIServerMaxAllowed,
+				ControlledValues: &controlledValues,
+			},
+		}
+	)
+
+	if k.values.VPN.HighAvailabilityEnabled {
+		for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
+			vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName: fmt.Sprintf("%s-%d", containerNameVPNSeedClient, i),
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("20Mi"),
+				},
+				ControlledValues: &controlledValues,
+			})
+		}
+		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName: containerNameVPNPathController,
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("20Mi"),
+			},
+			ControlledValues: &controlledValues,
+		})
+	}
+
+	return vpaContainerResourcePolicies
 }

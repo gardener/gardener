@@ -9,6 +9,8 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
@@ -23,10 +25,17 @@ func (k *kubeAPIServer) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalP
 }
 
 func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
-	if k.values.Autoscaling.Mode != apiserver.AutoscalingModeBaseline {
+	switch mode := k.values.Autoscaling.Mode; mode {
+	case apiserver.AutoscalingModeHVPA:
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), verticalPodAutoscaler)
+	case apiserver.AutoscalingModeVPAAndHPA:
+		return k.reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx, verticalPodAutoscaler, deployment)
+	default:
+		return k.reconcileVerticalPodAutoscalerInBaselineMode(ctx, verticalPodAutoscaler, deployment)
 	}
+}
 
+func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInBaselineMode(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeOff
 	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
@@ -49,5 +58,46 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 		}
 		return nil
 	})
+	return err
+}
+
+func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
+	updateMode := vpaautoscalingv1.UpdateModeAuto
+	kubeAPIServerMinAllowed := corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("20m"),
+		corev1.ResourceMemory: resource.MustParse("200M"),
+	}
+	kubeAPIServerMaxAllowed := corev1.ResourceList{
+		// The CPU and memory are aligned to the machine ration of 1:4.
+		corev1.ResourceCPU:    resource.MustParse("7"),
+		corev1.ResourceMemory: resource.MustParse("28G"),
+	}
+
+	var evictionRequirements []*vpaautoscalingv1.EvictionRequirement
+	if k.values.Autoscaling.ScaleDownDisabled {
+		evictionRequirements = []*vpaautoscalingv1.EvictionRequirement{{
+			Resources:         []corev1.ResourceName{corev1.ResourceMemory, corev1.ResourceCPU},
+			ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
+		}}
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
+		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       deployment.Name,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode:           &updateMode,
+				EvictionRequirements: evictionRequirements,
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),
+			},
+		}
+		return nil
+	})
+
 	return err
 }

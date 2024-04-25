@@ -81,16 +81,19 @@ type AutoscalingMode int8
 
 const (
 	// AutoscalingModeBaseline differs substantially between kube-apiserver and gardener-apiserver.
-	// For kube-apiserver, it is active HPA, plus VPA in passive, recommend-only mode.
+	// For kube-apiserver, it is active HPA and VPA in passive, recommend-only mode.
 	// For gardener-apiserver, it is VPA only.
 	AutoscalingModeBaseline = 0 + iota
 	// AutoscalingModeHVPA uses Gardener's custom HVPA autoscaler.
 	AutoscalingModeHVPA
+	// AutoscalingModeVPAAndHPA uses VPA on CPU utilization and HPA on CPU usage.
+	AutoscalingModeVPAAndHPA
 )
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.
 type AutoscalingConfig struct {
 	// Mode is the strategy for scaling the API server.
+	// Defaults to AutoscalingModeBaseline.
 	Mode AutoscalingMode
 	// APIServerResources are the resource requirements for the API server container.
 	APIServerResources corev1.ResourceRequirements
@@ -103,9 +106,9 @@ type AutoscalingConfig struct {
 	// UseMemoryMetricForHvpaHPA states whether the memory metric shall be used when the HPA is configured in an HVPA
 	// resource.
 	UseMemoryMetricForHvpaHPA bool
-	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
-	// resource.
-	ScaleDownDisabledForHvpa bool
+	// ScaleDownDisabled states whether scale-down shall be disabled.
+	// Only HVPA and VPAAndHPA autoscaling modes support disabling scale-down.
+	ScaleDownDisabled bool
 }
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.

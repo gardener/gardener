@@ -646,7 +646,7 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		MinReplicas:               minReplicas,
 		MaxReplicas:               6,
 		UseMemoryMetricForHvpaHPA: true,
-		ScaleDownDisabledForHvpa:  false,
+		ScaleDownDisabled:         false,
 	}
 }
 

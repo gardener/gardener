@@ -83,16 +83,16 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
 	var (
 		useMemoryMetricForHvpaHPA = false
-		scaleDownDisabledForHvpa  = false
+		scaleDownDisabled         = false
 		defaultReplicas           *int32
-		minReplicas               int32 = 1
-		maxReplicas               int32 = 3
-		apiServerResources        corev1.ResourceRequirements
+		// kube-apiserver is a control plane component of type "server".
+		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
+		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability.md#control-plane-components.
+		// That's why minReplicas is set to 2.
+		minReplicas        int32 = 2
+		maxReplicas        int32 = 3
+		apiServerResources corev1.ResourceRequirements
 	)
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
-	}
 
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
@@ -101,24 +101,29 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
 		maxReplicas = 4
-		scaleDownDisabledForHvpa = true
+		scaleDownDisabled = true
 	}
 
 	autoscalingMode := b.autoscalingMode()
 	nodeCount := b.Shoot.GetMinNodeCount()
-	if autoscalingMode == apiserver.AutoscalingModeHVPA {
-		nodeCount = b.Shoot.GetMaxNodeCount()
-	}
 
-	if autoscalingMode != apiserver.AutoscalingModeBaseline {
+	switch autoscalingMode {
+	case apiserver.AutoscalingModeHVPA:
 		apiServerResources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("500m"),
 				corev1.ResourceMemory: resource.MustParse("1Gi"),
 			},
 		}
-	} else {
-		apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount)
+	case apiserver.AutoscalingModeVPAAndHPA:
+		apiServerResources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("500Mi"),
+			},
+		}
+	default:
+		apiServerResources = resourcesRequirementsForKubeAPIServerInBaselineMode(nodeCount)
 	}
 
 	if b.ManagedSeed != nil {
@@ -147,11 +152,16 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		MinReplicas:               minReplicas,
 		MaxReplicas:               maxReplicas,
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
-		ScaleDownDisabledForHvpa:  scaleDownDisabledForHvpa,
+		ScaleDownDisabled:         scaleDownDisabled,
 	}
 }
 
 func (b *Botanist) autoscalingMode() apiserver.AutoscalingMode {
+	// The VPAAndHPAForAPIServer feature gate takes precedence over the HVPA feature gate.
+	if features.DefaultFeatureGate.Enabled(features.VPAAndHPAForAPIServer) {
+		return apiserver.AutoscalingModeVPAAndHPA
+	}
+
 	var hvpaEnabled bool
 	if b.ManagedSeed != nil {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
@@ -165,7 +175,7 @@ func (b *Botanist) autoscalingMode() apiserver.AutoscalingMode {
 	return apiserver.AutoscalingModeBaseline
 }
 
-func resourcesRequirementsForKubeAPIServer(nodeCount int32) corev1.ResourceRequirements {
+func resourcesRequirementsForKubeAPIServerInBaselineMode(nodeCount int32) corev1.ResourceRequirements {
 	var cpuRequest, memoryRequest string
 
 	switch {

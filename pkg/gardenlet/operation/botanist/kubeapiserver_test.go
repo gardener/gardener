@@ -182,22 +182,26 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(kubeAPIServer.GetValues().Autoscaling).To(Equal(expectedConfig))
 				},
 
-				Entry("default behaviour, HVPA is disabled",
-					nil,
-					map[featuregate.Feature]bool{features.HVPA: false},
-					apiserver.AutoscalingConfig{
-						Mode:                      apiserver.AutoscalingModeBaseline,
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						MinReplicas:               1,
-						MaxReplicas:               3,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
-					},
-				),
-				Entry("default behaviour, HVPA is enabled",
+				Entry("default behaviour, HVPA is disabled, VPAAndHPAForAPIServer is disabled",
 					nil,
 					map[featuregate.Feature]bool{
-						features.HVPA: true,
+						features.HVPA:                  false,
+						features.VPAAndHPAForAPIServer: false,
+					},
+					apiserver.AutoscalingConfig{
+						Mode:                      apiserver.AutoscalingModeBaseline,
+						APIServerResources:        resourcesRequirementsForKubeAPIServerInBaselineMode(4),
+						MinReplicas:               2,
+						MaxReplicas:               3,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabled:         false,
+					},
+				),
+				Entry("default behaviour, HVPA is enabled, VPAAndHPAForAPIServer is disabled",
+					nil,
+					map[featuregate.Feature]bool{
+						features.HVPA:                  true,
+						features.VPAAndHPAForAPIServer: false,
 					},
 					apiserver.AutoscalingConfig{
 						Mode: apiserver.AutoscalingModeHVPA,
@@ -207,10 +211,30 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("1Gi"),
 							},
 						},
-						MinReplicas:               1,
+						MinReplicas:               2,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
+					},
+				),
+				Entry("default behaviour, HVPA is enabled, VPAAndHPAForAPIServer is enabled",
+					nil,
+					map[featuregate.Feature]bool{
+						features.HVPA:                  true,
+						features.VPAAndHPAForAPIServer: true,
+					},
+					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeVPAAndHPA,
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
+						MinReplicas:               2,
+						MaxReplicas:               3,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot purpose production",
@@ -220,11 +244,11 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					apiserver.AutoscalingConfig{
 						Mode:                      apiserver.AutoscalingModeBaseline,
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
+						APIServerResources:        resourcesRequirementsForKubeAPIServerInBaselineMode(4),
 						MinReplicas:               2,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot disables scale down",
@@ -234,11 +258,11 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					apiserver.AutoscalingConfig{
 						Mode:                      apiserver.AutoscalingModeBaseline,
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
+						APIServerResources:        resourcesRequirementsForKubeAPIServerInBaselineMode(4),
 						MinReplicas:               4,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  true,
+						ScaleDownDisabled:         true,
 					},
 				),
 				Entry("shoot is a managed seed and HVPAForShootedSeed is disabled",
@@ -248,11 +272,11 @@ var _ = Describe("KubeAPIServer", func() {
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					apiserver.AutoscalingConfig{
 						Mode:                      apiserver.AutoscalingModeBaseline,
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
-						MinReplicas:               1,
+						APIServerResources:        resourcesRequirementsForKubeAPIServerInBaselineMode(4),
+						MinReplicas:               2,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled",
@@ -280,7 +304,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MinReplicas:               16,
 						MaxReplicas:               32,
 						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled",
@@ -307,7 +331,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MaxReplicas:               32,
 						Replicas:                  ptr.To[int32](24),
 						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled",
@@ -336,7 +360,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MaxReplicas:               32,
 						Replicas:                  ptr.To[int32](24),
 						UseMemoryMetricForHvpaHPA: true,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 				Entry("shoot enables HA control planes",
@@ -350,20 +374,20 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					apiserver.AutoscalingConfig{
 						Mode:                      apiserver.AutoscalingModeBaseline,
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(4),
+						APIServerResources:        resourcesRequirementsForKubeAPIServerInBaselineMode(4),
 						MinReplicas:               3,
 						MaxReplicas:               3,
 						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabledForHvpa:  false,
+						ScaleDownDisabled:         false,
 					},
 				),
 			)
 		})
 	})
 
-	DescribeTable("#resourcesRequirementsForKubeAPIServer",
+	DescribeTable("#resourcesRequirementsForKubeAPIServerInBaselineMode",
 		func(nodes int, expectedCPURequest, expectedMemoryRequest string) {
-			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes))).To(Equal(
+			Expect(resourcesRequirementsForKubeAPIServerInBaselineMode(int32(nodes))).To(Equal(
 				corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse(expectedCPURequest),
