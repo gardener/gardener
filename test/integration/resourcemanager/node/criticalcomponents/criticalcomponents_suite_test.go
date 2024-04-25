@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package node_test
+package criticalcomponents_test
 
 import (
 	"context"
@@ -29,13 +29,13 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-func TestNode(t *testing.T) {
+func TestCriticalComponents(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ResourceManager Node Suite")
+	RunSpecs(t, "Test Integration ResourceManager Node CriticalComponents Suite")
 }
 
 const testID = "node-controller-test"
@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddPodNodeName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
-	Expect((&node.Reconciler{
+	Expect((&criticalcomponents.Reconciler{
 		Config: config.NodeControllerConfig{
 			ConcurrentSyncs: ptr.To(5),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},

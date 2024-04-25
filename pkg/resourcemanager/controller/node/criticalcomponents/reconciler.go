@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package node
+package criticalcomponents
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/helper"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 

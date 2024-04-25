@@ -95,12 +95,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		}
 	}
 
-	if cfg.Controllers.Node.Enabled {
-		if err := (&node.Reconciler{
-			Config: cfg.Controllers.Node,
-		}).AddToManager(mgr, targetCluster); err != nil {
-			return fmt.Errorf("failed adding node controller: %w", err)
-		}
+	if err := node.AddToManager(mgr, targetCluster, *cfg); err != nil {
+		return fmt.Errorf("failed adding node controller: %w", err)
 	}
 
 	return nil

@@ -912,6 +912,8 @@ spec:
 
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
+#### [Critical Components Controller](../../pkg/resourcemanager/controller/node/criticalcomponents)
+
 Gardenlet configures kubelet of shoot worker nodes to register the `Node` object with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
 This controller watches newly created `Node` objects in the shoot cluster and removes the taint once all node-critical components are scheduled and ready.
 If the controller finds node-critical components that are not scheduled or not ready yet, it checks the `Node` again after the duration configured in `ResourceManagerConfiguration.controllers.node.backoff`

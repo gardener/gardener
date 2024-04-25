@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package node_test
+package criticalcomponents_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var _ = Describe("Node tests", func() {
+var _ = Describe("CriticalComponents tests", func() {
 	var (
 		resourceName string
 

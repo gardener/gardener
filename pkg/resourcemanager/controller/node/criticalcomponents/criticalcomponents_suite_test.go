@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package node_test
+package criticalcomponents_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNode(t *testing.T) {
+func TestCriticalComponents(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager Controller Node Suite")
+	RunSpecs(t, "ResourceManager Controller Node CriticalComponents Suite")
 }
