@@ -24,6 +24,7 @@ type Config struct {
 	LogFormat                              string                 `yaml:"logFormat"`
 	LogLevel                               string                 `yaml:"logLevel"`
 	APIServerURL                           string                 `yaml:"apiServerUrl"`
+	APIServerCAData                        *string                `yaml:"apiServerCaData,omitempty"`
 	MaxRequestBodySize                     string                 `yaml:"maxRequestBodySize"`
 	ExperimentalUseWatchCacheForListShoots string                 `yaml:"experimentalUseWatchCacheForListShoots"`
 	ReadinessProbe                         ReadinessProbe         `yaml:"readinessProbe"`

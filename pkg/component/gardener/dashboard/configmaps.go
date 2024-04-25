@@ -61,7 +61,8 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			Port:               portServer,
 			LogFormat:          "text",
 			LogLevel:           g.values.LogLevel,
-			APIServerURL:       g.values.APIServerURL,
+			APIServerURL:       "https://" + g.values.APIServerURL,
+			APIServerCAData:    g.values.APIServerCABundle,
 			MaxRequestBodySize: "500kb",
 			// TODO: Remove this field once https://github.com/gardener/dashboard/issues/1788 is fixed
 			ExperimentalUseWatchCacheForListShoots: "yes",

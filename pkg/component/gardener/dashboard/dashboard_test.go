@@ -68,7 +68,7 @@ var _ = Describe("GardenerDashboard", func() {
 		namespace                  = "some-namespace"
 
 		image                 = "gardener-dashboard-image:latest"
-		apiServerURL          = "https://api.com"
+		apiServerURL          = "api.local.gardener.cloud"
 		logLevel              = "debug"
 		ingressValues         = IngressValues{Domains: []string{"first", "second"}}
 		enableTokenLogin      bool
@@ -211,7 +211,7 @@ var _ = Describe("GardenerDashboard", func() {
 			configRaw := `port: 8080
 logFormat: text
 logLevel: ` + logLevel + `
-apiServerUrl: ` + apiServerURL + `
+apiServerUrl: https://` + apiServerURL + `
 maxRequestBodySize: 500kb
 experimentalUseWatchCacheForListShoots: "yes"
 readinessProbe:

@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,6 +60,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -332,7 +334,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Reconciling Gardener Dashboard",
 			Fn: func(ctx context.Context) error {
-				return r.deployGardenerDashboard(ctx, c.gardenerDashboard, garden.Spec.VirtualCluster.Gardener.Dashboard != nil, virtualClusterClient)
+				return r.deployGardenerDashboard(ctx, c.gardenerDashboard, garden, secretsManager, virtualClusterClient)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
@@ -690,8 +692,8 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 	return prometheus.Deploy(ctx)
 }
 
-func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gardenerdashboard.Interface, enabled bool, virtualGardenClient client.Client) error {
-	if !enabled {
+func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gardenerdashboard.Interface, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, virtualGardenClient client.Client) error {
+	if garden.Spec.VirtualCluster.Gardener.Dashboard == nil {
 		return component.OpDestroyAndWait(dashboard).Destroy(ctx)
 	}
 
@@ -715,6 +717,14 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 
 		dashboard.SetGardenTerminalSeedHost(seed.Name)
 		break
+	}
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer == nil || garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI == nil {
+		caSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+		}
+		dashboard.SetAPIServerCABundle(ptr.To(utils.EncodeBase64(caSecret.Data[secretsutils.DataKeyCertificateBundle])))
 	}
 
 	return component.OpWait(dashboard).Deploy(ctx)
