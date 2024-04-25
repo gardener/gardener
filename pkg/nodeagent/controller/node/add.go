@@ -6,7 +6,6 @@ package node
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -33,13 +32,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(r.NodePredicate(), nodePredicate)).
+		For(&corev1.Node{}, builder.WithPredicates(r.NodePredicate(), nodePredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }

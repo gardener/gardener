@@ -27,10 +27,10 @@ type Reconciler struct {
 	HealthCheckIntervalSeconds int32
 }
 
-// Reconcile executes all defined healtchecks
+// Reconcile executes all defined health checks.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
-	log.Info("Reconcile Healthchecks")
+	log.V(2).Info("Performing health checks")
 
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, request.NamespacedName, node); err != nil {

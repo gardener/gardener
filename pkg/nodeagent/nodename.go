@@ -9,16 +9,13 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // FetchNodeByHostName tries to fetch the node (metadata-only) object based on the hostname.
-func FetchNodeByHostName(ctx context.Context, c client.Client, hostName string) (*metav1.PartialObjectMetadata, error) {
+func FetchNodeByHostName(ctx context.Context, c client.Client, hostName string) (*corev1.Node, error) {
 	// node name not known yet, try to fetch it via label selector based on hostname
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
-
+	nodeList := &corev1.NodeList{}
 	if err := c.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: hostName}); err != nil {
 		return nil, fmt.Errorf("unable to list nodes with label selector %s=%s: %w", corev1.LabelHostname, hostName, err)
 	}

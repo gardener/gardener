@@ -32,8 +32,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
+	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, request.NamespacedName, node); err != nil {
 		return reconcile.Result{}, err
 	}
