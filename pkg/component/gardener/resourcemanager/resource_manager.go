@@ -320,6 +320,10 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 	// IsWorkerless specifies whether the cluster has workers.
 	IsWorkerless bool
+	// NodeAgentReconciliationMaxDelay specifies the maximum delay duration for the node-agent reconciliation of
+	// operating system configs on nodes. When this is provided, the respective controller is enabled in
+	// resource-manager.
+	NodeAgentReconciliationMaxDelay *metav1.Duration
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -629,6 +633,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if r.values.KubernetesServiceHost != nil {
 		config.Webhooks.KubernetesServiceHost.Enabled = true
 		config.Webhooks.KubernetesServiceHost.Host = *r.values.KubernetesServiceHost
+	}
+
+	if r.values.NodeAgentReconciliationMaxDelay != nil {
+		config.Controllers.NodeAgentReconciliationDelay.Enabled = true
+		config.Controllers.NodeAgentReconciliationDelay.MaxDelay = r.values.NodeAgentReconciliationMaxDelay
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {

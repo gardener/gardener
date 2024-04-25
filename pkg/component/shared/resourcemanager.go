@@ -124,6 +124,7 @@ func NewTargetGardenerResourceManager(
 	kubernetesServiceHost *string,
 	isWorkerless bool,
 	targetNamespaces []string,
+	nodeAgentReconciliationMaxDelay *metav1.Duration,
 ) (
 	resourcemanager.Interface,
 	error,
@@ -164,9 +165,10 @@ func NewTargetGardenerResourceManager(
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-		WatchedNamespace:            &namespaceName,
-		TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
-		IsWorkerless:                isWorkerless,
+		WatchedNamespace:                &namespaceName,
+		TopologyAwareRoutingEnabled:     topologyAwareRoutingEnabled,
+		IsWorkerless:                    isWorkerless,
+		NodeAgentReconciliationMaxDelay: nodeAgentReconciliationMaxDelay,
 	}
 
 	return resourcemanager.New(
