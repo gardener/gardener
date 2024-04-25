@@ -6,7 +6,6 @@ package operatingsystemconfig_test
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -153,90 +152,89 @@ var _ = Describe("Add", func() {
 				})
 
 				When("node name is known", func() {
-					var node *corev1.Node
-
 					BeforeEach(func() {
 						nodeName = "1"
-						node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+					})
 
-						Expect(fakeClient.Create(ctx, node)).To(Succeed())
-						DeferCleanup(func() {
-							Expect(fakeClient.Delete(ctx, node)).To(Succeed())
+					When("node does not exist or cannot be read", func() {
+						It("should enqueue the object without delay", func() {
+							queue.EXPECT().AddAfter(req, time.Duration(0))
+							hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 						})
 					})
 
-					When("number of nodes is not larger than max delay seconds", func() {
-						When("there are no other nodes", func() {
-							// It("should enqueue the object with a delay in the expected range", func() {
+					When("node exists", func() {
+						var node *corev1.Node
+
+						BeforeEach(func() {
+							node = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+						})
+
+						JustBeforeEach(func() {
+							Expect(fakeClient.Create(ctx, node)).To(Succeed())
+							DeferCleanup(func() {
+								Expect(fakeClient.Delete(ctx, node)).To(Succeed())
+							})
+						})
+
+						When("node has no reconciliation delay annotation", func() {
 							It("should enqueue the object without delay", func() {
 								queue.EXPECT().AddAfter(req, time.Duration(0))
 								hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 							})
-						})
 
-						When("there are other nodes", func() {
-							BeforeEach(func() {
-								for i := 2; i <= 5; i++ {
-									otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: strconv.Itoa(i)}}
+							When("node had a reconciliation delay previously", func() {
+								It("should enqueue the object with the previous delay", func() {
+									metav1.SetMetaDataAnnotation(&node.ObjectMeta, "node-agent.gardener.cloud/reconciliation-delay", "8m")
+									Expect(fakeClient.Update(ctx, node)).To(Succeed())
 
-									Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
-									DeferCleanup(func() {
-										Expect(fakeClient.Delete(ctx, otherNode)).To(Succeed(), "delete node "+otherNode.Name)
-									})
-								}
-							})
+									queue.EXPECT().AddAfter(req, 8*time.Minute)
+									hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 
-							test := func(node int) {
-								BeforeEach(func() {
-									nodeName = strconv.Itoa(node)
-								})
+									delete(node.Annotations, "node-agent.gardener.cloud/reconciliation-delay")
+									Expect(fakeClient.Update(ctx, node)).To(Succeed())
 
-								It("should enqueue the object with the expected delay", func() {
-									queue.EXPECT().AddAfter(req, time.Duration(node-1)*time.Second)
+									queue.EXPECT().AddAfter(req, 8*time.Minute)
 									hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 								})
-							}
-
-							Context("for the first node", func() {
-								test(1)
-							})
-
-							Context("for the second node", func() {
-								test(2)
-							})
-
-							Context("for the third node", func() {
-								test(3)
-							})
-
-							Context("for the fourth node", func() {
-								test(4)
-							})
-
-							Context("for the last node", func() {
-								test(5)
 							})
 						})
-					})
 
-					When("number of nodes is larger than max delay seconds", func() {
-						BeforeEach(func() {
-							nodeName = "8"
+						When("node has reconciliation annotation but it cannot be parsed", func() {
+							It("should enqueue the object without delay", func() {
+								metav1.SetMetaDataAnnotation(&node.ObjectMeta, "node-agent.gardener.cloud/reconciliation-delay", "fjj123hi")
+								Expect(fakeClient.Update(ctx, node)).To(Succeed())
 
-							for i := 2; i <= 15; i++ {
-								otherNode := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: strconv.Itoa(i)}}
+								queue.EXPECT().AddAfter(req, time.Duration(0))
+								hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+							})
 
-								Expect(fakeClient.Create(ctx, otherNode)).To(Succeed(), "create node "+otherNode.Name)
-								DeferCleanup(func() {
-									Expect(fakeClient.Delete(ctx, otherNode)).To(Succeed(), "delete node "+otherNode.Name)
+							When("node had a reconciliation delay previously", func() {
+								It("should enqueue the object with the previous delay", func() {
+									metav1.SetMetaDataAnnotation(&node.ObjectMeta, "node-agent.gardener.cloud/reconciliation-delay", "13s")
+									Expect(fakeClient.Update(ctx, node)).To(Succeed())
+
+									queue.EXPECT().AddAfter(req, 13*time.Second)
+									hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+
+									metav1.SetMetaDataAnnotation(&node.ObjectMeta, "node-agent.gardener.cloud/reconciliation-delay", "fjj123hi")
+									Expect(fakeClient.Update(ctx, node)).To(Succeed())
+
+									queue.EXPECT().AddAfter(req, 13*time.Second)
+									hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
 								})
-							}
+							})
 						})
 
-						It("should enqueue the object with a fractional duration", func() {
-							fraction := float64(13) / float64(3)
-							queue.EXPECT().AddAfter(req, time.Duration(fraction*float64(time.Second)))
-							hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+						When("node has reconciliation annotation and it can be parsed", func() {
+							BeforeEach(func() {
+								metav1.SetMetaDataAnnotation(&node.ObjectMeta, "node-agent.gardener.cloud/reconciliation-delay", "12h")
+							})
+
+							It("should enqueue the object with expected delay", func() {
+								queue.EXPECT().AddAfter(req, 12*time.Hour)
+								hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj}, queue)
+							})
 						})
 					})
 				})
