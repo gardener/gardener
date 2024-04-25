@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/ptr"
@@ -154,9 +155,15 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
 
-	leaseCacheOptions := cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
+	var (
+		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
+		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
+	)
+
 	if nodeName != "" {
 		log.Info("Node already registered, found name", "nodeName", nodeName)
+		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
+		nodeCacheOptions.Label = nil
 		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
 	}
 
@@ -177,6 +184,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
 				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: cfg.Controllers.OperatingSystemConfig.SecretName}),
 			},
+			&corev1.Node{}:          nodeCacheOptions,
 			&coordinationv1.Lease{}: leaseCacheOptions,
 		}},
 		LeaderElection: false,
