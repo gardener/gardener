@@ -31,6 +31,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
 | ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
 | VPAForETCD                         | `false` | `Alpha` | `1.94` |        |
+| VPAAndHPAForAPIServer              | `false` | `Alpha` | `1.95` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -202,3 +203,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | UseNamespacedCloudProfile          | `gardener-apiserver`              | Enables usage of `NamespacedCloudProfile`s in `Shoot`s.                                                                                                                                                                                                                                                                                                                            |
 | ShootManagedIssuer                 | `gardenlet`                       | Enables the shoot managed issuer functionality described in GEP 24.                                                                                                                                                                                                                                                                                                                |
 | VPAForETCD                         | `gardenlet`, `gardener-operator`  | Enables VPA for `etcd-main` and `etcd-events`, regardless of HVPA enablement.                                                                                                                                                                                                                                                                                                      |
+| VPAAndHPAForAPIServer              | `gardenlet`                       | Enables an autoscaling mechanism for shoot kube-apiserver where it is scaled simultaneously by VPA on CPU and memory utilization and by HPA - on CPU and memory usage. The feature gate takes precedence over the `HVPA` feature gate when they are both enabled.                                                                                                                  |
