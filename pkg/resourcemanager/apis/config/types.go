@@ -98,6 +98,8 @@ type ResourceManagerControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfig
 	// NodeCriticalComponents is the configuration for the node critical components controller.
 	NodeCriticalComponents NodeCriticalComponentsControllerConfig
+	// NodeAgentReconciliationDelay is the configuration for the node-agent reconciliation delay controller.
+	NodeAgentReconciliationDelay NodeAgentReconciliationDelayControllerConfig
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig
 	// TokenRequestor is the configuration for the token-requestor controller.
@@ -192,6 +194,16 @@ type NodeCriticalComponentsControllerConfig struct {
 	ConcurrentSyncs *int
 	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods.
 	Backoff *metav1.Duration
+}
+
+// NodeAgentReconciliationDelayControllerConfig is the configuration for the node-agent reconciliation delay controller.
+type NodeAgentReconciliationDelayControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool
+	// MinDelay is the minimum duration to use for delays (default: 0s).
+	MinDelay *metav1.Duration
+	// MaxDelay is the maximum duration to use for delays (default: 5m).
+	MaxDelay *metav1.Duration
 }
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.

@@ -442,6 +442,41 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
+	Describe("NodeAgentReconciliationDelayControllerConfig defaulting", func() {
+		It("should not default the NodeAgentReconciliationDelayControllerConfig because it is disabled", func() {
+			obj.Controllers.NodeAgentReconciliationDelay = NodeAgentReconciliationDelayControllerConfig{}
+
+			SetObjectDefaults_ResourceManagerConfiguration(obj)
+
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MinDelay).To(BeNil())
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MaxDelay).To(BeNil())
+		})
+
+		It("should default the NodeAgentReconciliationDelayControllerConfig because it is enabled", func() {
+			obj.Controllers.NodeAgentReconciliationDelay = NodeAgentReconciliationDelayControllerConfig{
+				Enabled: true,
+			}
+
+			SetObjectDefaults_ResourceManagerConfiguration(obj)
+
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MinDelay).To(PointTo(Equal(metav1.Duration{})))
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MaxDelay).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+		})
+
+		It("should not overwrite already set values for NodeAgentReconciliationDelayControllerConfig", func() {
+			obj.Controllers.NodeAgentReconciliationDelay = NodeAgentReconciliationDelayControllerConfig{
+				Enabled:  true,
+				MinDelay: &metav1.Duration{Duration: time.Minute},
+				MaxDelay: &metav1.Duration{Duration: time.Hour},
+			}
+
+			SetObjectDefaults_ResourceManagerConfiguration(obj)
+
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MinDelay).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			Expect(obj.Controllers.NodeAgentReconciliationDelay.MaxDelay).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+		})
+	})
+
 	Describe("PodSchedulerNameWebhookConfig defaulting", func() {
 		It("should not default the PodSchedulerNameWebhookConfig because it is disabled", func() {
 			obj.Webhooks.PodSchedulerName = PodSchedulerNameWebhookConfig{}

@@ -919,6 +919,10 @@ const (
 	// AnnotationPrefixWaitForCSINode is the annotation key for csi-driver-node pods, indicating they use the driver
 	// specified in the value.
 	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
+	// AnnotationNodeAgentReconciliationDelay is the annotation key for specifying how long the gardener-node-agent
+	// should wait with reconciliation of the operating system config (to prevent too many node-agents from restarting
+	// kubelet or other critical units at the same time).
+	AnnotationNodeAgentReconciliationDelay = "node-agent.gardener.cloud/reconciliation-delay"
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"

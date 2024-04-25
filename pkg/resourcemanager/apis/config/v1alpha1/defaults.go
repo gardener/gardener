@@ -164,6 +164,18 @@ func SetDefaults_NodeCriticalComponentsControllerConfig(obj *NodeCriticalCompone
 	}
 }
 
+// SetDefaults_NodeAgentReconciliationDelayControllerConfig sets defaults for the NodeAgentReconciliationDelayControllerConfig object.
+func SetDefaults_NodeAgentReconciliationDelayControllerConfig(obj *NodeAgentReconciliationDelayControllerConfig) {
+	if obj.Enabled {
+		if obj.MinDelay == nil {
+			obj.MinDelay = &metav1.Duration{}
+		}
+		if obj.MaxDelay == nil {
+			obj.MaxDelay = &metav1.Duration{Duration: 5 * time.Minute}
+		}
+	}
+}
+
 // SetDefaults_PodSchedulerNameWebhookConfig sets defaults for the PodSchedulerNameWebhookConfig object.
 func SetDefaults_PodSchedulerNameWebhookConfig(obj *PodSchedulerNameWebhookConfig) {
 	if obj.Enabled && obj.SchedulerName == nil {
