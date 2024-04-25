@@ -981,6 +981,9 @@ func ComputeExpectedGardenletDeploymentSpec(
 				ServiceAccountName: "gardenlet",
 				SecurityContext: &corev1.PodSecurityContext{
 					RunAsNonRoot: ptr.To(true),
+					RunAsUser:    ptr.To[int64](65532),
+					RunAsGroup:   ptr.To[int64](65532),
+					FSGroup:      ptr.To[int64](65532),
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},
