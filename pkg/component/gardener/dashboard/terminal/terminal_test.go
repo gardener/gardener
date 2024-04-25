@@ -302,6 +302,7 @@ server:
 								{
 									Name:      "config",
 									MountPath: "/etc/terminal-controller-manager",
+									ReadOnly:  true,
 								},
 								{
 									Name:      "server-cert",
@@ -321,10 +322,6 @@ server:
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
-										Items: []corev1.KeyToPath{{
-											Key:  "config.yaml",
-											Path: "config.yaml",
-										}},
 									},
 								},
 							},

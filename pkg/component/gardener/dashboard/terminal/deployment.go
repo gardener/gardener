@@ -126,6 +126,7 @@ func (t *terminal) deployment(
 							{
 								Name:      volumeNameConfig,
 								MountPath: volumeMountPathConfig,
+								ReadOnly:  true,
 							},
 							{
 								Name:      volumeNameServerCert,
@@ -145,10 +146,6 @@ func (t *terminal) deployment(
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
-									Items: []corev1.KeyToPath{{
-										Key:  dataKeyConfig,
-										Path: dataKeyConfig,
-									}},
 								},
 							},
 						},
