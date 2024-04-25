@@ -55,6 +55,7 @@ func NewRuntimeGardenerResourceManager(
 
 	defaultValues := resourcemanager.Values{
 		ConcurrentSyncs:                   ptr.To(20),
+		AlwaysUpdate:                      ptr.To(true),
 		HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
 		Image:                             image.String(),
 		MaxConcurrentNetworkPolicyWorkers: ptr.To(20),

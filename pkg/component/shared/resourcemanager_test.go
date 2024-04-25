@@ -58,6 +58,7 @@ var _ = Describe("ResourceManager", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
+				AlwaysUpdate:                      ptr.To(true),
 				ClusterIdentity:                   ptr.To("foo"),
 				ConcurrentSyncs:                   ptr.To(21),
 				HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
