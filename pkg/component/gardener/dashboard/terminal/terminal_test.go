@@ -15,6 +15,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -77,6 +79,7 @@ var _ = Describe("Terminal", func() {
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
+		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
 		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		crd                            *apiextensionsv1.CustomResourceDefinition
@@ -352,6 +355,35 @@ server:
 				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
 				Selector:                   &metav1.LabelSelector{MatchLabels: map[string]string{"app": "terminal-controller-manager"}},
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
+		}
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "terminal-controller-manager-vpa",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "terminal-controller-manager"},
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "terminal-controller-manager",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("32Mi"),
+							},
+						},
+					},
+				},
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
@@ -654,6 +686,7 @@ server:
 					configMap,
 					deployment,
 					podDisruptionBudget,
+					vpa,
 					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
