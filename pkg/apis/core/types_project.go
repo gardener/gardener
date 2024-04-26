@@ -56,6 +56,8 @@ type ProjectSpec struct {
 	Namespace *string
 	// Tolerations contains the default tolerations and a list for allowed taints on seed clusters.
 	Tolerations *ProjectTolerations
+	// DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+	DualApprovalForDeletion []DualApprovalForDeletion
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -97,6 +99,16 @@ type Toleration struct {
 	Key string
 	// Value is the toleration value corresponding to the toleration key.
 	Value *string
+}
+
+// DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+type DualApprovalForDeletion struct {
+	// Resource is the name of the resource this applies to.
+	Resource string
+	// Selector is the label selector for the resources.
+	Selector metav1.LabelSelector
+	// IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
+	IncludeServiceAccounts *bool
 }
 
 const (

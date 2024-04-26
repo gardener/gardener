@@ -36,3 +36,8 @@ spec:
 #   - key: <some-key>
 #   whitelist:
 #   - key: <some-key>
+# dualApprovalForDeletion:
+# - resource: shoots
+#   selector:
+#     matchLabels: {}
+#   includeServiceAccounts: true

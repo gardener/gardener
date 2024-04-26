@@ -6,11 +6,13 @@ package validation
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/api/validation/path"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -111,6 +113,8 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 		allErrs = append(allErrs, ValidateTolerations(projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "whitelist"))...)
 		allErrs = append(allErrs, ValidateTolerationsAgainstAllowlist(projectSpec.Tolerations.Defaults, projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "defaults"))...)
 	}
+
+	allErrs = append(allErrs, validateDualApprovalForDeletion(projectSpec.DualApprovalForDeletion, fldPath.Child("dualApprovalForDeletion"))...)
 
 	return allErrs
 }
@@ -235,6 +239,35 @@ func ValidateTolerationsAgainstAllowlist(tolerations, allowlist []core.Toleratio
 		if !allowedTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, nil)) && !allowedTolerations.Has(id) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("only the following tolerations are allowed: %+v", allowedTolerations.UnsortedList())))
 		}
+	}
+
+	return allErrs
+}
+
+func validateDualApprovalForDeletion(dualApproval []core.DualApprovalForDeletion, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs            field.ErrorList
+		resources          = sets.New[string]()
+		supportedResources = []string{"shoots"}
+	)
+
+	for i, cfg := range dualApproval {
+		idxPath := fldPath.Index(i)
+
+		if len(cfg.Resource) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("resource"), "cannot be empty"))
+		} else {
+			if !slices.Contains(supportedResources, cfg.Resource) {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("resource"), cfg.Resource, supportedResources))
+			}
+
+			if resources.Has(cfg.Resource) {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("resource"), cfg.Resource))
+			}
+			resources.Insert(cfg.Resource)
+		}
+
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&cfg.Selector, metav1validation.LabelSelectorValidationOptions{}, idxPath.Child("selector"))...)
 	}
 
 	return allErrs
