@@ -107,6 +107,10 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 		allErrs = append(allErrs, validateConcurrentSyncs(conf.TokenRequestor.ConcurrentSyncs, fldPath.Child("tokenRequestor"))...)
 	}
 
+	if conf.NodeAgentReconciliationDelay.Enabled {
+		allErrs = append(allErrs, validateNodeAgentReconciliationDelayControllerConfiguration(conf.NodeAgentReconciliationDelay, fldPath.Child("nodeAgentReconciliationDelay"))...)
+	}
+
 	return allErrs
 }
 
@@ -118,6 +122,23 @@ func validateManagedResourceControllerConfiguration(conf config.ManagedResourceC
 
 	if len(ptr.Deref(conf.ManagedByLabelValue, "")) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("managedByLabelValue"), "must specify value of managed-by label"))
+	}
+
+	return allErrs
+}
+
+func validateNodeAgentReconciliationDelayControllerConfiguration(conf config.NodeAgentReconciliationDelayControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if conf.MinDelay != nil && conf.MinDelay.Seconds() < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("minDelay"), conf.MinDelay.Duration.String(), "must be non-negative"))
+	}
+	if conf.MaxDelay != nil && conf.MaxDelay.Seconds() < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxDelay"), conf.MaxDelay.Duration.String(), "must be non-negative"))
+	}
+
+	if conf.MinDelay != nil && conf.MaxDelay != nil && conf.MinDelay.Duration > conf.MaxDelay.Duration {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("minDelay"), conf.MinDelay.Duration.String(), "minimum delay must not be higher than maximum delay"))
 	}
 
 	return allErrs
