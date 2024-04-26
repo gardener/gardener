@@ -106,9 +106,9 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			cfg.Frontend = make(map[string]interface{})
 		}
 		if cfg.Frontend["features"] == nil {
-			cfg.Frontend["features"] = make(map[string]bool)
+			cfg.Frontend["features"] = make(map[string]interface{})
 		}
-		cfg.Frontend["features"].(map[string]bool)["terminalEnabled"] = true
+		cfg.Frontend["features"].(map[string]interface{})["terminalEnabled"] = true
 	}
 
 	if g.values.OIDC != nil {
