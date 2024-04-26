@@ -208,7 +208,7 @@ spec:
                           - TargetHigherThanRequests
                           - TargetLowerThanRequests
                           type: string
-                        resource:
+                        resources:
                           description: |-
                             Resources is a list of one or more resources that the condition applies
                             to. If more than one resource is given, the EvictionRequirement is fulfilled
@@ -220,7 +220,7 @@ spec:
                           type: array
                       required:
                       - changeRequirement
-                      - resource
+                      - resources
                       type: object
                     type: array
                   minReplicas:
