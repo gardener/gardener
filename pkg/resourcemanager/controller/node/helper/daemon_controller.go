@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
+
 // This file contains several helper functions copied from the DaemonSet controller for determining which Nodes should
 // run daemon pods.
 // All code in this file is copied instead of vendored because it is located in unexported parts of the Kubernetes

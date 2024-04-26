@@ -2,6 +2,7 @@
 
 ![Gardener Logo](logo/gardener-large.png)
 
+[![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener)](https://api.reuse.software/info/github.com/gardener/gardener)
 [![CI Build status](https://concourse.ci.gardener.cloud/api/v1/teams/gardener-tests/pipelines/gardener-master/jobs/master-head-update-job/badge)](https://concourse.ci.gardener.cloud/teams/gardener-tests/pipelines/gardener-master/jobs/master-head-update-job)
 [![Slack channel #gardener](https://img.shields.io/badge/slack-gardener-brightgreen.svg?logo=slack)](https://kubernetes.slack.com/messages/gardener)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)

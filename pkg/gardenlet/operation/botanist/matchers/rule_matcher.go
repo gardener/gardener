@@ -16,6 +16,8 @@ limitations under the License.
 
 // this file is copy of https://github.com/kubernetes/kubernetes/blob/f247e75980061d7cf83c63c0fb1f12c7060c599f/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/rules/rules.go
 // with some modifications for the webhook matching use-case.
+// Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
+
 package matchers
 
 import (

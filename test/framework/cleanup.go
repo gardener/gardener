@@ -16,7 +16,7 @@ limitations under the License.
 This file was copied from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/v1.19.0-rc.4/test/e2e/framework/cleanup.go
 
-Modifications Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
 */
 
 package framework
