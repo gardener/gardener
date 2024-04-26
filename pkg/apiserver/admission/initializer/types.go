@@ -51,6 +51,18 @@ type WantsSeedManagementClientSet interface {
 	admission.InitializationValidator
 }
 
+// WantsAuthenticationInformerFactory defines a function which sets authentication InformerFactory for admission plugins that need it.
+type WantsAuthenticationInformerFactory interface {
+	SetAuthenticationInformerFactory(authenticationinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsAuthenticationClientSet defines a function which sets Authentication Clientset for admission plugins that need it.
+type WantsAuthenticationClientSet interface {
+	SetAuthenticationClientSet(authenticationclientset.Interface)
+	admission.InitializationValidator
+}
+
 // WantsSettingsInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsSettingsInformerFactory interface {
 	SetSettingsInformerFactory(settingsinformers.SharedInformerFactory)

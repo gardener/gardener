@@ -76,6 +76,13 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 		wants.SetSeedManagementClientSet(i.seedManagementClient)
 	}
 
+	if wants, ok := plugin.(WantsAuthenticationInformerFactory); ok {
+		wants.SetAuthenticationInformerFactory(i.authenticationInformers)
+	}
+	if wants, ok := plugin.(WantsAuthenticationClientSet); ok {
+		wants.SetAuthenticationClientSet(i.authenticationClient)
+	}
+
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {
 		wants.SetSettingsInformerFactory(i.settingsInformers)
 	}
