@@ -328,6 +328,11 @@ func (r *Reconciler) reconcile(
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling Gardener Dashboard web terminal controller manager",
+			Fn:           c.terminalControllerManager.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
 
 		// Renew seed secrets tasks must run sequentially. They all use "gardener.cloud/operation" annotation of the seeds and there can be only one annotation at the same time.
 		renewGardenAccessSecretsInAllSeeds = g.Add(flow.Task{

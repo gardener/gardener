@@ -111,6 +111,8 @@ const (
 	ImageNamePrometheusOperator = "prometheus-operator"
 	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
 	ImageNameTelegraf = "telegraf"
+	// ImageNameTerminalControllerManager is a constant for an image in the image vector with name 'terminal-controller-manager'.
+	ImageNameTerminalControllerManager = "terminal-controller-manager"
 	// ImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.
 	ImageNameTune2fs = "tune2fs"
 	// ImageNameVali is a constant for an image in the image vector with name 'vali'.

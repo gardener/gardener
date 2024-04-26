@@ -114,7 +114,11 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				},
 				Gardener: operatorv1alpha1.Gardener{
 					ClusterIdentity: "e2e-test",
-					Dashboard:       &operatorv1alpha1.GardenerDashboardConfig{},
+					Dashboard: &operatorv1alpha1.GardenerDashboardConfig{
+						Terminal: &operatorv1alpha1.DashboardTerminal{
+							Container: operatorv1alpha1.DashboardTerminalContainer{Image: "busybox:latest"},
+						},
+					},
 				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
 					Version: "1.27.1",

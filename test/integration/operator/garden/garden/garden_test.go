@@ -179,7 +179,11 @@ var _ = Describe("Garden controller tests", func() {
 					},
 					Gardener: operatorv1alpha1.Gardener{
 						ClusterIdentity: "test",
-						Dashboard:       &operatorv1alpha1.GardenerDashboardConfig{},
+						Dashboard: &operatorv1alpha1.GardenerDashboardConfig{
+							Terminal: &operatorv1alpha1.DashboardTerminal{
+								Container: operatorv1alpha1.DashboardTerminalContainer{Image: "busybox:latest"},
+							},
+						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",
@@ -708,6 +712,8 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-scheduler-virtual")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-dashboard-runtime")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-dashboard-virtual")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("terminal-runtime")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("terminal-virtual")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system-virtual")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-metrics-exporter-runtime")})}),

@@ -147,8 +147,8 @@ The Gardener control plane components are:
 - `gardener-controller-manager`
 - `gardener-scheduler`
 
-Besides those, the optional [Gardener Dashboard](https://github.com/gardener/dashboard) will also get deployed when `.spec.virtualCluster.gardener.gardenerDashboard` is set.
-You can read more about it and its configuration in [this section](#dashboard).
+Besides those, the optional [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) can also get deployed when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set.
+You can read more about it and its configuration in [this section](#gardener-dashboard).
 
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
@@ -258,6 +258,7 @@ This section highlights the most prominent fields:
   If this field is not provided and there is no `webhookSecret` key in the referenced secret, it will be implicitly defaulted to `15m`.
   The dashboard will use this to regularly poll the GitHub API for updates on issues.
 - `terminal`: This enables the web terminal feature, read more about it [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md).
+  When set, the [`terminal-controller-manager`](https://github.com/gardener/terminal-controller-manager) will be deployed to the runtime cluster.
   The `allowedHosts` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
 

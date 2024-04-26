@@ -51,6 +51,7 @@ import (
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
 	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
+	"github.com/gardener/gardener/pkg/component/gardener/dashboard/terminal"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -114,7 +115,9 @@ type components struct {
 	gardenerAdmissionController component.DeployWaiter
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
-	gardenerDashboard           gardenerdashboard.Interface
+
+	gardenerDashboard         gardenerdashboard.Interface
+	terminalControllerManager component.DeployWaiter
 
 	gardenerMetricsExporter       component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
@@ -236,6 +239,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.terminalControllerManager, err = r.newTerminalControllerManager(garden, secretsManager)
 	if err != nil {
 		return
 	}
@@ -1071,6 +1078,26 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 	}
 
 	return gardenerdashboard.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameTerminalControllerManager)
+	if err != nil {
+		return nil, err
+	}
+
+	values := terminal.Values{
+		Image:                       image.String(),
+		RuntimeVersion:              r.RuntimeVersion,
+		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+	}
+
+	deployer := terminal.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values)
+	if config := garden.Spec.VirtualCluster.Gardener.Dashboard; config == nil || config.Terminal == nil {
+		deployer = component.OpDestroyAndWait(deployer)
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
