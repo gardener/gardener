@@ -13,7 +13,7 @@ Every shoot cluster that has at least one worker pool with `minimum < maximum` n
 Gardener is leveraging the upstream community Kubernetes [`cluster-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler).
 We have forked it to [gardener/autoscaler](https://github.com/gardener/autoscaler/) so that it supports the way how Gardener manages the worker nodes (leveraging [gardener/machine-controller-manager](https://github.com/gardener/machine-controller-manager)).
 However, we have not touched the logic how it performs auto-scaling decisions.
-Consequently, please refer to the [offical documentation](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#faqdocumentation) for this component.
+Consequently, please refer to the [official documentation](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#faqdocumentation) for this component.
 
 The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 

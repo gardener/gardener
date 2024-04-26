@@ -77,7 +77,7 @@ spec:
 
 #### Aggregate Prometheus
 
-Another Prometheus instance in the `garden` namespace (called "aggregate Prometheus") stores pre-aggregated data from the cache Prometheus and shoot Prometheis.
+Another Prometheus instance in the `garden` namespace (called "aggregate Prometheus") stores pre-aggregated data from the cache Prometheus and shoot Prometheus.
 An ingress exposes this Prometheus instance allowing it to be scraped from another cluster.
 For more details, continue reading [here](../monitoring/README.md#aggregate-prometheus).
 
@@ -230,7 +230,7 @@ Gardener logging consists of components in three roles - log collectors and forw
 
 Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../pkg/component/kubernetes/apiserver/logging.go) for logs produced by all its core managed components as `ClusterFilters` and `ClusterParsers` . Extensions can contribute their own, specific configurations as fluent-operator custom resources too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml) for the Gardener AWS provider extension.
 
-### Fluent-bit Log Parsers and Filters 
+### Fluent-bit Log Parsers and Filters
 To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).
 
 To contribute its own configuration to the fluent-bit agents data pipelines, an extension must deploy a `fluent-operator` custom resource labeled with `fluentbit.gardener/type: seed` in the seed cluster.

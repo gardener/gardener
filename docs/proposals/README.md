@@ -39,7 +39,7 @@ the enhancement.
 Apart from general metadata, the GEP should name at least one "main reviewer".
 You can find a main reviewer for your GEP either when discussing the proposal in the community meeting, by asking in our
 [Slack Channel](https://gardener.cloud/docs/contribute/#slack-channel) or at latest during the GEP PR review.
-New GEPs should only be accepted once at least one main reviewer is nominated/assigned. 
+New GEPs should only be accepted once at least one main reviewer is nominated/assigned.
 
 The main reviewers are charged with the following tasks:
 
@@ -51,7 +51,7 @@ The main reviewers are charged with the following tasks:
 
 Other community members are of course also welcome to help the GEP author, review his work and raise
 general concerns with the enhancement. Nevertheless, the main reviewers are supposed to focus on more
-in-depth reviews and accompaning the whole GEP process end-to-end, which helps with getting more
+in-depth reviews and accompanying the whole GEP process end-to-end, which helps with getting more
 high-quality reviews and faster feedback cycles instead of having more people looking at the process
 with lower priority and less focus.
 

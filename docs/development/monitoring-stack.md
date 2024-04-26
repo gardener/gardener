@@ -134,7 +134,7 @@ Each alert rule definition has to contain the following annotations:
 * **summary**: A short description of the issue.
 * **description**: A detailed explanation of the issue with hints to the possible root causes and the impact assessment of the issue.
 
-In addtion, each alert must contain the following labels:
+In addition, each alert must contain the following labels:
 
 * **type**
   * `shoot`: Components running on the Shoot worker nodes in the `kube-system` namespace.
@@ -191,7 +191,7 @@ For each new component, its corresponding dashboard should contain the following
 
 1. Pod up/down status `up{job="example-component"}`
 1. Pod/containers cpu utilization
-1. Pod/containers memorty consumption
+1. Pod/containers memory consumption
 1. Pod/containers network i/o
 
 That information is provided by the cAdvisor metrics. These metrics are already integrated. Please check the other dashboards for detailed information on how to query.

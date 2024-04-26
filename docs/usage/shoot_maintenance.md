@@ -60,8 +60,7 @@ Additionally, Gardener creates events with the type `MachineImageVersionMaintena
 
 ```text
 LAST SEEN   TYPE      REASON                           OBJECT          MESSAGE
-30m         Normal    MachineImageVersionMaintenance   shoot/local     Worker pool "local": Updated image from 'gardenlinux' version 'xy' to version 'abc'. Reason: Automatic update of the machine image version is co
-nfigured (image update strategy: major).
+30m         Normal    MachineImageVersionMaintenance   shoot/local     Worker pool "local": Updated image from 'gardenlinux' version 'xy' to version 'abc'. Reason: Automatic update of the machine image version is configured (image update strategy: major).
 
 30m         Normal    KubernetesVersionMaintenance     shoot/local     Control Plane: Updated Kubernetes version from "1.26.4" to "1.27.1". Reason: Kubernetes version expired - force update required.
 
@@ -110,7 +109,7 @@ maintenance.gardener.cloud/operation=<operation>
 ```
 
 This will execute the specified `<operation>` during the next maintenance reconciliation.
-Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation. 
+Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation.
 
 > ⚠️ This is skipped when the `Shoot`'s `.status.lastOperation.state=Failed`. Make sure to [retry](shoot_operations.md#retry-failed-reconciliation) your shoot reconciliation beforehand.
 

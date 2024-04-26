@@ -1,7 +1,7 @@
 # Cleanup of Shoot Clusters in Deletion
 
 When a shoot cluster is deleted then Gardener tries to gracefully remove most of the Kubernetes resources inside the cluster.
-This is to prevent that any infrastructure or other artefacts remain after the shoot deletion.
+This is to prevent that any infrastructure or other artifacts remain after the shoot deletion.
 
 The cleanup is performed in four steps.
 Some resources are deleted with a grace period, and all resources are forcefully deleted (by removing blocking finalizers) after some time to not block the cluster deletion entirely.
@@ -21,4 +21,4 @@ It is possible to override the finalization grace periods via annotations on the
 - `shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds` (for the resources handled in step 3)
 
 ⚠️ If `"0"` is provided, then all resources are finalized immediately without waiting for any graceful deletion.
-Please be aware that this might lead to orphaned infrastructure artefacts.
+Please be aware that this might lead to orphaned infrastructure artifacts.

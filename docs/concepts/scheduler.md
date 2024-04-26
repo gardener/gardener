@@ -101,7 +101,7 @@ data:
 > Gardener provider extensions for public cloud providers usually have an example weight `ConfigMap` in their repositories.
 > We suggest to check them out before defining your own data.
 
-If a valid seed candidate cannot be found after consulting the distance configuration, the scheduler will fall back to 
+If a valid seed candidate cannot be found after consulting the distance configuration, the scheduler will fall back to
 the Levenshtein distance to find the closest region. Therefore, the region name
 is split into a base name and an orientation. Possible orientations are `north`, `south`, `east`, `west` and `central`.
 The distance then is twice the Levenshtein distance of the region's base name plus a correction value based on the
@@ -111,7 +111,7 @@ If the orientations of shoot and seed candidate match, the correction value is 0
 either the seed's or the shoot's region does not have an orientation it is 1.
 If the provider differs, the correction value is additionally incremented by 2.
 
-Because of this, a matching region with a matching provider is always prefered.
+Because of this, a matching region with a matching provider is always preferred.
 
 ### Special handling based on shoot cluster purpose
 

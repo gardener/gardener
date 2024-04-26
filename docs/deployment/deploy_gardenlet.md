@@ -1,8 +1,8 @@
 # Deploying Gardenlets
 
-Gardenlets act as decentral "agents" to manage the shoot clusters of a seed cluster.
+Gardenlets act as decentralized "agents" to manage the shoot clusters of a seed cluster.
 
-To support scaleability in an automated way, gardenlets are deployed automatically. However, you can still deploy gardenlets manually to be more flexible, for example, when the shoot clusters that need to be managed by Gardener are behind a firewall. The gardenlet only requires network connectivity from the gardenlet to the Garden cluster (not the other way round), so it can be used to register Kubernetes clusters with no public endpoint.
+To support scalability in an automated way, gardenlets are deployed automatically. However, you can still deploy gardenlets manually to be more flexible, for example, when the shoot clusters that need to be managed by Gardener are behind a firewall. The gardenlet only requires network connectivity from the gardenlet to the Garden cluster (not the other way round), so it can be used to register Kubernetes clusters with no public endpoint.
 
 ## Procedure
 
