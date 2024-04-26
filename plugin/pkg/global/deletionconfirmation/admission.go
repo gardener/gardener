@@ -31,6 +31,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -65,7 +66,7 @@ var (
 // New creates a new DeletionConfirmation admission plugin.
 func New() (*DeletionConfirmation, error) {
 	return &DeletionConfirmation{
-		Handler: admission.NewHandler(admission.Delete),
+		Handler: admission.NewHandler(admission.Create, admission.Update, admission.Delete),
 	}, nil
 }
 
@@ -116,10 +117,79 @@ func (d *DeletionConfirmation) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.ValidationInterface = &DeletionConfirmation{}
+var (
+	_ admission.ValidationInterface = &DeletionConfirmation{}
+	_ admission.MutationInterface   = &DeletionConfirmation{}
+)
+
+// Admit validates and if appropriate mutates the given bastion against the shoot that it references.
+func (d *DeletionConfirmation) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
+
+	// Wait until the caches have been synced
+	if d.readyFunc == nil {
+		d.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !d.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
+	// Ignore all kinds other than Shoots
+	if a.GetKind().GroupKind() != core.Kind("Shoot") {
+		return nil
+	}
+
+	// Ignore updates to status or other subresources
+	if a.GetSubresource() != "" {
+		return nil
+	}
+
+	obj, ok := a.GetObject().(client.Object)
+	if !ok {
+		return apierrors.NewBadRequest("object does not have metadata")
+	}
+
+	switch a.GetOperation() {
+	case admission.Create:
+		if gardenerutils.CheckIfDeletionIsConfirmed(obj) == nil {
+			kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.DeletionConfirmedBy, a.GetUserInfo().GetName())
+		} else {
+			delete(obj.GetAnnotations(), v1beta1constants.DeletionConfirmedBy)
+		}
+
+	case admission.Update:
+		oldObj, ok := a.GetOldObject().(client.Object)
+		if !ok {
+			return apierrors.NewBadRequest("old object does not have metadata")
+		}
+
+		if gardenerutils.CheckIfDeletionIsConfirmed(oldObj) != nil && gardenerutils.CheckIfDeletionIsConfirmed(obj) == nil {
+			kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.DeletionConfirmedBy, a.GetUserInfo().GetName())
+		} else if gardenerutils.CheckIfDeletionIsConfirmed(oldObj) == nil && gardenerutils.CheckIfDeletionIsConfirmed(obj) == nil {
+			kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.DeletionConfirmedBy, oldObj.GetAnnotations()[v1beta1constants.DeletionConfirmedBy])
+		} else if gardenerutils.CheckIfDeletionIsConfirmed(obj) != nil {
+			delete(obj.GetAnnotations(), v1beta1constants.DeletionConfirmedBy)
+		}
+	}
+
+	return nil
+}
 
 // Validate makes admissions decisions based on deletion confirmation annotation.
 func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+	if a.GetOperation() != admission.Delete {
+		return nil
+	}
+
 	var (
 		obj         client.Object
 		resource    string
