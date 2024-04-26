@@ -148,6 +148,8 @@ type GardenletControllerConfiguration struct {
 	ManagedSeed *ManagedSeedControllerConfiguration
 	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
 	TokenRequestor *TokenRequestorControllerConfiguration
+	// VPAEvictionRequirements defines the configuration of the VPAEvictionRequirements controller.
+	VPAEvictionRequirements *VPAEvictionRequirementsControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -337,6 +339,12 @@ type ManagedSeedControllerConfiguration struct {
 
 // TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
 type TokenRequestorControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+}
+
+// VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
+type VPAEvictionRequirementsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
 }

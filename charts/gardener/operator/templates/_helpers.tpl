@@ -105,6 +105,12 @@ config.yaml: |
 {{ toYaml .Values.config.controllers.networkPolicy.additionalNamespaceSelectors | indent 6 }}
       {{- end }}
     {{- end }}
+    {{- if .Values.config.controllers.vpaEvictionRequirements }}
+    vpaEvictionRequirements:
+      {{- if .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:
 {{ toYaml .Values.nodeToleration | indent 4 }}

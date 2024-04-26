@@ -61,6 +61,8 @@ type ControllerConfiguration struct {
 	GardenCare GardenCareControllerConfiguration `json:"gardenCare"`
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfiguration `json:"networkPolicy"`
+	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
+	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements"`
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -97,6 +99,13 @@ type NetworkPolicyControllerConfiguration struct {
 	// the controller.
 	// +optional
 	AdditionalNamespaceSelectors []metav1.LabelSelector `json:"additionalNamespaceSelectors,omitempty"`
+}
+
+// VPAEvictionRequirementsControllerConfiguration defines the configuration of the VPAEvictionRequirements controller.
+type VPAEvictionRequirementsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

@@ -565,6 +565,26 @@ const (
 	// The value can be true or false.
 	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
 
+	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
+	// of the VPAEvictionRequirementsController.
+	LabelVPAEvictionRequirementsController = "autoscaling.gardener.cloud/eviction-requirements"
+	// EvictionRequirementManagedByController is a constant to be used as a value for the label LabelVPAEvictionRequirementsController
+	// to indicate that the vpa-eviction-requirements-controller manages all EvictionRequirements on a VPA object.
+	EvictionRequirementManagedByController = "managed-by-controller"
+
+	// AnnotationVPAEvictionRequirementDownscaleRestriction is a constant for an annotation key on a VPA object indicating that
+	// the VPAEvictionRequirementsController should add an EvictionRestriction that prevents downscaling.
+	// Possible values are "in-maintenance-window-only" and "never", available as constants below.
+	AnnotationVPAEvictionRequirementDownscaleRestriction = "eviction-requirements.autoscaling.gardener.cloud/downscale-restriction"
+	// EvictionRequirementInMaintenanceWindowOnly is a constant to be used as a value for the annotation AnnotationVPAEvictionRequirementDownscaleRestriction,
+	// indicating that downscaling should be restricted to the Shoot's maintenance window.
+	EvictionRequirementInMaintenanceWindowOnly = "in-maintenance-window-only"
+	// EvictionRequirementNever is a constant to be used as a value for the annotation AnnotationVPAEvictionRequirementDownscaleRestriction,
+	// indicating that downscaling should never be allowed.
+	EvictionRequirementNever = "never"
+	// AnnotationShootMaintenanceWindow is a constant for an annotation key used on VPA objects to hold the Shoot's maintenance window start and end.
+	AnnotationShootMaintenanceWindow = "shoot.gardener.cloud/maintenance-window"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -111,6 +112,10 @@ func AddToManager(
 
 	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
+	}
+
+	if err := vpaevictionrequirements.AddToManager(ctx, mgr, gardenletCancel, *cfg.Controllers.VPAEvictionRequirements, seedCluster); err != nil {
+		return fmt.Errorf("failed adding VPAEvictionRequirements controller: %w", err)
 	}
 
 	if err := (&tokenrequestor.Reconciler{

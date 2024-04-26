@@ -183,18 +183,6 @@ func (mr *MockInterfaceMockRecorder) SetBackupConfig(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBackupConfig", reflect.TypeOf((*MockInterface)(nil).SetBackupConfig), arg0)
 }
 
-// SetHVPAConfig mocks base method.
-func (m *MockInterface) SetHVPAConfig(arg0 *etcd.HVPAConfig) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetHVPAConfig", arg0)
-}
-
-// SetHVPAConfig indicates an expected call of SetHVPAConfig.
-func (mr *MockInterfaceMockRecorder) SetHVPAConfig(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHVPAConfig", reflect.TypeOf((*MockInterface)(nil).SetHVPAConfig), arg0)
-}
-
 // SetReplicas mocks base method.
 func (m *MockInterface) SetReplicas(arg0 *int32) {
 	m.ctrl.T.Helper()
