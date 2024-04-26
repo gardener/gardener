@@ -72,6 +72,7 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 		} else {
 			cells = append(cells, "<none>")
 		}
+		cells = append(cells, metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
 
 		return cells, nil
 	})

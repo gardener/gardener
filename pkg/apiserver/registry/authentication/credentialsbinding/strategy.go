@@ -55,7 +55,7 @@ func (credentialsBindingStrategy) ValidateUpdate(_ context.Context, newObj, oldO
 }
 
 func (credentialsBindingStrategy) AllowUnconditionalUpdate() bool {
-	return true
+	return false
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.

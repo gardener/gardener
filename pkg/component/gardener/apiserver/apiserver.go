@@ -168,7 +168,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.apiService(secretCAGardener, seedmanagementv1alpha1.SchemeGroupVersion.Group, seedmanagementv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, operationsv1alpha1.SchemeGroupVersion.Group, operationsv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
-		g.apiService(secretCAGardener, authenticationv1alpha1.SchemeGroupVersion.Group, authenticationv1alpha1.SchemeGroupVersion.Version)
+		g.apiService(secretCAGardener, authenticationv1alpha1.SchemeGroupVersion.Group, authenticationv1alpha1.SchemeGroupVersion.Version),
 		g.service(),
 		g.endpoints(serviceRuntime.Spec.ClusterIP),
 		g.clusterRole(),
