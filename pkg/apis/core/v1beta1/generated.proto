@@ -770,6 +770,20 @@ message DeploymentRef {
   optional string name = 1;
 }
 
+// DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+message DualApprovalForDeletion {
+  // Resource is the name of the resource this applies to.
+  optional string resource = 1;
+
+  // Selector is the label selector for the resources.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+
+  // IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
+  // Defaults to true.
+  // +optional
+  optional bool includeServiceAccounts = 3;
+}
+
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 message ETCDEncryptionKeyRotation {
   // Phase describes the phase of the ETCD encryption key credential rotation.
@@ -2032,6 +2046,10 @@ message ProjectSpec {
   // Tolerations contains the tolerations for taints on seed clusters.
   // +optional
   optional ProjectTolerations tolerations = 7;
+
+  // DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+  // +optional
+  repeated DualApprovalForDeletion dualApprovalForDeletion = 8;
 }
 
 // ProjectStatus holds the most recently observed status of the project.
