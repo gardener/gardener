@@ -7,16 +7,24 @@ package deletionconfirmation
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -24,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Register registers a plugin.
@@ -113,14 +122,15 @@ var _ admission.ValidationInterface = &DeletionConfirmation{}
 func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	var (
 		obj         client.Object
+		resource    string
 		listFunc    func() ([]client.Object, error)
 		cacheLookup func() (client.Object, error)
 		liveLookup  func() (client.Object, error)
-		checkFunc   func(client.Object) error
 	)
 
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Shoot"):
+		resource = "shoots"
 		listFunc = func() ([]client.Object, error) {
 			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
@@ -138,11 +148,9 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.CoreV1beta1().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = func(shoot client.Object) error {
-			return gardenerutils.CheckIfDeletionIsConfirmed(shoot)
-		}
 
 	case core.Kind("Project"):
+		resource = "projects"
 		listFunc = func() ([]client.Object, error) {
 			list, err := d.projectLister.List(labels.Everything())
 			if err != nil {
@@ -160,9 +168,9 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.CoreV1beta1().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 
 	case core.Kind("ShootState"):
+		resource = "shootstates"
 		listFunc = func() ([]client.Object, error) {
 			list, err := d.shootStateLister.ShootStates(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
@@ -180,7 +188,6 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.CoreV1beta1().ShootStates(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
 
 	default:
 		return nil
@@ -248,7 +255,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 	// Read the object from the cache
 	obj, err := cacheLookup()
 	if err == nil {
-		if checkFunc(obj) == nil {
+		if d.check(obj, resource, a.GetUserInfo()) == nil {
 			return nil
 		}
 	} else if !apierrors.IsNotFound(err) {
@@ -263,14 +270,58 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		return err
 	}
 
-	if err := checkFunc(obj); err != nil {
+	if err := d.check(obj, resource, a.GetUserInfo()); err != nil {
 		return admission.NewForbidden(a, err)
 	}
 	return nil
 }
 
-func (d *DeletionConfirmation) checkIfDeletionMustBeDualApproved() bool {}
+func (d *DeletionConfirmation) check(obj client.Object, resource string, userInfo user.Info) error {
+	if err := gardenerutils.CheckIfDeletionIsConfirmed(obj); err != nil {
+		return err
+	}
 
-func (d *DeletionConfirmation) checkIfDeletionApprovedByOtherSubject(shoot client.Object) bool {
+	project, ok := obj.(*gardencorev1beta1.Project)
+	if !ok {
+		var err error
+		project, err = admissionutils.ProjectForNamespaceFromLister(d.projectLister, obj.GetNamespace())
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+	}
 
+	dualApprovalRequired, err := d.checkIfDeletionMustBeDualApproved(obj, project.Spec.DualApprovalForDeletion, resource, userInfo)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	if dualApprovalRequired && obj.GetAnnotations()[v1beta1constants.DeletionConfirmedBy] == userInfo.GetName() {
+		return fmt.Errorf("you are not allowed to both confirm the deletion and send the actual DELETE request - another subject must perform the deletion")
+	}
+
+	return nil
+}
+
+func (d *DeletionConfirmation) checkIfDeletionMustBeDualApproved(obj client.Object, dualApprovalConfig []gardencorev1beta1.DualApprovalForDeletion, resource string, userInfo user.Info) (bool, error) {
+	for _, config := range dualApprovalConfig {
+		if config.Resource != resource {
+			continue
+		}
+
+		labelSelector, err := metav1.LabelSelectorAsSelector(&config.Selector)
+		if err != nil {
+			return false, fmt.Errorf("failed parsing label selector for resource %s: %w", resource, err)
+		}
+		if !labelSelector.Matches(labels.Set(obj.GetLabels())) {
+			return false, nil
+		}
+
+		if strings.HasPrefix(userInfo.GetName(), serviceaccount.ServiceAccountUsernamePrefix) {
+			return ptr.Deref(config.IncludeServiceAccounts, true), nil
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }

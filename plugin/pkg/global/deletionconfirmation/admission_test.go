@@ -13,8 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,13 +68,20 @@ var _ = Describe("deleteconfirmation", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "dummy",
 				},
+				Spec: gardencorev1beta1.ProjectSpec{
+					Namespace: ptr.To("dummy"),
+				},
 			}
 			shootState = gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dummyName",
-					Namespace: "dummyNs",
+					Name:      "dummy",
+					Namespace: "dummy",
 				},
 			}
+		})
+
+		JustBeforeEach(func() {
+			Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 		})
 
 		It("should do nothing because the resource is not Shoot, Project or ShootState", func() {
@@ -98,7 +107,7 @@ var _ = Describe("deleteconfirmation", func() {
 				Expect(err.Error()).To(Equal(`shoot.core.gardener.cloud "dummy" not found`))
 			})
 
-			Context("no annotation", func() {
+			Context("delete", func() {
 				It("should reject for nil annotation field", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
@@ -155,6 +164,143 @@ var _ = Describe("deleteconfirmation", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 				})
+
+				Context("dual approval", func() {
+					var (
+						userInfo *user.DefaultInfo
+						userName = "some-user"
+						labels   = map[string]string{"foo": "bar"}
+					)
+
+					BeforeEach(func() {
+						userInfo = &user.DefaultInfo{Name: userName}
+
+						project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, gardencorev1beta1.DualApprovalForDeletion{
+							Resource:               "shoots",
+							Selector:               metav1.LabelSelector{MatchLabels: labels},
+							IncludeServiceAccounts: ptr.To(false),
+						})
+					})
+
+					When("label selector does not match", func() {
+						It("should succeed for true annotation value", func() {
+							attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+							shoot.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
+
+							Expect(shootStore.Add(&shoot)).To(Succeed())
+							gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+								return true, &shoot, nil
+							})
+
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+					})
+
+					When("label selector matches", func() {
+						BeforeEach(func() {
+							shoot.Labels = labels
+						})
+
+						It("should fail if the same subject confirmed the deletion", func() {
+							attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+							shoot.Annotations = map[string]string{
+								"confirmation.gardener.cloud/deletion": "true",
+								"deletion.gardener.cloud/confirmed-by": userInfo.Name,
+							}
+
+							Expect(shootStore.Add(&shoot)).To(Succeed())
+							gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+								return true, &shoot, nil
+							})
+
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("you are not allowed to both confirm the deletion and send the actual DELETE request - another subject must perform the deletion")))
+						})
+
+						It("should succeed if the another subject confirmed the deletion", func() {
+							attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+							shoot.Annotations = map[string]string{
+								"confirmation.gardener.cloud/deletion": "true",
+								"deletion.gardener.cloud/confirmed-by": "other-user",
+							}
+
+							Expect(shootStore.Add(&shoot)).To(Succeed())
+							gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+								return true, &shoot, nil
+							})
+
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						Context("for ServiceAccounts", func() {
+							BeforeEach(func() {
+								userInfo.Name = "system:serviceaccount:" + userName
+							})
+
+							When("ServiceAccounts are excluded", func() {
+								BeforeEach(func() {
+									project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = ptr.To(false)
+								})
+
+								It("should succeed even if the same ServiceAccount confirmed the deletion", func() {
+									attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+									shoot.Annotations = map[string]string{
+										"confirmation.gardener.cloud/deletion": "true",
+										"deletion.gardener.cloud/confirmed-by": userInfo.Name,
+									}
+
+									Expect(shootStore.Add(&shoot)).To(Succeed())
+									gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+										return true, &shoot, nil
+									})
+
+									Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+								})
+							})
+
+							When("ServiceAccounts are included", func() {
+								BeforeEach(func() {
+									project.Spec.DualApprovalForDeletion[0].IncludeServiceAccounts = ptr.To(true)
+								})
+
+								It("should fail if the same ServiceAccount confirmed the deletion", func() {
+									attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+									shoot.Annotations = map[string]string{
+										"confirmation.gardener.cloud/deletion": "true",
+										"deletion.gardener.cloud/confirmed-by": userInfo.Name,
+									}
+
+									Expect(shootStore.Add(&shoot)).To(Succeed())
+									gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+										return true, &shoot, nil
+									})
+
+									Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("you are not allowed to both confirm the deletion and send the actual DELETE request - another subject must perform the deletion")))
+								})
+
+								It("should succeed if the another subject confirmed the deletion", func() {
+									attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+									shoot.Annotations = map[string]string{
+										"confirmation.gardener.cloud/deletion": "true",
+										"deletion.gardener.cloud/confirmed-by": "other-user",
+									}
+
+									Expect(shootStore.Add(&shoot)).To(Succeed())
+									gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+										return true, &shoot, nil
+									})
+
+									Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+								})
+							})
+						})
+					})
+				})
 			})
 
 			Context("delete collection", func() {
@@ -205,11 +351,9 @@ var _ = Describe("deleteconfirmation", func() {
 				Expect(err.Error()).To(Equal(msg))
 			})
 
-			Context("no annotation", func() {
+			Context("delete", func() {
 				It("should reject for nil annotation field", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-
-					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -222,7 +366,6 @@ var _ = Describe("deleteconfirmation", func() {
 					project.Annotations = map[string]string{
 						"confirmation.gardener.cloud/deletion": "false",
 					}
-					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -235,7 +378,6 @@ var _ = Describe("deleteconfirmation", func() {
 					project.Annotations = map[string]string{
 						"confirmation.gardener.cloud/deletion": "true",
 					}
-					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -243,6 +385,8 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should succeed for true annotation value (live lookup)", func() {
+					Expect(projectStore.Delete(&project)).To(Succeed())
+
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					gardenClient.AddReactor("get", "projects", func(_ testing.Action) (bool, runtime.Object, error) {
@@ -270,7 +414,6 @@ var _ = Describe("deleteconfirmation", func() {
 					project2 := project.DeepCopy()
 					project2.Name = "dummy2"
 
-					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -285,7 +428,6 @@ var _ = Describe("deleteconfirmation", func() {
 					project2.Name = "dummy2"
 					project.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 
-					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -310,7 +452,7 @@ var _ = Describe("deleteconfirmation", func() {
 				Expect(err.Error()).To(Equal(`shoot.core.gardener.cloud "dummyName" not found`))
 			})
 
-			Context("no annotation", func() {
+			Context("delete", func() {
 				It("should reject for nil annotation field", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
@@ -327,7 +469,7 @@ var _ = Describe("deleteconfirmation", func() {
 					shootState.Annotations = map[string]string{
 						"confirmation.gardener.cloud/deletion": "false",
 					}
-					Expect(shootStateStore.Add(&shoot)).NotTo(HaveOccurred())
+					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -405,6 +547,11 @@ var _ = Describe("deleteconfirmation", func() {
 					shootState2.Name = "dummyName2"
 					shootState2.Namespace = "dummyNs2"
 					shootState2.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
+
+					project2 := project.DeepCopy()
+					project2.Name = shootState2.Namespace
+					project2.Spec.Namespace = &shootState2.Namespace
+					Expect(projectStore.Add(project2)).To(Succeed())
 
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState2.Namespace, "", core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
