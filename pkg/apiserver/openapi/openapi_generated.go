@@ -683,15 +683,15 @@ func schema_pkg_apis_authentication_v1alpha1_Credentials(ref common.ReferenceCal
 				Description: "Credentials holds reference to credentials implementation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"secret": {
+					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Secret is a reference to a secret object in the same or another namespace.",
+							Description: "SecretRef is a reference to a secret object in the same or another namespace.",
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
-					"workloadIdentity": {
+					"workloadIdentityRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WorkloadIdentity is a reference to a workloadidentity object in the same or another namespace.",
+							Description: "WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.WorkloadIdentityReference"),
 						},
 					},
@@ -738,9 +738,9 @@ func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.Refer
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider"),
 						},
 					},
-					"credentialsRef": {
+					"credentials": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef specify reference to credentials.",
+							Description: "Credentials specify reference to credentials.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.Credentials"),
 						},
@@ -760,7 +760,7 @@ func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.Refer
 						},
 					},
 				},
-				Required: []string{"provider", "credentialsRef"},
+				Required: []string{"provider", "credentials"},
 			},
 		},
 		Dependencies: []string{
@@ -945,7 +945,7 @@ func schema_pkg_apis_authentication_v1alpha1_WorkloadIdentityReference(ref commo
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve workloadidentity in any namespace",
+				Description: "WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve workloadidentity in any namespace.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {

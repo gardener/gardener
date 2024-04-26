@@ -74,7 +74,7 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>credentialsRef</code></br>
+<code>credentials</code></br>
 <em>
 <a href="#authentication.gardener.cloud/v1alpha1.Credentials">
 Credentials
@@ -82,7 +82,7 @@ Credentials
 </em>
 </td>
 <td>
-<p>CredentialsRef specify reference to credentials.</p>
+<p>Credentials specify reference to credentials.</p>
 </td>
 </tr>
 <tr>
@@ -275,7 +275,7 @@ Kubernetes meta/v1.Time
 <tbody>
 <tr>
 <td>
-<code>secret</code></br>
+<code>secretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
@@ -284,12 +284,12 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>Secret is a reference to a secret object in the same or another namespace.</p>
+<p>SecretRef is a reference to a secret object in the same or another namespace.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>workloadIdentity</code></br>
+<code>workloadIdentityRef</code></br>
 <em>
 <a href="#authentication.gardener.cloud/v1alpha1.WorkloadIdentityReference">
 WorkloadIdentityReference
@@ -298,7 +298,7 @@ WorkloadIdentityReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>WorkloadIdentity is a reference to a workloadidentity object in the same or another namespace.</p>
+<p>WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.</p>
 </td>
 </tr>
 </tbody>
@@ -494,8 +494,8 @@ Kubernetes meta/v1.Time
 <a href="#authentication.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
 </p>
 <p>
-<p>WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve
-workloadidentity in any namespace</p>
+<p>WorkloadIdentityReference represents a WorkloadIdentity Reference.
+It has enough information to retrieve workloadidentity in any namespace.</p>
 </p>
 <table>
 <thead>

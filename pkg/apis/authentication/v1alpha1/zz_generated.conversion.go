@@ -99,8 +99,8 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_Credentials_To_authentication_Credentials(in *Credentials, out *authentication.Credentials, s conversion.Scope) error {
-	out.Secret = (*v1.SecretReference)(unsafe.Pointer(in.Secret))
-	out.WorkloadIdentity = (*authentication.WorkloadIdentityReference)(unsafe.Pointer(in.WorkloadIdentity))
+	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.WorkloadIdentityRef = (*authentication.WorkloadIdentityReference)(unsafe.Pointer(in.WorkloadIdentityRef))
 	return nil
 }
 
@@ -110,8 +110,8 @@ func Convert_v1alpha1_Credentials_To_authentication_Credentials(in *Credentials,
 }
 
 func autoConvert_authentication_Credentials_To_v1alpha1_Credentials(in *authentication.Credentials, out *Credentials, s conversion.Scope) error {
-	out.Secret = (*v1.SecretReference)(unsafe.Pointer(in.Secret))
-	out.WorkloadIdentity = (*WorkloadIdentityReference)(unsafe.Pointer(in.WorkloadIdentity))
+	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.WorkloadIdentityRef = (*WorkloadIdentityReference)(unsafe.Pointer(in.WorkloadIdentityRef))
 	return nil
 }
 
@@ -125,7 +125,7 @@ func autoConvert_v1alpha1_CredentialsBinding_To_authentication_CredentialsBindin
 	if err := Convert_v1alpha1_CredentialsBindingProvider_To_authentication_CredentialsBindingProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_Credentials_To_authentication_Credentials(&in.CredentialsRef, &out.CredentialsRef, s); err != nil {
+	if err := Convert_v1alpha1_Credentials_To_authentication_Credentials(&in.Credentials, &out.Credentials, s); err != nil {
 		return err
 	}
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
@@ -142,7 +142,7 @@ func autoConvert_authentication_CredentialsBinding_To_v1alpha1_CredentialsBindin
 	if err := Convert_authentication_CredentialsBindingProvider_To_v1alpha1_CredentialsBindingProvider(&in.Provider, &out.Provider, s); err != nil {
 		return err
 	}
-	if err := Convert_authentication_Credentials_To_v1alpha1_Credentials(&in.CredentialsRef, &out.CredentialsRef, s); err != nil {
+	if err := Convert_authentication_Credentials_To_v1alpha1_Credentials(&in.Credentials, &out.Credentials, s); err != nil {
 		return err
 	}
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
