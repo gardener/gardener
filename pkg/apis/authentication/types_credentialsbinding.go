@@ -20,8 +20,8 @@ type CredentialsBinding struct {
 	// Provider defines the provider type of the CredentialsBinding.
 	// This field is immutable.
 	Provider CredentialsBindingProvider
-	// CredentialsRef specify reference to credentials.
-	CredentialsRef Credentials
+	// Credentials specify reference to credentials.
+	Credentials Credentials
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// This field is immutable.
 	Quotas []corev1.ObjectReference
@@ -29,15 +29,15 @@ type CredentialsBinding struct {
 
 // Credentials holds reference to credentials implementation.
 type Credentials struct {
-	// Secret is a reference to a secret object in the same or another namespace.
-	Secret *corev1.SecretReference
-	// WorkloadIdentity is a reference to a workloadidentity object in the same or another namespace.
-	WorkloadIdentity *WorkloadIdentityReference
+	// SecretRef is a reference to a secret object in the same or another namespace.
+	SecretRef *corev1.SecretReference
+	// WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.
+	WorkloadIdentityRef *WorkloadIdentityReference
 }
 
 // GetProviderType gets the type of the provider.
-func (sb *CredentialsBinding) GetProviderType() string {
-	return sb.Provider.Type
+func (cb *CredentialsBinding) GetProviderType() string {
+	return cb.Provider.Type
 }
 
 // CredentialsBindingProvider defines the provider type of the CredentialsBinding.
@@ -46,8 +46,8 @@ type CredentialsBindingProvider struct {
 	Type string
 }
 
-// WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve
-// workloadidentity in any namespace
+// WorkloadIdentityReference represents a WorkloadIdentity Reference.
+// It has enough information to retrieve workloadidentity in any namespace.
 type WorkloadIdentityReference struct {
 	// Name is unique within a namespace to reference a workloadidentity resource.
 	Name string

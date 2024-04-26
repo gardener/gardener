@@ -21,8 +21,8 @@ type CredentialsBinding struct {
 	// Provider defines the provider type of the CredentialsBinding.
 	// This field is immutable.
 	Provider CredentialsBindingProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
-	// CredentialsRef specify reference to credentials.
-	CredentialsRef Credentials `json:"credentialsRef" protobuf:"bytes,3,name=credentialsRef"`
+	// Credentials specify reference to credentials.
+	Credentials Credentials `json:"credentials" protobuf:"bytes,3,name=credentials"`
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// This field is immutable.
 	// +optional
@@ -31,17 +31,17 @@ type CredentialsBinding struct {
 
 // Credentials holds reference to credentials implementation.
 type Credentials struct {
-	// Secret is a reference to a secret object in the same or another namespace.
+	// SecretRef is a reference to a secret object in the same or another namespace.
 	// +optional
-	Secret *corev1.SecretReference `json:"secret,omitempty" protobuf:"bytes,1,opt,name=secret"`
-	// WorkloadIdentity is a reference to a workloadidentity object in the same or another namespace.
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.
 	// +optional
-	WorkloadIdentity *WorkloadIdentityReference `json:"workloadIdentity,omitempty" protobuf:"bytes,2,opt,name=workloadIdentity"`
+	WorkloadIdentityRef *WorkloadIdentityReference `json:"workloadIdentityRef,omitempty" protobuf:"bytes,2,opt,name=workloadIdentityRef"`
 }
 
 // GetProviderType gets the type of the provider.
-func (sb *CredentialsBinding) GetProviderType() string {
-	return sb.Provider.Type
+func (cb *CredentialsBinding) GetProviderType() string {
+	return cb.Provider.Type
 }
 
 // CredentialsBindingProvider defines the provider type of the CredentialsBinding.
@@ -50,8 +50,8 @@ type CredentialsBindingProvider struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 
-// WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve
-// workloadidentity in any namespace
+// WorkloadIdentityReference represents a WorkloadIdentity Reference.
+// It has enough information to retrieve workloadidentity in any namespace.
 type WorkloadIdentityReference struct {
 	// Name is unique within a namespace to reference a workloadidentity resource.
 	// +optional

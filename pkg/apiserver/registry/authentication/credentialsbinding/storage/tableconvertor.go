@@ -28,8 +28,8 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Provider", Type: "string", Description: swaggerMetadataDescriptions["provider.type"]},
-			{Name: "Secret", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentialsRef.secret"]},
-			{Name: "WorkloadIdentity", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentialsRef.workloadIdentity"]},
+			{Name: "Secret", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentials.secretRef"]},
+			{Name: "WorkloadIdentity", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentials.workloadIdentityRef"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -61,14 +61,14 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 
 		cells = append(cells, obj.Name)
 		cells = append(cells, obj.Provider.Type)
-		if obj.CredentialsRef.Secret != nil {
-			cells = append(cells, obj.CredentialsRef.Secret.Namespace+"/"+obj.CredentialsRef.Secret.Name)
+		if obj.Credentials.SecretRef != nil {
+			cells = append(cells, obj.Credentials.SecretRef.Namespace+"/"+obj.Credentials.SecretRef.Name)
 		} else {
 			cells = append(cells, "<none>")
 		}
 
-		if obj.CredentialsRef.WorkloadIdentity != nil {
-			cells = append(cells, obj.CredentialsRef.WorkloadIdentity.Namespace+"/"+obj.CredentialsRef.WorkloadIdentity.Name)
+		if obj.Credentials.WorkloadIdentityRef != nil {
+			cells = append(cells, obj.Credentials.WorkloadIdentityRef.Namespace+"/"+obj.Credentials.WorkloadIdentityRef.Name)
 		} else {
 			cells = append(cells, "<none>")
 		}

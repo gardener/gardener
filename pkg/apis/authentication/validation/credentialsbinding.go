@@ -20,7 +20,7 @@ func ValidateCredentialsBinding(binding *authentication.CredentialsBinding) fiel
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateCredentialsRef(binding.CredentialsRef, field.NewPath("credentialsRef"))...)
+	allErrs = append(allErrs, validateCredentials(binding.Credentials, field.NewPath("credentials"))...)
 	allErrs = append(allErrs, ValidateCredentialsBindingProvider(binding.Provider, field.NewPath("provider"))...)
 	for i, quota := range binding.Quotas {
 		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
@@ -67,22 +67,22 @@ func validateObjectReferenceOptionalNamespace(ref corev1.ObjectReference, fldPat
 	return allErrs
 }
 
-func validateCredentialsRef(ref authentication.Credentials, fldPath *field.Path) field.ErrorList {
-	if ref.Secret == nil && ref.WorkloadIdentity == nil {
+func validateCredentials(ref authentication.Credentials, fldPath *field.Path) field.ErrorList {
+	if ref.SecretRef == nil && ref.WorkloadIdentityRef == nil {
 		return field.ErrorList{field.Forbidden(fldPath, "must specify credentials provider")}
 	}
 
-	if ref.Secret != nil && ref.WorkloadIdentity != nil {
+	if ref.SecretRef != nil && ref.WorkloadIdentityRef != nil {
 		return field.ErrorList{field.Forbidden(fldPath, "must specify exactly one credentials provider")}
 	}
 
-	if ref.Secret != nil {
-		return validateSecret(ref.Secret, fldPath.Child("secret"))
+	if ref.SecretRef != nil {
+		return validateSecretRef(ref.SecretRef, fldPath.Child("secretRef"))
 	}
-	return validateWorkloadIdentity(ref.WorkloadIdentity, fldPath.Child("workloadIdentity"))
+	return validateWorkloadIdentityRef(ref.WorkloadIdentityRef, fldPath.Child("workloadIdentityRef"))
 }
 
-func validateSecret(ref *corev1.SecretReference, fldPath *field.Path) field.ErrorList {
+func validateSecretRef(ref *corev1.SecretReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
@@ -90,7 +90,7 @@ func validateSecret(ref *corev1.SecretReference, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateWorkloadIdentity(ref *authentication.WorkloadIdentityReference, fldPath *field.Path) field.ErrorList {
+func validateWorkloadIdentityRef(ref *authentication.WorkloadIdentityReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))

@@ -30,8 +30,8 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				Provider: authentication.CredentialsBindingProvider{
 					Type: "foo",
 				},
-				CredentialsRef: authentication.Credentials{
-					Secret: &corev1.SecretReference{
+				Credentials: authentication.Credentials{
+					SecretRef: &corev1.SecretReference{
 						Name:      "my-secret",
 						Namespace: "my-namespace",
 					},
@@ -46,8 +46,8 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 		})
 
 		It("[WorkloadIdentity] should not return any errors", func() {
-			credentialsBinding.CredentialsRef = authentication.Credentials{
-				WorkloadIdentity: &authentication.WorkloadIdentityReference{
+			credentialsBinding.Credentials = authentication.Credentials{
+				WorkloadIdentityRef: &authentication.WorkloadIdentityReference{
 					Name:      "my-workloadidentity",
 					Namespace: "my-namespace",
 				},
@@ -101,7 +101,7 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 
 		It("[Secret] should forbid empty CredentialsBinding resources", func() {
 			credentialsBinding.ObjectMeta = metav1.ObjectMeta{}
-			credentialsBinding.CredentialsRef.Secret = &corev1.SecretReference{}
+			credentialsBinding.Credentials.SecretRef = &corev1.SecretReference{}
 			credentialsBinding.Provider = authentication.CredentialsBindingProvider{}
 
 			errorList := ValidateCredentialsBinding(credentialsBinding)
@@ -116,7 +116,7 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("credentialsRef.secret.name"),
+					"Field": Equal("credentials.secretRef.name"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -127,8 +127,8 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 
 		It("[WorkloadIdentity] should forbid empty CredentialsBinding resources", func() {
 			credentialsBinding.ObjectMeta = metav1.ObjectMeta{}
-			credentialsBinding.CredentialsRef.Secret = nil
-			credentialsBinding.CredentialsRef.WorkloadIdentity = &authentication.WorkloadIdentityReference{}
+			credentialsBinding.Credentials.SecretRef = nil
+			credentialsBinding.Credentials.WorkloadIdentityRef = &authentication.WorkloadIdentityReference{}
 			credentialsBinding.Provider = authentication.CredentialsBindingProvider{}
 
 			errorList := ValidateCredentialsBinding(credentialsBinding)
@@ -143,7 +143,7 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("credentialsRef.workloadIdentity.name"),
+					"Field": Equal("credentials.workloadIdentityRef.name"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -153,19 +153,19 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 		})
 
 		It("Should forbid CredentialBinding with no credential provider", func() {
-			credentialsBinding.CredentialsRef.Secret = nil
+			credentialsBinding.Credentials.SecretRef = nil
 			errList := ValidateCredentialsBinding(credentialsBinding)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("credentialsRef"),
+					"Field":  Equal("credentials"),
 					"Detail": Equal("must specify credentials provider"),
 				})),
 			))
 		})
 
 		It("Should forbid CredentialBinding with multiple credential provider", func() {
-			credentialsBinding.CredentialsRef.WorkloadIdentity = &authentication.WorkloadIdentityReference{
+			credentialsBinding.Credentials.WorkloadIdentityRef = &authentication.WorkloadIdentityReference{
 				Name:      "my-workloadidentity",
 				Namespace: "my-namespace",
 			}
@@ -173,7 +173,7 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("credentialsRef"),
+					"Field":  Equal("credentials"),
 					"Detail": Equal("must specify exactly one credentials provider"),
 				})),
 			))
@@ -207,8 +207,8 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				Provider: authentication.CredentialsBindingProvider{
 					Type: "foo",
 				},
-				CredentialsRef: authentication.Credentials{
-					Secret: &corev1.SecretReference{
+				Credentials: authentication.Credentials{
+					SecretRef: &corev1.SecretReference{
 						Name:      "my-secret",
 						Namespace: "my-namespace",
 					},
