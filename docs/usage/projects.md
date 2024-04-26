@@ -95,3 +95,37 @@ The project owner can gradually remove these roles if desired.
 ## Stale Projects
 
 When a project is not actively used for some period of time, it is marked as "stale". This is done by a controller called ["Stale Projects Reconciler"](../concepts/controller-manager.md#stale-projects-reconciler). Once the project is marked as stale, there is a time frame in which if not used it will be deleted by that controller.
+
+## Four-Eyes-Principle For Resource Deletion
+
+In order to delete a `Shoot`, the deletion must be confirmed upfront with the `confirmation.gardener.cloud/deletion=true` annotation.
+Without this annotation being set, `gardener-apiserver` denies any DELETE request.
+Still, users sometimes accidentally shot themselves in the foot, meaning that they accidentally deleted a `Shoot` despite the confirmation requirement.
+
+To prevent that (or make it harder, at least), the `Project` can be configured to apply the dual approval concept for `Shoot` deletion.
+This means that the subject confirming the deletion must not be the same as the subject sending the DELETE request.
+
+Example:
+
+```yaml
+spec:
+  dualApprovalForDeletion:
+  - resource: shoots
+    selector:
+      matchLabels: {}
+    includeServiceAccounts: true
+```
+
+> [!NOTE]
+> As of today, `core.gardener.cloud/v1beta1.Shoot` is the only resource for which this concept is implemented.
+
+As usual, `.spec.dualApprovalForDeletion[].selector.matchLabels={}` matches all resources, `.spec.dualApprovalForDeletion[].selector.matchLabels=null` matches none at all.
+It can also be decided to specify an individual label selector if this concept shall only apply to a subset of the `Shoot`s in the project (e.g., CI/development clusters shall be excluded).
+
+The `includeServiceAccounts` (default: `true`) controls whether the concept also applies when the `Shoot` deletion confirmation and actual deletion is triggered via `ServiceAccount`s.
+This is to prevent that CI jobs have to follow this concept as well, adding additional complexity/overhead.
+Alternatively, you could also use two `ServiceAccount`s, one for confirming the deletion, and another one for actually sending the DELETE request, if desired.
+
+> [!IMPORTANT]
+> Project members can still change the labels of `Shoot`s (or the selector itself) to circumvent the dual approval concept.
+> This concern is intentionally excluded/ignored for now since the principle is not a "security feature" but shall just help preventing *accidental* deletion.

@@ -39,10 +39,15 @@ Usually, regular project members are not bound to this custom verb, allowing the
 
 _(enabled by default)_
 
-This admission controller reacts on `DELETE` operations for `Project`s and `Shoot`s and `ShootState`s.
+This admission controller reacts on `DELETE` operations for `Project`s, `Shoot`s, and `ShootState`s.
 It validates that the respective resource is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
+In addition, it applies the "four-eyes principle for deletion" concept if the `Project` is configured accordingly.
+Find all information about it [in this document](../usage/projects.md#four-eyes-principle-for-resource-deletion).
+
+In addition, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
+It makes sure that the `deletion.gardener.cloud/confirmed-by` annotation is properly maintained in case the `Shoot` deletion is confirmed with above mentioned annotation.
 
 ## `ExposureClass`
 
