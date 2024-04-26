@@ -235,6 +235,9 @@ build:
             - cmd/utils
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -342,6 +345,9 @@ build:
             - cmd/gardener-scheduler/app
             - cmd/utils
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -421,6 +427,9 @@ build:
             - pkg/admissioncontroller/webhook/admission/seedrestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -610,6 +619,9 @@ build:
             - imagevector
             - pkg/api/core
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -831,6 +843,9 @@ build:
             - imagevector
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -1064,6 +1079,9 @@ build:
             - cmd/utils
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -1164,6 +1182,9 @@ build:
             - cmd/utils
             - imagevector
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
