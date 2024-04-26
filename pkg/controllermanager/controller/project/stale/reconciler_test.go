@@ -468,8 +468,8 @@ var _ = Describe("Reconciler", func() {
 
 					projectCopy := project.DeepCopy()
 					projectCopy.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
-						v1beta1constants.GardenerTimestamp: gardenerutils.TimeNow().UTC().Format(time.RFC3339Nano),
+						v1beta1constants.ConfirmationDeletion: "true",
+						v1beta1constants.GardenerTimestamp:    gardenerutils.TimeNow().UTC().Format(time.RFC3339Nano),
 					}
 					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), projectCopy, gomock.Any())
 					k8sGardenRuntimeClient.EXPECT().Delete(gomock.Any(), projectCopy)

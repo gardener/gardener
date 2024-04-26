@@ -138,7 +138,9 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.CoreV1beta1().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = gardenerutils.CheckIfDeletionIsConfirmed
+		checkFunc = func(shoot client.Object) error {
+			return gardenerutils.CheckIfDeletionIsConfirmed(shoot)
+		}
 
 	case core.Kind("Project"):
 		listFunc = func() ([]client.Object, error) {
@@ -265,4 +267,10 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		return admission.NewForbidden(a, err)
 	}
 	return nil
+}
+
+func (d *DeletionConfirmation) checkIfDeletionMustBeDualApproved() bool {}
+
+func (d *DeletionConfirmation) checkIfDeletionApprovedByOtherSubject(shoot client.Object) bool {
+
 }

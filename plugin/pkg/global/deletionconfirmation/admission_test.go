@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	internalClientSet "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 )
@@ -114,7 +113,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "false",
+						"confirmation.gardener.cloud/deletion": "false",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
@@ -127,7 +126,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
+						"confirmation.gardener.cloud/deletion": "true",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
@@ -146,7 +145,7 @@ var _ = Describe("deleteconfirmation", func() {
 								Name:      shoot.Name,
 								Namespace: shoot.Namespace,
 								Annotations: map[string]string{
-									gardenerutils.ConfirmationDeletion: "true",
+									"confirmation.gardener.cloud/deletion": "true",
 								},
 							},
 						}, nil
@@ -162,7 +161,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should allow because all shoots have the deletion confirmation annotation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, "", core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					shoot.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					shoot.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 					shoot2 := shoot.DeepCopy()
 					shoot2.Name = "dummy2"
 
@@ -179,7 +178,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					shoot2 := shoot.DeepCopy()
 					shoot2.Name = "dummy2"
-					shoot.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					shoot.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 					Expect(shootStore.Add(shoot2)).NotTo(HaveOccurred())
@@ -221,7 +220,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					project.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "false",
+						"confirmation.gardener.cloud/deletion": "false",
 					}
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
@@ -234,7 +233,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					project.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
+						"confirmation.gardener.cloud/deletion": "true",
 					}
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
@@ -251,7 +250,7 @@ var _ = Describe("deleteconfirmation", func() {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: project.Name,
 								Annotations: map[string]string{
-									gardenerutils.ConfirmationDeletion: "true",
+									"confirmation.gardener.cloud/deletion": "true",
 								},
 							},
 						}, nil
@@ -267,7 +266,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should allow because all projects have the deletion confirmation annotation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", "", core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					project.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					project.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 					project2 := project.DeepCopy()
 					project2.Name = "dummy2"
 
@@ -284,7 +283,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					project2 := project.DeepCopy()
 					project2.Name = "dummy2"
-					project.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					project.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())
@@ -326,7 +325,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "false",
+						"confirmation.gardener.cloud/deletion": "false",
 					}
 					Expect(shootStateStore.Add(&shoot)).NotTo(HaveOccurred())
 
@@ -339,7 +338,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shootState.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
+						"confirmation.gardener.cloud/deletion": "true",
 					}
 					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
 
@@ -358,7 +357,7 @@ var _ = Describe("deleteconfirmation", func() {
 								Name:      shootState.Name,
 								Namespace: shootState.Namespace,
 								Annotations: map[string]string{
-									gardenerutils.ConfirmationDeletion: "true",
+									"confirmation.gardener.cloud/deletion": "true",
 								},
 							},
 						}, nil
@@ -374,7 +373,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should allow because all shootStates have the deletion confirmation annotation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, "", core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					shootState.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					shootState.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 					shootState2 := shootState.DeepCopy()
 					shootState2.Name = "dummyName2"
 
@@ -391,7 +390,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					shootState2 := shootState.DeepCopy()
 					shootState2.Name = "dummyName2"
-					shootState.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					shootState.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 
 					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
 					Expect(shootStateStore.Add(shootState2)).NotTo(HaveOccurred())
@@ -405,7 +404,7 @@ var _ = Describe("deleteconfirmation", func() {
 					shootState2 := shootState.DeepCopy()
 					shootState2.Name = "dummyName2"
 					shootState2.Namespace = "dummyNs2"
-					shootState2.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+					shootState2.Annotations = map[string]string{"confirmation.gardener.cloud/deletion": "true"}
 
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState2.Namespace, "", core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 

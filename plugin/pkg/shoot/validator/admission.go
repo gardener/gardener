@@ -42,7 +42,6 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -473,7 +472,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
 			// except changes to the deletion confirmation annotation
 			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				newConfirmation, newHasConfirmation := newMeta.Annotations[gardenerutils.ConfirmationDeletion]
+				newConfirmation, newHasConfirmation := newMeta.Annotations[v1beta1constants.ConfirmationDeletion]
 
 				// copy the new confirmation value to the old annotations to see if
 				// anything else was changed other than the confirmation annotation
@@ -481,11 +480,11 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 					if oldMeta.Annotations == nil {
 						oldMeta.Annotations = make(map[string]string)
 					}
-					oldMeta.Annotations[gardenerutils.ConfirmationDeletion] = newConfirmation
+					oldMeta.Annotations[v1beta1constants.ConfirmationDeletion] = newConfirmation
 				}
 
 				if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-					return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gardenerutils.ConfirmationDeletion))
+					return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, v1beta1constants.ConfirmationDeletion))
 				}
 			}
 

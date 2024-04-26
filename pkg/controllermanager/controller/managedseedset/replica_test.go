@@ -382,7 +382,7 @@ var _ = Describe("Replica", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-					Expect(s.Annotations).To(HaveKeyWithValue(gardenerutils.ConfirmationDeletion, "true"))
+					Expect(s.Annotations).To(HaveKeyWithValue(v1beta1constants.ConfirmationDeletion, "true"))
 					*shoot = *s
 					return nil
 				},

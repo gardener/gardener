@@ -32,7 +32,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
@@ -645,7 +644,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow adding the deletion confirmation", func() {
 				shoot.Annotations = make(map[string]string)
-				shoot.Annotations[gardenerutils.ConfirmationDeletion] = "true"
+				shoot.Annotations[v1beta1constants.ConfirmationDeletion] = "true"
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(ctx, attrs, nil)
@@ -4740,7 +4739,7 @@ var _ = Describe("validator", func() {
 						},
 					}
 					shoot.Annotations = map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
+						v1beta1constants.ConfirmationDeletion: "true",
 					}
 
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())

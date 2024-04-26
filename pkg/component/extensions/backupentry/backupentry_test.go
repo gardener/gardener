@@ -215,8 +215,8 @@ var _ = Describe("#BackupEntry", func() {
 
 			expected = empty.DeepCopy()
 			expected.SetAnnotations(map[string]string{
-				gardenerutils.ConfirmationDeletion: "true",
-				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
+				v1beta1constants.ConfirmationDeletion: "true",
+				v1beta1constants.GardenerTimestamp:    fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			})
 
 			// add deletion confirmation and timestamp annotation

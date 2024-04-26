@@ -18,11 +18,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type reconciler struct {
@@ -92,7 +92,7 @@ func dnsRecordsForIngress(ingress *networkingv1.Ingress, ip string, scheme *runt
 				},
 				Annotations: map[string]string{
 					// skip deletion protection, otherwise garbage collector won't be able to delete this DNSRecord object
-					gardenerutils.ConfirmationDeletion: "true",
+					v1beta1constants.ConfirmationDeletion: "true",
 				},
 			},
 			Spec: extensionsv1alpha1.DNSRecordSpec{
