@@ -74,15 +74,16 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>credentials</code></br>
+<code>credentialsRef</code></br>
 <em>
-<a href="#authentication.gardener.cloud/v1alpha1.Credentials">
-Credentials
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
 </a>
 </em>
 </td>
 <td>
-<p>Credentials specify reference to credentials.</p>
+<p>Credentials specify reference to a resource holding the credentials.
+Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 <tr>
@@ -252,53 +253,6 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <p>ExpirationTimestamp is the expiration timestamp of the returned credential.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="authentication.gardener.cloud/v1alpha1.Credentials">Credentials
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#authentication.gardener.cloud/v1alpha1.CredentialsBinding">CredentialsBinding</a>)
-</p>
-<p>
-<p>Credentials holds reference to credentials implementation.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a secret object in the same or another namespace.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>workloadIdentityRef</code></br>
-<em>
-<a href="#authentication.gardener.cloud/v1alpha1.WorkloadIdentityReference">
-WorkloadIdentityReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.</p>
 </td>
 </tr>
 </tbody>
@@ -483,50 +437,6 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <p>ExpirationTimestamp is the expiration timestamp of the returned credential.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="authentication.gardener.cloud/v1alpha1.WorkloadIdentityReference">WorkloadIdentityReference
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#authentication.gardener.cloud/v1alpha1.Credentials">Credentials</a>)
-</p>
-<p>
-<p>WorkloadIdentityReference represents a WorkloadIdentity Reference.
-It has enough information to retrieve workloadidentity in any namespace.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Name is unique within a namespace to reference a workloadidentity resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>namespace</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Namespace defines the space within which the workloadidentity name must be unique.</p>
 </td>
 </tr>
 </tbody>

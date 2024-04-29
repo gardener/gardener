@@ -24,14 +24,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":          schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":      schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus":    schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.Credentials":                     schema_pkg_apis_authentication_v1alpha1_Credentials(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBinding":              schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingList":          schema_pkg_apis_authentication_v1alpha1_CredentialsBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider":      schema_pkg_apis_authentication_v1alpha1_CredentialsBindingProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequest":         schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec":     schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus":   schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.WorkloadIdentityReference":       schema_pkg_apis_authentication_v1alpha1_WorkloadIdentityReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                           schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                          schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                      schema_pkg_apis_core_v1beta1_Addon(ref),
@@ -676,33 +674,6 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref co
 	}
 }
 
-func schema_pkg_apis_authentication_v1alpha1_Credentials(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Credentials holds reference to credentials implementation.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a secret object in the same or another namespace.",
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
-					"workloadIdentityRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.WorkloadIdentityReference"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.WorkloadIdentityReference", "k8s.io/api/core/v1.SecretReference"},
-	}
-}
-
 func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -738,11 +709,11 @@ func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.Refer
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider"),
 						},
 					},
-					"credentials": {
+					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Credentials specify reference to credentials.",
+							Description: "Credentials specify reference to a resource holding the credentials. Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.Credentials"),
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"quotas": {
@@ -760,11 +731,11 @@ func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.Refer
 						},
 					},
 				},
-				Required: []string{"provider", "credentials"},
+				Required: []string{"provider", "credentialsRef"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.Credentials", "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -938,33 +909,6 @@ func schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref c
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_authentication_v1alpha1_WorkloadIdentityReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadIdentityReference represents a WorkloadIdentity Reference. It has enough information to retrieve workloadidentity in any namespace.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Name is unique within a namespace to reference a workloadidentity resource.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Namespace defines the space within which the workloadidentity name must be unique.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-			},
-		},
 	}
 }
 
