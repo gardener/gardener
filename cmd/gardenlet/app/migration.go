@@ -380,7 +380,7 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-// TODO(plkokanov): Remove this code after a couple releases.
+// TODO(plkokanov): Remove this code after gardener v1.96 has been released.
 // The refactoring done in https://github.com/gardener/gardener/pull/8061 incorrectly changed
 // the label used to select vali vpas by the corresponding vali hvpa from `role: vali-vpa` to
 // `role: valivpa`. This caused the hvpa controller to orphan the existing vpa objects with
