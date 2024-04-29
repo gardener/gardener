@@ -390,9 +390,19 @@ func deleteOrphanedValiVPAs(ctx context.Context, log logr.Logger, c client.Clien
 	var (
 		orphanedValiVPALabel = "vali-vpa"
 		orphanedVPAList      = &vpaautoscalingv1.VerticalPodAutoscalerList{}
+		vpaCRDName           = "verticalpodautoscalers.autoscaling.k8s.io"
+		vpaCRD               = &apiextensionsv1.CustomResourceDefinition{}
 	)
 
-	if err := c.List(ctx, orphanedVPAList, client.MatchingLabels(map[string]string{v1beta1constants.LabelRole: orphanedValiVPALabel})); err != nil {
+	if err := c.Get(ctx, types.NamespacedName{Name: vpaCRDName}, vpaCRD); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Could not get required CRD, no need to delete orphaned vali VPA resources", "crd", vpaCRDName)
+			return nil
+		}
+		return fmt.Errorf("could not get %q CRD: %w", vpaCRDName, err)
+	}
+
+	if err := c.List(ctx, orphanedVPAList, client.MatchingLabels{v1beta1constants.LabelRole: orphanedValiVPALabel}); err != nil {
 		return fmt.Errorf("could not list orphaned vali VPAs with label '%s: %s': %w", v1beta1constants.LabelRole, orphanedValiVPALabel, err)
 	}
 
