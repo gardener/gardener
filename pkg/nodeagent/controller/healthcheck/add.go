@@ -13,7 +13,6 @@ import (
 	"github.com/containerd/containerd/defaults"
 	"github.com/containerd/containerd/namespaces"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -54,13 +53,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.HealthCheckIntervalSeconds = defaultIntervalSeconds
 	}
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(nodePredicate)).
+		For(&corev1.Node{}, builder.WithPredicates(nodePredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }

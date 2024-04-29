@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,8 +38,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
+	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, request.NamespacedName, node); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")

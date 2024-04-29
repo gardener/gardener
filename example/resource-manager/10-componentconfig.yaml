@@ -62,10 +62,14 @@ controllers:
       podSelector:
         matchLabels:
           foo: bar
-  node:
+  nodeCriticalComponents:
     enabled: true
     concurrentSyncs: 5
     backoff: 10s
+  nodeAgentReconciliationDelay:
+    enabled: true
+    minDelay: 0s
+    maxDelay: 5m
   tokenInvalidator:
     enabled: true
     concurrentSyncs: 5

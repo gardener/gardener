@@ -34,13 +34,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.Namespace = metav1.NamespaceSystem
 	}
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(node, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
+		For(&corev1.Node{}, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }

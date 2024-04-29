@@ -308,6 +308,43 @@ var _ = Describe("Validation", func() {
 					))
 				})
 			})
+
+			Context("node agent reconciliation delay", func() {
+				BeforeEach(func() {
+					conf.Controllers.NodeAgentReconciliationDelay.Enabled = true
+				})
+
+				It("should return errors because delays are <= 0", func() {
+					conf.Controllers.NodeAgentReconciliationDelay.MinDelay = &metav1.Duration{Duration: -1}
+					conf.Controllers.NodeAgentReconciliationDelay.MaxDelay = &metav1.Duration{Duration: -1}
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("controllers.nodeAgentReconciliationDelay.minDelay"),
+							"Detail": ContainSubstring("must be non-negative"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("controllers.nodeAgentReconciliationDelay.maxDelay"),
+							"Detail": ContainSubstring("must be non-negative"),
+						})),
+					))
+				})
+
+				It("should return an error because min delay > max delay", func() {
+					conf.Controllers.NodeAgentReconciliationDelay.MinDelay = &metav1.Duration{Duration: 4}
+					conf.Controllers.NodeAgentReconciliationDelay.MaxDelay = &metav1.Duration{Duration: 3}
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("controllers.nodeAgentReconciliationDelay.minDelay"),
+							"Detail": ContainSubstring("minimum delay must not be higher than maximum delay"),
+						})),
+					))
+				})
+			})
 		})
 
 		Context("webhook configuration", func() {

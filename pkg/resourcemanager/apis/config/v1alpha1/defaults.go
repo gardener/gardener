@@ -152,14 +152,26 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 	}
 }
 
-// SetDefaults_NodeControllerConfig sets defaults for the NodeControllerConfig object.
-func SetDefaults_NodeControllerConfig(obj *NodeControllerConfig) {
+// SetDefaults_NodeCriticalComponentsControllerConfig sets defaults for the NodeCriticalComponentsControllerConfig object.
+func SetDefaults_NodeCriticalComponentsControllerConfig(obj *NodeCriticalComponentsControllerConfig) {
 	if obj.Enabled {
 		if obj.ConcurrentSyncs == nil {
 			obj.ConcurrentSyncs = ptr.To(5)
 		}
 		if obj.Backoff == nil {
 			obj.Backoff = &metav1.Duration{Duration: 10 * time.Second}
+		}
+	}
+}
+
+// SetDefaults_NodeAgentReconciliationDelayControllerConfig sets defaults for the NodeAgentReconciliationDelayControllerConfig object.
+func SetDefaults_NodeAgentReconciliationDelayControllerConfig(obj *NodeAgentReconciliationDelayControllerConfig) {
+	if obj.Enabled {
+		if obj.MinDelay == nil {
+			obj.MinDelay = &metav1.Duration{}
+		}
+		if obj.MaxDelay == nil {
+			obj.MaxDelay = &metav1.Duration{Duration: 5 * time.Minute}
 		}
 	}
 }

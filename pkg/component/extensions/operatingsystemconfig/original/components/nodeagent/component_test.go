@@ -27,7 +27,6 @@ var _ = Describe("Component", func() {
 		kubernetesVersion          = semver.MustParse("1.2.3")
 		apiServerURL               = "https://localhost"
 		caBundle                   = []byte("ca-bundle")
-		syncJitterPeriod           = &metav1.Duration{Duration: time.Second}
 		additionalTokenSyncConfigs = []nodeagentv1alpha1.TokenSecretSyncConfig{{
 			SecretName: "gardener-valitail",
 			Path:       "/var/lib/valitail/auth-token",
@@ -44,16 +43,15 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, syncJitterPeriod, nil))
+			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, caBundle, nil))
 			Expect(err).NotTo(HaveOccurred())
 
 			units, files, err := component.Config(components.Context{
-				Key:                 key,
-				KubernetesVersion:   kubernetesVersion,
-				APIServerURL:        apiServerURL,
-				CABundle:            ptr.To(string(caBundle)),
-				Images:              map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: ptr.To("v1")}},
-				OSCSyncJitterPeriod: syncJitterPeriod,
+				Key:               key,
+				KubernetesVersion: kubernetesVersion,
+				APIServerURL:      apiServerURL,
+				CABundle:          ptr.To(string(caBundle)),
+				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: ptr.To("v1")}},
 			})
 
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
@@ -110,7 +108,7 @@ WantedBy=multi-user.target`))
 
 	Describe("#ComponentConfig", func() {
 		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, syncJitterPeriod, additionalTokenSyncConfigs)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentv1alpha1.APIServer{
 					Server:   apiServerURL,
 					CABundle: caBundle,
@@ -119,7 +117,6 @@ WantedBy=multi-user.target`))
 					OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
 						SecretName:        oscSecretName,
 						KubernetesVersion: kubernetesVersion,
-						SyncJitterPeriod:  syncJitterPeriod,
 					},
 					Token: nodeagentv1alpha1.TokenControllerConfig{
 						SyncConfigs: []nodeagentv1alpha1.TokenSecretSyncConfig{
@@ -141,7 +138,7 @@ WantedBy=multi-user.target`))
 
 	Describe("#Files", func() {
 		It("should return the expected files", func() {
-			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, syncJitterPeriod, additionalTokenSyncConfigs)
+			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        "/var/lib/gardener-node-agent/config.yaml",
@@ -160,7 +157,6 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: null
     secretName: ` + oscSecretName + `
-    syncJitterPeriod: ` + syncJitterPeriod.Duration.String() + `
   token:
     syncConfigs:
     - path: /var/lib/gardener-node-agent/credentials/token

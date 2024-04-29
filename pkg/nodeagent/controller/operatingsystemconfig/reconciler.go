@@ -164,10 +164,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
 
-func (r *Reconciler) getNode(ctx context.Context) (*metav1.PartialObjectMetadata, error) {
+func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, error) {
 	if r.NodeName != "" {
-		node := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
-		node.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Node"))
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
 		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
 			return nil, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
 		}

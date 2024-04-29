@@ -110,9 +110,3 @@ Because actual and previous configuration are compared, removed files and units 
 ### Availability
 
 Previously, the `cloud-config-downloader` simply restarted the systemd units on every change to the `OSC`, regardless which of the services changed. The `gardener-node-agent` first checks which systemd unit was changed, and will only restart these. This will prevent unneeded `kubelet` restarts.
-
-### Future Development
-
-The `gardener-node-agent` opens up the possibility for further improvements.
-
-Necessary restarts of the `kubelet` could be deterministic instead of the aforementioned random jittering. In that case, the `gardenlet` could add annotations across all nodes. As the `gardener-node-agent` watches the `Node` object, it could wait with `kubelet` restarts, OSC changes or react immediately. Critical changes could be performed in chunks of nodes in serial order, but an equal time spread is possible, too.

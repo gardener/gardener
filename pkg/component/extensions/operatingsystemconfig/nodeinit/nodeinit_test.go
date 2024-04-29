@@ -6,13 +6,11 @@ package nodeinit_test
 
 import (
 	"context"
-	"time"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
@@ -30,17 +28,16 @@ var _ = Describe("Init", func() {
 			worker gardencorev1beta1.Worker
 			image  = "gna-repo:gna-tag"
 
-			config              *nodeagentv1alpha1.NodeAgentConfiguration
-			oscSecretName       = "osc-secret-name"
-			apiServerURL        = "https://localhost"
-			caBundle            = []byte("cluster-ca")
-			kubernetesVersion   = semver.MustParse("1.2.3")
-			oscSyncJitterPeriod = &metav1.Duration{Duration: time.Second}
+			config            *nodeagentv1alpha1.NodeAgentConfiguration
+			oscSecretName     = "osc-secret-name"
+			apiServerURL      = "https://localhost"
+			caBundle          = []byte("cluster-ca")
+			kubernetesVersion = semver.MustParse("1.2.3")
 		)
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
-			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, oscSyncJitterPeriod, nil)
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil)
 		})
 
 		When("kubelet data volume is not configured", func() {
@@ -96,7 +93,6 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
-    syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
     syncConfigs:
     - path: /var/lib/gardener-node-agent/credentials/token
@@ -186,7 +182,6 @@ controllers:
   operatingSystemConfig:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
-    syncJitterPeriod: ` + oscSyncJitterPeriod.Duration.String() + `
   token:
     syncConfigs:
     - path: /var/lib/gardener-node-agent/credentials/token

@@ -418,7 +418,7 @@ var _ = Describe("ResourceManager", func() {
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenRequestorWorkers,
 					},
-					Node: resourcemanagerv1alpha1.NodeControllerConfig{
+					NodeCriticalComponents: resourcemanagerv1alpha1.NodeCriticalComponentsControllerConfig{
 						Enabled: false,
 					},
 				},
@@ -463,7 +463,7 @@ var _ = Describe("ResourceManager", func() {
 					Namespaces: targetNamespaces,
 				}
 
-				config.Controllers.Node.Enabled = !isWorkerless
+				config.Controllers.NodeCriticalComponents.Enabled = !isWorkerless
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       !isWorkerless,
 					SchedulerName: ptr.To("bin-packing-scheduler"),

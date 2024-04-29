@@ -68,7 +68,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		})
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, ctx.OSCSyncJitterPeriod, additionalTokenSyncConfigs))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, caBundle, additionalTokenSyncConfigs))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -116,7 +116,6 @@ func ComponentConfig(
 	kubernetesVersion *semver.Version,
 	apiServerURL string,
 	caBundle []byte,
-	syncJitterPeriod *metav1.Duration,
 	additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentv1alpha1.NodeAgentConfiguration {
 	return &nodeagentv1alpha1.NodeAgentConfiguration{
@@ -128,7 +127,6 @@ func ComponentConfig(
 			OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
-				SyncJitterPeriod:  syncJitterPeriod,
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
 				SyncConfigs: append([]nodeagentv1alpha1.TokenSecretSyncConfig{{

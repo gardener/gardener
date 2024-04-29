@@ -912,10 +912,26 @@ spec:
 
 ### [`Node` Controller](../../pkg/resourcemanager/controller/node)
 
+#### [Critical Components Controller](../../pkg/resourcemanager/controller/node/criticalcomponents)
+
 Gardenlet configures kubelet of shoot worker nodes to register the `Node` object with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
 This controller watches newly created `Node` objects in the shoot cluster and removes the taint once all node-critical components are scheduled and ready.
 If the controller finds node-critical components that are not scheduled or not ready yet, it checks the `Node` again after the duration configured in `ResourceManagerConfiguration.controllers.node.backoff`
 Please refer to the [feature documentation](../usage/node-readiness.md) or [proposal issue](https://github.com/gardener/gardener/issues/7117) for more details.
+
+#### [Node Agent Reconciliation Delay Controller](../../pkg/resourcemanager/controller/node/agentreconciliationdelay)
+
+This controller computes a reconciliation delay per node by using a simple linear mapping approach based on the index of the nodes in the list of all nodes in the shoot cluster.
+This approach ensures that the delays of all instances of `gardener-node-agent` are distributed evenly.
+
+The minimum and maximum delays can be configured, but they are defaulted to `0s` and `5m`, respectively.
+
+This approach works well as long as the number of nodes in the cluster is not higher than the configured maximum delay in seconds.
+In this case, the delay is still computed linearly, however, the more nodes exist in the cluster, the closer the delay times become (which might be of limited use then).
+Consider increasing the maximum delay by annotating the `Shoot` with `shoot.gardener.cloud/cloud-config-execution-max-delay-seconds=<value>`.
+The highest possible value is `1800`.
+
+The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotation to nodes whose value is read by the [node-agent](node-agent.md)s.
 
 ## Webhooks
 

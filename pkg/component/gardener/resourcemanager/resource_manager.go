@@ -320,6 +320,10 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 	// IsWorkerless specifies whether the cluster has workers.
 	IsWorkerless bool
+	// NodeAgentReconciliationMaxDelay specifies the maximum delay duration for the node-agent reconciliation of
+	// operating system configs on nodes. When this is provided, the respective controller is enabled in
+	// resource-manager.
+	NodeAgentReconciliationMaxDelay *metav1.Duration
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -631,6 +635,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Webhooks.KubernetesServiceHost.Host = *r.values.KubernetesServiceHost
 	}
 
+	if r.values.NodeAgentReconciliationMaxDelay != nil {
+		config.Controllers.NodeAgentReconciliationDelay.Enabled = true
+		config.Controllers.NodeAgentReconciliationDelay.MaxDelay = r.values.NodeAgentReconciliationMaxDelay
+	}
+
 	if r.values.TargetDiffersFromSourceCluster {
 		config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
@@ -643,7 +652,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			PodTolerations: r.values.SystemComponentTolerations,
 		}
 
-		config.Controllers.Node.Enabled = true
+		config.Controllers.NodeCriticalComponents.Enabled = true
 	}
 
 	// this function should be called at the last to make sure we disable
@@ -2082,7 +2091,7 @@ type Secrets struct {
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
 	// disable unneeded controllers
 	config.Controllers.KubeletCSRApprover.Enabled = false
-	config.Controllers.Node.Enabled = false
+	config.Controllers.NodeCriticalComponents.Enabled = false
 
 	// disable unneeded webhooks
 	config.Webhooks.PodSchedulerName.Enabled = false

@@ -55,6 +55,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
 		b.Shoot.IsWorkerless,
 		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
+		b.Shoot.OSCSyncJitterPeriod,
 	)
 }
 

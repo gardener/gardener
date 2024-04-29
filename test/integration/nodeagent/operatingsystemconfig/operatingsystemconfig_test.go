@@ -101,7 +101,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				SyncPeriod:        &metav1.Duration{Duration: time.Hour},
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
-				SyncJitterPeriod:  &metav1.Duration{Duration: 0},
 			},
 			DBus:          fakeDBus,
 			FS:            fakeFS,

@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -27,4 +28,9 @@ var EnqueueOnce = source.Func(func(_ context.Context, _ handler.EventHandler, q 
 var HandleOnce = source.Func(func(ctx context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
 	handler.Create(ctx, event.CreateEvent{}, queue)
 	return nil
+})
+
+// EnqueueAnonymously is a handler.EventHandler which enqueues a reconcile.Request without any namespace/name data.
+var EnqueueAnonymously = handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+	return []reconcile.Request{{}}
 })

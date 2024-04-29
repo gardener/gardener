@@ -26,7 +26,6 @@ controllers:
     secretName: name-of-osc-secret
     kubernetesVersion: 1.28.2
   # syncPeriod: 10m
-  # syncJitterPeriod: 5m
   token:
     syncConfigs:
     - secretName: name-of-access-token-secret

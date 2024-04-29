@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package node_test
+package agentreconciliationdelay_test
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -25,20 +25,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/agentreconciliationdelay"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
-func TestNode(t *testing.T) {
+func TestAgentReconciliationDelay(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ResourceManager Node Suite")
+	RunSpecs(t, "Test Integration ResourceManager Node AgentReconciliationDelay Suite")
 }
 
-const testID = "node-controller-test"
+const testID = "node-agent-reconciliation-delay-test"
 
 var (
 	ctx = context.Background()
@@ -48,9 +47,7 @@ var (
 	testEnv    *envtest.Environment
 	testClient client.Client
 	mgrClient  client.Client
-
-	testNamespace *corev1.Namespace
-	testRunID     string
+	testRunID  string
 )
 
 var _ = BeforeSuite(func() {
@@ -74,27 +71,13 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: resourcemanagerclient.TargetScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Create test Namespace")
-	testNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: testID + "-",
-		},
-	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
-	testRunID = testNamespace.Name
-
-	DeferCleanup(func() {
-		By("Delete test Namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
+	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16]
+	log.Info("Using test run ID for test", "testRunID", testRunID)
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Node{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
@@ -105,14 +88,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	By("Setup field indexes")
-	Expect(indexer.AddPodNodeName(ctx, mgr.GetFieldIndexer())).To(Succeed())
-
 	By("Register controller")
-	Expect((&node.Reconciler{
-		Config: config.NodeControllerConfig{
-			ConcurrentSyncs: ptr.To(5),
-			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
+	Expect((&agentreconciliationdelay.Reconciler{
+		Config: config.NodeAgentReconciliationDelayControllerConfig{
+			MinDelay: &metav1.Duration{Duration: 5 * time.Second},
+			MaxDelay: &metav1.Duration{Duration: 30 * time.Second},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())
 

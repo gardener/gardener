@@ -105,8 +105,10 @@ type ResourceManagerControllerConfiguration struct {
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
 	// NetworkPolicy is the configuration for the networkpolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
-	// Node is the configuration for the node controller.
-	Node NodeControllerConfig `json:"node"`
+	// NodeCriticalComponents is the configuration for the node critical components controller.
+	NodeCriticalComponents NodeCriticalComponentsControllerConfig `json:"nodeCriticalComponents"`
+	// NodeAgentReconciliationDelay is the configuration for the node-agent reconciliation delay controller.
+	NodeAgentReconciliationDelay NodeAgentReconciliationDelayControllerConfig `json:"nodeAgentReconciliationDelay"`
 	// TokenInvalidator is the configuration for the token-invalidator controller.
 	TokenInvalidator TokenInvalidatorControllerConfig `json:"tokenInvalidator"`
 	// TokenRequestor is the configuration for the token-requestor controller.
@@ -206,8 +208,8 @@ type TokenRequestorControllerConfig struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
-// NodeControllerConfig is the configuration for the node controller.
-type NodeControllerConfig struct {
+// NodeCriticalComponentsControllerConfig is the configuration for the node critical components controller.
+type NodeCriticalComponentsControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
@@ -216,6 +218,18 @@ type NodeControllerConfig struct {
 	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods (defaults to 10s).
 	// +optional
 	Backoff *metav1.Duration `json:"backoff,omitempty"`
+}
+
+// NodeAgentReconciliationDelayControllerConfig is the configuration for the node-agent reconciliation delay controller.
+type NodeAgentReconciliationDelayControllerConfig struct {
+	// Enabled defines whether this controller is enabled.
+	Enabled bool `json:"enabled"`
+	// MinDelay is the minimum duration to use for delays (default: 0s).
+	// +optional
+	MinDelay *metav1.Duration `json:"minDelay,omitempty"`
+	// MaxDelay is the maximum duration to use for delays (default: 5m).
+	// +optional
+	MaxDelay *metav1.Duration `json:"maxDelay,omitempty"`
 }
 
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.
