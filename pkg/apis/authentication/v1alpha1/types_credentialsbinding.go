@@ -21,22 +21,13 @@ type CredentialsBinding struct {
 	// Provider defines the provider type of the CredentialsBinding.
 	// This field is immutable.
 	Provider CredentialsBindingProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
-	// Credentials specify reference to credentials.
-	Credentials Credentials `json:"credentials" protobuf:"bytes,3,name=credentials"`
+	// Credentials specify reference to a resource holding the credentials.
+	// Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity
+	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,3,name=credentialsRef"`
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// This field is immutable.
 	// +optional
 	Quotas []corev1.ObjectReference `json:"quotas,omitempty" protobuf:"bytes,4,rep,name=quotas"`
-}
-
-// Credentials holds reference to credentials implementation.
-type Credentials struct {
-	// SecretRef is a reference to a secret object in the same or another namespace.
-	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
-	// WorkloadIdentityRef is a reference to a workloadidentity object in the same or another namespace.
-	// +optional
-	WorkloadIdentityRef *WorkloadIdentityReference `json:"workloadIdentityRef,omitempty" protobuf:"bytes,2,opt,name=workloadIdentityRef"`
 }
 
 // GetProviderType gets the type of the provider.
@@ -48,17 +39,6 @@ func (cb *CredentialsBinding) GetProviderType() string {
 type CredentialsBindingProvider struct {
 	// Type is the type of the provider.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-}
-
-// WorkloadIdentityReference represents a WorkloadIdentity Reference.
-// It has enough information to retrieve workloadidentity in any namespace.
-type WorkloadIdentityReference struct {
-	// Name is unique within a namespace to reference a workloadidentity resource.
-	// +optional
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	// Namespace defines the space within which the workloadidentity name must be unique.
-	// +optional
-	Namespace string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
