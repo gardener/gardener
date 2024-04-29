@@ -164,7 +164,6 @@ func (p *plutono) Deploy(ctx context.Context) error {
 	if dashboardConfigMap != nil {
 		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
 			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
-			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 			return nil
 		}); err != nil {
 			return err
@@ -245,7 +244,6 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 
 	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	ingress, err := p.getIngress(ctx)
