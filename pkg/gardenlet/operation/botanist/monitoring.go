@@ -106,8 +106,10 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-prometheus-cache", 9090):  v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-alertmanager-seed", 9093): v1beta1constants.LabelNetworkPolicyAllowed,
 		},
-		CentralConfigs: prometheus.CentralConfigs{},
 		ExternalLabels: externalLabels,
+		CentralConfigs: prometheus.CentralConfigs{
+			ServiceMonitors: shootprometheus.CentralServiceMonitors(b.Shoot.WantsAlertmanager),
+		},
 		Ingress: &prometheus.IngressValues{
 			Host:                              b.ComputePrometheusHost(),
 			SecretsManager:                    b.SecretsManager,
@@ -162,6 +164,12 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	b.Shoot.Components.Monitoring.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
 	b.Shoot.Components.Monitoring.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 	b.Shoot.Components.Monitoring.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
+
+	caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+	b.Shoot.Components.Monitoring.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
 	if err := b.Shoot.Components.Monitoring.Prometheus.Deploy(ctx); err != nil {
 		return err
