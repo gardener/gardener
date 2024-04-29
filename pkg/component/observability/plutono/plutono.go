@@ -164,7 +164,6 @@ func (p *plutono) Deploy(ctx context.Context) error {
 	if dashboardConfigMap != nil {
 		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
 			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
-			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 			return nil
 		}); err != nil {
 			return err
