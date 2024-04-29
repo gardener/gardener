@@ -16,19 +16,6 @@ data:
     global:
       evaluation_interval: 1m
       scrape_interval: 1m
-      external_labels:
-        cluster: {{ .Release.Namespace }}
-        project: {{ .Values.shoot.project }}
-        shoot_name: {{ .Values.shoot.name }}
-        name: {{ .Values.shoot.name }}
-        seed_api: {{ .Values.seed.apiserver }}
-        seed_region: {{ .Values.seed.region }}
-        seed_provider: {{ .Values.seed.provider }}
-        shoot_infra: {{ .Values.shoot.provider }}
-        ignoreAlerts: {{ .Values.ignoreAlerts }}
-    {{- if .Values.externalLabels }}
-{{ toYaml .Values.externalLabels | indent 8 }}
-    {{- end }}
     {{- if .Values.remoteWrite }}
     {{- if .Values.remoteWrite.url }}
     remote_write:

@@ -120,6 +120,7 @@ build:
             - pkg/component/observability/monitoring/prometheus/garden
             - pkg/component/observability/monitoring/prometheus/longterm
             - pkg/component/observability/monitoring/prometheus/seed
+            - pkg/component/observability/monitoring/prometheus/shoot
             - pkg/component/observability/monitoring/prometheusoperator
             - pkg/component/observability/monitoring/utils
             - pkg/component/observability/plutono

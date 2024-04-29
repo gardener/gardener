@@ -23,7 +23,7 @@ func NewPrometheus(log logr.Logger, c client.Client, namespace string, values pr
 	values.Image = imagePrometheus.String()
 	values.Version = ptr.Deref(imagePrometheus.Version, "v0.0.0")
 
-	// TODO(rfranzke): Remove this block after all Prometheis have been migrated.
+	// TODO(rfranzke): Remove this block after v1.97 has been released.
 	{
 		imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
 		if err != nil {

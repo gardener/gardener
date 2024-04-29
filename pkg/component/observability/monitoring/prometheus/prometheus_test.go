@@ -22,6 +22,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -33,6 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -543,6 +545,77 @@ honor_labels: true`
 				))
 			})
 
+			When("namespace UID is set", func() {
+				BeforeEach(func() {
+					values.NamespaceUID = ptr.To(apitypes.UID("foo"))
+				})
+
+				It("should successfully deploy all resources", func() {
+					clusterRoleBinding.Name += "-foo"
+					clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{{
+						APIVersion:         corev1.SchemeGroupVersion.String(),
+						Kind:               "Namespace",
+						Name:               namespace,
+						UID:                "foo",
+						Controller:         ptr.To(true),
+						BlockOwnerDeletion: ptr.To(true),
+					}}
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusFor(""),
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+					))
+				})
+			})
+
+			When("cluster type is shoot", func() {
+				BeforeEach(func() {
+					values.ClusterType = component.ClusterTypeShoot
+				})
+
+				It("should successfully deploy all resources", func() {
+					service.Annotations = map[string]string{
+						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+						"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+					}
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusFor(""),
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+					))
+				})
+			})
+
 			When("ingress is configured", func() {
 				test := func() {
 					It("should successfully deploy all resources", func() {
@@ -583,6 +656,47 @@ honor_labels: true`
 					})
 
 					test()
+
+					When("management APIs shall be blocked", func() {
+						BeforeEach(func() {
+							values.Ingress.BlockManagementAndTargetAPIAccess = true
+						})
+
+						It("should successfully deploy all resources", func() {
+							prometheusObj := prometheusFor("")
+							prometheusObj.Spec.ExternalURL = "https://" + ingressHost
+							ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = `location /-/reload {
+  return 403;
+}
+location /-/quit {
+  return 403;
+}
+location /api/v1/targets {
+  return 403;
+}`
+
+							prometheusRule.Namespace = namespace
+							metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+							Expect(managedResource).To(consistOf(
+								serviceAccount,
+								service,
+								clusterRoleBinding,
+								prometheusObj,
+								vpa,
+								prometheusRule,
+								scrapeConfig,
+								serviceMonitor,
+								podMonitor,
+								secretAdditionalScrapeConfigs,
+								additionalConfigMap,
+								ingress,
+							))
+						})
+					})
 				})
 
 				Context("late initialization", func() {

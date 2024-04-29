@@ -7,19 +7,32 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strconv"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
+	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultAlertmanager creates a new alertmanager deployer.
@@ -56,10 +69,124 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
-	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
-	b.Operation.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
 	return b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
+}
+
+// DefaultPrometheus creates a new prometheus deployer.
+func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
+	externalLabels := map[string]string{
+		"cluster":       b.Shoot.SeedNamespace,
+		"project":       b.Garden.Project.Name,
+		"shoot_name":    b.Shoot.GetInfo().Name,
+		"name":          b.Shoot.GetInfo().Name,
+		"seed_api":      b.SeedClientSet.RESTConfig().Host,
+		"seed_region":   b.Seed.GetInfo().Spec.Provider.Region,
+		"seed_provider": b.Seed.GetInfo().Spec.Provider.Type,
+		"shoot_infra":   b.Shoot.GetInfo().Spec.Provider.Type,
+		"ignoreAlerts":  strconv.FormatBool(b.Shoot.IgnoreAlerts),
+	}
+
+	if b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil {
+		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
+	}
+
+	values := prometheus.Values{
+		Name:              "shoot",
+		PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+		StorageCapacity:   resource.MustParse(b.Seed.GetValidVolumeSize("20Gi")),
+		ClusterType:       component.ClusterTypeShoot,
+		Replicas:          b.Shoot.GetReplicas(1),
+		Retention:         ptr.To(monitoringv1.Duration("30d")),
+		RetentionSize:     "15GB",
+		AdditionalPodLabels: map[string]string{
+			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets:  v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-prometheus-cache", 9090):  v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-alertmanager-seed", 9093): v1beta1constants.LabelNetworkPolicyAllowed,
+		},
+		CentralConfigs: prometheus.CentralConfigs{},
+		ExternalLabels: externalLabels,
+		Ingress: &prometheus.IngressValues{
+			Host:                              b.ComputePrometheusHost(),
+			SecretsManager:                    b.SecretsManager,
+			SigningCA:                         v1beta1constants.SecretNameCACluster,
+			BlockManagementAndTargetAPIAccess: true,
+		},
+		DataMigration: monitoring.DataMigration{
+			StatefulSetName: "prometheus",
+		},
+	}
+
+	if b.Shoot.WantsAlertmanager {
+		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-shoot"}
+	}
+
+	return sharedcomponent.NewPrometheus(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
+}
+
+// MigratePrometheus migrate the shoot Prometheus to prometheus-operator.
+// TODO(rfranzke): Remove this function after v1.97 has been released.
+func (b *Botanist) MigratePrometheus(ctx context.Context) error {
+	oldStatefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(oldStatefulSet), oldStatefulSet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed reading old Prometheus StatefulSet %s: %w", client.ObjectKeyFromObject(oldStatefulSet), err)
+	}
+
+	return b.DeployPrometheus(ctx)
+}
+
+// DeployPrometheus reconciles the shoot Prometheus.
+func (b *Botanist) DeployPrometheus(ctx context.Context) error {
+	if !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx)
+	}
+
+	if err := gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
+		return fmt.Errorf("failed reconciling access secret for prometheus: %w", err)
+	}
+
+	ingressAuthSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
+	}
+
+	b.Shoot.Components.Monitoring.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.Monitoring.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.Monitoring.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
+
+	if err := b.Shoot.Components.Monitoring.Prometheus.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove this after v1.97 has been released.
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "blackbox-exporter-config-prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-rules", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-remote-am-tls", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-web", Namespace: b.Shoot.SeedNamespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: b.Shoot.SeedNamespace}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + b.Shoot.SeedNamespace, Namespace: b.Shoot.SeedNamespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-db-prometheus-0", Namespace: b.Shoot.SeedNamespace}},
+	)
+}
+
+// DestroyPrometheus destroys the shoot Prometheus.
+func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
+	if err := b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Secret)
 }
 
 // DefaultMonitoring creates a new monitoring component.

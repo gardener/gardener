@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,7 +31,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -141,11 +139,6 @@ type monitoring struct {
 }
 
 func (m *monitoring) Deploy(ctx context.Context) error {
-	credentialsSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
-	}
-
 	alerting, err := m.getCustomAlertingConfigs(ctx)
 	if err != nil {
 		return err
@@ -154,31 +147,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 	alertingRules, scrapeConfigs, err := m.getAlertingRulesAndScrapeConfigs(ctx)
 	if err != nil {
 		return err
-	}
-
-	// Create shoot token secret for prometheus component
-	shootAccessSecret := m.newShootAccessSecret()
-	if err := shootAccessSecret.Reconcile(ctx, m.client); err != nil {
-		return err
-	}
-
-	var ingressTLSSecretName string
-	if m.values.WildcardCertName != nil {
-		ingressTLSSecretName = *m.values.WildcardCertName
-	} else {
-		ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "prometheus-tls",
-			CommonName:                  "prometheus",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{m.values.IngressHostPrometheus},
-			CertType:                    secretsutils.ServerCert,
-			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-		if err != nil {
-			return err
-		}
-		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
 	clusterCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCACluster)
@@ -210,16 +178,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			"kubernetesVersion":        m.values.KubernetesVersion,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": m.values.NodeLocalDNSEnabled,
-			},
-			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   m.values.IngressHostPrometheus,
-						"secretName": ingressTLSSecretName,
-					},
-				},
 			},
 			"namespace": map[string]interface{}{
 				"uid": m.values.NamespaceUID,
@@ -300,11 +258,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		prometheusConfig["remoteWrite"] = remoteWriteConfig
 	}
 
-	// set externalLabels
-	if m.values.Config != nil && m.values.Config.Shoot != nil && len(m.values.Config.Shoot.ExternalLabels) != 0 {
-		prometheusConfig["externalLabels"] = m.values.Config.Shoot.ExternalLabels
-	}
-
 	coreValues := map[string]interface{}{
 		"global": map[string]interface{}{
 			"shootKubeVersion": map[string]interface{}{
@@ -318,7 +271,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return m.reconcilePrometheusShootResources(ctx, shootAccessSecret.ServiceAccountName)
+	return nil
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {

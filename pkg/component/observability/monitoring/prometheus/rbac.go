@@ -5,14 +5,16 @@
 package prometheus
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 func (p *prometheus) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
+	obj := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        p.name(),
 			Labels:      p.getLabels(),
@@ -29,4 +31,18 @@ func (p *prometheus) clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			Namespace: p.namespace,
 		}},
 	}
+
+	if p.values.NamespaceUID != nil {
+		obj.Name += "-" + string(*p.values.NamespaceUID)
+		obj.OwnerReferences = append(obj.OwnerReferences, metav1.OwnerReference{
+			APIVersion:         corev1.SchemeGroupVersion.String(),
+			Kind:               "Namespace",
+			Name:               p.namespace,
+			UID:                *p.values.NamespaceUID,
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
+		})
+	}
+
+	return obj
 }

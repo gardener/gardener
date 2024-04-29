@@ -811,9 +811,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
 		deployAlertmanager = g.Add(flow.Task{
-			Name:         "Reconciling Shoot alertmanager",
+			Name:         "Reconciling Shoot Alertmanager",
 			Fn:           flow.TaskFn(botanist.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+		})
+		// TODO(rfranzke): Remove the migratePrometheus task after v1.97 has been released.
+		migratePrometheus = g.Add(flow.Task{
+			Name:         "Migrating Shoot Prometheus to prometheus-operator",
+			Fn:           flow.TaskFn(botanist.MigratePrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		deployPrometheus = g.Add(flow.Task{
+			Name:         "Reconciling Shoot Prometheus",
+			Fn:           flow.TaskFn(botanist.DeployPrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
@@ -824,19 +835,19 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployKubeStateMetrics).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployAlertmanager),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployPrometheus, deployAlertmanager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployAlertmanager),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployPrometheus, deployAlertmanager),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       !o.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deployPrometheus, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 
 		// logic is inverted here

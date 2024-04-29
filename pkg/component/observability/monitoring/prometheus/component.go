@@ -15,6 +15,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,6 +47,8 @@ type Interface interface {
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
+	// SetNamespaceUID sets the namespace UID.
+	SetNamespaceUID(name types.UID)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -56,6 +59,8 @@ type Values struct {
 	Image string
 	// Version is the version of prometheus.
 	Version string
+	// ClusterType is the type of the cluster.
+	ClusterType component.ClusterType
 	// PriorityClassName is the name of the priority class for the deployment.
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
@@ -78,6 +83,8 @@ type Values struct {
 	ExternalLabels map[string]string
 	// AdditionalPodLabels is a map containing additional labels for the created pods.
 	AdditionalPodLabels map[string]string
+	// NamespaceUID is the UID of the namespace.
+	NamespaceUID *types.UID
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs
@@ -91,7 +98,7 @@ type Values struct {
 	Cortex *CortexValues
 
 	// DataMigration is a struct for migrating data from existing disks.
-	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
+	// TODO(rfranzke): Remove this after v1.97 has been released.
 	DataMigration monitoring.DataMigration
 }
 
@@ -132,6 +139,9 @@ type IngressValues struct {
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
+	// BlockManagementAndTargetAPIAccess controls whether access to the management and target APIs is blocked when
+	// accessing Prometheus via ingress.
+	BlockManagementAndTargetAPIAccess bool
 }
 
 // CortexValues contains configuration for the cortex frontend sidecar container.
@@ -270,6 +280,10 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 
 func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
 	p.values.CentralConfigs.ScrapeConfigs = configs
+}
+
+func (p *prometheus) SetNamespaceUID(uid types.UID) {
+	p.values.NamespaceUID = &uid
 }
 
 func (p *prometheus) name() string {
