@@ -257,7 +257,7 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 		plutonoConfigSecret,
 		providerConfigMap,
 		dataSourceConfigMap,
-		p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
+		p.getDeployment(providerConfigMap, dataSourceConfigMap, plutonoConfigSecret, plutonoAdminUserSecret),
 		p.getService(),
 		ingress,
 		p.getServiceAccount(),
@@ -546,7 +546,7 @@ func (p *plutono) getService() *corev1.Service {
 	return service
 }
 
-func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap *corev1.ConfigMap, plutonoConfigSecret, plutonoAdminUserSecret *corev1.Secret) *appsv1.Deployment {
+func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.ConfigMap, plutonoConfigSecret, plutonoAdminUserSecret *corev1.Secret) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -702,7 +702,7 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 	}
-	utilruntime.Must(references.InjectAnnotations(deployment, references.AnnotationKey(references.KindConfigMap, dashboardConfigMap.Name)))
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment
 }
