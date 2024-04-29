@@ -183,7 +183,7 @@ metadata:
 `
 
 			dataSourceConfigMapYAMLFor = func(values Values) string {
-				url, maxLine := "http://prometheus-web:80", "1000"
+				url, maxLine := "http://prometheus-shoot:80", "1000"
 				if values.IsGardenCluster {
 					url, maxLine = "http://prometheus-garden:80", "5000"
 				} else if values.ClusterType == comp.ClusterTypeSeed {
@@ -265,7 +265,7 @@ metadata:
 				}
 
 				if values.ClusterType == comp.ClusterTypeShoot {
-					configMap += `  name: plutono-datasources-0fd41775
+					configMap += `  name: plutono-datasources-f82429ca
   namespace: some-namespace
 `
 				} else {
@@ -280,7 +280,7 @@ metadata:
 			deploymentYAMLFor = func(values Values) *appsv1.Deployment {
 				dataSourceConfigMap, labelKey := "plutono-datasources-be28eaa6", "seed"
 				if values.ClusterType == comp.ClusterTypeShoot {
-					dataSourceConfigMap, labelKey = "plutono-datasources-0fd41775", "shoot"
+					dataSourceConfigMap, labelKey = "plutono-datasources-f82429ca", "shoot"
 				}
 				if values.IsGardenCluster {
 					dataSourceConfigMap, labelKey = "plutono-datasources-b320ffed", "garden"
@@ -648,7 +648,7 @@ status:
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 				dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 				testDashboardConfigMap(dashboardsConfigMap, 35, values)
@@ -672,7 +672,7 @@ status:
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 39, values)
@@ -694,7 +694,7 @@ status:
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 27, values)
@@ -864,8 +864,8 @@ func getPodLabels(values Values) map[string]string {
 		})
 	} else if values.ClusterType == comp.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
-			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
 
