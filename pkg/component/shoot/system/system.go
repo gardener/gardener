@@ -354,6 +354,12 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		)
 	}
 
+	if versionutils.ConstraintK8sGreaterEqual130.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"storage-version-migrator-controller",
+		)
+	}
+
 	return append(kubeControllerManagerServiceAccountNames, "default")
 }
 
