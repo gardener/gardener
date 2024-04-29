@@ -154,28 +154,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
 
-    - job_name: blackbox-apiserver
-      params:
-        module:
-        - http_apiserver
-      scrape_timeout: 10s
-      metrics_path: /probe
-      static_configs:
-      - targets:
-        - {{ .Values.shoot.apiserver }}/healthz
-      relabel_configs:
-      - target_label: type
-        replacement: seed
-      - source_labels: [__address__]
-        target_label: __param_target
-        action: replace
-      - source_labels: [__param_target]
-        target_label: instance
-        action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-        action: replace
-
 {{- if not .Values.shoot.workerless }}
     - job_name: cadvisor
       honor_timestamps: false

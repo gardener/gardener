@@ -923,7 +923,8 @@ build:
             - pkg/component/observability/monitoring
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
-            - pkg/component/observability/monitoring/blackboxexporter/shoot
+            - pkg/component/observability/monitoring/blackboxexporter/shoot/cluster
+            - pkg/component/observability/monitoring/blackboxexporter/shoot/controlplane
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/monitoring/metricsserver
             - pkg/component/observability/monitoring/nodeexporter

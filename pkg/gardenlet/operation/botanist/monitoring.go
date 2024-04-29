@@ -137,7 +137,11 @@ func (b *Botanist) MigratePrometheus(ctx context.Context) error {
 		return fmt.Errorf("failed reading old Prometheus StatefulSet %s: %w", client.ObjectKeyFromObject(oldStatefulSet), err)
 	}
 
-	return b.DeployPrometheus(ctx)
+	if err := b.DeployPrometheus(ctx); err != nil {
+		return err
+	}
+
+	return b.ReconcileBlackboxExporterControlPlane(ctx)
 }
 
 // DeployPrometheus reconciles the shoot Prometheus.

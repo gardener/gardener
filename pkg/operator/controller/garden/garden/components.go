@@ -1285,6 +1285,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 		r.GardenNamespace,
 		blackboxexporter.Values{
 			ClusterType:       component.ClusterTypeSeed,
+			IsGardenCluster:   true,
 			VPAEnabled:        true,
 			KubernetesVersion: r.RuntimeVersion,
 			PodLabels: map[string]string{
@@ -1296,6 +1297,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
 			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
+			Replicas:          1,
 		},
 	)
 }

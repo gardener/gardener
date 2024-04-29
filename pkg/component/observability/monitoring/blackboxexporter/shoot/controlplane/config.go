@@ -2,19 +2,25 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot
+package controlplane
 
 import (
 	"time"
 
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 	prometheuscommonconfig "github.com/prometheus/common/config"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-// Config returns the blackbox-exporter config for the shoot use-case.
+const moduleName = "http_apiserver"
+
+// Config returns the blackbox-exporter config for the shoot control plane use-case.
 func Config() blackboxexporterconfig.Config {
 	return blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-		"http_kubernetes_service": {
+		moduleName: {
 			Prober:  "http",
 			Timeout: 10 * time.Second,
 			HTTP: blackboxexporterconfig.HTTPProbe{
@@ -23,8 +29,8 @@ func Config() blackboxexporterconfig.Config {
 					"Accept-Language": "en-US",
 				},
 				HTTPClientConfig: prometheuscommonconfig.HTTPClientConfig{
-					TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"},
-					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+					TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle},
+					BearerTokenFile: blackboxexporter.VolumeMountPathClusterAccess + "/" + resourcesv1alpha1.DataKeyToken,
 				},
 				IPProtocol: "ipv4",
 			},

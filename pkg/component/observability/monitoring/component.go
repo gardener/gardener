@@ -168,7 +168,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		networks         = map[string]interface{}{}
 		prometheusConfig = map[string]interface{}{
 			"images": map[string]string{
-				"blackbox-exporter":  m.values.ImageBlackboxExporter,
 				"configmap-reloader": m.values.ImageConfigmapReloader,
 				"prometheus":         m.values.ImagePrometheus,
 			},
@@ -303,12 +302,6 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: m.namespace,
 				Name:      "prometheus-rules",
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: m.namespace,
-				Name:      "blackbox-exporter-config-prometheus",
 			},
 		},
 		&corev1.Secret{

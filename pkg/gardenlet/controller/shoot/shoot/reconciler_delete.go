@@ -333,6 +333,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DestroyPrometheus).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
+		deleteBlackboxExporter = g.Add(flow.Task{
+			Name:         "Destroying control plane blackbox-exporter",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Monitoring.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -656,6 +661,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		syncPoint = flow.NewTaskIDs(
 			deleteAlertmanager,
 			deletePrometheus,
+			deleteBlackboxExporter,
 			deleteSeedMonitoring,
 			deletePlutono,
 			destroySeedLogging,

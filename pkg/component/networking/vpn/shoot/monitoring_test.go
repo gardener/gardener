@@ -67,7 +67,7 @@ relabel_configs:
   target_label: instance
   action: replace
 - target_label: __address__
-  replacement: 127.0.0.1:9115
+  replacement: blackbox-exporter:9115
   action: replace
 metric_relabel_configs:
 - source_labels: [ __name__ ]

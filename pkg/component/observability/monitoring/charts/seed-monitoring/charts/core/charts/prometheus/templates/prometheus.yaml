@@ -20,7 +20,6 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -31,10 +30,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-all-scrape-targets: allowed
-        # needed for blackbox-exporter sidecar container to talk to shoot API server via istio-ingressgateway
-        networking.gardener.cloud/to-public-networks: allowed
         networking.resources.gardener.cloud/to-alertmanager-shoot-tcp-9093: allowed
-        networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443: allowed
         networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090: allowed
         networking.resources.gardener.cloud/to-garden-alertmanager-seed-tcp-9093: allowed
         observability.gardener.cloud/app: "prometheus-shoot"
@@ -110,31 +106,6 @@ spec:
         - mountPath: /etc/prometheus/operator
           name: prometheus-remote-am-tls
         {{- end }}
-      - name: blackbox-exporter
-        image: {{ index .Values.images "blackbox-exporter" }}
-        args:
-        - --config.file=/vpn/blackbox.yaml
-        - --web.listen-address=127.0.0.1:9115
-        ports:
-        # port name must be max 15 characters long
-        - name: blackbox-export
-          containerPort: 9115
-          protocol: TCP
-        resources:
-          requests:
-            cpu: 10m
-            memory: 25Mi
-          limits:
-            memory: 128Mi
-        volumeMounts:
-        - name: blackbox-exporter-config-prometheus
-          mountPath: /vpn
-        - mountPath: /var/run/secrets/shoot-ca
-          name: shoot-ca
-          readOnly: true
-        - name: shoot-access
-          mountPath: /var/run/secrets/gardener.cloud/shoot/token
-          readOnly: true
       - name: prometheus-config-reloader
         image: {{ index .Values.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
@@ -187,9 +158,6 @@ spec:
       - name: shoot-access
         secret:
           secretName: shoot-access-prometheus
-      - name: blackbox-exporter-config-prometheus
-        configMap:
-          name: blackbox-exporter-config-prometheus
 {{- if hasKey .Values.alerting.auth_type "certificate" }}
       - name: prometheus-remote-am-tls
         secret:

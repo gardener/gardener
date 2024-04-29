@@ -55,9 +55,9 @@ var _ = Describe("BlackboxExporter", func() {
 		configMapName      = "blackbox-exporter-config-eb6ac772"
 		serviceAccountYAML string
 		configMapYAML      string
-		deploymentYAMLFor  func(clusterType component.ClusterType) string
+		deploymentYAMLFor  func(clusterType component.ClusterType, isGardenCluster bool) string
 		pdbYAMLFor         func(k8sGreaterEquals126 bool) string
-		serviceYAMLFor     func(clusterType component.ClusterType) string
+		serviceYAMLFor     func(clusterType component.ClusterType, isGardenCluster bool) string
 		vpaYAML            string
 	)
 
@@ -75,6 +75,7 @@ var _ = Describe("BlackboxExporter", func() {
 		values.Config = config
 		values.PodLabels = podLabels
 		values.PriorityClassName = priorityClassName
+		values.Replicas = 1
 	})
 
 	JustBeforeEach(func() {
@@ -100,7 +101,7 @@ kind: ServiceAccount
 metadata:
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
+    app: blackbox-exporter
     gardener.cloud/role: monitoring
     origin: gardener
   name: blackbox-exporter
@@ -130,7 +131,7 @@ kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
+    app: blackbox-exporter
     gardener.cloud/role: monitoring
   name: blackbox-exporter
   namespace: ` + resourcesNamespace + `
@@ -138,7 +139,7 @@ spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      component: blackbox-exporter
+      app: blackbox-exporter
 `
 			if k8sGreaterEquals126 {
 				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
@@ -153,15 +154,16 @@ spec:
 			return out
 		}
 
-		deploymentYAMLFor = func(clusterType component.ClusterType) string {
+		deploymentYAMLFor = func(clusterType component.ClusterType, isGardenCluster bool) string {
 			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
     ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+    resources.gardener.cloud/delete-on-invalid-update: "true"
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
+    app: blackbox-exporter
     gardener.cloud/role: monitoring
     high-availability-config.resources.gardener.cloud/type: server
     origin: gardener
@@ -172,7 +174,7 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      component: blackbox-exporter
+      app: blackbox-exporter
   strategy: {}
   template:
     metadata:
@@ -180,8 +182,8 @@ spec:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
       creationTimestamp: null
       labels:
+        app: blackbox-exporter
         bar: foo
-        component: blackbox-exporter
         gardener.cloud/role: monitoring
         origin: gardener
     spec:
@@ -209,9 +211,12 @@ spec:
 			if clusterType == component.ClusterTypeSeed {
 				out += `
         - mountPath: /var/run/secrets/blackbox_exporter/cluster-access
-          name: cluster-access
+          name: cluster-access`
+				if isGardenCluster {
+					out += `
         - mountPath: /var/run/secrets/blackbox_exporter/gardener-ca
           name: gardener-ca`
+				}
 			}
 
 			out += `
@@ -249,12 +254,25 @@ spec:
           - secret:
               items:
               - key: token
-                path: token
-              name: shoot-access-prometheus-garden
-              optional: false
+                path: token`
+
+				if isGardenCluster {
+					out += `
+              name: shoot-access-prometheus-garden`
+				} else {
+					out += `
+              name: shoot-access-prometheus-shoot`
+				}
+
+				out += `
+              optional: false`
+
+				if isGardenCluster {
+					out += `
       - name: gardener-ca
         secret:
           secretName: ca-gardener`
+				}
 			}
 
 			out += `
@@ -264,21 +282,27 @@ status: {}
 			return out
 		}
 
-		serviceYAMLFor = func(clusterType component.ClusterType) string {
+		serviceYAMLFor = func(clusterType component.ClusterType, isGardenCluster bool) string {
 			out := `apiVersion: v1
 kind: Service
 metadata:`
 
 			if clusterType == component.ClusterTypeSeed {
-				out += `
+				if isGardenCluster {
+					out += `
   annotations:
     networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":9115}]'`
+				} else {
+					out += `
+  annotations:
+    networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":9115}]'`
+				}
 			}
 
 			out += `
   creationTimestamp: null
   labels:
-    component: blackbox-exporter
+    app: blackbox-exporter
   name: blackbox-exporter
   namespace: ` + resourcesNamespace + `
 spec:
@@ -288,7 +312,7 @@ spec:
     protocol: TCP
     targetPort: 0
   selector:
-    component: blackbox-exporter
+    app: blackbox-exporter
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -351,8 +375,8 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType, values.IsGardenCluster)))
+				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType, values.IsGardenCluster)))
 			})
 
 			Context("w/o vpa enabled", func() {
@@ -412,7 +436,6 @@ status: {}
 
 			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
-			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
 		})
 
 		Describe("#Deploy", func() {
@@ -451,39 +474,59 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType, values.IsGardenCluster)))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType, values.IsGardenCluster)))
 			})
 
-			Context("w/o vpa enabled", func() {
-				Context("kubernetes versions < 1.26", func() {
-					It("should successfully deploy the resources", func() {
-						Expect(managedResourceSecret.Data).To(HaveLen(5))
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-					})
-				})
-
-				Context("kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						values.KubernetesVersion = semver.MustParse("1.26")
-					})
-
-					It("should successfully deploy the resources", func() {
-						Expect(managedResourceSecret.Data).To(HaveLen(5))
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
-					})
-				})
-			})
-
-			Context("w/ vpa enabled", func() {
+			Context("shoot control plane", func() {
 				BeforeEach(func() {
-					values.VPAEnabled = true
+					values.IsGardenCluster = false
 				})
 
-				It("should successfully deploy the resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(6))
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
+				Context("w/o vpa enabled", func() {
+					Context("kubernetes versions < 1.26", func() {
+						It("should successfully deploy the resources", func() {
+							Expect(managedResourceSecret.Data).To(HaveLen(5))
+							Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+						})
+					})
+
+					Context("kubernetes versions >= 1.26", func() {
+						BeforeEach(func() {
+							values.KubernetesVersion = semver.MustParse("1.26")
+						})
+
+						It("should successfully deploy the resources", func() {
+							Expect(managedResourceSecret.Data).To(HaveLen(5))
+							Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
+						})
+					})
+				})
+
+				Context("w/ vpa enabled", func() {
+					BeforeEach(func() {
+						values.VPAEnabled = true
+					})
+
+					It("should successfully deploy the resources", func() {
+						Expect(managedResourceSecret.Data).To(HaveLen(6))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+						Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
+					})
+				})
+			})
+
+			Context("garden cluster", func() {
+				BeforeEach(func() {
+					values.IsGardenCluster = true
+
+					By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+					Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+					// other assertions are executed in JustBeforeEach bock above
 				})
 			})
 		})

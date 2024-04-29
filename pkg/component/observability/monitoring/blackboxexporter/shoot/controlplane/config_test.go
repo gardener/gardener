@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot_test
+package controlplane_test
 
 import (
 	"time"
@@ -12,14 +12,14 @@ import (
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 	prometheuscommonconfig "github.com/prometheus/common/config"
 
-	. "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot"
+	. "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/controlplane"
 )
 
 var _ = Describe("Config", func() {
 	Describe("#Config", func() {
-		It("should return the expected config for the shoot's blackbox-exporter", func() {
+		It("should return the expected config for the shoot control plane's blackbox-exporter", func() {
 			Expect(Config()).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-				"http_kubernetes_service": {
+				"http_apiserver": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
 					HTTP: blackboxexporterconfig.HTTPProbe{
@@ -28,8 +28,8 @@ var _ = Describe("Config", func() {
 							"Accept-Language": "en-US",
 						},
 						HTTPClientConfig: prometheuscommonconfig.HTTPClientConfig{
-							TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"},
-							BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
+							TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/blackbox_exporter/cluster-access/bundle.crt"},
+							BearerTokenFile: "/var/run/secrets/blackbox_exporter/cluster-access/token",
 						},
 						IPProtocol: "ipv4",
 					},

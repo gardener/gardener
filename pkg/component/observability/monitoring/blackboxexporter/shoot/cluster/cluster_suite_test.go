@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot_test
+package cluster_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestShoot(t *testing.T) {
+func TestCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Observability Monitoring BlackboxExporter Shoot Suite")
+	RunSpecs(t, "Component Observability Monitoring BlackboxExporter Shoot Cluster Suite")
 }

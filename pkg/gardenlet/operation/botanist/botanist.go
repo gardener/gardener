@@ -159,7 +159,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 			return nil, err
 		}
 
-		o.Shoot.Components.SystemComponents.BlackboxExporter, err = b.DefaultBlackboxExporter()
+		o.Shoot.Components.SystemComponents.BlackboxExporter, err = b.DefaultBlackboxExporterCluster()
 		if err != nil {
 			return nil, err
 		}
@@ -206,6 +206,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 	o.Shoot.Components.Monitoring.Prometheus, err = b.DefaultPrometheus()
+	if err != nil {
+		return nil, err
+	}
+	o.Shoot.Components.Monitoring.BlackboxExporter, err = b.DefaultBlackboxExporterControlPlane()
 	if err != nil {
 		return nil, err
 	}

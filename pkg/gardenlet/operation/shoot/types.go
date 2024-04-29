@@ -174,9 +174,10 @@ type SystemComponents struct {
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
-	Alertmanager alertmanager.Interface
-	Prometheus   prometheus.Interface
-	Monitoring   monitoring.Interface
+	Alertmanager     alertmanager.Interface
+	Prometheus       prometheus.Interface
+	BlackboxExporter blackboxexporter.Interface
+	Monitoring       monitoring.Interface
 }
 
 // Logging contains references to logging deployers.

@@ -9,7 +9,6 @@ networks:
 images:
   prometheus: image-repository:image-tag
   vpn-seed: image-repository:image-tag
-  blackbox-exporter: image-repository:image-tag
 
 ingress:
   class: nginx

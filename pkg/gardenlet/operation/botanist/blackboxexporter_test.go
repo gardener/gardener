@@ -48,7 +48,7 @@ var _ = Describe("BlackboxExporter", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DefaultBlackboxExporter", func() {
+	Describe("#DefaultBlackboxExporterCluster", func() {
 		var kubernetesClient *kubernetesmock.MockInterface
 
 		BeforeEach(func() {
@@ -60,13 +60,13 @@ var _ = Describe("BlackboxExporter", func() {
 		It("should successfully create a blackbox-exporter interface", func() {
 			kubernetesClient.EXPECT().Client()
 
-			blackboxExporter, err := botanist.DefaultBlackboxExporter()
+			blackboxExporter, err := botanist.DefaultBlackboxExporterCluster()
 			Expect(blackboxExporter).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
-	Describe("#ReconcileBlackboxExporter", func() {
+	Describe("#ReconcileBlackboxExporterCluster", func() {
 		var (
 			blackboxExporter *mockblackboxexporter.MockInterface
 
@@ -89,13 +89,13 @@ var _ = Describe("BlackboxExporter", func() {
 				It("should fail when the deploy function fails", func() {
 					blackboxExporter.EXPECT().Deploy(ctx).Return(fakeErr)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(MatchError(fakeErr))
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(MatchError(fakeErr))
 				})
 
 				It("should successfully deploy", func() {
 					blackboxExporter.EXPECT().Deploy(ctx)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(Succeed())
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(Succeed())
 				})
 			})
 
@@ -107,13 +107,13 @@ var _ = Describe("BlackboxExporter", func() {
 				It("should fail when the destroy function fails", func() {
 					blackboxExporter.EXPECT().Destroy(ctx).Return(fakeErr)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(MatchError(fakeErr))
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(MatchError(fakeErr))
 				})
 
 				It("should successfully destroy", func() {
 					blackboxExporter.EXPECT().Destroy(ctx)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(Succeed())
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(Succeed())
 				})
 			})
 		})
@@ -133,7 +133,7 @@ var _ = Describe("BlackboxExporter", func() {
 				It("should successfully destroy", func() {
 					blackboxExporter.EXPECT().Destroy(ctx)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(Succeed())
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(Succeed())
 				})
 			})
 
@@ -145,7 +145,7 @@ var _ = Describe("BlackboxExporter", func() {
 				It("should successfully destroy", func() {
 					blackboxExporter.EXPECT().Destroy(ctx)
 
-					Expect(botanist.ReconcileBlackboxExporter(ctx)).To(Succeed())
+					Expect(botanist.ReconcileBlackboxExporterCluster(ctx)).To(Succeed())
 				})
 			})
 		})

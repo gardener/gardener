@@ -670,7 +670,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployBlackboxExporter = g.Add(flow.Task{
 			Name:         "Deploying blackbox-exporter",
-			Fn:           flow.TaskFn(botanist.ReconcileBlackboxExporter).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.ReconcileBlackboxExporterCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler, waitUntilShootNamespacesReady),
 		})
@@ -824,6 +824,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployPrometheus = g.Add(flow.Task{
 			Name:         "Reconciling Shoot Prometheus",
 			Fn:           flow.TaskFn(botanist.DeployPrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying control plane blackbox-exporter",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
