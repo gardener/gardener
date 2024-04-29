@@ -245,7 +245,6 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 
 	utilruntime.Must(kubernetesutils.MakeUnique(plutonoConfigSecret))
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	ingress, err := p.getIngress(ctx)
