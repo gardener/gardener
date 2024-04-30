@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
@@ -117,6 +118,10 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			SigningCA:                         v1beta1constants.SecretNameCACluster,
 			BlockManagementAndTargetAPIAccess: true,
 		},
+		TargetCluster: &prometheus.TargetClusterValues{
+			ServiceAccountName: shootprometheus.ServiceAccountName,
+			ScrapesMetrics:     true,
+		},
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "prometheus",
 		},
@@ -204,6 +209,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: b.Shoot.SeedNamespace}},
 		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + b.Shoot.SeedNamespace, Namespace: b.Shoot.SeedNamespace}},
 		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-db-prometheus-0", Namespace: b.Shoot.SeedNamespace}},
+		&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-prometheus", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 

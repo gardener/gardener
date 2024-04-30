@@ -22,14 +22,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -37,8 +35,6 @@ var (
 	//go:embed charts/seed-monitoring/charts/core
 	chartCore     embed.FS
 	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
-
-	managedResourceNamePrometheus = "shoot-core-prometheus"
 )
 
 // Interface contains functions for a monitoring deployer.
@@ -234,10 +230,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, m.client, m.namespace, managedResourceNamePrometheus); err != nil {
-		return err
-	}
-
 	objects := []client.Object{
 		&networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -323,57 +315,6 @@ func (m *monitoring) SetWildcardCertName(secretName *string)          { m.values
 
 func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)
-}
-
-func (m *monitoring) reconcilePrometheusShootResources(ctx context.Context, serviceAccountName string) error {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:monitoring:prometheus-target",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"nodes", "services", "endpoints", "pods"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{corev1.GroupName},
-					Resources: []string{"nodes/metrics", "pods/log", "nodes/proxy", "services/proxy", "pods/proxy"},
-					Verbs:     []string{"get"},
-				},
-				{
-					NonResourceURLs: []string{"/metrics"},
-					Verbs:           []string{"get"},
-				},
-			},
-		}
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "gardener.cloud:monitoring:prometheus-target",
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
-		}
-	)
-
-	data, err := registry.AddAllAndSerialize(clusterRole, clusterRoleBinding)
-	if err != nil {
-		return err
-	}
-
-	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceNamePrometheus, managedresources.LabelValueGardener, false, data)
 }
 
 func (m *monitoring) getAlertingRulesAndScrapeConfigs(ctx context.Context) (alertingRules, scrapeConfigs strings.Builder, err error) {

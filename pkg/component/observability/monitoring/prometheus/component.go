@@ -101,6 +101,9 @@ type Values struct {
 	AdditionalResources []client.Object
 	// Cortex contains configuration for the cortex frontend sidecar container.
 	Cortex *CortexValues
+	// TargetCluster contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
+	// virtual garden, or shoot cluster) or other components running in this cluster.
+	TargetCluster *TargetClusterValues
 
 	// DataMigration is a struct for migrating data from existing disks.
 	// TODO(rfranzke): Remove this after v1.97 has been released.
@@ -159,6 +162,16 @@ type IngressValues struct {
 	// BlockManagementAndTargetAPIAccess controls whether access to the management and target APIs is blocked when
 	// accessing Prometheus via ingress.
 	BlockManagementAndTargetAPIAccess bool
+}
+
+// TargetClusterValues contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
+// virtual garden, or shoot cluster) or other components running in this cluster.
+type TargetClusterValues struct {
+	// ServiceAccountName is the name of the ServiceAccount.
+	ServiceAccountName string
+	// ScrapesMetrics specifies whether this Prometheus has scrape configs for scraping metrics from components running
+	// in the target cluster.
+	ScrapesMetrics bool
 }
 
 // CortexValues contains configuration for the cortex frontend sidecar container.
@@ -246,6 +259,26 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if p.values.TargetCluster != nil {
+		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		resourcesTarget, err := registryTarget.AddAllAndSerialize(
+			p.clusterRoleTarget(),
+			p.clusterRoleBindingTarget(),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShootWithLabels(ctx, p.client, p.namespace, p.name()+"-target", managedresources.LabelValueGardener, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resourcesTarget); err != nil {
+			return err
+		}
+	} else {
+		if err := managedresources.DeleteForShoot(ctx, p.client, p.namespace, p.name()+"-target"); err != nil {
+			return err
+		}
+	}
+
 	if takeOverExistingPV {
 		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
 			return err
@@ -259,6 +292,9 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 }
 
 func (p *prometheus) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForShoot(ctx, p.client, p.namespace, p.name()+"-target"); err != nil {
+		return err
+	}
 	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.name())
 }
 

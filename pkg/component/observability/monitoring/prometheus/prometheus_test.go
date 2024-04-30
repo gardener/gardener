@@ -52,16 +52,17 @@ var _ = Describe("Prometheus", func() {
 		namespace           = "some-namespace"
 		managedResourceName = "prometheus-" + name
 
-		image                   = "some-image"
-		version                 = "v1.2.3"
-		priorityClassName       = "priority-class"
-		replicas          int32 = 1
-		storageCapacity         = resource.MustParse("1337Gi")
-		retention               = monitoringv1.Duration("1d")
-		retentionSize           = monitoringv1.ByteSize("5GB")
-		externalLabels          = map[string]string{"seed": "test"}
-		additionalLabels        = map[string]string{"foo": "bar"}
-		alertmanagerName        = "alertmgr-test"
+		image                                 = "some-image"
+		version                               = "v1.2.3"
+		priorityClassName                     = "priority-class"
+		replicas                        int32 = 1
+		storageCapacity                       = resource.MustParse("1337Gi")
+		retention                             = monitoringv1.Duration("1d")
+		retentionSize                         = monitoringv1.ByteSize("5GB")
+		externalLabels                        = map[string]string{"seed": "test"}
+		additionalLabels                      = map[string]string{"foo": "bar"}
+		alertmanagerName                      = "alertmgr-test"
+		serviceAccountNameTargetCluster       = "target-cluster-service-account"
 
 		additionalScrapeConfig1 = `job_name: foo
 honor_labels: false`
@@ -99,6 +100,9 @@ honor_labels: true`
 		secretAdditionalAlertmanagerConfigs *corev1.Secret
 		secretRemoteWriteBasicAuth          *corev1.Secret
 		podDisruptionBudget                 *policyv1.PodDisruptionBudget
+
+		clusterRoleTarget        *rbacv1.ClusterRole
+		clusterRoleBindingTarget *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -490,6 +494,31 @@ honor_labels: true`
 				}},
 				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
+		}
+
+		clusterRoleTarget = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:monitoring:prometheus-" + name,
+			},
+			Rules: []rbacv1.PolicyRule{{
+				NonResourceURLs: []string{"/metrics"},
+				Verbs:           []string{"get"},
+			}},
+		}
+		clusterRoleBindingTarget = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:monitoring:prometheus-" + name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:monitoring:prometheus-" + name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountNameTargetCluster,
+				Namespace: "kube-system",
+			}},
 		}
 	})
 
@@ -1134,6 +1163,148 @@ query_range:
 							secretAdditionalScrapeConfigs,
 							additionalConfigMap,
 							secretRemoteWriteBasicAuth,
+						))
+					})
+				})
+			})
+
+			When("target cluster is configured", func() {
+				var (
+					managedResourceTarget       *resourcesv1alpha1.ManagedResource
+					managedResourceSecretTarget *corev1.Secret
+				)
+
+				BeforeEach(func() {
+					values.TargetCluster = &TargetClusterValues{
+						ServiceAccountName: serviceAccountNameTargetCluster,
+					}
+
+					managedResourceTarget = &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      managedResourceName + "-target",
+							Namespace: namespace,
+						},
+					}
+					managedResourceSecretTarget = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-" + managedResource.Name,
+							Namespace: namespace,
+						},
+					}
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(BeNotFoundError())
+
+					Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceTarget.Name,
+							Namespace:  namespace,
+							Generation: 1,
+						},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+				})
+
+				JustBeforeEach(func() {
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
+					expectedTargetMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceTarget.Name,
+							Namespace:       managedResourceTarget.Namespace,
+							ResourceVersion: "2",
+							Generation:      1,
+							Labels: map[string]string{
+								"origin":                             "gardener",
+								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+							},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceTarget.Spec.SecretRefs[0].Name}},
+							KeepObjects:  ptr.To(false),
+							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						},
+						Status: healthyManagedResourceStatus,
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedTargetMr))
+					Expect(managedResourceTarget).To(Equal(expectedTargetMr))
+
+					managedResourceSecretTarget.Name = managedResourceTarget.Spec.SecretRefs[0].Name
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
+
+					Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				})
+
+				It("should successfully deploy all resources", func() {
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusFor(""),
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+					))
+
+					Expect(managedResourceTarget).To(consistOf(
+						clusterRoleTarget,
+						clusterRoleBindingTarget,
+					))
+				})
+
+				When("it is configured that metrics are scraped from components in target cluster", func() {
+					BeforeEach(func() {
+						values.TargetCluster.ScrapesMetrics = true
+					})
+
+					It("should successfully deploy all resources", func() {
+						clusterRoleTarget.Rules = append(clusterRoleTarget.Rules,
+							rbacv1.PolicyRule{
+								APIGroups: []string{""},
+								Resources: []string{"nodes", "services", "endpoints", "pods"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							rbacv1.PolicyRule{
+								APIGroups: []string{""},
+								Resources: []string{"nodes/metrics", "pods/log", "nodes/proxy", "services/proxy", "pods/proxy"},
+								Verbs:     []string{"get"},
+							},
+						)
+
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						Expect(managedResource).To(consistOf(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheusFor(""),
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+						))
+
+						Expect(managedResourceTarget).To(consistOf(
+							clusterRoleTarget,
+							clusterRoleBindingTarget,
 						))
 					})
 				})
