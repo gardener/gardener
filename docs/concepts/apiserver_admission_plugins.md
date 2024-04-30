@@ -46,7 +46,7 @@ This prevents users from accidental/undesired deletions.
 In addition, it applies the "four-eyes principle for deletion" concept if the `Project` is configured accordingly.
 Find all information about it [in this document](../usage/projects.md#four-eyes-principle-for-resource-deletion).
 
-In addition, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
+Furthermore, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
 It makes sure that the `deletion.gardener.cloud/confirmed-by` annotation is properly maintained in case the `Shoot` deletion is confirmed with above mentioned annotation.
 
 ## `ExposureClass`

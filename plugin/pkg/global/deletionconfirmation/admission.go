@@ -122,7 +122,7 @@ var (
 	_ admission.MutationInterface   = &DeletionConfirmation{}
 )
 
-// Admit validates and if appropriate mutates the given bastion against the shoot that it references.
+// Admit maintains the deletion.gardener.cloud/confirmed-by annotation.
 func (d *DeletionConfirmation) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
