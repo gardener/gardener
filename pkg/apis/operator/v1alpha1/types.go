@@ -405,6 +405,9 @@ type Gardener struct {
 	// Dashboard contains configuration settings for the gardener-dashboard.
 	// +optional
 	Dashboard *GardenerDashboardConfig `json:"gardenerDashboard,omitempty"`
+	// DiscoveryServer contains configuration settings for the gardener-discovery-server.
+	// +optional
+	DiscoveryServer *GardenerDiscoveryServerConfig `json:"gardenerDiscoveryServer,omitempty"`
 }
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
@@ -608,6 +611,18 @@ type DashboardTerminalContainer struct {
 	// Description is a description for the dashboard terminal container with hints for the user.
 	// +optional
 	Description *string `json:"description,omitempty"`
+}
+
+// GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
+type GardenerDiscoveryServerConfig struct {
+	// Hostname is the hostname that the gardener-discovery-server will use
+	// to serve metadata on. This hostname will also be used to configure
+	// shoot kube-apiservers that want the managed service account issuer feature.
+	Hostname string `json:"hostname,omitempty"`
+	// TLSSecretName is the name of the secret that will be used for TLS.
+	// If not provided a self signed certificate will be created.
+	// +optional
+	TLSSecretName *string `json:"tlsSecretName,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

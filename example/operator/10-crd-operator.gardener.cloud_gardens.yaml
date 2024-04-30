@@ -914,6 +914,22 @@ spec:
                             - container
                             type: object
                         type: object
+                      gardenerDiscoveryServer:
+                        description: DiscoveryServer contains configuration settings
+                          for the gardener-discovery-server.
+                        properties:
+                          hostname:
+                            description: |-
+                              Hostname is the hostname that the gardener-discovery-server will use
+                              to serve metadata on. This hostname will also be used to configure
+                              shoot kube-apiservers that want the managed service account issuer feature.
+                            type: string
+                          tlsSecretName:
+                            description: |-
+                              TLSSecretName is the name of the secret that will be used for TLS.
+                              If not provided a self signed certificate will be created.
+                            type: string
+                        type: object
                       gardenerScheduler:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.

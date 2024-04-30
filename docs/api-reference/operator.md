@@ -1053,6 +1053,20 @@ GardenerDashboardConfig
 <p>Dashboard contains configuration settings for the gardener-dashboard.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>gardenerDiscoveryServer</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">
+GardenerDiscoveryServerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DiscoveryServer contains configuration settings for the gardener-discovery-server.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
@@ -1398,6 +1412,51 @@ DashboardTerminal
 <td>
 <em>(Optional)</em>
 <p>Terminal contains configuration for the terminal settings.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">GardenerDiscoveryServerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>hostname</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Hostname is the hostname that the gardener-discovery-server will use
+to serve metadata on. This hostname will also be used to configure
+shoot kube-apiservers that want the managed service account issuer feature.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tlsSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLSSecretName is the name of the secret that will be used for TLS.
+If not provided a self signed certificate will be created.</p>
 </td>
 </tr>
 </tbody>

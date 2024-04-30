@@ -214,6 +214,7 @@ func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1a
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(gardener.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(gardener.Scheduler, fldPath.Child("gardenerScheduler"))...)
 	allErrs = append(allErrs, validateGardenerDashboardConfig(gardener.Dashboard, kubernetes.KubeAPIServer, fldPath.Child("gardenerDashboard"))...)
+	allErrs = append(allErrs, validateGardenerDiscoveryServerConfig(gardener.DiscoveryServer, fldPath.Child("gardenerDiscoveryServer"))...)
 
 	return allErrs
 }
@@ -376,6 +377,20 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 
 	if config.OIDC != nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidc"), config.OIDC, "must set .spec.virtualCluster.kubernetes.kubeAPIServer.oidcConfig when configuring OIDC config for dashboard"))
+	}
+
+	return allErrs
+}
+
+func validateGardenerDiscoveryServerConfig(config *operatorv1alpha1.GardenerDiscoveryServerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if strings.TrimSpace(config.Hostname) == "" {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("hostname"), "hostname must be configured"))
 	}
 
 	return allErrs
