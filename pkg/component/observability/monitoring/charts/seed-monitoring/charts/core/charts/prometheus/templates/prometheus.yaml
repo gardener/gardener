@@ -84,21 +84,12 @@ spec:
             cpu: 50m
             memory: 350Mi
         volumeMounts:
-        - mountPath: /etc/prometheus/seed
-          name: shoot-ca
-        - mountPath: /srv/kubernetes/etcd/ca
-          name: ca-etcd
-        - mountPath: /srv/kubernetes/etcd/client
-          name: etcd-client-tls
         - mountPath: /etc/prometheus/config
           name: config
           readOnly: true
         - mountPath: /var/prometheus/data
           name: prometheus-db
           subPath: prometheus-
-        - name: shoot-access
-          mountPath: /var/run/secrets/gardener.cloud/shoot/token
-          readOnly: true
         {{- if hasKey .Values.alerting.auth_type "certificate" }}
         - mountPath: /etc/prometheus/operator
           name: prometheus-remote-am-tls
@@ -125,28 +116,6 @@ spec:
         configMap:
           defaultMode: 420
           name: prometheus-config
-      - name: shoot-ca
-        projected:
-          defaultMode: 420
-          sources:
-          # For backwards-compatibility, we make the CA bundle available under both ca.crt and bundle.crt keys.
-          - secret:
-              name: {{ .Values.secretNameClusterCA }}
-              items:
-              - key: bundle.crt
-                path: bundle.crt
-              - key: bundle.crt
-                path: ca.crt
-              optional: false
-      - name: ca-etcd
-        secret:
-          secretName: {{ .Values.secretNameEtcdCA }}
-      - name: etcd-client-tls
-        secret:
-          secretName: {{ .Values.secretNameEtcdClientCert }}
-      - name: shoot-access
-        secret:
-          secretName: shoot-access-prometheus
 {{- if hasKey .Values.alerting.auth_type "certificate" }}
       - name: prometheus-remote-am-tls
         secret:

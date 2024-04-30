@@ -229,6 +229,11 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		cortexConfigMap = p.cortexConfigMap()
 	}
 
+	prometheusObj, err := p.prometheus(takeOverExistingPV, cortexConfigMap)
+	if err != nil {
+		return err
+	}
+
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
@@ -238,7 +243,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
-		p.prometheus(takeOverExistingPV, cortexConfigMap),
+		prometheusObj,
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,

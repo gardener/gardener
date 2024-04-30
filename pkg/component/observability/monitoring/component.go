@@ -139,21 +139,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	clusterCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	etcdCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	etcdClientSecret, found := m.secretsManager.Get("etcd-client")
-	if !found {
-		return fmt.Errorf("secret %q not found", "etcd-client")
-	}
-
 	var (
 		networks         = map[string]interface{}{}
 		prometheusConfig = map[string]interface{}{
@@ -161,10 +146,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 				"configmap-reloader": m.values.ImageConfigmapReloader,
 				"prometheus":         m.values.ImagePrometheus,
 			},
-			"secretNameClusterCA":      clusterCASecret.Name,
-			"secretNameEtcdCA":         etcdCASecret.Name,
-			"secretNameEtcdClientCert": etcdClientSecret.Name,
-			"kubernetesVersion":        m.values.KubernetesVersion,
+			"kubernetesVersion": m.values.KubernetesVersion,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": m.values.NodeLocalDNSEnabled,
 			},
