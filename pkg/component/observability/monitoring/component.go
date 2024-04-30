@@ -224,39 +224,6 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 
 	prometheusConfig["networks"] = networks
 
-	// Add remotewrite to prometheus when enabled
-	if m.values.Config != nil &&
-		m.values.Config.Shoot != nil &&
-		m.values.Config.Shoot.RemoteWrite != nil &&
-		m.values.Config.Shoot.RemoteWrite.URL != "" {
-		// if remoteWrite Url is set add config into values
-		remoteWriteConfig := map[string]interface{}{
-			"url": m.values.Config.Shoot.RemoteWrite.URL,
-		}
-		// get secret for basic_auth in remote write
-		if remoteWriteBasicAuth := m.values.GlobalShootRemoteWriteSecret; remoteWriteBasicAuth != nil {
-			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
-			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
-			if remoteWriteUsername != "" &&
-				remoteWritePassword != "" {
-				remoteWriteConfig["basic_auth"] = map[string]interface{}{
-					"username": remoteWriteUsername,
-					"password": remoteWritePassword,
-				}
-			}
-		}
-		// add list with keep metrics if set
-		if len(m.values.Config.Shoot.RemoteWrite.Keep) != 0 {
-			remoteWriteConfig["keep"] = m.values.Config.Shoot.RemoteWrite.Keep
-		}
-		// add queue_config if set
-		if m.values.Config.Shoot.RemoteWrite.QueueConfig != nil &&
-			len(*m.values.Config.Shoot.RemoteWrite.QueueConfig) != 0 {
-			remoteWriteConfig["queue_config"] = m.values.Config.Shoot.RemoteWrite.QueueConfig
-		}
-		prometheusConfig["remoteWrite"] = remoteWriteConfig
-	}
-
 	coreValues := map[string]interface{}{
 		"global": map[string]interface{}{
 			"shootKubeVersion": map[string]interface{}{

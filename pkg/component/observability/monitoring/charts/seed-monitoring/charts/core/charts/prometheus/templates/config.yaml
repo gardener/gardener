@@ -16,25 +16,6 @@ data:
     global:
       evaluation_interval: 1m
       scrape_interval: 1m
-    {{- if .Values.remoteWrite }}
-    {{- if .Values.remoteWrite.url }}
-    remote_write:
-    - url: {{ .Values.remoteWrite.url }}
-    {{- if .Values.remoteWrite.basic_auth }}
-      basic_auth:
-        username: {{ .Values.remoteWrite.basic_auth.username }}
-        password: {{ .Values.remoteWrite.basic_auth.password }}
-    {{- end }}
-    {{- if .Values.remoteWrite.keep }}
-      write_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.remoteWrite.keep | indent 6 }}
-    {{- end }}
-    {{- if .Values.remoteWrite.queue_config }}
-      queue_config:
-{{ .Values.remoteWrite.queue_config | indent 8}}
-    {{- end }}
-    {{- end }}
-    {{- end }}
     alerting:
       alertmanagers:
 {{- if hasKey .Values.alerting.auth_type "none" }}

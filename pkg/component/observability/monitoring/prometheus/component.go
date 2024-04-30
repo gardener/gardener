@@ -92,6 +92,8 @@ type Values struct {
 	Ingress *IngressValues
 	// Alerting contains alerting configuration for this Prometheus instance.
 	Alerting *AlertingValues
+	// RemoteWrite contains remote write configuration for this Prometheus instance.
+	RemoteWrite *RemoteWriteValues
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
 	// Cortex contains configuration for the cortex frontend sidecar container.
@@ -122,6 +124,16 @@ type CentralConfigs struct {
 type AlertingValues struct {
 	// AlertmanagerName is the name of the alertmanager to which alerts should be sent.
 	AlertmanagerName string
+}
+
+// RemoteWriteValues contains remote write configuration for this Prometheus instance.
+type RemoteWriteValues struct {
+	// URL is the remote url.
+	URL string
+	// KeptMetrics is a list of metrics to keep.
+	KeptMetrics []string
+	// GlobalShootRemoteWriteSecret is a secret containing basic auth credentials for the remote write endpoint.
+	GlobalShootRemoteWriteSecret *corev1.Secret
 }
 
 // IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
@@ -194,12 +206,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if p.values.Alerting != nil {
-		if err := registry.Add(p.secretAdditionalAlertRelabelConfigs()); err != nil {
-			return err
-		}
-	}
-
 	var cortexConfigMap *corev1.ConfigMap
 	if p.values.Cortex != nil {
 		cortexConfigMap = p.cortexConfigMap()
@@ -210,6 +216,8 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
+		p.secretAdditionalAlertRelabelConfigs(),
+		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
 		p.prometheus(takeOverExistingPV, cortexConfigMap),
 		p.vpa(),

@@ -17,6 +17,7 @@ import (
 const (
 	secretNameSuffixAdditionalScrapeConfigs       = "-additional-scrape-configs"
 	secretNameSuffixAdditionalAlertRelabelConfigs = "-additional-alert-relabel-configs"
+	secretNameSuffixRemoteWriteBasicAuth          = "-remote-write-basic-auth"
 )
 
 func (p *prometheus) secretAdditionalScrapeConfigs() *corev1.Secret {
@@ -38,6 +39,10 @@ func (p *prometheus) secretAdditionalScrapeConfigs() *corev1.Secret {
 }
 
 func (p *prometheus) secretAdditionalAlertRelabelConfigs() *corev1.Secret {
+	if p.values.Alerting == nil {
+		return nil
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name() + secretNameSuffixAdditionalAlertRelabelConfigs,
@@ -50,5 +55,21 @@ func (p *prometheus) secretAdditionalAlertRelabelConfigs() *corev1.Secret {
   regex: true
   action: drop
 `)},
+	}
+}
+
+func (p *prometheus) secretRemoteWriteBasicAuth() *corev1.Secret {
+	if p.values.RemoteWrite == nil || p.values.RemoteWrite.GlobalShootRemoteWriteSecret == nil {
+		return nil
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      p.name() + secretNameSuffixRemoteWriteBasicAuth,
+			Namespace: p.namespace,
+			Labels:    p.getLabels(),
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: p.values.RemoteWrite.GlobalShootRemoteWriteSecret.Data,
 	}
 }

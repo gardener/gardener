@@ -106,6 +106,29 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		}
 	}
 
+	if p.values.RemoteWrite != nil {
+		spec := monitoringv1.RemoteWriteSpec{URL: p.values.RemoteWrite.URL}
+
+		if len(p.values.RemoteWrite.KeptMetrics) > 0 {
+			spec.WriteRelabelConfigs = []monitoringv1.RelabelConfig{*monitoringutils.StandardMetricRelabelConfig(p.values.RemoteWrite.KeptMetrics...)[0]}
+		}
+
+		if p.values.RemoteWrite.GlobalShootRemoteWriteSecret != nil {
+			spec.BasicAuth = &monitoringv1.BasicAuth{
+				Username: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixRemoteWriteBasicAuth},
+					Key:                  "username",
+				},
+				Password: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixRemoteWriteBasicAuth},
+					Key:                  "password",
+				},
+			}
+		}
+
+		obj.Spec.RemoteWrite = append(obj.Spec.RemoteWrite, spec)
+	}
+
 	if takeOverOldPV {
 		var (
 			mountPath = "/prometheus"

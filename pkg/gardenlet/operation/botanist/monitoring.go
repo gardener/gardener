@@ -126,6 +126,14 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-shoot"}
 	}
 
+	if b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil && b.Config.Monitoring.Shoot.RemoteWrite != nil {
+		values.RemoteWrite = &prometheus.RemoteWriteValues{
+			URL:                          b.Config.Monitoring.Shoot.RemoteWrite.URL,
+			KeptMetrics:                  b.Config.Monitoring.Shoot.RemoteWrite.Keep,
+			GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
+		}
+	}
+
 	return sharedcomponent.NewPrometheus(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
 }
 

@@ -96,6 +96,7 @@ honor_labels: true`
 		additionalConfigMap                 *corev1.ConfigMap
 		secretAdditionalScrapeConfigs       *corev1.Secret
 		secretAdditionalAlertRelabelConfigs *corev1.Secret
+		secretRemoteWriteBasicAuth          *corev1.Secret
 		podDisruptionBudget                 *policyv1.PodDisruptionBudget
 	)
 
@@ -440,6 +441,22 @@ honor_labels: true`
   regex: true
   action: drop
 `)},
+		}
+		secretRemoteWriteBasicAuth = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name + "-remote-write-basic-auth",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"username": []byte("uname"),
+				"password": []byte("pass"),
+			},
 		}
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
@@ -909,6 +926,99 @@ query_range:
 						additionalConfigMap,
 						cortexConfigMap,
 					))
+				})
+			})
+
+			When("remote write config is provided", func() {
+				BeforeEach(func() {
+					values.RemoteWrite = &RemoteWriteValues{
+						URL:         "rw-url",
+						KeptMetrics: []string{"1", "2"},
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					prometheusObj := prometheusFor("")
+					prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
+						URL: "rw-url",
+						WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(1|2)$`,
+						}},
+					}}
+
+					prometheusRule.Namespace = namespace
+					metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+					metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+					Expect(managedResource).To(consistOf(
+						serviceAccount,
+						service,
+						clusterRoleBinding,
+						prometheusObj,
+						vpa,
+						prometheusRule,
+						scrapeConfig,
+						serviceMonitor,
+						podMonitor,
+						secretAdditionalScrapeConfigs,
+						additionalConfigMap,
+					))
+				})
+
+				When("global shoot remote write secret is provided", func() {
+					BeforeEach(func() {
+						values.RemoteWrite.GlobalShootRemoteWriteSecret = &corev1.Secret{Data: map[string][]byte{
+							"username": []byte(`uname`),
+							"password": []byte(`pass`),
+						}}
+					})
+
+					It("should successfully deploy all resources", func() {
+						prometheusObj := prometheusFor("")
+						prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
+							URL: "rw-url",
+							WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
+								SourceLabels: []monitoringv1.LabelName{"__name__"},
+								Action:       "keep",
+								Regex:        `^(1|2)$`,
+							}},
+							BasicAuth: &monitoringv1.BasicAuth{
+								Username: corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: secretRemoteWriteBasicAuth.Name},
+									Key:                  "username",
+								},
+								Password: corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: secretRemoteWriteBasicAuth.Name},
+									Key:                  "password",
+								},
+							},
+						}}
+
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						Expect(managedResource).To(consistOf(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheusObj,
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+							secretRemoteWriteBasicAuth,
+						))
+					})
 				})
 			})
 		})

@@ -663,9 +663,6 @@ type RemoteWriteMonitoringConfig struct {
 	// Keep contains a list of metrics that will be remote written
 	// +optional
 	Keep []string `json:"keep,omitempty"`
-	// QueueConfig contains the queue_config for prometheus remote write.
-	// +optional
-	QueueConfig *string `json:"queueConfig,omitempty"`
 }
 
 const (
