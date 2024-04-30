@@ -76,6 +76,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                                schema_pkg_apis_core_v1beta1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                 schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                              schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion":                    schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                  schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                           schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                           schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
@@ -2888,6 +2889,44 @@ func schema_pkg_apis_core_v1beta1_DeploymentRef(ref common.ReferenceCallback) co
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the name of the resource this applies to.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector is the label selector for the resources.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"includeServiceAccounts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"resource", "selector"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -5956,11 +5995,25 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations"),
 						},
 					},
+					"dualApprovalForDeletion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations", "k8s.io/api/rbac/v1.Subject"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectTolerations", "k8s.io/api/rbac/v1.Subject"},
 	}
 }
 

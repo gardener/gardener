@@ -277,8 +277,8 @@ var _ = Describe("#Network", func() {
 					Name:      networkName,
 					Namespace: networkNs,
 					Annotations: map[string]string{
-						gardenerutils.ConfirmationDeletion: "true",
-						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+						v1beta1constants.ConfirmationDeletion: "true",
+						v1beta1constants.GardenerTimestamp:    now.UTC().Format(time.RFC3339Nano),
 					},
 				}}
 

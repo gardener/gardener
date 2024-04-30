@@ -793,8 +793,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Name:      "osc1",
 						Namespace: namespace,
 						Annotations: map[string]string{
-							gardenerutils.ConfirmationDeletion: "true",
-							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+							v1beta1constants.ConfirmationDeletion: "true",
+							v1beta1constants.GardenerTimestamp:    now.UTC().Format(time.RFC3339Nano),
 						},
 					},
 				}

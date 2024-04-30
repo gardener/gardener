@@ -1262,6 +1262,20 @@ ProjectTolerations
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>dualApprovalForDeletion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DualApprovalForDeletion">
+[]DualApprovalForDeletion
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -4514,6 +4528,62 @@ string
 </td>
 <td>
 <p>Name is the name of the <code>ControllerDeployment</code> that is being referred to.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.DualApprovalForDeletion">DualApprovalForDeletion
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ProjectSpec">ProjectSpec</a>)
+</p>
+<p>
+<p>DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resource</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Resource is the name of the resource this applies to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>selector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<p>Selector is the label selector for the resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>includeServiceAccounts</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
+Defaults to true.</p>
 </td>
 </tr>
 </tbody>
@@ -8613,6 +8683,20 @@ ProjectTolerations
 <td>
 <em>(Optional)</em>
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dualApprovalForDeletion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DualApprovalForDeletion">
+[]DualApprovalForDeletion
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.</p>
 </td>
 </tr>
 </tbody>

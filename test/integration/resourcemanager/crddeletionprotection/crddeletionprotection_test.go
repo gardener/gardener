@@ -20,19 +20,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
 	var (
-		deletionConfirmedAnnotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+		deletionConfirmedAnnotations = map[string]string{v1beta1constants.ConfirmationDeletion: "true"}
 
 		crdObjects []client.Object
 		objects    []client.Object

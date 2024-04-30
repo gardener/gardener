@@ -392,6 +392,70 @@ var _ = Describe("Project Validation Tests", func() {
 			))
 		})
 
+		Context("dual approval for deletion config", func() {
+			It("should forbid empty resources", func() {
+				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, core.DualApprovalForDeletion{})
+
+				Expect(ValidateProject(project)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dualApprovalForDeletion[0].resource"),
+					})),
+				))
+			})
+
+			It("should forbid unsupported resources", func() {
+				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, core.DualApprovalForDeletion{
+					Resource: "foos",
+				})
+
+				Expect(ValidateProject(project)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.dualApprovalForDeletion[0].resource"),
+					})),
+				))
+			})
+
+			It("should forbid duplicate resources", func() {
+				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion,
+					core.DualApprovalForDeletion{Resource: "shoots"},
+					core.DualApprovalForDeletion{Resource: "shoots"},
+				)
+
+				Expect(ValidateProject(project)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.dualApprovalForDeletion[1].resource"),
+					})),
+				))
+			})
+
+			It("should forbid invalid label selectors", func() {
+				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, core.DualApprovalForDeletion{
+					Resource: "shoots",
+					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+				})
+
+				Expect(ValidateProject(project)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.dualApprovalForDeletion[0].selector.matchLabels"),
+					})),
+				))
+			})
+
+			It("should allow valid configurations", func() {
+				project.Spec.DualApprovalForDeletion = append(project.Spec.DualApprovalForDeletion, core.DualApprovalForDeletion{
+					Resource:               "shoots",
+					Selector:               metav1.LabelSelector{MatchLabels: map[string]string{}},
+					IncludeServiceAccounts: ptr.To(false),
+				})
+
+				Expect(ValidateProject(project)).To(BeEmpty())
+			})
+		})
+
 		DescribeTable("namespace immutability",
 			func(old, new *string, matcher gomegatypes.GomegaMatcher) {
 				project.Spec.Namespace = old

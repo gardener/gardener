@@ -262,7 +262,7 @@ func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error 
 // DeleteShoot deletes this replica's shoot using the given context and client.
 func (r *replica) DeleteShoot(ctx context.Context, c client.Client) error {
 	if r.shoot != nil {
-		if err := kubernetesutils.SetAnnotationAndUpdate(ctx, c, r.shoot, gardenerutils.ConfirmationDeletion, "true"); err != nil {
+		if err := kubernetesutils.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.ConfirmationDeletion, "true"); err != nil {
 			return err
 		}
 		return client.IgnoreNotFound(c.Delete(ctx, r.shoot))

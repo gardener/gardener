@@ -71,6 +71,9 @@ type ProjectSpec struct {
 	// Tolerations contains the tolerations for taints on seed clusters.
 	// +optional
 	Tolerations *ProjectTolerations `json:"tolerations,omitempty" protobuf:"bytes,7,opt,name=tolerations"`
+	// DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+	// +optional
+	DualApprovalForDeletion []DualApprovalForDeletion `json:"dualApprovalForDeletion,omitempty" protobuf:"bytes,8,opt,name=dualApprovalForDeletion"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -129,6 +132,18 @@ type Toleration struct {
 	// Value is the toleration value corresponding to the toleration key.
 	// +optional
 	Value *string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
+}
+
+// DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
+type DualApprovalForDeletion struct {
+	// Resource is the name of the resource this applies to.
+	Resource string `json:"resource" protobuf:"bytes,1,opt,name=resource"`
+	// Selector is the label selector for the resources.
+	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
+	// IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
+	// Defaults to true.
+	// +optional
+	IncludeServiceAccounts *bool `json:"includeServiceAccounts,omitempty" protobuf:"varint,3,opt,name=includeServiceAccounts"`
 }
 
 const (
