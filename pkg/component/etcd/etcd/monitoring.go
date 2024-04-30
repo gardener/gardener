@@ -188,18 +188,18 @@ const (
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
     expr:
-            (
-                (
-                    time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"}
-                  > bool
-                    86400
-                )
-              *
-                etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"}
-            )
+          (
+              (
+                  time() - ` + monitoringMetricBackupRestoreSnapshotLatestTimestamp + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"}
+                > bool
+                  86400
+              )
+            *
+              etcdbr_snapshot_required{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}",kind="Full"}
+          )
           * on (pod, role)
             ` + monitoringMetricEtcdServerIsLeader + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}
-        >
+          >
           0
     for: 15m
     labels:

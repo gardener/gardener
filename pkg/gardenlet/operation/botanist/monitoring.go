@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +18,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils"
@@ -191,6 +194,16 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	}
 	b.Shoot.Components.Monitoring.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
+	// TODO(rfranzke): Remove this block after v1.100 got released.
+	{
+		prometheusRule, rawScrapeConfigs, err := b.getPrometheusRuleAndRawScrapeConfigs(ctx)
+		if err != nil {
+			return err
+		}
+		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalScrapeConfigs(rawScrapeConfigs)
+		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalResources(prometheusRule)
+	}
+
 	if err := b.Shoot.Components.Monitoring.Prometheus.Deploy(ctx); err != nil {
 		return err
 	}
@@ -307,6 +320,74 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
 }
 
+// TODO(rfranzke): Remove this function after v1.100 has been released.
+func (b *Botanist) getPrometheusRuleAndRawScrapeConfigs(ctx context.Context) (prometheusRule *monitoringv1.PrometheusRule, rawScrapeConfigs []string, err error) {
+	var rawAlertingRules []string
+
+	for _, component := range b.getMonitoringComponents() {
+		componentsScrapeConfigs, err := component.ScrapeConfigs()
+		if err != nil {
+			return prometheusRule, rawScrapeConfigs, err
+		}
+		rawScrapeConfigs = append(rawScrapeConfigs, componentsScrapeConfigs...)
+
+		componentsAlertingRules, err := component.AlertingRules()
+		if err != nil {
+			return prometheusRule, rawScrapeConfigs, err
+		}
+		for _, rule := range componentsAlertingRules {
+			rawAlertingRules = append(rawAlertingRules, rule)
+		}
+	}
+
+	// Fetch extensions provider-specific monitoring configuration
+	existingConfigMaps := &corev1.ConfigMapList{}
+	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
+		return prometheusRule, rawScrapeConfigs, err
+	}
+
+	// Need stable order before passing the dashboards to Prometheus config to avoid unnecessary changes
+	kubernetesutils.ByName().Sort(existingConfigMaps)
+
+	// Read extension monitoring configurations
+	for _, cm := range existingConfigMaps.Items {
+		if len(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]) > 0 {
+			rawAlertingRules = append(rawAlertingRules, normalizeAlertingRules(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))...)
+		}
+		if len(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]) > 0 {
+			rawScrapeConfigs = append(rawScrapeConfigs, normalizeScrapeConfigs(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))...)
+		}
+	}
+
+	rawPrometheusRule := `apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shoot-additional-rules
+  namespace: ` + b.Shoot.SeedNamespace + `
+  labels:
+    prometheus: shoot
+spec:
+  groups:
+`
+
+	for _, group := range rawAlertingRules {
+		for _, line := range strings.Split(group, "\n") {
+			if line != "groups:" {
+				rawPrometheusRule += "  " + line + "\n"
+			}
+		}
+	}
+
+	prometheusRule = &monitoringv1.PrometheusRule{}
+	if err := runtime.DecodeInto(monitoringutils.Decoder, []byte(rawPrometheusRule), prometheusRule); err != nil {
+		return prometheusRule, rawScrapeConfigs, err
+	}
+
+	return
+}
+
 func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	// Fetch component-specific monitoring configuration
 	monitoringComponents := []component.MonitoringComponent{
@@ -348,4 +429,68 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	}
 
 	return monitoringComponents
+}
+
+// TODO(rfranzke): Remove this function after v1.100 has been released.
+func normalizeAlertingRules(input string) []string {
+	var cleanedLines []string
+	for _, line := range strings.Split(input, "\n") {
+		if strings.Contains(line, ": |") {
+			continue
+		}
+		if len(line) >= 2 && line[:2] == "  " {
+			cleanedLines = append(cleanedLines, line[2:])
+		} else {
+			cleanedLines = append(cleanedLines, line)
+		}
+	}
+
+	var blocks []string
+	for _, group := range strings.Split(strings.Join(cleanedLines, "\n"), "groups:") {
+		group = strings.TrimSpace(group)
+		if group != "" {
+			blocks = append(blocks, "groups:\n"+group)
+		}
+	}
+
+	return blocks
+}
+
+// TODO(rfranzke): Remove this function after v1.100 has been released.
+func normalizeScrapeConfigs(input string) []string {
+	cleanLines := func(lines []string) []string {
+		var cleanedLines []string
+		for _, line := range lines {
+			line = strings.TrimPrefix(line, "- ")
+			if len(line) >= 2 && line[:2] == "  " {
+				cleanedLines = append(cleanedLines, line[2:])
+			} else {
+				cleanedLines = append(cleanedLines, line)
+			}
+		}
+		return cleanedLines
+	}
+
+	var (
+		cleanedBlocks   []string
+		blockStartIndex = 0
+		lines           = strings.Split(input, "\n")
+	)
+
+	for i := 0; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "- ") {
+			if i > blockStartIndex {
+				block := strings.Join(cleanLines(lines[blockStartIndex:i]), "\n")
+				cleanedBlocks = append(cleanedBlocks, block)
+			}
+			blockStartIndex = i
+		}
+	}
+
+	if blockStartIndex < len(lines) {
+		block := strings.Join(cleanLines(lines[blockStartIndex:]), "\n")
+		cleanedBlocks = append(cleanedBlocks, block)
+	}
+
+	return cleanedBlocks
 }
