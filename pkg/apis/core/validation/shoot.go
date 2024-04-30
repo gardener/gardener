@@ -1743,12 +1743,27 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	}
 
 	if v := kubeletConfig.MemorySwap; v != nil {
+		path := fldPath.Child("memorySwap")
+
 		if ptr.Deref(kubeletConfig.FailSwapOn, false) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
+			allErrs = append(allErrs, field.Forbidden(path, "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
 		}
 
-		if featureGateEnabled, ok := kubeletConfig.FeatureGates["NodeSwap"]; !ok || (!featureGateEnabled && v.SwapBehavior != nil) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when kubelet's 'NodeSwap' feature gate is not set"))
+		if v.SwapBehavior != nil {
+			if featureGateEnabled, ok := kubeletConfig.FeatureGates["NodeSwap"]; !ok || (!featureGateEnabled) {
+				allErrs = append(allErrs, field.Forbidden(path, "configuring swap behaviour is not available when kubelet's 'NodeSwap' feature gate is not set"))
+			}
+
+			k8sGreaterEqual130, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.30")
+			if k8sGreaterEqual130 {
+				if !sets.New(core.NoSwap, core.LimitedSwap).Has(*v.SwapBehavior) {
+					allErrs = append(allErrs, field.Invalid(path.Child("swapBehavior"), *v.SwapBehavior, "value must be either 'NoSwap' or 'LimitedSwap'"))
+				}
+			} else {
+				if !sets.New(core.LimitedSwap, core.UnlimitedSwap).Has(*v.SwapBehavior) {
+					allErrs = append(allErrs, field.Invalid(path.Child("swapBehavior"), *v.SwapBehavior, "value must be either 'LimitedSwap' or 'UnlimitedSwap'"))
+				}
+			}
 		}
 	}
 

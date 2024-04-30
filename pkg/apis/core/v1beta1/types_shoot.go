@@ -1249,11 +1249,15 @@ type KubeletConfigReserved struct {
 type SwapBehavior string
 
 const (
+	// NoSwap is a constant for the kubelet's swap behavior restricting Kubernetes workloads to not use swap.
+	// Only available for Kubernetes versions >= v1.30.
+	NoSwap SwapBehavior = "NoSwap"
 	// LimitedSwap is a constant for the kubelet's swap behavior limitting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
 	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
 	LimitedSwap SwapBehavior = "LimitedSwap"
 	// UnlimitedSwap is a constant for the kubelet's swap behavior enabling Kubernetes workloads to use as much swap memory as required, up to the system limit (not limited by pod or container memory limits).
+	// Only available for Kubernetes versions < v1.30.
 	UnlimitedSwap SwapBehavior = "UnlimitedSwap"
 )
 
