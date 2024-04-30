@@ -38,6 +38,13 @@ images:
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/node-agent
   resourceId:
     name: node-agent
+- name: gardener-discovery-server
+  sourceRepository: github.com/gardener/gardener-discovery-server
+  # TODO: FIX THIS
+  # repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server
+  # tag: "v0.1.0" 
+  repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener/gardener-discovery-server
+  tag: "sha256:ac131396676366bfa45de08a463d80d3c69436fa3b443206f121b3873f062ed7"
 
 # Gardener Dashboard components
 - name: gardener-dashboard
