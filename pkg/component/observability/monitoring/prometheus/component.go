@@ -32,8 +32,11 @@ import (
 const (
 	dataKeyAdditionalScrapeConfigs       = "prometheus.yaml"
 	dataKeyAdditionalAlertRelabelConfigs = "configs.yaml"
-	port                                 = 9090
-	servicePort                          = 80
+	dataKeyAdditionalAlertmanagerConfigs = "configs.yaml"
+
+	port        = 9090
+	servicePort = 80
+
 	// ServicePortName is the name of the port in the Service specification.
 	ServicePortName = "web"
 )
@@ -124,6 +127,8 @@ type CentralConfigs struct {
 type AlertingValues struct {
 	// AlertmanagerName is the name of the alertmanager to which alerts should be sent.
 	AlertmanagerName string
+	// AdditionalAlertmanager contains the data of the 'alerting' secret (url, credentials, etc.).
+	AdditionalAlertmanager map[string][]byte
 }
 
 // RemoteWriteValues contains remote write configuration for this Prometheus instance.
@@ -217,6 +222,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
 		p.secretAdditionalAlertRelabelConfigs(),
+		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
 		p.prometheus(takeOverExistingPV, cortexConfigMap),

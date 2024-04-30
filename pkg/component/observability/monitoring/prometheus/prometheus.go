@@ -104,6 +104,13 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 			LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertRelabelConfigs},
 			Key:                  dataKeyAdditionalAlertRelabelConfigs,
 		}
+
+		if p.values.Alerting.AdditionalAlertmanager != nil {
+			obj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertmanagerConfigs},
+				Key:                  dataKeyAdditionalAlertmanagerConfigs,
+			}
+		}
 	}
 
 	if p.values.RemoteWrite != nil {

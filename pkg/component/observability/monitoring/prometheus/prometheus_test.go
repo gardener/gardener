@@ -96,6 +96,7 @@ honor_labels: true`
 		additionalConfigMap                 *corev1.ConfigMap
 		secretAdditionalScrapeConfigs       *corev1.Secret
 		secretAdditionalAlertRelabelConfigs *corev1.Secret
+		secretAdditionalAlertmanagerConfigs *corev1.Secret
 		secretRemoteWriteBasicAuth          *corev1.Secret
 		podDisruptionBudget                 *policyv1.PodDisruptionBudget
 	)
@@ -442,6 +443,18 @@ honor_labels: true`
   action: drop
 `)},
 		}
+		secretAdditionalAlertmanagerConfigs = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name + "-additional-alertmanager-configs",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 		secretRemoteWriteBasicAuth = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + name + "-remote-write-basic-auth",
@@ -755,6 +768,110 @@ location /api/v1/targets {
 						additionalConfigMap,
 						secretAdditionalAlertRelabelConfigs,
 					))
+				})
+
+				When("additional alertmanagers are configured", func() {
+					When("configured w/ basic auth", func() {
+						BeforeEach(func() {
+							values.Alerting.AdditionalAlertmanager = map[string][]byte{
+								"auth_type": []byte("basic"),
+								"url":       []byte("some-url"),
+								"username":  []byte("uname"),
+								"password":  []byte("pass"),
+							}
+						})
+
+						It("should successfully deploy all resources", func() {
+							prometheusObj := prometheusFor(alertmanagerName)
+							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
+								Key:                  "configs.yaml",
+							}
+
+							secretAdditionalAlertmanagerConfigs.Data = map[string][]byte{"configs.yaml": []byte(`
+static_configs:
+- targets:
+  - some-url
+basic_auth:
+  username: uname
+  password: pass`)}
+
+							prometheusRule.Namespace = namespace
+							metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+							Expect(managedResource).To(consistOf(
+								serviceAccount,
+								service,
+								clusterRoleBinding,
+								prometheusObj,
+								vpa,
+								prometheusRule,
+								scrapeConfig,
+								serviceMonitor,
+								podMonitor,
+								secretAdditionalScrapeConfigs,
+								additionalConfigMap,
+								secretAdditionalAlertRelabelConfigs,
+								secretAdditionalAlertmanagerConfigs,
+							))
+						})
+					})
+
+					When("configured w/ certificate", func() {
+						BeforeEach(func() {
+							values.Alerting.AdditionalAlertmanager = map[string][]byte{
+								"auth_type":            []byte("certificate"),
+								"url":                  []byte("some-url"),
+								"ca.crt":               []byte("ca-crt"),
+								"tls.crt":              []byte("tls-crt"),
+								"tls.key":              []byte("tls-key"),
+								"insecure_skip_verify": []byte("false"),
+							}
+						})
+
+						It("should successfully deploy all resources", func() {
+							prometheusObj := prometheusFor(alertmanagerName)
+							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
+								Key:                  "configs.yaml",
+							}
+
+							secretAdditionalAlertmanagerConfigs.Data = map[string][]byte{"configs.yaml": []byte(`
+static_configs:
+- targets:
+  - some-url
+tls_config:
+  ca: ca-crt
+  cert: tls-crt
+  key: tls-key
+  insecure_skip_verify: false`)}
+
+							prometheusRule.Namespace = namespace
+							metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+							metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+							Expect(managedResource).To(consistOf(
+								serviceAccount,
+								service,
+								clusterRoleBinding,
+								prometheusObj,
+								vpa,
+								prometheusRule,
+								scrapeConfig,
+								serviceMonitor,
+								podMonitor,
+								secretAdditionalScrapeConfigs,
+								additionalConfigMap,
+								secretAdditionalAlertRelabelConfigs,
+								secretAdditionalAlertmanagerConfigs,
+							))
+						})
+					})
 				})
 			})
 

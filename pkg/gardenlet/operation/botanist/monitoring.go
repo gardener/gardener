@@ -124,6 +124,12 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 
 	if b.Shoot.WantsAlertmanager {
 		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-shoot"}
+
+		if secret := b.LoadSecret(v1beta1constants.GardenRoleAlerting); secret != nil &&
+			len(secret.Data["auth_type"]) > 0 &&
+			string(secret.Data["auth_type"]) != "smtp" {
+			values.Alerting.AdditionalAlertmanager = secret.Data
+		}
 	}
 
 	if b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil && b.Config.Monitoring.Shoot.RemoteWrite != nil {

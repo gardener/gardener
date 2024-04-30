@@ -16,50 +16,6 @@ data:
     global:
       evaluation_interval: 1m
       scrape_interval: 1m
-    alerting:
-      alertmanagers:
-{{- if hasKey .Values.alerting.auth_type "none" }}
-      - static_configs:
-        - targets:
-          - {{ .Values.alerting.auth_type.none.url }}
-{{- end }}
-{{- if hasKey .Values.alerting.auth_type "basic" }}
-      - static_configs:
-        - targets:
-          - {{ .Values.alerting.auth_type.basic.url }}
-        basic_auth:
-          username: {{ .Values.alerting.auth_type.basic.username }}
-          password: {{ .Values.alerting.auth_type.basic.password }}
-{{- end }}
-{{- if hasKey .Values.alerting.auth_type "certificate" }}
-      - static_configs:
-        - targets:
-          - {{ .Values.alerting.auth_type.certificate.url }}
-        tls_config:
-          ca_file: /etc/prometheus/operator/ca.crt
-          cert_file: /etc/prometheus/operator/tls.crt
-          key_file: /etc/prometheus/operator/tls.key
-          insecure_skip_verify: {{ .Values.alerting.auth_type.certificate.insecure_skip_verify }}
-{{- end }}
-      - kubernetes_sd_configs:
-        - role: endpoints
-          namespaces:
-            names:
-{{ include "prometheus.alertmanager.namespaces" . | indent 12 }}
-        relabel_configs:
-        - source_labels: [ __meta_kubernetes_service_label_component ]
-          action: keep
-          regex: alertmanager
-        - source_labels: [ __meta_kubernetes_service_label_role ]
-          action: keep
-          regex: monitoring
-        - source_labels: [ __meta_kubernetes_endpoint_port_name ]
-          action: keep
-          regex: metrics
-      alert_relabel_configs:
-      - source_labels: [ ignoreAlerts ]
-        regex: true
-        action: drop
     scrape_configs:
 {{- if .Values.additionalScrapeConfigs }}
 {{ toString .Values.additionalScrapeConfigs | indent 4 }}
