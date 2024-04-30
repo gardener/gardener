@@ -149,12 +149,6 @@ var _ = Describe("health check", func() {
 		})
 	})
 
-	Describe("#ComputeRequiredMonitoringStatefulSets", func() {
-		It("should return expected statefulsets", func() {
-			Expect(ComputeRequiredMonitoringStatefulSets().UnsortedList()).To(HaveExactElements("prometheus"))
-		})
-	})
-
 	Describe("#ComputeRequiredMonitoringSeedDeployments", func() {
 		It("should return expected deployments", func() {
 			Expect(ComputeRequiredMonitoringSeedDeployments(shoot).UnsortedList()).To(HaveExactElements("kube-state-metrics"))

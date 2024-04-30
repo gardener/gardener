@@ -430,23 +430,12 @@ var _ = Describe("HealthChecker", func() {
 				plutonoDeployment,
 				kubeStateMetricsShootDeployment,
 			}
-
-			alertManagerStatefulSet = newStatefulSet(namespace, v1beta1constants.StatefulSetNameAlertManager, v1beta1constants.GardenRoleMonitoring, true)
-			prometheusStatefulSet   = newStatefulSet(namespace, v1beta1constants.StatefulSetNamePrometheus, v1beta1constants.GardenRoleMonitoring, true)
-
-			requiredMonitoringControlPlaneStatefulSets = []*appsv1.StatefulSet{
-				alertManagerStatefulSet,
-				prometheusStatefulSet,
-			}
 		)
 
 		DescribeTable("#CheckShootMonitoringControlPlane",
-			func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
+			func(deployments []*appsv1.Deployment, conditionMatcher types.GomegaMatcher) {
 				for _, obj := range deployments {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
-				}
-				for _, obj := range statefulSets {
-					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 				}
 
 				checker := NewHealthChecker(fakeClient, fakeClock, nil, nil)
@@ -455,7 +444,6 @@ var _ = Describe("HealthChecker", func() {
 					ctx,
 					namespace,
 					objectNameSet(requiredMonitoringControlPlaneDeployments),
-					objectNameSet(requiredMonitoringControlPlaneStatefulSets),
 					labels.SelectorFromSet(map[string]string{"gardener.cloud/role": "monitoring"}),
 					condition,
 				)
@@ -464,32 +452,16 @@ var _ = Describe("HealthChecker", func() {
 			},
 			Entry("all healthy",
 				requiredMonitoringControlPlaneDeployments,
-				requiredMonitoringControlPlaneStatefulSets,
 				BeNil()),
 			Entry("required deployment missing",
 				[]*appsv1.Deployment{
 					plutonoDeployment,
 				},
-				requiredMonitoringControlPlaneStatefulSets,
 				PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{kubeStateMetricsShootDeployment}))),
-			Entry("required stateful set set missing",
-				requiredMonitoringControlPlaneDeployments,
-				[]*appsv1.StatefulSet{
-					prometheusStatefulSet,
-				},
-				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 			Entry("deployment unhealthy",
 				[]*appsv1.Deployment{
 					newDeployment(plutonoDeployment.Namespace, plutonoDeployment.Name, roleOf(plutonoDeployment), false),
 					kubeStateMetricsShootDeployment,
-				},
-				requiredMonitoringControlPlaneStatefulSets,
-				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
-			Entry("stateful set unhealthy",
-				requiredMonitoringControlPlaneDeployments,
-				[]*appsv1.StatefulSet{
-					newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
-					prometheusStatefulSet,
 				},
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		)
@@ -539,21 +511,6 @@ func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deploymen
 		}}}
 	}
 	return deployment
-}
-
-func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
-	statefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		statefulSet.Status.ReadyReplicas = 1
-	}
-
-	return statefulSet
 }
 
 func objectNameSet[o client.Object](objs []o) sets.Set[string] {
