@@ -23,7 +23,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -233,91 +232,6 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Secret)
-}
-
-// DefaultMonitoring creates a new monitoring component.
-func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
-	imageBlackboxExporter, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
-	if err != nil {
-		return nil, err
-	}
-	imageConfigmapReloader, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
-	if err != nil {
-		return nil, err
-	}
-	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
-	if err != nil {
-		return nil, err
-	}
-
-	var alertingSecrets []*corev1.Secret
-	for _, key := range b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting) {
-		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
-	}
-
-	values := monitoring.Values{
-		AlertingSecrets:              alertingSecrets,
-		AlertmanagerEnabled:          b.Shoot.WantsAlertmanager,
-		APIServerDomain:              gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-		APIServerHost:                b.SeedClientSet.RESTConfig().Host,
-		Config:                       b.Config.Monitoring,
-		GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
-		IgnoreAlerts:                 b.Shoot.IgnoreAlerts,
-		ImageBlackboxExporter:        imageBlackboxExporter.String(),
-		ImageConfigmapReloader:       imageConfigmapReloader.String(),
-		ImagePrometheus:              imagePrometheus.String(),
-		IngressHostPrometheus:        b.ComputePrometheusHost(),
-		IsWorkerless:                 b.Shoot.IsWorkerless,
-		KubernetesVersion:            b.Shoot.GetInfo().Spec.Kubernetes.Version,
-		MonitoringConfig:             b.Shoot.GetInfo().Spec.Monitoring,
-		NodeLocalDNSEnabled:          b.Shoot.NodeLocalDNSEnabled,
-		ProjectName:                  b.Garden.Project.Name,
-		Replicas:                     b.Shoot.GetReplicas(1),
-		RuntimeProviderType:          b.Seed.GetInfo().Spec.Provider.Type,
-		RuntimeRegion:                b.Seed.GetInfo().Spec.Provider.Region,
-		TargetName:                   b.Shoot.GetInfo().Name,
-		TargetProviderType:           b.Shoot.GetInfo().Spec.Provider.Type,
-		WildcardCertName:             nil,
-	}
-
-	if b.Shoot.Networks != nil {
-		if services := b.Shoot.Networks.Services; services != nil {
-			values.ServiceNetworkCIDR = ptr.To(services.String())
-		}
-		if pods := b.Shoot.Networks.Pods; pods != nil {
-			values.PodNetworkCIDR = ptr.To(pods.String())
-		}
-		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
-			values.APIServerServiceIP = ptr.To(apiServer.String())
-		}
-	}
-
-	if b.Shoot.GetInfo().Spec.Networking != nil {
-		values.NodeNetworkCIDR = b.Shoot.GetInfo().Spec.Networking.Nodes
-	}
-
-	return monitoring.New(
-		b.SeedClientSet.Client(),
-		b.SeedClientSet.ChartApplier(),
-		b.SecretsManager,
-		b.Shoot.SeedNamespace,
-		values,
-	), nil
-}
-
-// DeployMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
-// to monitor the Shoot cluster whose control plane runs in the Seed cluster.
-func (b *Botanist) DeployMonitoring(ctx context.Context) error {
-	if !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
-	}
-
-	if b.ControlPlaneWildcardCert != nil {
-		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
-	}
-	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
-	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())
-	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
 }
 
 // TODO(rfranzke): Remove this function after v1.100 has been released.

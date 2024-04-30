@@ -186,9 +186,6 @@ const (
 	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
 	// the vali pod.
 	StatefulSetNameVali = "vali"
-	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
-	// the prometheus pod.
-	StatefulSetNamePrometheus = "prometheus"
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"

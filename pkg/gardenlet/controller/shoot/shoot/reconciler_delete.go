@@ -338,11 +338,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
-		deleteSeedMonitoring = g.Add(flow.Task{
-			Name:         "Deleting shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Monitoring.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
 		deleteClusterAutoscaler = g.Add(flow.Task{
 			Name: "Deleting cluster autoscaler",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -662,7 +657,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deleteAlertmanager,
 			deletePrometheus,
 			deleteBlackboxExporter,
-			deleteSeedMonitoring,
 			deletePlutono,
 			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,

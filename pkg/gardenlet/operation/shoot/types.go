@@ -42,7 +42,6 @@ import (
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
@@ -177,7 +176,6 @@ type Monitoring struct {
 	Alertmanager     alertmanager.Interface
 	Prometheus       prometheus.Interface
 	BlackboxExporter blackboxexporter.Interface
-	Monitoring       monitoring.Interface
 }
 
 // Logging contains references to logging deployers.

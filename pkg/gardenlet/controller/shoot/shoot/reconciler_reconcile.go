@@ -831,28 +831,23 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
-		deploySeedMonitoring = g.Add(flow.Task{
-			Name:         "Deploying Shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeployMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
-		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployKubeStateMetrics).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployPrometheus, deployAlertmanager),
+			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deployPrometheus, deployAlertmanager),
+			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       !o.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deployPrometheus, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployPrometheus, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 
 		// logic is inverted here

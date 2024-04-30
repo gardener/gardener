@@ -213,10 +213,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Monitoring.Monitoring, err = b.DefaultMonitoring()
-	if err != nil {
-		return nil, err
-	}
 
 	// Logging
 	o.Shoot.Components.Logging.EventLogger, err = b.DefaultEventLogger()
