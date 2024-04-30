@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package monitoring_test
+package prometheus_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	. "github.com/gardener/gardener/pkg/component/observability/monitoring"
+	. "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 )
 
 var _ = Describe("Logging", func() {

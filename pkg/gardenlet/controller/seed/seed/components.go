@@ -53,7 +53,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
@@ -727,7 +726,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		extensions.CentralLoggingConfiguration,
 		dependencywatchdog.CentralLoggingConfiguration,
 		alertmanager.CentralLoggingConfiguration,
-		monitoring.CentralLoggingConfiguration,
+		prometheus.CentralLoggingConfiguration,
 		plutono.CentralLoggingConfiguration,
 		// shoot control plane components
 		clusterautoscaler.CentralLoggingConfiguration,
