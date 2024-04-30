@@ -68,8 +68,7 @@ spec:
       expr: |
         garden_shoot_condition{condition = "APIServerAvailable",
                               operation = "Reconcile",
-                              is_seed   = "true",
-                              purpose   = "infrastructure"}
+                              is_seed   = "true"}
         < 1
       for: 2m
       labels:
@@ -331,8 +330,7 @@ spec:
         max_over_time(
           garden_shoot_condition{condition       = "ControlPlaneHealthy",
                                  operation       = "Reconcile",
-                                 is_seed         = "false",
-                                 purpose         =~ "infrastructure",
+                                 is_seed         = "true",
                                  is_compliant    = "True",
                                  has_user_errors = "false"}[2m])
         == 0
@@ -368,8 +366,7 @@ spec:
         max_over_time(
           garden_shoot_condition{condition       = "SystemComponentsHealthy",
                                  operation       = "Reconcile",
-                                 is_seed         = "false",
-                                 purpose         =~ "infrastructure",
+                                 is_seed         = "true",
                                  is_compliant    = "True",
                                  has_user_errors = "false"}[2m])
         == 0
