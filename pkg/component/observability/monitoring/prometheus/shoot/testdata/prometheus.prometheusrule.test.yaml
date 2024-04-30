@@ -1,5 +1,5 @@
 rule_files:
-- ../rules/prometheus.rules.yaml
+- prometheus.prometheusrule.yaml
 
 evaluation_interval: 30s
 

@@ -171,7 +171,7 @@ define GENERATE_HELP_INFO
 # Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_DIRS="<folders>"]
 #
 # Options:
-#   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck monitoring-docs")
+#   WHAT              - Specify the targets to run (e.g., "protobuf codegen manifests logcheck")
 #   CODEGEN_GROUPS    - Specify which groups to run the 'codegen' target for, not applicable for other targets (e.g., "authentication_groups core_groups extensions_groups resources_groups
 #                       operator_groups seedmanagement_groups operations_groups settings_groups operatorconfig_groups controllermanager_groups admissioncontroller_groups scheduler_groups
 #                       gardenlet_groups resourcemanager_groups shoottolerationrestriction_groups shootdnsrewriting_groups shootresourcereservation_groups provider_local_groups extensions_config_groups")
@@ -229,15 +229,11 @@ check-apidiff: $(GO_APIDIFF)
 check-vulnerabilities: $(GO_VULN_CHECK)
 	$(GO_VULN_CHECK) ./...
 
-.PHONY: test-prometheus
-test-prometheus: $(PROMTOOL)
-	@./hack/test-prometheus.sh
-
 .PHONY: verify
-verify: check format test test-integration test-prometheus
+verify: check format test test-integration
 
 .PHONY: verify-extended
-verify-extended: check-generate check format test-cov test-cov-clean test-integration test-prometheus
+verify-extended: check-generate check format test-cov test-cov-clean test-integration
 
 #####################################################################
 # Rules for local environment                                       #

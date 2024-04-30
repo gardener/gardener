@@ -35,8 +35,6 @@ data:
     {{- end }}
     {{- end }}
     {{- end }}
-    rule_files:
-    - /etc/prometheus/rules/*.yaml
     alerting:
       alertmanagers:
 {{- if hasKey .Values.alerting.auth_type "none" }}

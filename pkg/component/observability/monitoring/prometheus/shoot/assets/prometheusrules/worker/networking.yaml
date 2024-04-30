@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: networking
+spec:
+  groups:
+  - name: networking.rules
+    rules:
+    - record: shoot:container_network_transmit_bytes_total_apiserver:sum
+      expr: sum(rate(container_network_transmit_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))
+
+    - record: shoot:container_network_receive_bytes_total_apiserver:sum
+      expr: sum(rate(container_network_receive_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))
+
+    - record: shoot:container_network_transmit_bytes_total_vpn:sum
+      expr: sum(rate(container_network_transmit_bytes_total{pod=~"vpn-shoot(.+)"}[10m]))
+
+    - record: shoot:container_network_receive_bytes_total_vpn:sum
+      expr: sum(rate(container_network_receive_bytes_total{pod=~"vpn-shoot(.+)"}[10m]))

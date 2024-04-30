@@ -108,6 +108,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		},
 		ExternalLabels: externalLabels,
 		CentralConfigs: prometheus.CentralConfigs{
+			PrometheusRules: shootprometheus.CentralPrometheusRules(b.Shoot.IsWorkerless, b.Shoot.WantsAlertmanager),
 			ServiceMonitors: shootprometheus.CentralServiceMonitors(b.Shoot.WantsAlertmanager),
 		},
 		Ingress: &prometheus.IngressValues{
