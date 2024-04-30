@@ -286,6 +286,13 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Gardener Discovery Server",
+			Fn: func(ctx context.Context) error {
+				return r.deployGardenerDiscoveryServer(ctx, c.gardenerDiscoveryServer, garden, secretsManager)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying virtual system resources",
@@ -723,6 +730,14 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 	}
 
 	return component.OpWait(dashboard).Deploy(ctx)
+}
+
+func (r *Reconciler) deployGardenerDiscoveryServer(ctx context.Context, discoveryServer component.DeployWaiter, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
+	if garden.Spec.VirtualCluster.Gardener.DiscoveryServer == nil {
+		return component.OpDestroyAndWait(discoveryServer).Destroy(ctx)
+	}
+
+	return component.OpWait(discoveryServer).Deploy(ctx)
 }
 
 func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, secretsManager secretsmanager.Interface, prometheus prometheus.Interface) error {

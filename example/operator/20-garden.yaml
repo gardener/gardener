@@ -241,7 +241,7 @@ spec:
     #       image: busybox:latest
     #       description: A nice container for debugging purposes
       gardenerDiscoveryServer:
-        hostname: discovery.local.gardener.cloud
+        hostname: discovery.ingress.runtime-garden.local.gardener.cloud
     maintenance:
       timeWindow:
         begin: 220000+0100
