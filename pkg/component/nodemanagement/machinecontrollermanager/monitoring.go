@@ -16,18 +16,76 @@ import (
 
 const (
 	monitoringPrometheusJobName = "machine-controller-manager"
+)
 
-	monitoringMetricMCMCloudAPIRequestsFailedTotal             = "mcm_cloud_api_requests_failed_total"
-	monitoringMetricMCMCloudAPIRequestsTotal                   = "mcm_cloud_api_requests_total"
-	monitoringMetricMCMMachineControllerFrozen                 = "mcm_machine_controller_frozen"
-	monitoringMetricMCMMachineCurrentStatusPhase               = "mcm_machine_current_status_phase"
-	monitoringMetricMCMMachineDeploymentFailedMachines         = "mcm_machine_deployment_failed_machines"
-	monitoringMetricMCMMachineItemsTotal                       = "mcm_machine_items_total"
-	monitoringMetricMCMMachineSetFailedMachines                = "mcm_machine_set_failed_machines"
-	monitoringMetricMCMMachineDeploymentItemsTotal             = "mcm_machine_deployment_items_total"
-	monitoringMetricMCMMachineSetItemsTotal                    = "mcm_machine_set_items_total"
-	monitoringMetricMCMMachineSetStaleMachinesTotal            = "mcm_machine_set_stale_machines_total"
-	monitoringMetricMCMScrapeFailureTotal                      = "mcm_scrape_failure_total"
+// Machine Deployment related metrics
+const (
+	monitoringMetricMCMMachineDeploymentItemsTotal                          = "mcm_machine_deployment_items_total"
+	monitoringMetricMCMMachineDeploymentInfo                                = "mcm_machine_deployment_info"
+	monitoringMetricMCMMachineDeploymentInfoSpecPaused                      = "mcm_machine_deployment_info_spec_paused"
+	monitoringMetricMCMMachineDeploymentInfoSpecReplicas                    = "mcm_machine_deployment_info_spec_replicas"
+	monitoringMetricMCMMachineDeploymentInfoSpecMinReadySeconds             = "mcm_machine_deployment_info_spec_min_ready_seconds"
+	monitoringMetricMCMMachineDeploymentInfoSpecRollingUpdateMaxSurge       = "mcm_machine_deployment_info_spec_rolling_update_max_surge"
+	monitoringMetricMCMMachineDeploymentInfoSpecRollingUpdateMaxUnavailable = "mcm_machine_deployment_info_spec_rolling_update_max_unavailable"
+	monitoringMetricMCMMachineDeploymentInfoSpecRevisionHistoryLimit        = "mcm_machine_deployment_info_spec_revision_history_limit"
+	monitoringMetricMCMMachineDeploymentInfoSpecProgressDeadlineSeconds     = "mcm_machine_deployment_info_spec_progress_deadline_seconds"
+	monitoringMetricMCMMachineDeploymentInfoSpecRollbackToRevision          = "mcm_machine_deployment_info_spec_rollback_to_revision"
+	monitoringMetricMCMMachineDeploymentStatusCondition                     = "mcm_machine_deployment_status_condition"
+	monitoringMetricMCMMachineDeploymentStatusAvailableReplicas             = "mcm_machine_deployment_status_available_replicas"
+	monitoringMetricMCMMachineDeploymentStatusUnavailableReplicas           = "mcm_machine_deployment_status_unavailable_replicas"
+	monitoringMetricMCMMachineDeploymentStatusReadyReplicas                 = "mcm_machine_deployment_status_ready_replicas"
+	monitoringMetricMCMMachineDeploymentStatusUpdatedReplicas               = "mcm_machine_deployment_status_updated_replicas"
+	monitoringMetricMCMMachineDeploymentStatusCollisionCount                = "mcm_machine_deployment_status_collision_count"
+	monitoringMetricMCMMachineDeploymentStatusReplicas                      = "mcm_machine_deployment_status_replicas"
+	monitoringMetricMCMMachineDeploymentFailedMachines                      = "mcm_machine_deployment_failed_machines"
+)
+
+// Machine Set related metrics
+const (
+	monitoringMetricMCMMachineSetItemsTotal                  = "mcm_machine_set_items_total"
+	monitoringMetricMCMMachineSetInfo                        = "mcm_machine_set_info"
+	monitoringMetricMCMMachineSetFailedMachines              = "mcm_machine_set_failed_machines"
+	monitoringMetricMCMMachineSetInfoSpecReplicas            = "mcm_machine_set_info_spec_replicas"
+	monitoringMetricMCMMachineSetInfoSpecMinReadySeconds     = "mcm_machine_set_info_spec_min_ready_seconds"
+	monitoringMetricMCMMachineSetStatusCondition             = "mcm_machine_set_status_condition"
+	monitoringMetricMCMMachineSetStatusAvailableReplicas     = "mcm_machine_set_status_available_replicas"
+	monitoringMetricMCMMachineSetStatusFullyLabelledReplicas = "mcm_machine_set_status_fully_labelled_replicas"
+	monitoringMetricMCMMachineSetStatusReplicas              = "mcm_machine_set_status_replicas"
+	monitoringMetricMCMMachineSetStatusReadyReplicas         = "mcm_machine_set_status_ready_replicas"
+)
+
+// Machine related metrics
+const (
+	monitoringMetricMCMMachineStaleMachinesTotal = "mcm_machine_stale_machines_total"
+	monitoringMetricMCMMachineItemsTotal         = "mcm_machine_items_total"
+	monitoringMetricMCMMachineCurrentStatusPhase = "mcm_machine_current_status_phase"
+	monitoringMetricMCMMachineInfo               = "mcm_machine_info"
+	monitoringMetricMCMMachineStatusCondition    = "mcm_machine_status_condition"
+)
+
+// Cloud API related metrics
+const (
+	monitoringMetricMCMCloudAPIRequestsTotal                      = "mcm_cloud_api_requests_total"
+	monitoringMetricMCMCloudAPIRequestsFailedTotal                = "mcm_cloud_api_requests_failed_total"
+	monitoringMetricMCMCloudAPIRequestDurationSecondsBucket       = "mcm_cloud_api_api_request_duration_seconds_bucket"
+	monitoringMetricMCMCloudAPIRequestDurationSecondsSum          = "mcm_cloud_api_api_request_duration_seconds_sum"
+	monitoringMetricMCMCloudAPIRequestDurationSecondsCount        = "mcm_cloud_api_api_request_duration_seconds_count"
+	monitoringMetricMCMCloudAPIDriverRequestDurationSecondsSum    = "mcm_cloud_api_driver_request_duration_seconds_sum"
+	monitoringMetricMCMCloudAPIDriverRequestDurationSecondsCount  = "mcm_cloud_api_driver_request_duration_seconds_count"
+	monitoringMetricMCMCloudAPIDriverRequestDurationSecondsBucket = "mcm_cloud_api_driver_request_duration_seconds_bucket"
+	monitoringMetricMCMCloudAPIDriverRequestFailedTotal           = "mcm_cloud_api_driver_request_failed_total"
+)
+
+// misc metrics
+const (
+	monitoringMetricMCMScrapeFailureTotal      = "mcm_misc_scrape_failure_total"
+	monitoringMetricMCMMachineControllerFrozen = "mcm_machine_controller_frozen"
+	monitoringMetricProcessMaxFds              = "process_max_fds"
+	monitoringMetricProcessOpenFds             = "process_open_fds"
+)
+
+// workqueue related metrics
+const (
 	monitoringMetricMCMWorkqueueAddsTotal                      = "mcm_workqueue_adds_total"
 	monitoringMetricMCMWorkqueueDepth                          = "mcm_workqueue_depth"
 	monitoringMetricMCMWorkqueueQueueDurationSecondsBucket     = "mcm_workqueue_queue_duration_seconds_bucket"
@@ -39,9 +97,10 @@ const (
 	monitoringMetricMCMWorkqueueUnfinishedWorkSeconds          = "mcm_workqueue_unfinished_work_seconds"
 	monitoringMetricMCMWorkqueueLongestRunningProcessorSeconds = "mcm_workqueue_longest_running_processor_seconds"
 	monitoringMetricMCMWorkqueueRetriesTotal                   = "mcm_workqueue_retries_total"
-	monitoringMetricProcessMaxFds                              = "process_max_fds"
-	monitoringMetricProcessOpenFds                             = "process_open_fds"
+)
 
+// alert rules
+const (
 	monitoringAlertingRules = `groups:
 - name: machine-controller-manager.rules
   rules:
@@ -61,17 +120,57 @@ const (
 
 var (
 	monitoringAllowedMetrics = []string{
-		monitoringMetricMCMCloudAPIRequestsFailedTotal,
-		monitoringMetricMCMCloudAPIRequestsTotal,
-		monitoringMetricMCMMachineControllerFrozen,
-		monitoringMetricMCMMachineCurrentStatusPhase,
-		monitoringMetricMCMMachineDeploymentFailedMachines,
-		monitoringMetricMCMMachineItemsTotal,
-		monitoringMetricMCMMachineSetFailedMachines,
 		monitoringMetricMCMMachineDeploymentItemsTotal,
+		monitoringMetricMCMMachineDeploymentInfo,
+		monitoringMetricMCMMachineDeploymentInfoSpecPaused,
+		monitoringMetricMCMMachineDeploymentInfoSpecReplicas,
+		monitoringMetricMCMMachineDeploymentInfoSpecMinReadySeconds,
+		monitoringMetricMCMMachineDeploymentInfoSpecRollingUpdateMaxSurge,
+		monitoringMetricMCMMachineDeploymentInfoSpecRollingUpdateMaxUnavailable,
+		monitoringMetricMCMMachineDeploymentInfoSpecRevisionHistoryLimit,
+		monitoringMetricMCMMachineDeploymentInfoSpecProgressDeadlineSeconds,
+		monitoringMetricMCMMachineDeploymentInfoSpecRollbackToRevision,
+		monitoringMetricMCMMachineDeploymentStatusCondition,
+		monitoringMetricMCMMachineDeploymentStatusAvailableReplicas,
+		monitoringMetricMCMMachineDeploymentStatusUnavailableReplicas,
+		monitoringMetricMCMMachineDeploymentStatusReadyReplicas,
+		monitoringMetricMCMMachineDeploymentStatusUpdatedReplicas,
+		monitoringMetricMCMMachineDeploymentStatusCollisionCount,
+		monitoringMetricMCMMachineDeploymentStatusReplicas,
+		monitoringMetricMCMMachineDeploymentFailedMachines,
+
+		monitoringMetricMCMMachineSetInfo,
+		monitoringMetricMCMMachineSetInfoSpecReplicas,
+		monitoringMetricMCMMachineSetInfoSpecMinReadySeconds,
 		monitoringMetricMCMMachineSetItemsTotal,
-		monitoringMetricMCMMachineSetStaleMachinesTotal,
+		monitoringMetricMCMMachineSetFailedMachines,
+		monitoringMetricMCMMachineSetStatusCondition,
+		monitoringMetricMCMMachineSetStatusAvailableReplicas,
+		monitoringMetricMCMMachineSetStatusFullyLabelledReplicas,
+		monitoringMetricMCMMachineSetStatusReplicas,
+		monitoringMetricMCMMachineSetStatusReadyReplicas,
+
+		monitoringMetricMCMMachineStaleMachinesTotal,
+		monitoringMetricMCMMachineItemsTotal,
+		monitoringMetricMCMMachineCurrentStatusPhase,
+		monitoringMetricMCMMachineInfo,
+		monitoringMetricMCMMachineStatusCondition,
+
+		monitoringMetricMCMCloudAPIRequestsTotal,
+		monitoringMetricMCMCloudAPIRequestsFailedTotal,
+		monitoringMetricMCMCloudAPIRequestDurationSecondsBucket,
+		monitoringMetricMCMCloudAPIRequestDurationSecondsSum,
+		monitoringMetricMCMCloudAPIRequestDurationSecondsCount,
+		monitoringMetricMCMCloudAPIDriverRequestDurationSecondsSum,
+		monitoringMetricMCMCloudAPIDriverRequestDurationSecondsCount,
+		monitoringMetricMCMCloudAPIDriverRequestDurationSecondsBucket,
+		monitoringMetricMCMCloudAPIDriverRequestFailedTotal,
+
+		monitoringMetricMCMMachineControllerFrozen,
 		monitoringMetricMCMScrapeFailureTotal,
+		monitoringMetricProcessMaxFds,
+		monitoringMetricProcessOpenFds,
+
 		monitoringMetricMCMWorkqueueAddsTotal,
 		monitoringMetricMCMWorkqueueDepth,
 		monitoringMetricMCMWorkqueueQueueDurationSecondsBucket,
@@ -83,8 +182,6 @@ var (
 		monitoringMetricMCMWorkqueueUnfinishedWorkSeconds,
 		monitoringMetricMCMWorkqueueLongestRunningProcessorSeconds,
 		monitoringMetricMCMWorkqueueRetriesTotal,
-		monitoringMetricProcessMaxFds,
-		monitoringMetricProcessOpenFds,
 	}
 
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
