@@ -5977,16 +5977,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("should allow UnlimitedSwap behavior for Kubernetes versions < 1.30", true, ptr.To("UnlimitedSwap"), "1.29", BeEmpty()),
 			Entry("should forbid UnlimitedSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("UnlimitedSwap"), "1.30", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
+					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
-					"Detail": Equal("value must be either 'NoSwap' or 'LimitedSwap'"),
+					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
 				})),
 			)),
 			Entry("should forbid NoSwap behavior for Kubernetes versions < 1.30", true, ptr.To("NoSwap"), "1.29", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
+					"Type":   Equal(field.ErrorTypeNotSupported),
 					"Field":  Equal("memorySwap.swapBehavior"),
-					"Detail": Equal("value must be either 'LimitedSwap' or 'UnlimitedSwap'"),
+					"Detail": Equal("supported values: \"LimitedSwap\", \"UnlimitedSwap\""),
 				})),
 			)),
 			Entry("should allow NoSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("NoSwap"), "1.30", BeEmpty()),

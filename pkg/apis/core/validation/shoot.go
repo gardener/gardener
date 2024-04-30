@@ -1754,15 +1754,14 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 				allErrs = append(allErrs, field.Forbidden(path, "configuring swap behaviour is not available when kubelet's 'NodeSwap' feature gate is not set"))
 			}
 
+			supportedSwapBehaviors := []core.SwapBehavior{core.LimitedSwap, core.UnlimitedSwap}
 			k8sGreaterEqual130, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.30")
 			if k8sGreaterEqual130 {
-				if !sets.New(core.NoSwap, core.LimitedSwap).Has(*v.SwapBehavior) {
-					allErrs = append(allErrs, field.Invalid(path.Child("swapBehavior"), *v.SwapBehavior, "value must be either 'NoSwap' or 'LimitedSwap'"))
-				}
-			} else {
-				if !sets.New(core.LimitedSwap, core.UnlimitedSwap).Has(*v.SwapBehavior) {
-					allErrs = append(allErrs, field.Invalid(path.Child("swapBehavior"), *v.SwapBehavior, "value must be either 'LimitedSwap' or 'UnlimitedSwap'"))
-				}
+				supportedSwapBehaviors = []core.SwapBehavior{core.NoSwap, core.LimitedSwap}
+			}
+
+			if !slices.Contains(supportedSwapBehaviors, *v.SwapBehavior) {
+				allErrs = append(allErrs, field.NotSupported(path.Child("swapBehavior"), *v.SwapBehavior, supportedSwapBehaviors))
 			}
 		}
 	}
