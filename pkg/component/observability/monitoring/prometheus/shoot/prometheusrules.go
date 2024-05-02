@@ -71,16 +71,16 @@ func init() {
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the shoot prometheus.
 func CentralPrometheusRules(isWorkerless, wantsAlertmanager bool) []*monitoringv1.PrometheusRule {
-	out := []*monitoringv1.PrometheusRule{prometheus}
+	out := []*monitoringv1.PrometheusRule{prometheus.DeepCopy()}
 
 	if isWorkerless {
-		out = append(out, workerlessKubePods, workerlessNetworking)
+		out = append(out, workerlessKubePods.DeepCopy(), workerlessNetworking.DeepCopy())
 	} else {
-		out = append(out, workerKubeKubelet, workerKubePods, workerNetworking)
+		out = append(out, workerKubeKubelet.DeepCopy(), workerKubePods.DeepCopy(), workerNetworking.DeepCopy())
 	}
 
 	if wantsAlertmanager {
-		out = append(out, alertManager)
+		out = append(out, alertManager.DeepCopy())
 	}
 
 	return out

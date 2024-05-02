@@ -32,7 +32,7 @@ func init() {
 // CentralPrometheusRules returns the central PrometheusRule resources for the aggregate prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 	return []*monitoringv1.PrometheusRule{
-		meteringStateful,
+		meteringStateful.DeepCopy(),
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed"},
 			Spec: monitoringv1.PrometheusRuleSpec{

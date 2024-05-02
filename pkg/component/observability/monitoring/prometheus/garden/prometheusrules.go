@@ -70,12 +70,12 @@ func init() {
 // CentralPrometheusRules returns the central PrometheusRule resources for the garden prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 	return []*monitoringv1.PrometheusRule{
-		auditLog,
-		etcd,
-		garden,
-		metering,
-		recording,
-		seed,
-		shoot,
+		auditLog.DeepCopy(),
+		etcd.DeepCopy(),
+		garden.DeepCopy(),
+		metering.DeepCopy(),
+		recording.DeepCopy(),
+		seed.DeepCopy(),
+		shoot.DeepCopy(),
 	}
 }

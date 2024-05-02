@@ -41,5 +41,5 @@ func init() {
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the cache prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
-	return []*monitoringv1.PrometheusRule{metering, meteringStateful, recordingRules}
+	return []*monitoringv1.PrometheusRule{metering.DeepCopy(), meteringStateful.DeepCopy(), recordingRules.DeepCopy()}
 }
