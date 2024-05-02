@@ -719,7 +719,7 @@ func (r *Reconciler) newKubeControllerManager(
 		config,
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		true,
-		&kubecontrollermanager.HVPAConfig{Enabled: hvpaEnabled()},
+		false,
 		nil,
 		services,
 		certificateSigningDuration,

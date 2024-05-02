@@ -8,29 +8,17 @@ import (
 	"context"
 	"net"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
 func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interface, error) {
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
-	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto
-	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
-
 	var services, pods *net.IPNet
 	if b.Shoot.Networks != nil {
 		services = b.Shoot.Networks.Services
@@ -48,10 +36,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
 		v1beta1constants.PriorityClassNameShootControlPlane300,
 		b.Shoot.IsWorkerless,
-		&kubecontrollermanager.HVPAConfig{
-			Enabled:             hvpaEnabled,
-			ScaleDownUpdateMode: &scaleDownUpdateMode,
-		},
+		metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled),
 		pods,
 		services,
 		nil,
