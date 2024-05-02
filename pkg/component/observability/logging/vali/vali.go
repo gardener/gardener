@@ -283,66 +283,60 @@ func (v *vali) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
 }
 
 func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	var (
-		vpaUpdateMode      = vpaautoscalingv1.UpdateModeAuto
-		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
-
-		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      valiName + "-vpa",
-				Namespace: v.namespace,
-				Labels:    getLabels(),
+	vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      valiName + "-vpa",
+			Namespace: v.namespace,
+			Labels:    getLabels(),
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				Kind:       "StatefulSet",
+				Name:       valiName,
+				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					Kind:       "StatefulSet",
-					Name:       valiName,
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: valiName,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("200M"),
-							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("800m"),
-								corev1.ResourceMemory: resource.MustParse("3Gi"),
-							},
-							ControlledValues: &controlledValues,
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: valiName,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("200M"),
 						},
-						{
-							ContainerName:    curatorName,
-							Mode:             &containerPolicyOff,
-							ControlledValues: &controlledValues,
+						MaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("800m"),
+							corev1.ResourceMemory: resource.MustParse("3Gi"),
 						},
-						{
-							ContainerName:    initLargeDirName,
-							Mode:             &containerPolicyOff,
-							ControlledValues: &controlledValues,
-						},
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName:    curatorName,
+						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName:    initLargeDirName,
+						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 				},
 			},
-		}
-	)
+		},
+	}
 
 	if v.values.ShootNodeLoggingEnabled {
 		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
 			vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    kubeRBACProxyName,
-				Mode:             &containerPolicyOff,
-				ControlledValues: &controlledValues,
+				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			},
 			vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    telegrafName,
-				Mode:             &containerPolicyOff,
-				ControlledValues: &controlledValues,
+				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			},
 		)
 	}
