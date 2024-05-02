@@ -1171,13 +1171,6 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, garden *operatorv1alpha1.G
 			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "garden-alertmanager",
-			PVCNames: []string{
-				"alertmanager-db-garden-alertmanager-0",
-				"alertmanager-db-garden-alertmanager-1",
-			},
-		},
 	})
 }
 
@@ -1213,6 +1206,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
+		// TODO(rfranzke): Remove this after v1.95 has been released.
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "garden-prometheus",
 			OldSubPath:      ptr.To("/"),
@@ -1259,6 +1253,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 			Image:         imageCortex.String(),
 			CacheValidity: 7 * 24 * time.Hour, // 1 week
 		},
+		// TODO(rfranzke): Remove this after v1.96 has been released.
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "availability-prometheus",
 			OldSubPath:      ptr.To("/"),

@@ -17,7 +17,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -62,10 +61,6 @@ type Values struct {
 	EmailReceivers []string
 	// Ingress contains configuration for exposing this AlertManager instance via an Ingress resource.
 	Ingress *IngressValues
-
-	// DataMigration is a struct for migrating data from existing disks.
-	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
-	DataMigration monitoring.DataMigration
 }
 
 // IngressValues contains configuration for exposing this AlertManager instance via an Ingress resource.
@@ -103,16 +98,7 @@ type alertManager struct {
 }
 
 func (a *alertManager) Deploy(ctx context.Context) error {
-	var (
-		log      = a.log.WithName("alertmanager-deployer").WithValues("name", a.values.Name)
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	)
-
-	// TODO(rfranzke): Remove this migration code after all AlertManagers have been migrated.
-	takeOverExistingPV, pvs, oldPVCs, err := a.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
-	if err != nil {
-		return err
-	}
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	ingress, err := a.ingress(ctx)
 	if err != nil {
@@ -121,7 +107,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		a.service(),
-		a.alertManager(takeOverExistingPV),
+		a.alertManager(),
 		a.vpa(),
 		a.podDisruptionBudget(),
 		a.config(),
@@ -132,28 +118,7 @@ func (a *alertManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if takeOverExistingPV {
-		if err := a.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pvs, oldPVCs); err != nil {
-			return err
-		}
-
-		log.Info("Deploy new AlertManager (with init container for renaming the data directory)")
-	}
-
-	if err := managedresources.CreateForSeedWithLabels(ctx, a.client, a.namespace, a.name(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources); err != nil {
-		return err
-	}
-
-	if takeOverExistingPV {
-		if err := a.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
-			return err
-		}
-
-		log.Info("Deploy new AlertManager again (to remove the migration init container)")
-		return a.Deploy(ctx)
-	}
-
-	return nil
+	return managedresources.CreateForSeedWithLabels(ctx, a.client, a.namespace, a.name(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources)
 }
 
 func (a *alertManager) Destroy(ctx context.Context) error {

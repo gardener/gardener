@@ -7,22 +7,13 @@ package app
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -30,30 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	dwd "github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.Cluster) error {
-	log.Info("Updating shoot Prometheus config for connection to cache Prometheus and seed Alertmanager")
-	if err := updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManager(ctx, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
-	log.Info("Creating new secret and managed resource required by dependency-watchdog")
-	if err := g.createNewDWDResources(ctx, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
-	log.Info("Reconciling labels for PVC migrations")
-	if err := reconcileLabelsForPVCMigrations(ctx, log, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
@@ -61,244 +33,6 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 
 	log.Info("Deleting orphaned vali VPAs which used to be managed by the HVPA controller")
 	return deleteOrphanedValiVPAs(ctx, log, g.mgr.GetClient())
-}
-
-// TODO(aaronfern): Remove this code after v1.93 has been released.
-func (g *garden) createNewDWDResources(ctx context.Context, seedClient client.Client) error {
-	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
-		return err
-	}
-
-	var tasks []flow.TaskFn
-	for _, ns := range namespaceList.Items {
-		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
-			continue
-		}
-		namespace := ns
-		tasks = append(tasks, func(ctx context.Context) error {
-			dwdOldSecret := &corev1.Secret{}
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: dwd.InternalProbeSecretName}, dwdOldSecret); err != nil {
-				// If ns does not contain old DWD secret, do not process.
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			// Fetch GRM deployment
-			grmDeploy := &appsv1.Deployment{}
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: "gardener-resource-manager"}, grmDeploy); err != nil {
-				if apierrors.IsNotFound(err) {
-					// Do not proceed if GRM deployment is not present
-					return nil
-				}
-				return err
-			}
-
-			// Create a DWDAccess object
-			inClusterServerURL := fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, namespace.Name)
-			dwdAccess := dwd.NewAccess(seedClient, namespace.Name, nil, dwd.AccessValues{ServerInCluster: inClusterServerURL})
-
-			if err := dwdAccess.DeployMigrate(ctx); err != nil {
-				return err
-			}
-
-			// Delete old DWD secrets
-			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.InternalProbeSecretName, Namespace: namespace.Name}},
-				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dwd.ExternalProbeSecretName, Namespace: namespace.Name}},
-			); err != nil {
-				return err
-			}
-
-			// Fetch and update the GRM configmap
-			var grmCMName string
-			var grmCMVolumeIndex int
-			for n, vol := range grmDeploy.Spec.Template.Spec.Volumes {
-				if vol.Name == "config" {
-					grmCMName = vol.ConfigMap.Name
-					grmCMVolumeIndex = n
-
-					break
-				}
-			}
-			if len(grmCMName) == 0 {
-				return nil
-			}
-
-			grmConfigMap := &corev1.ConfigMap{}
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: grmCMName}, grmConfigMap); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			cmData := grmConfigMap.Data["config.yaml"]
-			rmConfig := resourcemanagerv1alpha1.ResourceManagerConfiguration{}
-
-			// create codec
-			var codec runtime.Codec
-			configScheme := runtime.NewScheme()
-			utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(configScheme))
-			utilruntime.Must(apiextensionsv1.AddToScheme(configScheme))
-			ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, configScheme, configScheme, json.SerializerOptions{
-				Yaml:   true,
-				Pretty: false,
-				Strict: false,
-			})
-			versions := schema.GroupVersions([]schema.GroupVersion{
-				resourcemanagerv1alpha1.SchemeGroupVersion,
-				apiextensionsv1.SchemeGroupVersion,
-			})
-			codec = serializer.NewCodecFactory(configScheme).CodecForVersions(ser, ser, versions, versions)
-
-			obj, err := runtime.Decode(codec, []byte(cmData))
-			if err != nil {
-				return err
-			}
-			rmConfig = *(obj.(*resourcemanagerv1alpha1.ResourceManagerConfiguration))
-
-			if rmConfig.TargetClientConnection == nil || slices.Contains(rmConfig.TargetClientConnection.Namespaces, corev1.NamespaceNodeLease) {
-				return nil
-			}
-
-			rmConfig.TargetClientConnection.Namespaces = append(rmConfig.TargetClientConnection.Namespaces, corev1.NamespaceNodeLease)
-
-			data, err := runtime.Encode(codec, &rmConfig)
-			if err != nil {
-				return err
-			}
-
-			newGRMConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-dwd", Namespace: namespace.Name}}
-			newGRMConfigMap.Data = map[string]string{"config.yaml": string(data)}
-			utilruntime.Must(kubernetesutils.MakeUnique(newGRMConfigMap))
-
-			if err = seedClient.Create(ctx, newGRMConfigMap); err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return err
-				}
-			}
-
-			patch := client.MergeFrom(grmDeploy.DeepCopy())
-			grmDeploy.Spec.Template.Spec.Volumes[grmCMVolumeIndex].ConfigMap.Name = newGRMConfigMap.Name
-			utilruntime.Must(references.InjectAnnotations(grmDeploy))
-
-			return seedClient.Patch(ctx, grmDeploy, patch)
-		})
-	}
-	return flow.Parallel(tasks...)(ctx)
-}
-
-// TODO(rfranzke): Remove this code after v1.92 has been released.
-func updateShootPrometheusConfigForConnectionToCachePrometheusAndSeedAlertManager(ctx context.Context, seedClient client.Client) error {
-	statefulSetList := &appsv1.StatefulSetList{}
-	if err := seedClient.List(ctx, statefulSetList, client.MatchingLabels{"app": "prometheus", "role": "monitoring", "gardener.cloud/role": "monitoring"}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-	for _, obj := range statefulSetList.Items {
-		if !strings.HasPrefix(obj.Namespace, v1beta1constants.TechnicalIDPrefix) {
-			continue
-		}
-
-		statefulSet := obj.DeepCopy()
-
-		taskFns = append(taskFns,
-			func(ctx context.Context) error {
-				patch := client.MergeFrom(statefulSet.DeepCopy())
-				metav1.SetMetaDataLabel(&statefulSet.Spec.Template.ObjectMeta, "networking.resources.gardener.cloud/to-garden-prometheus-cache-tcp-9090", "allowed")
-				metav1.SetMetaDataLabel(&statefulSet.Spec.Template.ObjectMeta, "networking.resources.gardener.cloud/to-garden-alertmanager-seed-tcp-9093", "allowed")
-				return seedClient.Patch(ctx, statefulSet, patch)
-			},
-			func(ctx context.Context) error {
-				configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: statefulSet.Namespace}}
-				if err := seedClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-					if apierrors.IsNotFound(err) {
-						return nil
-					}
-					return err
-				}
-
-				if configMap.Data == nil || configMap.Data["prometheus.yaml"] == "" {
-					return nil
-				}
-
-				patch := client.MergeFrom(configMap.DeepCopy())
-				configMap.Data["prometheus.yaml"] = strings.ReplaceAll(configMap.Data["prometheus.yaml"], "prometheus-web.garden.svc", "prometheus-cache.garden.svc")
-				return seedClient.Patch(ctx, configMap, patch)
-			},
-		)
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-// TODO(rfranzke): Remove this code after gardener v1.92 has been released.
-func reconcileLabelsForPVCMigrations(ctx context.Context, log logr.Logger, seedClient client.Client) error {
-	var (
-		labelMigrationNamespace = "disk-migration.monitoring.gardener.cloud/namespace"
-		labelMigrationPVCName   = "disk-migration.monitoring.gardener.cloud/pvc-name"
-	)
-
-	persistentVolumeList := &corev1.PersistentVolumeList{}
-	if err := seedClient.List(ctx, persistentVolumeList, client.HasLabels{labelMigrationPVCName}); err != nil {
-		return fmt.Errorf("failed listing persistent volumes with label %s: %w", labelMigrationPVCName, err)
-	}
-
-	var (
-		persistentVolumeNamesWithoutClaimRef []string
-		taskFns                              []flow.TaskFn
-	)
-
-	for _, pv := range persistentVolumeList.Items {
-		persistentVolume := pv
-
-		if persistentVolume.Labels[labelMigrationNamespace] != "" {
-			continue
-		}
-
-		if persistentVolume.Status.Phase == corev1.VolumeReleased && persistentVolume.Spec.ClaimRef != nil {
-			// check if namespace is already gone - if yes, just clean them up
-			if err := seedClient.Get(ctx, client.ObjectKey{Name: persistentVolume.Spec.ClaimRef.Namespace}, &corev1.Namespace{}); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed checking if namespace %s still exists (due to PV %s): %w", persistentVolume.Spec.ClaimRef.Namespace, client.ObjectKeyFromObject(&persistentVolume), err)
-				}
-
-				taskFns = append(taskFns, func(ctx context.Context) error {
-					log.Info("Deleting orphaned persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume))
-					return client.IgnoreNotFound(seedClient.Delete(ctx, &persistentVolume))
-				})
-
-				continue
-			}
-		} else if persistentVolume.Spec.ClaimRef == nil {
-			persistentVolumeNamesWithoutClaimRef = append(persistentVolumeNamesWithoutClaimRef, persistentVolume.Name)
-			continue
-		}
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			log.Info("Adding missing namespace label to persistent volume in migration", "persistentVolume", client.ObjectKeyFromObject(&persistentVolume), "namespace", persistentVolume.Spec.ClaimRef.Namespace)
-			patch := client.MergeFrom(persistentVolume.DeepCopy())
-			metav1.SetMetaDataLabel(&persistentVolume.ObjectMeta, labelMigrationNamespace, persistentVolume.Spec.ClaimRef.Namespace)
-			return seedClient.Patch(ctx, &persistentVolume, patch)
-		})
-	}
-
-	if err := flow.Parallel(taskFns...)(ctx); err != nil {
-		return err
-	}
-
-	if len(persistentVolumeNamesWithoutClaimRef) > 0 {
-		return fmt.Errorf("found persistent volumes with missing namespace in migration label and `.spec.claimRef=nil` - "+
-			"cannot automatically determine the namespace this PV originated from. "+
-			"A human operator needs to manually add the namespace and update the label to %s=<namespace> - "+
-			"The names of such PVs are: %+v", labelMigrationNamespace, persistentVolumeNamesWithoutClaimRef)
-	}
-
-	return nil
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.
