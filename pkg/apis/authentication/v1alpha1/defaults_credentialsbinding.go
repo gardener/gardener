@@ -6,12 +6,8 @@ package v1alpha1
 
 // SetDefaults_CredentialsBinding sets default values for CredentialsBinding objects.
 func SetDefaults_CredentialsBinding(obj *CredentialsBinding) {
-	if obj.Credentials.SecretRef != nil && len(obj.Credentials.SecretRef.Namespace) == 0 {
-		obj.Credentials.SecretRef.Namespace = obj.Namespace
-	}
-
-	if obj.Credentials.WorkloadIdentityRef != nil && len(obj.Credentials.WorkloadIdentityRef.Namespace) == 0 {
-		obj.Credentials.WorkloadIdentityRef.Namespace = obj.Namespace
+	if len(obj.CredentialsRef.Namespace) == 0 {
+		obj.CredentialsRef.Namespace = obj.Namespace
 	}
 
 	for i, quota := range obj.Quotas {

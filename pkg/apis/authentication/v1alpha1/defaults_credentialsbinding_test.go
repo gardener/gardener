@@ -23,10 +23,10 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 					Name:      "credentialsbinding",
 					Namespace: "test",
 				},
-				Credentials: Credentials{
-					SecretRef: &corev1.SecretReference{
-						Name: "secret",
-					},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "",
+					Kind:       "Secret",
+					Name:       "foo",
 				},
 			}
 		})
@@ -34,16 +34,16 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 		It("should default secret namespace", func() {
 			SetObjectDefaults_CredentialsBinding(obj)
 
-			Expect(obj.Credentials.SecretRef.Namespace).NotTo(BeNil())
-			Expect(obj.Credentials.SecretRef.Namespace).To(Equal("test"))
+			Expect(obj.CredentialsRef.Namespace).NotTo(BeEmpty())
+			Expect(obj.CredentialsRef.Namespace).To(Equal("test"))
 		})
 
 		It("should not overwrite already set values for secret namespace", func() {
-			obj.Credentials.SecretRef.Namespace = "other"
+			obj.CredentialsRef.Namespace = "other"
 
 			SetObjectDefaults_CredentialsBinding(obj)
 
-			Expect(obj.Credentials.SecretRef.Namespace).To(Equal("other"))
+			Expect(obj.CredentialsRef.Namespace).To(Equal("other"))
 		})
 
 		It("should default quotas namespace", func() {
@@ -60,12 +60,6 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 			SetObjectDefaults_CredentialsBinding(obj)
 
 			Expect(obj.Quotas[0].Namespace).To(Equal("ns"))
-		})
-
-		It("should not default unset workloadidentity", func() {
-			SetObjectDefaults_CredentialsBinding(obj)
-
-			Expect(obj.Credentials.WorkloadIdentityRef).To(BeNil())
 		})
 	})
 
@@ -76,10 +70,10 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 					Name:      "credentialsbinding",
 					Namespace: "test",
 				},
-				Credentials: Credentials{
-					WorkloadIdentityRef: &WorkloadIdentityReference{
-						Name: "workloadidentity",
-					},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "authentication.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Name:       "bar",
 				},
 			}
 		})
@@ -87,16 +81,16 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 		It("should default workloadidentity namespace", func() {
 			SetObjectDefaults_CredentialsBinding(obj)
 
-			Expect(obj.Credentials.WorkloadIdentityRef.Namespace).NotTo(BeNil())
-			Expect(obj.Credentials.WorkloadIdentityRef.Namespace).To(Equal("test"))
+			Expect(obj.CredentialsRef.Namespace).NotTo(BeEmpty())
+			Expect(obj.CredentialsRef.Namespace).To(Equal("test"))
 		})
 
 		It("should not overwrite already set values for workloadidentity namespace", func() {
-			obj.Credentials.WorkloadIdentityRef.Namespace = "other"
+			obj.CredentialsRef.Namespace = "other"
 
 			SetObjectDefaults_CredentialsBinding(obj)
 
-			Expect(obj.Credentials.WorkloadIdentityRef.Namespace).To(Equal("other"))
+			Expect(obj.CredentialsRef.Namespace).To(Equal("other"))
 		})
 
 		It("should default quotas namespace", func() {
@@ -113,12 +107,6 @@ var _ = Describe("CredentialsBinding defaulting", func() {
 			SetObjectDefaults_CredentialsBinding(obj)
 
 			Expect(obj.Quotas[0].Namespace).To(Equal("ns"))
-		})
-
-		It("should not default unset secret", func() {
-			SetObjectDefaults_CredentialsBinding(obj)
-
-			Expect(obj.Credentials.SecretRef).To(BeNil())
 		})
 	})
 })
