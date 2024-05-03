@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -79,8 +80,11 @@ func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework
 	}))
 
 	By("Update ManagedResources for shoot with working node-critical component")
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, "nginx", false)
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, "nginx", true)
+	// Use a container image that is already cached
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePauseContainer)
+	ExpectWithOffset(1, err).To(Succeed())
+	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
+	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, image.String(), true)
 
 	By("Patch CSINode object to contain required driver")
 	patchCSINodeObjectWithRequiredDriver(ctx, shootClient)

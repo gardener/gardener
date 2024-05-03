@@ -109,12 +109,15 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 		},
 	}
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+	}
 	return shoot
 }
 
 // DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.
 func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
-	return &gardencorev1beta1.Shoot{
+	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name + "-wl",
 		},
@@ -139,6 +142,12 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 				},
 			}},
 	}
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		shoot.Spec.Networking = &gardencorev1beta1.Networking{
+			IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+		}
+	}
+	return shoot
 }
 
 // SetupDNSForMultiZoneTest sets the golang DefaultResolver to the CoreDNS server, which is port forwarded to the host 127.0.0.1:5353.

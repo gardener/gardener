@@ -24,6 +24,11 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   fi
 fi
 
+local_address="127.0.0.1"
+if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
+  local_address="::1"
+fi
+
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
 if [[ "$1" != "operator" ]]; then
   seed_name="local"
@@ -69,11 +74,11 @@ if [[ "$1" != "operator" ]]; then
         # The e2e-upd-zone test uses the in-cluster coredns for name resolution and can therefore resolve the api endpoint.
         continue
       fi
-      printf "\n127.0.0.1 api.%s.external.local.gardener.cloud\n127.0.0.1 api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
+      printf "\n$local_address api.%s.external.local.gardener.cloud\n$local_address api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
     done
-    printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n127.0.0.1 gu-local--e2e-rotate-wl.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address gu-local--e2e-rotate-wl.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address api.e2e-managedseed.garden.external.local.gardener.cloud\n$local_address api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
     missing_entries=()
 
@@ -83,8 +88,8 @@ if [[ "$1" != "operator" ]]; then
         continue
       fi
       for ip in internal external; do
-        if ! grep -q -x "127.0.0.1 api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
-          missing_entries+=("127.0.0.1 api.$shoot.$ip.local.gardener.cloud")
+        if ! grep -q -x "$local_address api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
+          missing_entries+=("$local_address api.$shoot.$ip.local.gardener.cloud")
         fi
       done
     done
@@ -101,14 +106,14 @@ if [[ "$1" != "operator" ]]; then
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 else
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
-    printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n127.0.0.1 plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
   else
-    if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
+    if ! grep -q -x "$local_address api.virtual-garden.local.gardener.cloud" /etc/hosts; then
       printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi
-    if ! grep -q -x "127.0.0.1 plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
+    if ! grep -q -x "$local_address plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
       printf "Hostname for the plutono is missing in /etc/hosts. To access the plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi

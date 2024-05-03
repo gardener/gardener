@@ -7,6 +7,7 @@ package managedseed
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -247,7 +248,7 @@ const (
 )
 
 func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.ManagedSeed, error) {
-	gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
+	gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "GardenletConfiguration",
@@ -277,7 +278,11 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 				},
 			},
 		},
-	})
+	}
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		gardenletConfig.SeedConfig.SeedTemplate.Spec.Networks.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+	}
+	rawGardenletConfig, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +295,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 		Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 			Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot.Name},
 			Gardenlet: &seedmanagementv1alpha1.Gardenlet{
-				Config: *gardenletConfig,
+				Config: *rawGardenletConfig,
 				Deployment: &seedmanagementv1alpha1.GardenletDeployment{
 					ReplicaCount: ptr.To[int32](1), // the default replicaCount is 2, however in this e2e test we don't need 2 replicas
 				},
