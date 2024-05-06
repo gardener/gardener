@@ -616,6 +616,7 @@ var _ = Describe("Etcd", func() {
 
 	BeforeEach(func() {
 		hvpaEnabled = true
+		vpaEnabled = false
 		caRotationPhase = ""
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, testNamespace)
@@ -1116,6 +1117,93 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Deploy(ctx)).To(Succeed())
 		})
 
+		Context("When VPAforETCD is enabled", func() {
+			BeforeEach(func() {
+				vpaEnabled = true
+			})
+			It("should successfully deploy (normal etcd) and not keep the existing resource request settings, because we're not using HVPA here", func() {
+				oldTimeNow := TimeNow
+				defer func() { TimeNow = oldTimeNow }()
+				TimeNow = func() time.Time { return now }
+
+				var (
+					existingResourcesContainerEtcd = corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("2G"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("3"),
+							corev1.ResourceMemory: resource.MustParse("4G"),
+						},
+					}
+					existingResourcesContainerBackupRestore = corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("5"),
+							corev1.ResourceMemory: resource.MustParse("6G"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("7"),
+							corev1.ResourceMemory: resource.MustParse("8G"),
+						},
+					}
+				)
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&appsv1.StatefulSet{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      etcdName,
+								Namespace: testNamespace,
+							},
+							Spec: appsv1.StatefulSetSpec{
+								Template: corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:      "etcd",
+												Resources: existingResourcesContainerEtcd,
+											},
+											{
+												Name:      "backup-restore",
+												Resources: existingResourcesContainerBackupRestore,
+											},
+										},
+									},
+								},
+							},
+						}).DeepCopyInto(obj.(*appsv1.StatefulSet))
+						return nil
+					}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(etcdObjFor(
+							class,
+							1,
+							nil,
+							"",
+							"",
+							nil,
+							nil,
+							secretNameCA,
+							secretNameClient,
+							secretNameServer,
+							nil,
+							nil,
+							false)))
+					}),
+					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(testNamespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj).To(DeepEqual(expectedVPA))
+					}),
+				)
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+		})
+
 		for _, shootPurpose := range []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation, gardencorev1beta1.ShootPurposeProduction} {
 			var purpose = shootPurpose
 			It(fmt.Sprintf("should successfully deploy (important etcd): purpose = %q", purpose), func() {
@@ -1452,6 +1540,8 @@ var _ = Describe("Etcd", func() {
 				secretNamesToTimes := map[string]time.Time{}
 				replicas = ptr.To[int32](0)
 				caRotationPhase = gardencorev1beta1.RotationCompleted
+				hvpaEnabled = false
+				vpaEnabled = true
 
 				var err error
 				sm, err = secretsmanager.New(
@@ -1939,6 +2029,7 @@ var _ = Describe("Etcd", func() {
 		Context("When HVPA is enabled", func() {
 			BeforeEach(func() {
 				hvpaEnabled = true
+				vpaEnabled = false
 			})
 
 			It("should update HVPA with the new replica count if it is enabled", func() {
@@ -1966,6 +2057,25 @@ var _ = Describe("Etcd", func() {
 				test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
 
 				Expect(etcd.Scale(ctx, 3)).To(Succeed())
+			})
+			Context("When VPAforETCD is enabled", func() {
+				BeforeEach(func() {
+					vpaEnabled = true
+				})
+
+				It("should not update HVPA with the new replica count, because we're not using HVPA here", func() {
+					etcdObj.Spec.Replicas = 1
+
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+						func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+							*etcd = *etcdObj
+							return nil
+						},
+					)
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any())
+
+					Expect(etcd.Scale(ctx, 3)).To(Succeed())
+				})
 			})
 		})
 	})
