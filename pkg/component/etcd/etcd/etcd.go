@@ -852,7 +852,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 		return err
 	}
 
-	if e.values.HVPAEnabled {
+	if e.values.HVPAEnabled && !e.values.VPAEnabled { // Skip this when VPA is enabled for etcd: there is no HVPA object anymore
 		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
 		// values consistent with the replica count of the etcd.
 		hvpa := e.emptyHVPA()
@@ -931,7 +931,7 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 		}
 	)
 
-	if existingSts != nil && e.values.HVPAEnabled {
+	if existingSts != nil && e.values.HVPAEnabled && !e.values.VPAEnabled { // Skip this when VPA is enabled for etcd: we're not using HVPA for etcd in this case
 		for k := range existingSts.Spec.Template.Spec.Containers {
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {
