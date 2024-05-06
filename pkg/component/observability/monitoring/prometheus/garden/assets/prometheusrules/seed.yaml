@@ -75,10 +75,12 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: API Server Unavailable
+        summary: >-
+          A seed has a failing APIServerAvailable condition in
+          landscape {{$externalLabels.landscape}}
         description: >
-          The seed cluster: {{$labels.project}}/{{$labels.name}} has the
-          condition APIServerAvailable < 1.
+          The seed cluster: {{$labels.name}} has condition APIServerAvailable
+          in failing/unknown state. The seed API server may have an issue.
 
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
@@ -352,11 +354,13 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed ControlPlane Components Unhealthy
+        summary: >-
+          A seed has a failing ControlPlaneHealthy condition in
+          landscape {{$externalLabels.landscape}}
         description: >
-          The seed cluster: {{$labels.name}} has
-          condition ControlPlaneHealthy == 0 for more than 30 minutes. Some Control Plane
-          components of the seed may have an issue.
+          The seed cluster: {{$labels.name}} has condition ControlPlaneHealthy in
+          failing/unknown state. Some control plane components of the seed may have
+          an issue.
 
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
@@ -385,11 +389,13 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed System Components Unhealthy
+        summary: >-
+          A seed has a failing SystemComponentsHealthy condition in
+          landscape {{$externalLabels.landscape}}
         description: >
-          The seed cluster: {{$labels.name}} has
-          condition SystemComponentsHealthy == 0 for more than 30 minutes. Some
-          components required by the seed may have an issue.
+          The seed cluster: {{$labels.name}} has condition SystemComponentsHealthy
+          in failing/unknown state. Some components required by the seed may have
+          an issue.
 
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
@@ -416,10 +422,13 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed System Components are unhealthy
+        summary: >-
+          A seed has a failing SeedSystemComponentsHealthy condition in
+          landscape {{$externalLabels.landscape}}
         description: >
           The seed cluster: {{$labels.name}} has condition SeedSystemComponentsHealthy
-          in failing/unknown state
+          in failing/unknown state. Some components required by the seed may have
+          an issue.
 
     - alert: SeedNotEveryNodeReady
       expr: |
@@ -432,10 +441,12 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed Every Node Ready is false
+        summary: >-
+          A seed has a failing EveryNodeReady condition in
+          landscape {{$externalLabels.landscape}}
         description: >
-          The seed cluster: {{$labels.name}} has condition EveryNodeReady in state
-          failing / unknown.
+          The seed cluster: {{$labels.name}} has condition EveryNodeReady in
+          failing/unknown state. Some seed nodes may have an issue.
 
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
@@ -464,10 +475,13 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed Observability Components are unhealthy
+        summary: >-
+          A seed has a failing ObservabilityComponentsHealthy condition in
+          landscape {{$externalLabels.landscape}}
         description: >
           The seed cluster: {{$labels.name}} has condition ObservabilityComponentsHealthy
-          in failing/unknown state
+          in failing/unknown state. Some observability components in the seed may have
+          an issue.
 
           {{with printf `ALERTS{alertstate       = 'firing',
                                 project          = '%s',
@@ -494,10 +508,12 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed Backup Buckets Ready is false
+        summary: >-
+          A seed has a failing BackupBucketsReady condition in
+          landscape {{$externalLabels.landscape}}
         description: >
           The seed cluster: {{$labels.name}} has condition BackupBucketsReady in
-          failing/unknown state
+          failing/unknown state. Some seed backup buckets may have an issue.
 
     - alert: SeedExtensionsNotReady
       expr: |
@@ -508,7 +524,9 @@ spec:
         severity: critical
         topology: seed
       annotations:
-        summary: Seed Extensions Ready is false
+        summary: >-
+          A seed has a failing ExtensionsReady condition in
+          landscape {{$externalLabels.landscape}}
         description: >
           The seed cluster: {{$labels.name}} has condition ExtensionsReady in
-          failing/unknown state
+          failing/unknown state. Some seed extensions may have an issue.
