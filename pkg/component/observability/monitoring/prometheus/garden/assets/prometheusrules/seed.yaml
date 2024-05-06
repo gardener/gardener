@@ -330,9 +330,7 @@ spec:
         max_over_time(
           garden_shoot_condition{condition       = "ControlPlaneHealthy",
                                  operation       = "Reconcile",
-                                 is_seed         = "true",
-                                 is_compliant    = "True",
-                                 has_user_errors = "false"}[2m])
+                                 is_seed         = "true"}[2m])
         == 0
       for: 30m
       labels:
@@ -366,9 +364,7 @@ spec:
         max_over_time(
           garden_shoot_condition{condition       = "SystemComponentsHealthy",
                                  operation       = "Reconcile",
-                                 is_seed         = "true",
-                                 is_compliant    = "True",
-                                 has_user_errors = "false"}[2m])
+                                 is_seed         = "true"}[2m])
         == 0
       for: 30m
       labels:
