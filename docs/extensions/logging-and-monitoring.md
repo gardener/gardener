@@ -144,7 +144,7 @@ kind: ServiceMonitor
 metadata:
   labels:
     prometheus: shoot
-  name: shoot-my-component
+  name: shoot-my-controlplane-component
   namespace: shoot--foo--bar
 spec:
   selector:
@@ -194,7 +194,7 @@ spec:
   tlsConfig:
     ca:
       secret:
-        name: ca-bundle-08f7ac5d
+        name: <name-of-ca-bundle-secret>
         key: bundle.crt
 ```
 
@@ -210,25 +210,25 @@ kind: ScrapeConfig
 metadata:
   labels:
     prometheus: shoot
-  name: shoot-my-shoot-component
+  name: shoot-my-cluster-component
   namespace: shoot--foo--bar
 spec:
   authorization:
     credentials:
-      key: token
       name: shoot-access-prometheus-shoot
+      key: token
   scheme: HTTPS
   tlsConfig:
     ca:
       secret:
+        name: <name-of-ca-bundle-secret>
         key: bundle.crt
-        name: ca-bundle-08f7ac5d
   kubernetesSDConfigs:
   - apiServer: https://kube-apiserver
     authorization:
       credentials:
-        key: token
         name: shoot-access-prometheus-shoot
+        key: token
     followRedirects: true
     namespaces:
       names:
@@ -237,8 +237,8 @@ spec:
     tlsConfig:
       ca:
         secret:
+          name: <name-of-ca-bundle-secret>
           key: bundle.crt
-          name: ca-bundle-08f7ac5d
       cert: {}
   metricRelabelings:
   - sourceLabels:
@@ -251,29 +251,31 @@ spec:
     regex: kube-system
   relabelings:
   - action: replace
-    replacement: my-shoot-component
+    replacement: my-cluster-component
     targetLabel: job
-  - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_name]
+  - sourceLabels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_name]
     separator: ;
     regex: my-component-service;metrics
     replacement: $1
     action: keep
-  - source_labels: [__meta_kubernetes_endpoint_node_name]
+  - sourceLabels: [__meta_kubernetes_endpoint_node_name]
     separator: ;
     regex: (.*)
-    target_label: node
+    targetLabel: node
     replacement: $1
     action: replace
-  - source_labels: [__meta_kubernetes_pod_name]
+  - sourceLabels: [__meta_kubernetes_pod_name]
     separator: ;
     regex: (.*)
-    target_label: pod
+    targetLabel: pod
     replacement: $1
     action: replace
-  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+  - targetLabel: __address__
+    replacement: kube-apiserver:443
+  - sourceLabels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
     separator: ;
     regex: (.+);(.+)
-    target_label: __metrics_path__
+    targetLabel: __metrics_path__
     replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
     action: replace
 ```
@@ -318,7 +320,7 @@ data:
 
 > [!CAUTION]
 > The following documentation refers to the previous/legacy method of providing observability configuration.
-> This way is deprecated and will be removed after Gardener v1.00 has been released.
+> This way is deprecated and will be removed after Gardener v1.100 has been released.
 > Consult [this section](#plutono-dashboards) for information about how to provide the dashboards.
 
 Before deploying the shoot-specific Prometheus instance, Gardener will read all `ConfigMap`s in the shoot namespace, which are labeled with `extensions.gardener.cloud/configuration=monitoring`.

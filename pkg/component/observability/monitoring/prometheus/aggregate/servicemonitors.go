@@ -12,6 +12,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 )
 
 // CentralServiceMonitors returns the central ServiceMonitor resources for the aggregate prometheus.
@@ -40,7 +41,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 							`{__name__="kubeproxy_sync_proxy:quantile"}`,
 						},
 					},
-					Port: "web",
+					Port: prometheus.ServicePortName,
 					RelabelConfigs: []*monitoringv1.RelabelConfig{
 						// This service monitor is targeting the prometheis in multiple namespaces. Without explicitly
 						// overriding the job label, prometheus-operator would choose job=prometheus-web (service name).

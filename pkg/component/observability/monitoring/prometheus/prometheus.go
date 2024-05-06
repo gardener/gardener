@@ -156,9 +156,16 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 			return nil, fmt.Errorf("secret %q not found", "etcd-client")
 		}
 
+		const (
+			volumeNameShootCA       = "shoot-ca"
+			volumeNameShootAccess   = "shoot-access"
+			volumeNameEtcdCA        = "ca-etcd"
+			volumeNameEtcdClientTLS = "etcd-client-tls"
+		)
+
 		obj.Spec.Volumes = append(obj.Spec.Volumes,
 			corev1.Volume{
-				Name: "shoot-ca",
+				Name: volumeNameShootCA,
 				VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{{
 					Secret: &corev1.SecretProjection{
 						LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
@@ -172,23 +179,23 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 				}}}},
 			},
 			corev1.Volume{
-				Name:         "shoot-access",
+				Name:         volumeNameShootAccess,
 				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: shootprometheus.AccessSecretName}},
 			},
 			corev1.Volume{
-				Name:         "ca-etcd",
+				Name:         volumeNameEtcdCA,
 				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: etcdCASecret.Name}},
 			},
 			corev1.Volume{
-				Name:         "etcd-client-tls",
+				Name:         volumeNameEtcdClientTLS,
 				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: etcdClientSecret.Name}},
 			},
 		)
 		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts,
-			corev1.VolumeMount{Name: "shoot-ca", MountPath: "/etc/prometheus/seed"},
-			corev1.VolumeMount{Name: "shoot-access", MountPath: "/var/run/secrets/gardener.cloud/shoot/token"},
-			corev1.VolumeMount{Name: "ca-etcd", MountPath: "/srv/kubernetes/etcd/ca"},
-			corev1.VolumeMount{Name: "etcd-client-tls", MountPath: "/srv/kubernetes/etcd/client"},
+			corev1.VolumeMount{Name: volumeNameShootCA, MountPath: "/etc/prometheus/seed"},
+			corev1.VolumeMount{Name: volumeNameShootAccess, MountPath: "/var/run/secrets/gardener.cloud/shoot/token"},
+			corev1.VolumeMount{Name: volumeNameEtcdCA, MountPath: "/srv/kubernetes/etcd/ca"},
+			corev1.VolumeMount{Name: volumeNameEtcdClientTLS, MountPath: "/srv/kubernetes/etcd/client"},
 		)
 	}
 
