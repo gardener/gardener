@@ -66,11 +66,11 @@ spec:
 
     - alert: SeedAPIServerUnavailable
       expr: |
-        garden_shoot_condition{condition = "APIServerAvailable",
-                              operation = "Reconcile",
-                              is_seed   = "true"}
-        < 1
-      for: 2m
+        max_over_time((
+            garden_shoot_condition{condition = "APIServerAvailable",
+                                   operation = "Reconcile",
+                                   is_seed   = "true"} < 1)[2m:])
+      for: 3m
       labels:
         severity: critical
         topology: seed
@@ -327,12 +327,11 @@ spec:
 
     - alert: SeedControlPlaneUnhealthy
       expr: |
-        max_over_time(
-          garden_shoot_condition{condition       = "ControlPlaneHealthy",
-                                 operation       = "Reconcile",
-                                 is_seed         = "true"}[2m])
-        == 0
-      for: 30m
+        max_over_time((
+          garden_shoot_condition{condition = "ControlPlaneHealthy",
+                                 operation = "Reconcile",
+                                 is_seed   = "true"} <= 0)[2m:])
+      for: 10m
       labels:
         severity: critical
         topology: seed
@@ -361,12 +360,11 @@ spec:
 
     - alert: SeedSystemComponentsUnhealthy
       expr: |
-        max_over_time(
-          garden_shoot_condition{condition       = "SystemComponentsHealthy",
-                                 operation       = "Reconcile",
-                                 is_seed         = "true"}[2m])
-        == 0
-      for: 30m
+        max_over_time((
+          garden_shoot_condition{condition = "SystemComponentsHealthy",
+                                 operation = "Reconcile",
+                                 is_seed   = "true"} <= 0)[2m:])
+      for: 10m
       labels:
         severity: critical
         topology: seed
