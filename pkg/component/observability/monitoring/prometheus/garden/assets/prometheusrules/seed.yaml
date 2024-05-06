@@ -379,7 +379,7 @@ spec:
         last_over_time((
           garden_shoot_condition{condition = "SystemComponentsHealthy",
                                  operation = "Reconcile",
-                                 is_seed   = "true"} <= 0)[2m:])
+                                 is_seed   = "true"} <= 0)[5m:])
       for: 10m
       labels:
         severity: critical
@@ -406,3 +406,109 @@ spec:
 
           {{end -}}
           {{end -}}
+
+    - alert: SeedSystemComponentsUnhealthy
+      expr: |
+        last_over_time((
+          garden_seed_condition{condition = "SeedSystemComponentsHealthy"} <= 0)[5m:])
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Seed System Components are unhealthy
+        description: >
+          The seed cluster: {{$labels.name}} has condition SeedSystemComponentsHealthy
+          in failing/unknown state
+
+    - alert: SeedNotEveryNodeReady
+      expr: |
+        last_over_time((
+          garden_shoot_condition{condition = "EveryNodeReady",
+                                 operation = "Reconcile",
+                                 is_seed   = "true"} <= 0)[2m:])
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Seed Every Node Ready is false
+        description: >
+          The seed cluster: {{$labels.name}} has condition EveryNodeReady in state
+          failing / unknown.
+
+          {{with printf `ALERTS{alertstate       = 'firing',
+                                project          = '%s',
+                                shoot_name       = '%s',
+                                severity         =~'critical|blocker',
+                                shoot_alertname != ''}` $labels.project $labels.name
+                 | query
+                 | sortByLabel "shoot_alertname"}}
+          {{if .}}Currently firing alerts:
+
+          {{end -}}
+          {{range . -}}
+          - {{.Labels.shoot_alertname}}
+
+          {{end -}}
+          {{end -}}
+
+    - alert: SeedObservabilityComponentsUnhealthy
+      expr: |
+        last_over_time((
+          garden_shoot_condition{condition = "ObservabilityComponentsHealthy",
+                                 operation = "Reconcile",
+                                 is_seed   = "true"} <= 0)[2m:])
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Seed Observability Components are unhealthy
+        description: >
+          The seed cluster: {{$labels.name}} has condition ObservabilityComponentsHealthy
+          in failing/unknown state
+
+          {{with printf `ALERTS{alertstate       = 'firing',
+                                project          = '%s',
+                                shoot_name       = '%s',
+                                severity         =~'critical|blocker',
+                                shoot_alertname != ''}` $labels.project $labels.name
+                 | query
+                 | sortByLabel "shoot_alertname"}}
+          {{if .}}Currently firing alerts:
+
+          {{end -}}
+          {{range . -}}
+          - {{.Labels.shoot_alertname}}
+
+          {{end -}}
+          {{end -}}
+
+    - alert: SeedBackupBucketsNotReady
+      expr: |
+        last_over_time((
+          garden_seed_condition{condition = "BackupBucketsReady"} <= 0)[2m:])
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Seed Backup Buckets Ready is false
+        description: >
+          The seed cluster: {{$labels.name}} has condition BackupBucketsReady in
+          failing/unknown state
+
+    - alert: SeedExtensionsNotReady
+      expr: |
+        last_over_time((
+          garden_seed_condition{condition = "ExtensionsReady"} <= 0)[2m:])
+      for: 10m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: Seed Extensions Ready is false
+        description: >
+          The seed cluster: {{$labels.name}} has condition ExtensionsReady in
+          failing/unknown state
