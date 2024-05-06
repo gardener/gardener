@@ -73,7 +73,7 @@ spec:
       for: 2m
       labels:
         severity: critical
-        topology: shoot
+        topology: seed
       annotations:
         summary: API Server Unavailable
         description: >
@@ -337,7 +337,7 @@ spec:
       for: 30m
       labels:
         severity: critical
-        topology: garden
+        topology: seed
       annotations:
         summary: Seed ControlPlane Components Unhealthy
         description: >
@@ -373,7 +373,7 @@ spec:
       for: 30m
       labels:
         severity: critical
-        topology: garden
+        topology: seed
         mute_on_weekends: "true"
       annotations:
         summary: Seed System Components Unhealthy
