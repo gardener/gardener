@@ -139,7 +139,7 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(And(BeForbiddenError(), MatchError(ContainSubstring("overlapping networks"))))
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(And(BeForbiddenError(), MatchError(ContainSubstring("overlap with Shoot"))))
 				})
 			})
 		})

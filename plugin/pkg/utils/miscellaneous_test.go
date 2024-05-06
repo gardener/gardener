@@ -229,6 +229,10 @@ var _ = Describe("Miscellaneous", func() {
 			newSeedSpec = oldSeedSpec.DeepCopy()
 
 			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "garden-foo",
+					Name:      "bar",
+				},
 				Spec: gardencorev1beta1.ShootSpec{
 					SeedName: &seedName,
 					Networking: &gardencorev1beta1.Networking{
@@ -258,7 +262,7 @@ var _ = Describe("Miscellaneous", func() {
 		It("should forbid VPN network update if there are overlapping shoots", func() {
 			newSeedSpec.Networks.VPN = ptr.To("10.4.0.0/24")
 
-			Expect(ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("overlapping networks")))
+			Expect(ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(And(ContainSubstring("overlap with Shoot"), ContainSubstring("garden-foo/bar"))))
 		})
 	})
 })

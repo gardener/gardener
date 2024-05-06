@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -106,7 +107,7 @@ func ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec *core.SeedSpe
 	}
 
 	for _, shoot := range shoots {
-		if len(cidrvalidation.ValidateNetworkDisjointedness(
+		if allErrs := cidrvalidation.ValidateNetworkDisjointedness(
 			nil,
 			shoot.Spec.Networking.Nodes,
 			shoot.Spec.Networking.Pods,
@@ -116,8 +117,8 @@ func ValidateSeedNetworksUpdateWithShoots(oldSeedSpec, newSeedSpec *core.SeedSpe
 			newSeedSpec.Networks.Pods,
 			newSeedSpec.Networks.Services,
 			v1beta1helper.IsWorkerless(shoot),
-		)) > 0 {
-			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot update networks of %s %s as there are Shoots with overlapping networks scheduled to this Seed", kind, seedName))
+		); len(allErrs) > 0 {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot update networks of %s %s as they overlap with Shoot %s: %v", kind, seedName, client.ObjectKeyFromObject(shoot), allErrs.ToAggregate()))
 		}
 	}
 
