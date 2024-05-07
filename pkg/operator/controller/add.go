@@ -13,8 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
+	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
@@ -33,8 +37,27 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	}
 
 	if err := (&controllerregistrar.Reconciler{
-		NetworkPolicyControllerConfiguration: cfg.Controllers.NetworkPolicy,
-		VPAEvictionControllerConfiguration:   cfg.Controllers.VPAEvictionRequirements,
+		Controllers: []controllerregistrar.Controller{
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) error {
+				return (&networkpolicy.Reconciler{
+					ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
+					AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+					RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+						// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
+						IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
+						Nodes:      garden.Spec.RuntimeCluster.Networking.Nodes,
+						Pods:       garden.Spec.RuntimeCluster.Networking.Pods,
+						Services:   garden.Spec.RuntimeCluster.Networking.Services,
+						BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
+					},
+				}).AddToManager(ctx, mgr, mgr)
+			}},
+			{AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
+				return (&vpaevictionrequirements.Reconciler{
+					ConcurrentSyncs: cfg.Controllers.VPAEvictionRequirements.ConcurrentSyncs,
+				}).AddToManager(mgr, mgr)
+			}},
+		},
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy Registrar controller: %w", err)
 	}
