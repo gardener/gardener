@@ -240,11 +240,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		port                    int32 = 10257
-		probeURIScheme                = corev1.URISchemeHTTPS
-		command                       = k.computeCommand(port)
-		controlledValues              = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpaEvictionRequirements []*vpaautoscalingv1.EvictionRequirement
+		port              int32 = 10257
+		probeURIScheme          = corev1.URISchemeHTTPS
+		command                 = k.computeCommand(port)
+		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName: containerName,
@@ -259,17 +258,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			}},
 		}
 	)
-
-	if k.values.IsScaleDownDisabled {
-		vpaEvictionRequirements = []*vpaautoscalingv1.EvictionRequirement{
-			{
-				Resources:         []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory},
-				ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-			},
-		}
-	} else {
-		vpaEvictionRequirements = nil
-	}
 
 	resourceRequirements, err := k.computeResourceRequirements(ctx)
 	if err != nil {
@@ -478,10 +466,18 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode:           &vpaUpdateMode,
-			EvictionRequirements: vpaEvictionRequirements,
+			UpdateMode: &vpaUpdateMode,
 		}
 		vpa.Spec.ResourcePolicy = vpaResourcePolicy
+
+		if k.values.IsScaleDownDisabled {
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
+		} else {
+			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(vpa.GetAnnotations(), v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction)
+		}
+
 		return nil
 	}); err != nil {
 		return err

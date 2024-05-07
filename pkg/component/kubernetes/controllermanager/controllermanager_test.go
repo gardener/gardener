@@ -173,17 +173,7 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		vpaFor = func(isScaleDownDisabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
-			var evictionRequirements []*vpaautoscalingv1.EvictionRequirement = nil
-			if isScaleDownDisabled {
-				evictionRequirements = []*vpaautoscalingv1.EvictionRequirement{
-					{
-						Resources:         []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory},
-						ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-					},
-				}
-			}
-
-			return &vpaautoscalingv1.VerticalPodAutoscaler{
+			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
 				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 					TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -192,8 +182,7 @@ var _ = Describe("KubeControllerManager", func() {
 						Name:       v1beta1constants.DeploymentNameKubeControllerManager,
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode:           &vpaUpdateMode,
-						EvictionRequirements: evictionRequirements,
+						UpdateMode: &vpaUpdateMode,
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
@@ -210,6 +199,13 @@ var _ = Describe("KubeControllerManager", func() {
 					},
 				},
 			}
+
+			if isScaleDownDisabled {
+				vpa.Labels = map[string]string{v1beta1constants.LabelVPAEvictionRequirementsController: v1beta1constants.EvictionRequirementManagedByController}
+				vpa.Annotations = map[string]string{v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction: v1beta1constants.EvictionRequirementNever}
+			}
+
+			return vpa
 		}
 
 		service = &corev1.Service{
