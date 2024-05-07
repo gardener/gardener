@@ -901,6 +901,7 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/webhook/authorizer
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:

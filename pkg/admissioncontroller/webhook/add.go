@@ -76,7 +76,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", resourcesize.HandlerName, err)
 	}
 
-	if err := (&seedauthorizer.Handler{
+	if err := (&seedauthorizer.Webhook{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(seedauthorizer.HandlerName),
 	}).AddToManager(ctx, mgr, cfg.Server.EnableDebugHandlers); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedauthorizer.HandlerName, err)
