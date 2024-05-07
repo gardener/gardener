@@ -599,7 +599,10 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
-		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
+		AdditionalResources: []client.Object{
+			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace),
+			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace),
+		},
 	})
 }
 
