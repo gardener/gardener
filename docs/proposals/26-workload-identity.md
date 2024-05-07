@@ -220,25 +220,21 @@ is no longer limited to referring only secrets as its name implies. Therefore, a
 new resource named `CredentialsBinding` in the API group
 `authentication.gardener.cloud` will be implemented. It will have all features
 of `SecretBinding`, but on top of that will be extended to refer to
-`WorkloadIdentity` resources via `.workloadIdentityRef` field.
-`CredentialsBinding` will be allowed to set exactly one of the `.secretRef` or
-`.workloadIdentityRef` fields, but not both or none of them.
+`WorkloadIdentity` resources via `.credentialsRef` field of type
+`ObjectReference`.
 
 In a nutshell, the changes introduced compared to `SecretBinding` are:
 
-- `CredentialsBinding.secretRef` field will be optional and mutable.
-- `CredentialsBinding.workloadIdentityRef` field will be optional and mutable.
-  It will refer to a `WorkloadIdentity` resource by its name and namespace. If
-  the namespace is unset, the namespace of the `CredentialsBinding` will be
-  used.
+- `CredentialsBinding.credentialsRef` field will be mutable. It will refer to a
+  `WorkloadIdentity` or `Secret` resource by its name and namespace. If the
+  namespace is unset, the namespace of the `CredentialsBinding` will be used.
 - `quotas` and `provider` fields have the semantic as their respective
   counterparts in the `SecretBinding` API. `providers` will be made mandatory
   field also via the API specification.
-- Static validation will ensure that exactly one of `secretRef` or
-  `workloadIdentityRef` fields is set, but not both or none of them.
-- On update of the `workloadIdentityRef`, extension admission controller should
-  ensure that both the old and the new `WorkloadIdentity` are for the same cloud
-  provider account, if such validation is possible for the given extension.
+- On update of the `credentialsRef` when `WorkloadIdentity` is the credentials
+  provider, extension admission controller should ensure that both the old and
+  the new `WorkloadIdentity` are for the same cloud provider account, if such
+  validation is possible for the given extension.
 
 ```yaml
 apiVersion: authentication.gardener.cloud/v1alpha1
@@ -248,13 +244,11 @@ metadata:
   namespace: garden-local
 provider:
   type: aws # {aws,azure,gcp,...}
-credentials:
-  secretRef: # unlike SecretBindings, this field will be optional and mutable
-    name: static
-    # namespace: "...", allow reference across namespaces
-  workloadIdentityRef:
-    name: banana-testing
-    # namespace: "...", allow reference across namespaces
+credentialsRef:
+  apiVersion: authentication.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+  kind: WorkloadIdentity # or "Secret", when secret is being used
+  name: my-provider-account
+  # namespace: "...", allow reference across namespaces
 quotas: []
 # - name: quota-1
 # # namespace: garden-quotas
