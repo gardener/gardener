@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed_test
+package authorizer_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -11,7 +11,7 @@ import (
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
+	. "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
 )
 
 var _ = Describe("Attributes", func() {

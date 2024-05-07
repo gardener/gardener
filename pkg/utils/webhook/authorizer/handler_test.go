@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed_test
+package authorizer_test
 
 import (
 	"bytes"
@@ -19,9 +19,9 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
 )
 
 var _ = Describe("Handler", func() {
@@ -43,7 +43,7 @@ var _ = Describe("Handler", func() {
 		It("should write an erroneous response because the request body is empty", func() {
 			req := &http.Request{Body: nil}
 
-			handler.Handle(respRecorder, req)
+			handler.ServeHTTP(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"422 request body is empty"}}
 `))
@@ -55,7 +55,7 @@ var _ = Describe("Handler", func() {
 				Body:   &errReader{},
 			}
 
-			handler.Handle(respRecorder, req)
+			handler.ServeHTTP(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 fake-err"}}
 `))
@@ -67,7 +67,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBuffer(nil)},
 			}
 
-			handler.Handle(respRecorder, req)
+			handler.ServeHTTP(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 contentType=foo, expected application/json"}}
 `))
@@ -79,7 +79,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBufferString("{")},
 			}
 
-			handler.Handle(respRecorder, req)
+			handler.ServeHTTP(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 couldn't get version/kind; json parse error: unexpected end of JSON input"}}
 `))
@@ -95,7 +95,7 @@ var _ = Describe("Handler", func() {
 				}
 
 				handler = &Handler{Logger: log, Authorizer: &fakeAuthorizer{fn: fn}}
-				handler.Handle(respRecorder, req)
+				handler.ServeHTTP(respRecorder, req)
 
 				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{` + expectedStatus + `}}
 `))
@@ -115,7 +115,7 @@ var _ = Describe("Handler", func() {
 				Body:   nopCloser{Reader: bytes.NewBufferString(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1"}`)},
 			}
 
-			handler.Handle(respRecorder, req)
+			handler.ServeHTTP(respRecorder, req)
 
 			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":true}}
 `))
