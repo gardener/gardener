@@ -27,9 +27,10 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Provider", Type: "string", Description: swaggerMetadataDescriptions["provider.type"]},
-			{Name: "Secret", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentials.secretRef"]},
-			{Name: "WorkloadIdentity", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["credentials.workloadIdentityRef"]},
+			{Name: "Provider", Type: "string", Description: "Provide is the provider type of the CredentialsBinding."},
+			{Name: "APIVersion", Type: "string", Format: "name", Description: "APIVersion is the apiVersion of the referenced credentials provider."},
+			{Name: "Kind", Type: "string", Format: "name", Description: "Kind is the kind of the referenced credentials provider."},
+			{Name: "Name", Type: "string", Format: "name", Description: "Name is the namespace and name of the referenced credentials provider."},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -61,17 +62,11 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 
 		cells = append(cells, obj.Name)
 		cells = append(cells, obj.Provider.Type)
-		if obj.Credentials.SecretRef != nil {
-			cells = append(cells, obj.Credentials.SecretRef.Namespace+"/"+obj.Credentials.SecretRef.Name)
-		} else {
-			cells = append(cells, "<none>")
-		}
 
-		if obj.Credentials.WorkloadIdentityRef != nil {
-			cells = append(cells, obj.Credentials.WorkloadIdentityRef.Namespace+"/"+obj.Credentials.WorkloadIdentityRef.Name)
-		} else {
-			cells = append(cells, "<none>")
-		}
+		cells = append(cells, obj.CredentialsRef.APIVersion)
+		cells = append(cells, obj.CredentialsRef.Kind)
+		cells = append(cells, obj.CredentialsRef.Namespace+"/"+obj.CredentialsRef.Name)
+
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
 
 		return cells, nil
