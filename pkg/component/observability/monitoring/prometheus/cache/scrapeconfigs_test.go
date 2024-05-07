@@ -19,6 +19,7 @@ var _ = Describe("PrometheusRules", func() {
 honor_timestamps: false
 honor_labels: false
 scheme: https
+metrics_path: /metrics/cadvisor
 
 tls_config:
   ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -31,12 +32,6 @@ relabel_configs:
   target_label: instance
 - action: labelmap
   regex: __meta_kubernetes_node_label_(.+)
-- target_label: __address__
-  replacement: kubernetes.default.svc
-- source_labels: [__meta_kubernetes_node_name]
-  regex: (.+)
-  target_label: __metrics_path__
-  replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
 - target_label: type
   replacement: seed
 
@@ -97,12 +92,6 @@ relabel_configs:
   target_label: instance
 - action: labelmap
   regex: __meta_kubernetes_node_label_(.+)
-- target_label: __address__
-  replacement: kubernetes.default.svc
-- source_labels: [__meta_kubernetes_node_name]
-  regex: (.+)
-  target_label: __metrics_path__
-  replacement: /api/v1/nodes/${1}/proxy/metrics
 - target_label: type
   replacement: seed
 
