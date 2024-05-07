@@ -30,11 +30,11 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				Provider: authentication.CredentialsBindingProvider{
 					Type: "foo",
 				},
-				Credentials: authentication.Credentials{
-					SecretRef: &corev1.SecretReference{
-						Name:      "my-secret",
-						Namespace: "my-namespace",
-					},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       "my-secret",
+					Namespace:  "my-namespace",
 				},
 			}
 		})
@@ -46,11 +46,11 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 		})
 
 		It("[WorkloadIdentity] should not return any errors", func() {
-			credentialsBinding.Credentials = authentication.Credentials{
-				WorkloadIdentityRef: &authentication.WorkloadIdentityReference{
-					Name:      "my-workloadidentity",
-					Namespace: "my-namespace",
-				},
+			credentialsBinding.CredentialsRef = corev1.ObjectReference{
+				APIVersion: "authentication.gardener.cloud/v1alpha1",
+				Kind:       "WorkloadIdentity",
+				Name:       "my-workloadidentity",
+				Namespace:  "my-namespace",
 			}
 			errorList := ValidateCredentialsBinding(credentialsBinding)
 
@@ -99,9 +99,9 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 			),
 		)
 
-		It("[Secret] should forbid empty CredentialsBinding resources", func() {
+		It("should forbid empty CredentialsBinding resources", func() {
 			credentialsBinding.ObjectMeta = metav1.ObjectMeta{}
-			credentialsBinding.Credentials.SecretRef = &corev1.SecretReference{}
+			credentialsBinding.CredentialsRef = corev1.ObjectReference{}
 			credentialsBinding.Provider = authentication.CredentialsBindingProvider{}
 
 			errorList := ValidateCredentialsBinding(credentialsBinding)
@@ -116,7 +116,31 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("credentials.secretRef.name"),
+					"Field": Equal("credentialsRef.apiVersion"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.kind"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("credentialsRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("credentialsRef.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -125,59 +149,87 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 			))
 		})
 
-		It("[WorkloadIdentity] should forbid empty CredentialsBinding resources", func() {
-			credentialsBinding.ObjectMeta = metav1.ObjectMeta{}
-			credentialsBinding.Credentials.SecretRef = nil
-			credentialsBinding.Credentials.WorkloadIdentityRef = &authentication.WorkloadIdentityReference{}
-			credentialsBinding.Provider = authentication.CredentialsBindingProvider{}
-
-			errorList := ValidateCredentialsBinding(credentialsBinding)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("metadata.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("metadata.namespace"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("credentials.workloadIdentityRef.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("provider.type"),
-				})),
-			))
-		})
-
-		It("Should forbid CredentialBinding with no credential provider", func() {
-			credentialsBinding.Credentials.SecretRef = nil
-			errList := ValidateCredentialsBinding(credentialsBinding)
-			Expect(errList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("credentials"),
-					"Detail": Equal("must specify credentials provider"),
-				})),
-			))
-		})
-
-		It("Should forbid CredentialBinding with multiple credential provider", func() {
-			credentialsBinding.Credentials.WorkloadIdentityRef = &authentication.WorkloadIdentityReference{
-				Name:      "my-workloadidentity",
-				Namespace: "my-namespace",
-			}
-			errList := ValidateCredentialsBinding(credentialsBinding)
-			Expect(errList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("credentials"),
-					"Detail": Equal("must specify exactly one credentials provider"),
-				})),
-			))
-		})
+		DescribeTable("CredentialsRef",
+			func(ref corev1.ObjectReference, matcher gomegatypes.GomegaMatcher) {
+				credentialsBinding.CredentialsRef = ref
+				errList := ValidateCredentialsBinding(credentialsBinding)
+				Expect(errList).To(matcher)
+			},
+			Entry("should allow v1.Secret",
+				corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"},
+				BeEmpty(),
+			),
+			Entry("should allow authentication.gardener.cloud/v1alpha1.WorkloadIdentity",
+				corev1.ObjectReference{APIVersion: "authentication.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+				BeEmpty(),
+			),
+			Entry("should forbid v1.Secret with non DNS1123 name",
+				corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo", Namespace: "bar"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("credentialsRef.name"),
+					})),
+				),
+			),
+			Entry("should forbid authentication.gardener.cloud/v1alpha1.WorkloadIdentity with non DNS1123 namespace",
+				corev1.ObjectReference{APIVersion: "authentication.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar?"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("credentialsRef.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid credentialsRef with empty apiVersion, kind, name, or namespace",
+				corev1.ObjectReference{APIVersion: "", Kind: "", Name: "", Namespace: ""},
+				ContainElements(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("credentialsRef.apiVersion"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("credentialsRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("credentialsRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("credentialsRef.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid v1.ConfigMap",
+				corev1.ObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo", Namespace: "bar"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("credentialsRef"),
+					})),
+				),
+			),
+			Entry("should forbid authentication.gardener.cloud/v1alpha1.FooBar",
+				corev1.ObjectReference{APIVersion: "authentication.gardener.cloud/v1alpha1", Kind: "FooBar", Name: "foo", Namespace: "bar"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("credentialsRef"),
+					})),
+				),
+			),
+			Entry("should forbid authentication.gardener.cloud/v2alpha1.WorkloadIdentity",
+				corev1.ObjectReference{APIVersion: "authentication.gardener.cloud/v2alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("credentialsRef"),
+					})),
+				),
+			),
+		)
 
 		It("should forbid empty stated Quota names", func() {
 			credentialsBinding.Quotas = []corev1.ObjectReference{
@@ -207,11 +259,11 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 				Provider: authentication.CredentialsBindingProvider{
 					Type: "foo",
 				},
-				Credentials: authentication.Credentials{
-					SecretRef: &corev1.SecretReference{
-						Name:      "my-secret",
-						Namespace: "my-namespace",
-					},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "authentication.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Name:       "my-workloadidentity",
+					Namespace:  "my-namespace",
 				},
 			}
 		})

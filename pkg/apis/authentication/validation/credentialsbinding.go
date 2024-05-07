@@ -9,9 +9,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/authentication"
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
@@ -20,7 +23,7 @@ func ValidateCredentialsBinding(binding *authentication.CredentialsBinding) fiel
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateCredentials(binding.Credentials, field.NewPath("credentials"))...)
+	allErrs = append(allErrs, validateCredentials(binding.CredentialsRef, field.NewPath("credentialsRef"))...)
 	allErrs = append(allErrs, ValidateCredentialsBindingProvider(binding.Provider, field.NewPath("provider"))...)
 	for i, quota := range binding.Quotas {
 		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
@@ -67,33 +70,44 @@ func validateObjectReferenceOptionalNamespace(ref corev1.ObjectReference, fldPat
 	return allErrs
 }
 
-func validateCredentials(ref authentication.Credentials, fldPath *field.Path) field.ErrorList {
-	if ref.SecretRef == nil && ref.WorkloadIdentityRef == nil {
-		return field.ErrorList{field.Forbidden(fldPath, "must specify credentials provider")}
-	}
-
-	if ref.SecretRef != nil && ref.WorkloadIdentityRef != nil {
-		return field.ErrorList{field.Forbidden(fldPath, "must specify exactly one credentials provider")}
-	}
-
-	if ref.SecretRef != nil {
-		return validateSecretRef(ref.SecretRef, fldPath.Child("secretRef"))
-	}
-	return validateWorkloadIdentityRef(ref.WorkloadIdentityRef, fldPath.Child("workloadIdentityRef"))
-}
-
-func validateSecretRef(ref *corev1.SecretReference, fldPath *field.Path) field.ErrorList {
+func validateCredentials(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if len(ref.APIVersion) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
+	}
+
+	if len(ref.Kind) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
+	}
+
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
 	}
-	return allErrs
-}
 
-func validateWorkloadIdentityRef(ref *authentication.WorkloadIdentityReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	for _, err := range validation.IsDNS1123Subdomain(ref.Name) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), ref.Name, err))
 	}
+
+	if len(ref.Namespace) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	}
+
+	for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
+	}
+
+	var (
+		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
+		workloadIdentity = authenticationv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
+
+		allowedGVKs = sets.New(secret, workloadIdentity)
+		validGVKs   = []string{secret.String(), workloadIdentity.String()}
+	)
+
+	if !allowedGVKs.Has(ref.GroupVersionKind()) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
+	}
+
 	return allErrs
 }
