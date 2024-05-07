@@ -94,7 +94,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - For any removed controllers, add them only to the Kubernetes version if it is low enough.
 - Maintain the names of controllers used for workerless Shoots, [here](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubecontrollermanager/kube_controller_manager.go#L683C27-L709) after carefully evaluating whether they are needed if there are no workers.
 - Maintain copies of the `DaemonSet` controller's scheduling logic:
-  - `gardener-resource-manager`'s [`Node` controller](../concepts/resource-manager.md#node-controllerpkgresourcemanagercontrollernode) uses a copy of parts of the `DaemonSet` controller's logic for determining whether a specific `Node` should run a daemon pod of a given `DaemonSet`: see [this file](../../pkg/resourcemanager/controller/node/helper/daemon_controller.go).
+  - `gardener-resource-manager`'s [`Node` controller](../concepts/resource-manager.md#node-controllerpkgresourcemanagercontrollernode) uses a copy of parts of the `DaemonSet` controller's logic for determining whether a specific `Node` should run a daemon pod of a given `DaemonSet`: see [this file](../../pkg/resourcemanager/controller/node/criticalcomponents/helper/daemon_controller.go).
   - Check the referenced upstream files for changes to the `DaemonSet` controller's logic and adapt our copies accordingly. This might include introducing version-specific checks in our codebase to handle different shoot cluster versions.
 - Maintain version specific defaulting logic in shoot admission plugin:
   - Sometimes default values for shoots are intentionally changed with the introduction of a new Kubernetes version.
