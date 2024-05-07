@@ -19,6 +19,7 @@ DEFAULT_MANIFESTS_DIRS=(
   "pkg"
   "plugin"
   "test"
+  "third_party"
 )
 
 parse_flags() {

@@ -79,6 +79,20 @@ func (mr *MockManagerMockRecorder) AddHealthzCheck(arg0, arg1 any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddHealthzCheck", reflect.TypeOf((*MockManager)(nil).AddHealthzCheck), arg0, arg1)
 }
 
+// AddMetricsServerExtraHandler mocks base method.
+func (m *MockManager) AddMetricsServerExtraHandler(arg0 string, arg1 http.Handler) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddMetricsServerExtraHandler", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddMetricsServerExtraHandler indicates an expected call of AddMetricsServerExtraHandler.
+func (mr *MockManagerMockRecorder) AddMetricsServerExtraHandler(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMetricsServerExtraHandler", reflect.TypeOf((*MockManager)(nil).AddMetricsServerExtraHandler), arg0, arg1)
+}
+
 // AddReadyzCheck mocks base method.
 func (m *MockManager) AddReadyzCheck(arg0 string, arg1 healthz.Checker) error {
 	m.ctrl.T.Helper()

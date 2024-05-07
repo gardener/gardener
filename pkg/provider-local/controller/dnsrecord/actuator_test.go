@@ -26,7 +26,6 @@ import (
 )
 
 var _ = Describe("Actuator", func() {
-
 	Describe("DNS Rewriting", func() {
 		var (
 			actuator dnsrecord.Actuator
