@@ -515,8 +515,8 @@ rules:
 - apiGroups:
   - bar
   resources:
-  - foo
   - baz
+  - foo
   verbs:
   - get
   - list

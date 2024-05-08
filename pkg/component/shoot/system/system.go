@@ -439,6 +439,9 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 
 			apiGroupToReadableResourcesNames[apiGroup] = append(apiGroupToReadableResourcesNames[apiGroup], resource.Name)
 		}
+
+		// Sort keys to get a stable order of the RBAC rules when iterating.
+		slices.Sort(apiGroupToReadableResourcesNames[apiGroup])
 	}
 
 	// Sort keys to get a stable order of the RBAC rules when iterating.
