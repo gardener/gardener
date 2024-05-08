@@ -4,7 +4,6 @@ scheme: https
 
 tls_config:
   ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-  insecure_skip_verify: true # tls: failed to verify certificate: x509: cannot validate certificate for 172.18.0.2 because it doesn't contain any IP SANs. To fix this:
 bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
 
 kubernetes_sd_configs:
