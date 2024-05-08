@@ -368,7 +368,6 @@ spec:
       labels:
         severity: critical
         topology: seed
-        mute_on_weekends: "true"
       annotations:
         summary: Seed System Components Unhealthy
         description: >
