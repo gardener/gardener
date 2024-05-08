@@ -175,6 +175,7 @@ func (v *vpa) reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBinding 
 func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration) {
 	var (
 		failurePolicy      = admissionregistrationv1.Ignore
+		namespaceSelector  *metav1.LabelSelector
 		matchPolicy        = admissionregistrationv1.Exact
 		reinvocationPolicy = admissionregistrationv1.IfNeededReinvocationPolicy
 		sideEffects        = admissionregistrationv1.SideEffectClassNone
@@ -205,12 +206,24 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 			"intentionally starts with 'zzz', such that it is called after all other webhooks which inject "+
 			"containers. All containers injected by webhooks that are called _after_ the vpa webhook will not be "+
 			"under control of vpa.")
+
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		namespaceSelector = &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{Key: "name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+			},
+		}
+	} else {
+		namespaceSelector = nil
+	}
+
 	mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 		Name:                    "vpa.k8s.io",
 		AdmissionReviewVersions: []string{"v1"},
 		ClientConfig:            clientConfig,
 		FailurePolicy:           &failurePolicy,
 		MatchPolicy:             &matchPolicy,
+		NamespaceSelector:       namespaceSelector,
 		ReinvocationPolicy:      &reinvocationPolicy,
 		SideEffects:             &sideEffects,
 		TimeoutSeconds:          ptr.To[int32](10),
