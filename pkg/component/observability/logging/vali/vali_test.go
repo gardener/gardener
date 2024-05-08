@@ -970,7 +970,9 @@ func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName + "-vpa",
 			Namespace: namespace,
-			Labels:    getLabels(),
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: valiName,
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{

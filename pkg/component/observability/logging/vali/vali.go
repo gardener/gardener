@@ -160,8 +160,6 @@ func (v *vali) Deploy(ctx context.Context) error {
 		}
 	}
 
-	resources = append(resources, v.getVPA())
-
 	var (
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
@@ -239,6 +237,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 	resources = append(resources,
 		valiConfigMap,
 		v.getService(),
+		v.getVPA(),
 		v.getStatefulSet(valiConfigMap.Name, telegrafConfigMapName, genericTokenKubeconfigSecretName),
 	)
 
@@ -287,7 +286,9 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName + "-vpa",
 			Namespace: v.namespace,
-			Labels:    getLabels(),
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.LabelObservabilityApplication: valiName,
+			}),
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
