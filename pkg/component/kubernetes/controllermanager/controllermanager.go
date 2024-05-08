@@ -240,23 +240,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		port              int32 = 10257
-		probeURIScheme          = corev1.URISchemeHTTPS
-		command                 = k.computeCommand(port)
-		controlledValues        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-				ContainerName: containerName,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("4"),
-					corev1.ResourceMemory: resource.MustParse("10G"),
-				},
-				ControlledValues: &controlledValues,
-			}},
-		}
+		port           int32 = 10257
+		probeURIScheme       = corev1.URISchemeHTTPS
+		command              = k.computeCommand(port)
 	)
 
 	resourceRequirements, err := k.computeResourceRequirements(ctx)
@@ -453,11 +439,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(andrerun): Remove this after v1.97 has been released.
 	if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), k.emptyHVPA()); err != nil {
 		return err
 	}
-
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
@@ -466,9 +451,21 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 		}
-		vpa.Spec.ResourcePolicy = vpaResourcePolicy
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName: containerName,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
+				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("4"),
+					corev1.ResourceMemory: resource.MustParse("10G"),
+				},
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			}},
+		}
 
 		if k.values.IsScaleDownDisabled {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
