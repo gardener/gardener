@@ -41,14 +41,17 @@ func OperatingSystemConfigSecret(
 	*corev1.Secret,
 	error,
 ) {
+	// This OperatingSystemConfig object should only contain the data relevant for gardener-node-agent reconciliation to
+	// prevent undesired changes of the computed checksum of this object.
 	operatingSystemConfig := &extensionsv1alpha1.OperatingSystemConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        osc.Name,
-			Labels:      osc.Labels,
-			Annotations: osc.Annotations,
+		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+			Units: osc.Spec.Units,
+			Files: osc.Spec.Files,
 		},
-		Spec:   osc.Spec,
-		Status: osc.Status,
+		Status: extensionsv1alpha1.OperatingSystemConfigStatus{
+			ExtensionUnits: osc.Status.ExtensionUnits,
+			ExtensionFiles: osc.Status.ExtensionFiles,
+		},
 	}
 
 	// The OperatingSystemConfig will be deployed to the shoot to get processed by gardener-node-agent. It doesn't
