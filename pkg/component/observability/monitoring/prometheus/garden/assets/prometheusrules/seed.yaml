@@ -80,6 +80,22 @@ spec:
           The seed cluster: {{$labels.project}}/{{$labels.name}} has the
           condition APIServerAvailable < 1.
 
+          {{with printf `ALERTS{alertstate       = 'firing',
+                                project          = '%s',
+                                shoot_name       = '%s',
+                                severity         =~'critical|blocker',
+                                shoot_alertname != ''}` $labels.project $labels.name
+                 | query
+                 | sortByLabel "shoot_alertname"}}
+          {{if .}}Currently firing alerts:
+
+          {{end -}}
+          {{range . -}}
+          - {{.Labels.shoot_alertname}}
+
+          {{end -}}
+          {{end -}}
+
     - alert: ApproachingSeedCapacity
       expr: |
         # number of shoots
