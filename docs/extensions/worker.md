@@ -80,7 +80,9 @@ spec:
       worker.gardener.cloud/cri-name: containerd
       worker.gardener.cloud/pool: cpu-worker
       worker.gardener.cloud/system-components: "true"
-    userData: c29tZSBkYXRhIHRvIGJvb3RzdHJhcCB0aGUgVk0K
+    userDataSecretRef:
+      name: user-data-secret
+      key: cloud_config
     volume:
       size: 20Gi
       type: gp2
@@ -273,7 +275,7 @@ The `MachineDeployment`'s machine class reference (`.spec.template.spec.class.na
 However, all of this is only a convention that eases writing the controller, but you can do it completely differently if you desire - as long as you make sure that the described behaviours are implemented correctly.
 
 After the machine classes and machine deployments have been created, the machine-controller-manager will start talking to the provider's IaaS API and create the virtual machines.
-Gardener makes sure that the content of the `userData` field that is used to bootstrap the machines contains the required configuration for installation of the kubelet and registering the VM as worker node in the shoot cluster.
+Gardener makes sure that the content of the `Secret` referenced in the `userDataSecretRef` field that is used to bootstrap the machines contains the required configuration for installation of the kubelet and registering the VM as worker node in the shoot cluster.
 The `Worker` extension controller shall wait until all the created `MachineDeployment`s indicate healthiness/readiness before it ends the control loop.
 
 ## Does Gardener need some information that must be returned back?
