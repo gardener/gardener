@@ -58,8 +58,14 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	}
 
 	// This will return FieldValueRequired for an empty spec.Name
-	// allow leading '_' as used for DNS challenges (e.g. Let's Encrypt)
-	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), strings.TrimPrefix(strings.TrimPrefix(spec.Name, "_"), "*."))...)
+	var nameToCheck string
+	if spec.RecordType == extensionsv1alpha1.DNSRecordTypeTXT {
+		// allow leading '_' as used for DNS challenges (e.g. Let's Encrypt)
+		nameToCheck = strings.TrimPrefix(spec.Name, "_")
+	} else {
+		nameToCheck = strings.TrimPrefix(spec.Name, "*.")
+	}
+	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), nameToCheck)...)
 
 	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeAAAA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
 	if !slices.Contains(validRecordTypes, string(spec.RecordType)) {
