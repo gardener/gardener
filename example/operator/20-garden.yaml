@@ -223,7 +223,7 @@ spec:
     #   assetsConfigMapRef:
     #     name: gardener-dashboard-assets
     #   gitHub:
-    #     apiURL: https://github.com/api/v3/
+    #     apiURL: https://api.github.com
     #     organisation: kubernetes-dev
     #     repository: issues-dev
     #     secretRef:
