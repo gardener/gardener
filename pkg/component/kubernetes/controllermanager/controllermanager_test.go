@@ -115,12 +115,13 @@ var _ = Describe("KubeControllerManager", func() {
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
-		hvpaName                         = "kube-controller-manager"
-		pdbName                          = "kube-controller-manager"
-		secretName                       = "shoot-access-kube-controller-manager"
-		serviceName                      = "kube-controller-manager"
-		managedResourceName              = "shoot-core-kube-controller-manager"
-		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
+		// TODO(andrerun): Remove this after v1.97 has been released.
+		hvpaName                  = "kube-controller-manager"
+		pdbName                   = "kube-controller-manager"
+		secretName                = "shoot-access-kube-controller-manager"
+		serviceName               = "kube-controller-manager"
+		managedResourceName       = "shoot-core-kube-controller-manager"
+		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -618,7 +619,7 @@ namespace: kube-system
 
 			Entry("w/o config k8s >=1.26", emptyConfig, false, runtimeKubernetesVersion),
 			Entry("w/o config k8s < 1.26", emptyConfig, false, semver.MustParse("1.25.0")),
-			Entry("with HVPA and custom scale-down update mode", emptyConfig, true, runtimeKubernetesVersion),
+			Entry("with scale-down disabled", emptyConfig, true, runtimeKubernetesVersion),
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, runtimeKubernetesVersion),
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, runtimeKubernetesVersion),
@@ -655,7 +656,7 @@ namespace: kube-system
 			},
 
 			Entry("w/o config", emptyConfig, false, controllerWorkers),
-			Entry("with HVPA and custom scale-down update mode", emptyConfig, true, controllerWorkers),
+			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers),
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers),
 			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers),

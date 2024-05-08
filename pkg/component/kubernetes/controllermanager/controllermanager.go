@@ -766,6 +766,9 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 	return horizontalPodAutoscalerConfig
 }
 
+// TODO(andrerun): Remove this after v1.97 has been released.
+// After the transitory period, we'll no longer need the reconciliation carrying-over the request value.
+// At that time, just set the fixed static request value (100m/128Mi, see below).
 func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context) (corev1.ResourceRequirements, error) {
 	defaultResources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
