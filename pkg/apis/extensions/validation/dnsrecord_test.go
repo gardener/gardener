@@ -201,6 +201,14 @@ var _ = Describe("DNSRecord validation tests", func() {
 
 			Expect(errorList).To(BeEmpty())
 		})
+
+		It("should allow domain names starting with '_' as used for DNS challenges", func() {
+			dns.Spec.Name = "_acme-challenge.test.example.com"
+			dns.Spec.RecordType = extensionsv1alpha1.DNSRecordTypeTXT
+			errorList := ValidateDNSRecord(dns)
+
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 
 	Describe("#ValidateDNSRecordUpdate", func() {
