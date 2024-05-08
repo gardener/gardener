@@ -5,6 +5,7 @@
 package worker_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -322,4 +325,80 @@ var _ = Describe("Machines", func() {
 		Entry("4-digit size", "2000Gi", 2000, BeNil()),
 		Entry("non-parseable size", "foo", -1, HaveOccurred()),
 	)
+
+	Describe("#FetchUserData", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+
+			namespace = "some-namespace"
+			pool      extensionsv1alpha1.WorkerPool
+			userData  = []byte("some-user-data")
+		)
+
+		BeforeEach(func() {
+			pool = extensionsv1alpha1.WorkerPool{Name: "pool"}
+			fakeClient = fakeclient.NewClientBuilder().Build()
+		})
+
+		When("user data secret reference is used", func() {
+			var (
+				secretName = "some-secret-name"
+				key        = "the-key"
+				secret     *corev1.Secret
+			)
+
+			BeforeEach(func() {
+				pool.UserDataSecretRef = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+					Key:                  key,
+				}
+				secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+			})
+
+			It("should fail because the referenced secret is not found", func() {
+				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+				Expect(err).To(MatchError(ContainSubstring("failed fetching user data secret")))
+				Expect(result).To(BeNil())
+			})
+
+			It("should fail because the referenced secret does not contain key", func() {
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+				Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
+				Expect(result).To(BeNil())
+			})
+
+			It("should fail because the referenced secret's key is empty", func() {
+				secret.Data = map[string][]byte{key: nil}
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+				Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
+				Expect(result).To(BeNil())
+			})
+
+			It("should return the user data because the referenced secret's key is set", func() {
+				secret.Data = map[string][]byte{key: userData}
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(userData))
+			})
+		})
+
+		When("user data is inlined", func() {
+			BeforeEach(func() {
+				pool.UserData = userData
+			})
+
+			It("should return the inlined user data", func() {
+				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(userData))
+			})
+		})
+	})
 })
