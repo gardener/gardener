@@ -19,9 +19,8 @@ import (
 )
 
 const (
-	clusterRoleControlName = "system:cluster-autoscaler-seed"
-	// ManagedResourceControlName is the name of the of the cluster-autoscaler managed resource.
-	ManagedResourceControlName = "cluster-autoscaler"
+	clusterRoleControlName     = "system:cluster-autoscaler-seed"
+	managedResourceControlName = "cluster-autoscaler"
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the cluster-autoscaler bootstrapper.
@@ -65,11 +64,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, b.client, b.namespace, ManagedResourceControlName, false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, ManagedResourceControlName)
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -80,12 +79,12 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, ManagedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, ManagedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }

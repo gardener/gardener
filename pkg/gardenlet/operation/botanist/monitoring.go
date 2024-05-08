@@ -324,10 +324,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 			b.Shoot.Components.ControlPlane.MachineControllerManager,
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
 		)
-
-		if b.Shoot.WantsClusterAutoscaler {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
-		}
 	}
 
 	return monitoringComponents
