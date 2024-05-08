@@ -59,7 +59,7 @@ message CredentialsBinding {
   // This field is immutable.
   optional CredentialsBindingProvider provider = 2;
 
-  // Credentials specify reference to a resource holding the credentials.
+  // CredentialsRef is a reference to a resource holding the credentials.
   // Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity
   optional k8s.io.api.core.v1.ObjectReference credentialsRef = 3;
 

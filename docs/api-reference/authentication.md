@@ -82,7 +82,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>Credentials specify reference to a resource holding the credentials.
+<p>CredentialsRef is a reference to a resource holding the credentials.
 Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>

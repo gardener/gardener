@@ -711,7 +711,7 @@ func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.Refer
 					},
 					"credentialsRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Credentials specify reference to a resource holding the credentials. Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity",
+							Description: "CredentialsRef is a reference to a resource holding the credentials. Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

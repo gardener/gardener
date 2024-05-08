@@ -21,7 +21,7 @@ type CredentialsBinding struct {
 	// Provider defines the provider type of the CredentialsBinding.
 	// This field is immutable.
 	Provider CredentialsBindingProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
-	// Credentials specify reference to a resource holding the credentials.
+	// CredentialsRef is a reference to a resource holding the credentials.
 	// Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity
 	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,3,name=credentialsRef"`
 	// Quotas is a list of references to Quota objects in the same or another namespace.
