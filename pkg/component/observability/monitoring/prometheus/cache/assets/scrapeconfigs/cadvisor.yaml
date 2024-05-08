@@ -11,15 +11,6 @@ bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
 kubernetes_sd_configs:
 - role: node
 relabel_configs:
-# replace the IP in the __address__ label with the value of __meta_kubernetes_node_address_Hostname
-# to mitigate the issue with the kubelet not having IP SANs in the local setup
-# this means that Prometheus will use DNS to resolve the IP of the node
-- source_labels:
-  - __address__
-  - __meta_kubernetes_node_address_Hostname
-  target_label: __address__
-  regex: .+:(.+);(.+)
-  replacement: ${2}:${1}
 - source_labels: [__meta_kubernetes_node_address_InternalIP]
   target_label: instance
 - action: labelmap
