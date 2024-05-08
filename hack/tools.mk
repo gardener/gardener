@@ -50,7 +50,7 @@ VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.58.0
+GOLANGCI_LINT_VERSION ?= v1.58.1
 # renovate: datasource=github-releases depName=joelanford/go-apidiff
 GO_APIDIFF_VERSION ?= v0.8.2
 # renovate: datasource=github-releases depName=google/addlicense
