@@ -166,9 +166,20 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		var userData []byte
+		// TODO(rfranzke): Remove this after v1.100 has been released.
+		var (
+			userData          []byte
+			userDataSecretRef *corev1.SecretKeySelector
+		)
 		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
 			userData = []byte(val.Init.Content)
+
+			if val.Init.SecretName != nil {
+				userDataSecretRef = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: *val.Init.SecretName},
+					Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
+				}
+			}
 		}
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
@@ -227,9 +238,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			NodeTemplate:                     nodeTemplate,
-			ProviderConfig:                   pConfig,
+			NodeTemplate:   nodeTemplate,
+			ProviderConfig: pConfig,
+			// TODO(rfranzke): Remove usage of UserData field after v1.100 has been released.
 			UserData:                         userData,
+			UserDataSecretRef:                userDataSecretRef,
 			Volume:                           volume,
 			DataVolumes:                      dataVolumes,
 			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,

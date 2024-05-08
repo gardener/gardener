@@ -165,6 +165,10 @@ var _ = Describe("Machines", func() {
 				p.UserData = []byte("new-data")
 			})
 
+			It("when changing user-data secret ref", func() {
+				p.UserDataSecretRef = &corev1.SecretKeySelector{}
+			})
+
 			It("when changing zones", func() {
 				p.Zones = []string{"1"}
 			})
