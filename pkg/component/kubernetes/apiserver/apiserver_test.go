@@ -365,7 +365,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			DescribeTable("should successfully deploy the VPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, vpaUpdateMode *vpaautoscalingv1.UpdateMode, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy, evictionRequirements []*vpaautoscalingv1.EvictionRequirement) {
+				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, vpaUpdateMode *vpaautoscalingv1.UpdateMode, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							Autoscaling:    autoscalingConfig,
@@ -385,6 +385,8 @@ var _ = Describe("KubeAPIServer", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            verticalPodAutoscaler.Name,
 							Namespace:       verticalPodAutoscaler.Namespace,
+							Annotations:     annotations,
+							Labels:          labels,
 							ResourceVersion: "1",
 						},
 						Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -394,8 +396,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode:           vpaUpdateMode,
-								EvictionRequirements: evictionRequirements,
+								UpdateMode: vpaUpdateMode,
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,
@@ -407,6 +408,8 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("autoscaling mode is baseline",
 					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline},
 					false,
+					nil,
+					nil,
 					ptr.To(vpaautoscalingv1.UpdateModeOff),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -414,11 +417,12 @@ var _ = Describe("KubeAPIServer", func() {
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 					},
-					nil,
 				),
 				Entry("autoscaling mode is VPAAndHPA",
 					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
 					false,
+					nil,
+					nil,
 					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -434,11 +438,12 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 					},
-					nil,
 				),
 				Entry("autoscaling mode is VPAAndHPA and HA VPN is enabled",
 					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
 					true,
+					nil,
+					nil,
 					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -475,11 +480,12 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 					},
-					nil,
 				),
 				Entry("autoscaling mode is VPAAndHPA and scale-down is disabled",
 					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA, ScaleDownDisabled: true},
 					false,
+					map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"},
+					map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"},
 					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
@@ -495,10 +501,6 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 					},
-					[]*vpaautoscalingv1.EvictionRequirement{{
-						Resources:         []corev1.ResourceName{corev1.ResourceMemory, corev1.ResourceCPU},
-						ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-					}},
 				),
 			)
 

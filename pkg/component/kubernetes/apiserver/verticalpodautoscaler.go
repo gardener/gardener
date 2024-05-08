@@ -73,14 +73,6 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 		corev1.ResourceMemory: resource.MustParse("28G"),
 	}
 
-	var evictionRequirements []*vpaautoscalingv1.EvictionRequirement
-	if k.values.Autoscaling.ScaleDownDisabled {
-		evictionRequirements = []*vpaautoscalingv1.EvictionRequirement{{
-			Resources:         []corev1.ResourceName{corev1.ResourceMemory, corev1.ResourceCPU},
-			ChangeRequirement: vpaautoscalingv1.TargetHigherThanRequests,
-		}}
-	}
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -89,13 +81,21 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 				Name:       deployment.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode:           &updateMode,
-				EvictionRequirements: evictionRequirements,
+				UpdateMode: &updateMode,
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),
 			},
 		}
+
+		if k.values.Autoscaling.ScaleDownDisabled {
+			metav1.SetMetaDataLabel(&verticalPodAutoscaler.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
+			metav1.SetMetaDataAnnotation(&verticalPodAutoscaler.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
+		} else {
+			delete(verticalPodAutoscaler.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(verticalPodAutoscaler.GetAnnotations(), v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction)
+		}
+
 		return nil
 	})
 
