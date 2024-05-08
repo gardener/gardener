@@ -35,14 +35,6 @@ When a [`gardenlet`](gardenlet.md) reconciles a `Shoot` resource or a [`gardener
 `etcd-druid` needs to manage the lifecycle of the desired etcd instance (today `main` or `events`).
 Likewise, when the `Shoot` or `Garden` is deleted, `gardenlet` or `gardener-operator` deletes the `Etcd` resources and [etcd Druid](https://github.com/gardener/etcd-druid/) takes care of cleaning up all related objects, e.g. the backing `StatefulSet`s.
 
-## Autoscaling
-
-Gardenlet maintains [`HVPA`](https://github.com/gardener/hvpa-controller/blob/master/config/samples/autoscaling_v1alpha1_hvpa.yaml) objects for etcd `StatefulSet`s if the corresponding [feature gate](../deployment/feature_gates.md) is enabled.
-This enables a vertical scaling for etcd.
-Downscaling is handled more pessimistically to prevent many subsequent etcd restarts.
-Thus, for `production` and `infrastructure` shoot clusters (or all garden clusters), downscaling is deactivated for the main etcd.
-For all other shoot clusters, lower advertised requests/limits are only applied during a shoot's maintenance time window.
-
 ## Backup
 
 If `Seed`s specify backups for etcd ([example](../../example/50-seed.yaml)), then Gardener and the respective [provider extensions](../extensions/overview.md) are responsible for creating a bucket on the cloud provider's side (modelled through a [BackupBucket resource](../extensions/backupbucket.md)).

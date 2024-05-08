@@ -162,11 +162,9 @@ func (b *Botanist) autoscalingMode() apiserver.AutoscalingMode {
 		return apiserver.AutoscalingModeVPAAndHPA
 	}
 
-	var hvpaEnabled bool
+	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	} else {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPA)
 	}
 
 	if hvpaEnabled {

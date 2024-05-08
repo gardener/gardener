@@ -1,10 +1,31 @@
 ---
-title: Kubernetes API Server
+title: Autoscaling Specifics for Components
 ---
 
 ## Overview
 
-The Kubernetes API Server is a component of the Kubernetes control plane that exposes the Kubernetes API. It is the gateway to the Kubernetes cluster - the central touch point that is accessed by all users, automation, and components in the Kubernetes cluster.
+This document describes the used autoscaling mechanism for several components.
+
+## Garden or Shoot Cluster etcd
+
+By default, if none of the autoscaling modes is requested the `etcd` is deployed with static resources, without autoscaling.
+
+However, there are two supported autoscaling modes for the Garden or Shoot cluster etcd.
+
+- `HVPA`
+
+   In `HVPA` mode, the etcd is scaled by the [hvpa-controller](https://github.com/gardener/hvpa-controller). The gardenlet/gardener-operator is creating an `HVPA` resource for the etcd (`main` or `events`).
+   The `HVPA` enables a vertical scaling for etcd.
+
+   The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled (and the `VPAForETCD` feature gate is disabled).
+
+- `VPA`
+
+   In `VPA` mode, the etcd is scaled by a native `VPA` resource.
+
+   The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate).
+
+For both of the autoscaling modes downscaling is handled more pessimistically to prevent many subsequent etcd restarts. Thus, for `production` and `infrastructure` Shoot clusters (or all Garden clusters), downscaling is deactivated for the main etcd. For all other Shoot clusters, lower advertised requests/limits are only applied during the Shoot's maintenance time window.
 
 ## Shoot Kubernetes API Server Autoscaling
 
