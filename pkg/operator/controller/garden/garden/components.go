@@ -268,7 +268,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(garden)
+	c.vali, err = r.newVali()
 	if err != nil {
 		return
 	}
@@ -1130,7 +1130,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, error) {
+func (r *Reconciler) newVali() (vali.Interface, error) {
 	return sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1141,11 +1141,6 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		"",
-		hvpaEnabled(),
-		&hvpav1alpha1.MaintenanceTimeWindow{
-			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
-			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
-		},
 	)
 }
 

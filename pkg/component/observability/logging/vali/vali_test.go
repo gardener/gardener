@@ -8,14 +8,13 @@ import (
 	"context"
 	"fmt"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -53,8 +52,6 @@ const (
 	valiName                           = "vali"
 	valiConfigMapName                  = "vali-config-bc8a885d"
 	telegrafConfigMapName              = "telegraf-config-b4c38756"
-	maintenanceBegin                   = "210000-0000"
-	maintenanceEnd                     = "223000-0000"
 	valiImage                          = "vali:0.0.1"
 	curatorImage                       = "curator:0.0.1"
 	alpineImage                        = "alpine:0.0.1"
@@ -134,19 +131,14 @@ var _ = Describe("Vali", func() {
 					Replicas:                1,
 					Storage:                 &storage,
 					ShootNodeLoggingEnabled: true,
-					HVPAEnabled:             true,
-					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
-						Begin: maintenanceBegin,
-						End:   maintenanceEnd,
-					},
-					ValiImage:          valiImage,
-					CuratorImage:       curatorImage,
-					InitLargeDirImage:  initLargeDirImage,
-					TelegrafImage:      telegrafImage,
-					KubeRBACProxyImage: kubeRBACProxyImage,
-					PriorityClassName:  priorityClassName,
-					ClusterType:        "shoot",
-					IngressHost:        valiHost,
+					ValiImage:               valiImage,
+					CuratorImage:            curatorImage,
+					InitLargeDirImage:       initLargeDirImage,
+					TelegrafImage:           telegrafImage,
+					KubeRBACProxyImage:      kubeRBACProxyImage,
+					PriorityClassName:       priorityClassName,
+					ClusterType:             "shoot",
+					IngressHost:             valiHost,
 				},
 			)
 
@@ -179,7 +171,7 @@ var _ = Describe("Vali", func() {
 			Expect(managedResource).To(consistOf(
 				getTelegrafConfigMap(),
 				getValiConfigMap(),
-				getHVPA(true),
+				getVPA(true),
 				getIngress(),
 				getService(true, "shoot"),
 				getStatefulSet(true),
@@ -228,13 +220,8 @@ var _ = Describe("Vali", func() {
 				namespace,
 				fakeSecretManager,
 				Values{
-					Replicas:    1,
-					Storage:     &storage,
-					HVPAEnabled: true,
-					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
-						Begin: maintenanceBegin,
-						End:   maintenanceEnd,
-					},
+					Replicas:          1,
+					Storage:           &storage,
 					ValiImage:         valiImage,
 					CuratorImage:      curatorImage,
 					InitLargeDirImage: initLargeDirImage,
@@ -278,8 +265,8 @@ var _ = Describe("Vali", func() {
 			Expect(managedResource).To(DeepEqual(expectedMr))
 			Expect(managedResource).To(consistOf(
 				getValiConfigMap(),
-				getHVPA(false),
 				getService(false, "seed"),
+				getVPA(false),
 				getStatefulSet(false),
 				getServiceMonitor(),
 				getPrometheusRule(),
@@ -292,61 +279,6 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			test.PrometheusRule(getPrometheusRule(), "testdata/aggregate-vali.prometheusrule.test.yaml")
-		})
-
-		It("should successfully deploy all resources for seed without HVPA", func() {
-			valiDeployer := New(
-				c,
-				namespace,
-				fakeSecretManager,
-				Values{
-					Replicas:          1,
-					Storage:           &storage,
-					ValiImage:         valiImage,
-					CuratorImage:      curatorImage,
-					InitLargeDirImage: initLargeDirImage,
-					PriorityClassName: priorityClassName,
-					ClusterType:       "seed",
-				},
-			)
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
-
-			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			expectedMr := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResourceName,
-					Namespace:       namespace,
-					Labels:          map[string]string{"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy"},
-					ResourceVersion: "1",
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: ptr.To("seed"),
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResource.Spec.SecretRefs[0].Name,
-					}},
-					KeepObjects: ptr.To(false),
-				},
-			}
-			utilruntime.Must(references.InjectAnnotations(expectedMr))
-			Expect(managedResource).To(DeepEqual(expectedMr))
-
-			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			Expect(managedResource).To(consistOf(
-				getValiConfigMap(),
-				getService(false, "seed"),
-				getStatefulSet(false),
-				getServiceMonitor(),
-				getPrometheusRule(),
-			))
 		})
 	})
 
@@ -1033,174 +965,68 @@ wait
 	return configMap
 }
 
-func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
-
-	obj := &hvpav1alpha1.Hvpa{
+func getVPA(isRBACProxyEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
+	vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      valiName,
+			Name:      valiName + "-vpa",
 			Namespace: namespace,
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 				v1beta1constants.LabelObservabilityApplication: valiName,
 			}),
 		},
-		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: ptr.To[int32](1),
-			MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
-				Begin: maintenanceBegin,
-				End:   maintenanceEnd,
-			},
-			Hpa: hvpav1alpha1.HpaSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"role": valiName + "-hpa",
-					},
-				},
-				Deploy: false,
-				Template: hvpav1alpha1.HpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"role": valiName + "-hpa",
-						},
-					},
-					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: ptr.To[int32](1),
-						MaxReplicas: 1,
-						Metrics: []autoscalingv2beta1.MetricSpec{
-							{
-								Type: "Resource",
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     "cpu",
-									TargetAverageUtilization: ptr.To[int32](80),
-								},
-							},
-							{
-								Type: "Resource",
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     "memory",
-									TargetAverageUtilization: ptr.To[int32](80),
-								},
-							},
-						},
-					},
-				},
-			},
-			Vpa: hvpav1alpha1.VpaSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"role": valiName + "vpa",
-					},
-				},
-				Deploy: true,
-				ScaleUp: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: ptr.To("Auto"),
-					},
-					StabilizationDuration: ptr.To("5m"),
-					MinChange: hvpav1alpha1.ScaleParams{
-						CPU: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("100m"),
-							Percentage: ptr.To[int32](80),
-						},
-						Memory: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("300M"),
-							Percentage: ptr.To[int32](80),
-						},
-					},
-				},
-				ScaleDown: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: ptr.To("MaintenanceWindow"),
-					},
-					StabilizationDuration: ptr.To("168h"),
-					MinChange: hvpav1alpha1.ScaleParams{
-						CPU: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("200m"),
-							Percentage: ptr.To[int32](80),
-						},
-						Memory: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("500M"),
-							Percentage: ptr.To[int32](80),
-						},
-					},
-				},
-				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
-					CPU: hvpav1alpha1.ChangeParams{
-						Value:      ptr.To("300m"),
-						Percentage: ptr.To[int32](40),
-					},
-					Memory: hvpav1alpha1.ChangeParams{
-						Value:      ptr.To("1G"),
-						Percentage: ptr.To[int32](40),
-					},
-				},
-				Template: hvpav1alpha1.VpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"role": valiName + "vpa",
-						},
-					},
-					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-								{
-									ContainerName: valiName,
-									MinAllowed: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("300M"),
-									},
-									MaxAllowed: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("800m"),
-										corev1.ResourceMemory: resource.MustParse("3Gi"),
-									},
-									ControlledValues: &controlledValues,
-								},
-								{
-									ContainerName:    "curator",
-									Mode:             &containerPolicyOff,
-									ControlledValues: &controlledValues,
-								},
-								{
-									ContainerName:    "init-large-dir",
-									Mode:             &containerPolicyOff,
-									ControlledValues: &controlledValues,
-								},
-							},
-						},
-					},
-				},
-			},
-			WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{
-				{
-					VpaWeight:         hvpav1alpha1.VpaOnly,
-					StartReplicaCount: 1,
-					LastReplicaCount:  1,
-				},
-			},
-			TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-				APIVersion: "apps/v1",
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       "StatefulSet",
 				Name:       valiName,
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: valiName,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("200M"),
+						},
+						MaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("800m"),
+							corev1.ResourceMemory: resource.MustParse("3Gi"),
+						},
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName:    "curator",
+						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+					{
+						ContainerName:    "init-large-dir",
+						Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					},
+				},
 			},
 		},
 	}
 
 	if isRBACProxyEnabled {
-		obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies = append(obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies,
-			[]vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName:    "kube-rbac-proxy",
-					Mode:             &containerPolicyOff,
-					ControlledValues: &controlledValues,
-				},
-				{
-					ContainerName:    "telegraf",
-					Mode:             &containerPolicyOff,
-					ControlledValues: &controlledValues,
-				},
-			}...)
+		vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies,
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    "kube-rbac-proxy",
+				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			},
+			vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    "telegraf",
+				Mode:             ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			},
+		)
 	}
-	return obj
+
+	return vpa
 }
 
 func getIngress() *networkingv1.Ingress {
@@ -1386,8 +1212,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("12Mi"),
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("15Mi"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("700Mi"),
@@ -1453,8 +1279,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("50m"),
-						corev1.ResourceMemory: resource.MustParse("50Mi"),
+						corev1.ResourceCPU:    resource.MustParse("5m"),
+						corev1.ResourceMemory: resource.MustParse("30Mi"),
 					},
 					Limits: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("150Mi"),
@@ -1496,7 +1322,7 @@ wait
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("5m"),
-						corev1.ResourceMemory: resource.MustParse("35Mi"),
+						corev1.ResourceMemory: resource.MustParse("45Mi"),
 					},
 					Limits: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("350Mi"),
