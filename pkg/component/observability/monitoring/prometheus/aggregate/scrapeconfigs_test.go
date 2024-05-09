@@ -31,6 +31,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								`{job="kube-state-metrics",namespace=~"garden|extension-.+"}`,
 								`{job="kube-state-metrics",namespace=""}`,
 								`{job="cadvisor",namespace=~"garden|extension-.+"}`,
+								`{job="etcd-druid",namespace="garden"}`,
 							},
 						},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
