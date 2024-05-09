@@ -56,7 +56,7 @@ There are three supported autoscaling modes for the Shoot Kubernetes API Server.
 
 - `VPAAndHPA`
 
-   In `VPAAndHPA` mode, the Shoot Kubernetes API server is scaled simultaneously by VPA on CPU and memory utilization and by HPA - on CPU and memory usage. The gardenlet configures VPA and HPA resources in a such a way that the VPA's `maxAllowed` CPU and memory values are a little smaller than the HPA's average usage target. This allows VPA to scale vertically on the Pod's CPU and memory requests. Once all Pods on average exceed the maxAllowed CPU/memory, HPA is scaling horizontally (by adding a new replica).
+   In `VPAAndHPA` mode, the Shoot Kubernetes API server is scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage). The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and by picking the target average utilization values in sync with VPA's allowed maximums. This makes possible VPA to first scale vertically on CPU/memory usage. Once all Pods' average CPU/memory usage is close to exceed the VPA's allowed maximum CPU/memory (the HPA's target average utilization, 10-20% less than VPA's allowed maximums), HPA is scaling horizontally (by adding a new replica).
 
    The `VPAAndHPA` mode is introduced to address disadvantages with HVPA: additional component; modifies the deployment triggering unnecessary rollouts; vertical scaling only at max replicas; stuck vertical resource requests when scaling in again; etc.
 
