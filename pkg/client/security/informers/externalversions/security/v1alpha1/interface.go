@@ -14,6 +14,8 @@ import (
 type Interface interface {
 	// CredentialsBindings returns a CredentialsBindingInformer.
 	CredentialsBindings() CredentialsBindingInformer
+	// WorkloadIdentities returns a WorkloadIdentityInformer.
+	WorkloadIdentities() WorkloadIdentityInformer
 }
 
 type version struct {
@@ -30,4 +32,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // CredentialsBindings returns a CredentialsBindingInformer.
 func (v *version) CredentialsBindings() CredentialsBindingInformer {
 	return &credentialsBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// WorkloadIdentities returns a WorkloadIdentityInformer.
+func (v *version) WorkloadIdentities() WorkloadIdentityInformer {
+	return &workloadIdentityInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
