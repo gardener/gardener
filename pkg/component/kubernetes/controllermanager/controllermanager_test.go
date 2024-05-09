@@ -123,9 +123,6 @@ var _ = Describe("KubeControllerManager", func() {
 		managedResourceName       = "shoot-core-kube-controller-manager"
 		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
@@ -180,10 +177,10 @@ var _ = Describe("KubeControllerManager", func() {
 					TargetRef: &autoscalingv1.CrossVersionObjectReference{
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
-						Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+						Name:       "kube-controller-manager",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: &vpaUpdateMode,
+						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
@@ -195,15 +192,15 @@ var _ = Describe("KubeControllerManager", func() {
 								corev1.ResourceCPU:    resource.MustParse("4"),
 								corev1.ResourceMemory: resource.MustParse("10G"),
 							},
-							ControlledValues: &controlledValues,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						}},
 					},
 				},
 			}
 
 			if isScaleDownDisabled {
-				vpa.Labels = map[string]string{v1beta1constants.LabelVPAEvictionRequirementsController: v1beta1constants.EvictionRequirementManagedByController}
-				vpa.Annotations = map[string]string{v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction: v1beta1constants.EvictionRequirementNever}
+				vpa.Labels = map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"}
+				vpa.Annotations = map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"}
 			}
 
 			return vpa
@@ -624,7 +621,7 @@ namespace: kube-system
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, runtimeKubernetesVersion),
 			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, runtimeKubernetesVersion),
-			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, false, runtimeKubernetesVersion),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, runtimeKubernetesVersion),
 		)
 
 		DescribeTable("success tests for various kubernetes versions (workerless shoot)",
@@ -661,7 +658,7 @@ namespace: kube-system
 			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers),
 			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers),
-			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers),
 			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers),
 		)
 
