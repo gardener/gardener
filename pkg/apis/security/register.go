@@ -37,6 +37,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&CredentialsBinding{},
 		&CredentialsBindingList{},
+		&WorkloadIdentity{},
+		&WorkloadIdentityList{},
 	)
 
 	return nil

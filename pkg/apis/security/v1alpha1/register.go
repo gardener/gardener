@@ -39,6 +39,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&CredentialsBinding{},
 		&CredentialsBindingList{},
+		&WorkloadIdentity{},
+		&WorkloadIdentityList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
