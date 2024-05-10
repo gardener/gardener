@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -25,6 +27,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,15 +38,13 @@ import (
 )
 
 const (
-	managedResourceName   = "shoot-core-apiserver-proxy"
-	configMapName         = "apiserver-proxy-config"
-	serviceAcountName     = "apiserver-proxy"
-	daemonSetName         = "apiserver-proxy"
-	mutatingWebhookName   = "apiserver-proxy.networking.gardener.cloud"
-	webhookExpressionsKey = "apiserver-proxy.networking.gardener.cloud/inject"
+	managedResourceName = "shoot-core-apiserver-proxy"
+	configMapName       = "apiserver-proxy-config"
+	name                = "apiserver-proxy"
 
 	adminPort           = 16910
 	proxySeedServerPort = 8443
+	portNameMetrics     = "metrics"
 
 	volumeNameConfig   = "proxy-config"
 	volumeNameAdminUDS = "admin-uds"
@@ -89,7 +92,6 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 // Interface contains functions for deploying apiserver-proxy.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	SetAdvertiseIPAddress(string)
 }
 
@@ -105,6 +107,54 @@ func (a *apiserverProxy) Deploy(ctx context.Context) error {
 		return fmt.Errorf("run SetAdvertiseIPAddress before deploying")
 	}
 
+	scrapeConfig := a.emptyScrapeConfig()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			name,
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:             "endpoints",
+				ServiceName:      name,
+				EndpointPortName: portNameMetrics,
+			},
+			"envoy_cluster_bind_errors",
+			"envoy_cluster_lb_healthy_panic",
+			"envoy_cluster_update_attempt",
+			"envoy_cluster_update_failure",
+			"envoy_cluster_upstream_cx_connect_ms_bucket",
+			"envoy_cluster_upstream_cx_length_ms_bucket",
+			"envoy_cluster_upstream_cx_none_healthy",
+			"envoy_cluster_upstream_cx_rx_bytes_total",
+			"envoy_cluster_upstream_cx_tx_bytes_total",
+			"envoy_listener_downstream_cx_destroy",
+			"envoy_listener_downstream_cx_length_ms_bucket",
+			"envoy_listener_downstream_cx_overflow",
+			"envoy_listener_downstream_cx_total",
+			"envoy_tcp_downstream_cx_no_route",
+			"envoy_tcp_downstream_cx_rx_bytes_total",
+			"envoy_tcp_downstream_cx_total",
+			"envoy_tcp_downstream_cx_tx_bytes_total",
+		)
+
+		// we don't care about admin metrics
+		scrapeConfig.Spec.MetricRelabelConfigs = append(scrapeConfig.Spec.MetricRelabelConfigs,
+			monitoringv1.RelabelConfig{
+				SourceLabels: []monitoringv1.LabelName{"envoy_cluster_name"},
+				Regex:        `^uds_admin$`,
+				Action:       "drop",
+			},
+			monitoringv1.RelabelConfig{
+				SourceLabels: []monitoringv1.LabelName{"envoy_listener_address"},
+				Regex:        `^^0.0.0.0_16910$`,
+				Action:       "drop",
+			},
+		)
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := a.computeResourcesData()
 	if err != nil {
 		return err
@@ -114,6 +164,12 @@ func (a *apiserverProxy) Deploy(ctx context.Context) error {
 }
 
 func (a *apiserverProxy) Destroy(ctx context.Context) error {
+	if err := kubernetesutils.DeleteObjects(ctx, a.client,
+		a.emptyScrapeConfig(),
+	); err != nil {
+		return err
+	}
+
 	return managedresources.DeleteForShoot(ctx, a.client, a.namespace, managedResourceName)
 }
 
@@ -137,6 +193,10 @@ func (a *apiserverProxy) WaitCleanup(ctx context.Context) error {
 
 func (a *apiserverProxy) SetAdvertiseIPAddress(advertiseIPAddress string) {
 	a.values.advertiseIPAddress = advertiseIPAddress
+}
+
+func (a *apiserverProxy) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("apiserver-proxy", a.namespace, shoot.Label)}
 }
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
@@ -166,7 +226,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAcountName,
+				Name:      name,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getDefaultLabels(),
 			},
@@ -174,7 +234,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAcountName,
+				Name:      name,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getDefaultLabels(),
 			},
@@ -183,7 +243,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				ClusterIP: "None",
 				Ports: []corev1.ServicePort{
 					{
-						Name:       "metrics",
+						Name:       portNameMetrics,
 						Port:       adminPort,
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt32(adminPort),
@@ -194,7 +254,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		}
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      daemonSetName,
+				Name:      name,
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(
 					getDefaultLabels(),
@@ -223,7 +283,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						),
 					},
 					Spec: corev1.PodSpec{
-						ServiceAccountName: serviceAcountName,
+						ServiceAccountName: name,
 						PriorityClassName:  "system-node-critical",
 						Tolerations: []corev1.Toleration{
 							{Effect: corev1.TaintEffectNoSchedule, Operator: corev1.TolerationOpExists},
