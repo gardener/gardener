@@ -24,9 +24,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":          schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":      schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus":    schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBinding":              schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingList":          schema_pkg_apis_authentication_v1alpha1_CredentialsBindingList(ref),
-		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider":      schema_pkg_apis_authentication_v1alpha1_CredentialsBindingProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequest":         schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestSpec":     schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.ViewerKubeconfigRequestStatus":   schema_pkg_apis_authentication_v1alpha1_ViewerKubeconfigRequestStatus(ref),
@@ -211,6 +208,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                         schema_pkg_apis_operations_v1alpha1_BastionList(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec":                         schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus":                       schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding":                    schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingList":                schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider":            schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet":                       schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment":             schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                           schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
@@ -671,144 +671,6 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref co
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_authentication_v1alpha1_CredentialsBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CredentialsBinding represents a binding to credentials in the same or another namespace.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"provider": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Provider defines the provider type of the CredentialsBinding. This field is immutable.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider"),
-						},
-					},
-					"credentialsRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef is a reference to a resource holding the credentials. Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
-					"quotas": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Quotas is a list of references to Quota objects in the same or another namespace. This field is immutable.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("k8s.io/api/core/v1.ObjectReference"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"provider", "credentialsRef"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBindingProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_authentication_v1alpha1_CredentialsBindingList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CredentialsBindingList is a collection of CredentialsBindings.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard list object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
-						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Items is the list of CredentialsBindings.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBinding"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.CredentialsBinding", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_pkg_apis_authentication_v1alpha1_CredentialsBindingProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CredentialsBindingProvider defines the provider type of the CredentialsBinding.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type is the type of the provider.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"type"},
-			},
-		},
 	}
 }
 
@@ -9597,6 +9459,144 @@ func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallb
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "k8s.io/api/core/v1.LoadBalancerIngress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CredentialsBinding represents a binding to credentials in the same or another namespace.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider defines the provider type of the CredentialsBinding. This field is immutable.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider"),
+						},
+					},
+					"credentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsRef is a reference to a resource holding the credentials. Accepted resources are core/v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"quotas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Quotas is a list of references to Quota objects in the same or another namespace. This field is immutable.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.ObjectReference"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"provider", "credentialsRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CredentialsBindingList is a collection of CredentialsBindings.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of CredentialsBindings.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CredentialsBindingProvider defines the provider type of the CredentialsBinding.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the provider.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type"},
+			},
+		},
 	}
 }
 

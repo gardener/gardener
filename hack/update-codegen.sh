@@ -19,6 +19,7 @@ AVAILABLE_CODEGEN_OPTIONS=(
   "seedmanagement_groups"
   "operations_groups"
   "settings_groups"
+  "security_groups"
   "operatorconfig_groups"
   "controllermanager_groups"
   "admissioncontroller_groups"
@@ -184,6 +185,29 @@ settings_groups() {
 }
 export -f settings_groups
 
+# security.gardener.cloud APIs
+
+security_groups() {
+  echo "Generating API groups for pkg/apis/security"
+
+  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
+    client,deepcopy,defaulter,informer,lister \
+    github.com/gardener/gardener/pkg/client/security \
+    "" \
+    github.com/gardener/gardener/pkg/apis \
+    "security:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
+    deepcopy,defaulter,conversion \
+    github.com/gardener/gardener/pkg/client/security \
+    github.com/gardener/gardener/pkg/apis \
+    github.com/gardener/gardener/pkg/apis \
+    "security:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f security_groups
+
 # operations.gardener.cloud APIs
 
 operations_groups() {
@@ -213,7 +237,7 @@ authentication_groups() {
   echo "Generating API groups for pkg/apis/authentication"
 
   bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    client,deepcopy,defaulter,informer,lister \
+    deepcopy,defaulter \
     github.com/gardener/gardener/pkg/client/authentication \
     "" \
     github.com/gardener/gardener/pkg/apis \
@@ -517,6 +541,7 @@ openapi_definitions() {
     --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
+    --input-dirs=github.com/gardener/gardener/pkg/apis/security/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/operations/v1alpha1 \
     --input-dirs=k8s.io/api/core/v1 \
     --input-dirs=k8s.io/api/rbac/v1 \

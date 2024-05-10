@@ -12,10 +12,10 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	authenticationclientset "github.com/gardener/gardener/pkg/client/authentication/clientset/versioned"
-	authenticationinformers "github.com/gardener/gardener/pkg/client/authentication/informers/externalversions"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
@@ -28,8 +28,8 @@ func New(
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory,
 	seedManagementClient seedmanagementclientset.Interface,
 	settingsInformers settingsinformers.SharedInformerFactory,
-	authenticationInformers authenticationinformers.SharedInformerFactory,
-	authenticationClient authenticationclientset.Interface,
+	securityInformers securityinformers.SharedInformerFactory,
+	securityClient securityclientset.Interface,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,
@@ -45,8 +45,8 @@ func New(
 
 		settingsInformers: settingsInformers,
 
-		authenticationInformers: authenticationInformers,
-		authenticationClient:    authenticationClient,
+		securityInformers: securityInformers,
+		securityClient:    securityClient,
 
 		kubeInformers: kubeInformers,
 		kubeClient:    kubeClient,
@@ -76,11 +76,11 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 		wants.SetSeedManagementClientSet(i.seedManagementClient)
 	}
 
-	if wants, ok := plugin.(WantsAuthenticationInformerFactory); ok {
-		wants.SetAuthenticationInformerFactory(i.authenticationInformers)
+	if wants, ok := plugin.(WantsSecurityInformerFactory); ok {
+		wants.SetSecurityInformerFactory(i.securityInformers)
 	}
-	if wants, ok := plugin.(WantsAuthenticationClientSet); ok {
-		wants.SetAuthenticationClientSet(i.authenticationClient)
+	if wants, ok := plugin.(WantsSecurityClientSet); ok {
+		wants.SetSecurityClientSet(i.securityClient)
 	}
 
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {

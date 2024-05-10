@@ -18,25 +18,12 @@ import (
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&AdminKubeconfigRequest{}, func(obj interface{}) { SetObjectDefaults_AdminKubeconfigRequest(obj.(*AdminKubeconfigRequest)) })
-	scheme.AddTypeDefaultingFunc(&CredentialsBinding{}, func(obj interface{}) { SetObjectDefaults_CredentialsBinding(obj.(*CredentialsBinding)) })
-	scheme.AddTypeDefaultingFunc(&CredentialsBindingList{}, func(obj interface{}) { SetObjectDefaults_CredentialsBindingList(obj.(*CredentialsBindingList)) })
 	scheme.AddTypeDefaultingFunc(&ViewerKubeconfigRequest{}, func(obj interface{}) { SetObjectDefaults_ViewerKubeconfigRequest(obj.(*ViewerKubeconfigRequest)) })
 	return nil
 }
 
 func SetObjectDefaults_AdminKubeconfigRequest(in *AdminKubeconfigRequest) {
 	SetDefaults_AdminKubeconfigRequestSpec(&in.Spec)
-}
-
-func SetObjectDefaults_CredentialsBinding(in *CredentialsBinding) {
-	SetDefaults_CredentialsBinding(in)
-}
-
-func SetObjectDefaults_CredentialsBindingList(in *CredentialsBindingList) {
-	for i := range in.Items {
-		a := &in.Items[i]
-		SetObjectDefaults_CredentialsBinding(a)
-	}
 }
 
 func SetObjectDefaults_ViewerKubeconfigRequest(in *ViewerKubeconfigRequest) {

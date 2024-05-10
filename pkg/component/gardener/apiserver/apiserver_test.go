@@ -1454,7 +1454,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"),
 						apiServiceFor("operations.gardener.cloud", "v1alpha1"),
 						apiServiceFor("settings.gardener.cloud", "v1alpha1"),
-						apiServiceFor("authentication.gardener.cloud", "v1alpha1"),
+						apiServiceFor("security.gardener.cloud", "v1alpha1"),
 						serviceVirtual,
 						endpoints,
 						clusterRole,

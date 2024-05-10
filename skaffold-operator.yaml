@@ -33,9 +33,6 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
             - pkg/api/extensions
-            - pkg/apis/authentication
-            - pkg/apis/authentication/install
-            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -57,6 +54,9 @@ build:
             - pkg/apis/operator/v1alpha1/validation
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -107,8 +107,8 @@ build:
             - pkg/component/networking/vpn/seedserver
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentbit
-            - pkg/component/observability/logging/fluentoperator
             - pkg/component/observability/logging/fluentcustomresources
+            - pkg/component/observability/logging/fluentoperator
             - pkg/component/observability/logging/vali
             - pkg/component/observability/logging/vali/constants
             - pkg/component/observability/monitoring
@@ -220,9 +220,6 @@ build:
             - cmd/utils
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/apis/authentication
-            - pkg/apis/authentication/install
-            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -240,6 +237,9 @@ build:
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/resources/v1alpha1/helper
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -343,6 +343,10 @@ build:
             - pkg/apis/operator/v1alpha1
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/security/validation
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/helper
@@ -358,9 +362,6 @@ build:
             - pkg/apiserver/admission/initializer
             - pkg/apiserver/features
             - pkg/apiserver/openapi
-            - pkg/apiserver/registry/authentication/credentialsbinding
-            - pkg/apiserver/registry/authentication/credentialsbinding/storage
-            - pkg/apiserver/registry/authentication/rest
             - pkg/apiserver/registry/core/backupbucket
             - pkg/apiserver/registry/core/backupbucket/storage
             - pkg/apiserver/registry/core/backupentry
@@ -395,6 +396,9 @@ build:
             - pkg/apiserver/registry/operations/bastion
             - pkg/apiserver/registry/operations/bastion/storage
             - pkg/apiserver/registry/operations/rest
+            - pkg/apiserver/registry/security/credentialsbinding
+            - pkg/apiserver/registry/security/credentialsbinding/storage
+            - pkg/apiserver/registry/security/rest
             - pkg/apiserver/registry/seedmanagement/managedseed
             - pkg/apiserver/registry/seedmanagement/managedseed/storage
             - pkg/apiserver/registry/seedmanagement/managedseedset
@@ -407,14 +411,6 @@ build:
             - pkg/apiserver/registry/settings/rest
             - pkg/apiserver/storage
             - pkg/chartrenderer
-            - pkg/client/authentication/clientset/versioned
-            - pkg/client/authentication/clientset/versioned/scheme
-            - pkg/client/authentication/clientset/versioned/typed/authentication/v1alpha1
-            - pkg/client/authentication/informers/externalversions
-            - pkg/client/authentication/informers/externalversions/authentication
-            - pkg/client/authentication/informers/externalversions/authentication/v1alpha1
-            - pkg/client/authentication/informers/externalversions/internalinterfaces
-            - pkg/client/authentication/listers/authentication/v1alpha1
             - pkg/client/core/clientset/versioned
             - pkg/client/core/clientset/versioned/scheme
             - pkg/client/core/clientset/versioned/typed/core/v1beta1
@@ -425,6 +421,14 @@ build:
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/client/security/clientset/versioned
+            - pkg/client/security/clientset/versioned/scheme
+            - pkg/client/security/clientset/versioned/typed/security/v1alpha1
+            - pkg/client/security/informers/externalversions
+            - pkg/client/security/informers/externalversions/internalinterfaces
+            - pkg/client/security/informers/externalversions/security
+            - pkg/client/security/informers/externalversions/security/v1alpha1
+            - pkg/client/security/listers/security/v1alpha1
             - pkg/client/seedmanagement/clientset/versioned
             - pkg/client/seedmanagement/clientset/versioned/scheme
             - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
@@ -518,9 +522,6 @@ build:
             - cmd/utils
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/apis/authentication
-            - pkg/apis/authentication/install
-            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -535,6 +536,9 @@ build:
             - pkg/apis/operator/v1alpha1
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -628,9 +632,6 @@ build:
             - cmd/gardener-scheduler/app
             - cmd/utils
             - pkg/api/extensions
-            - pkg/apis/authentication
-            - pkg/apis/authentication/install
-            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1beta1
@@ -645,6 +646,9 @@ build:
             - pkg/apis/operator/v1alpha1
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
@@ -710,9 +714,6 @@ build:
             - pkg/admissioncontroller/webhook/admission/seedrestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
-            - pkg/apis/authentication
-            - pkg/apis/authentication/install
-            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -728,6 +729,9 @@ build:
             - pkg/apis/operator/v1alpha1
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
