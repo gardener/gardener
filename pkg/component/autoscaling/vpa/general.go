@@ -210,11 +210,9 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 	if v.values.ClusterType == component.ClusterTypeSeed {
 		namespaceSelector = &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{Key: "name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+				{Key: corev1.LabelMetadataName, Operator: metav1.LabelSelectorOpNotIn, Values: []string{metav1.NamespaceSystem}},
 			},
 		}
-	} else {
-		namespaceSelector = nil
 	}
 
 	mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{

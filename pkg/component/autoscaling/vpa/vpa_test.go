@@ -1319,7 +1319,7 @@ var _ = Describe("VPA", func() {
 					}
 					mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector = &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{Key: "name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+							{Key: "kubernetes.io/metadata.name", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
 						},
 					}
 
