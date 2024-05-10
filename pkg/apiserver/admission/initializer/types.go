@@ -12,6 +12,8 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
+	authenticationclientset "github.com/gardener/gardener/pkg/client/authentication/clientset/versioned"
+	authenticationinformers "github.com/gardener/gardener/pkg/client/authentication/informers/externalversions"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
@@ -46,6 +48,18 @@ type WantsSeedManagementInformerFactory interface {
 // WantsSeedManagementClientSet defines a function which sets SeedManagement Clientset for admission plugins that need it.
 type WantsSeedManagementClientSet interface {
 	SetSeedManagementClientSet(seedmanagementclientset.Interface)
+	admission.InitializationValidator
+}
+
+// WantsAuthenticationInformerFactory defines a function which sets authentication InformerFactory for admission plugins that need it.
+type WantsAuthenticationInformerFactory interface {
+	SetAuthenticationInformerFactory(authenticationinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsAuthenticationClientSet defines a function which sets Authentication Clientset for admission plugins that need it.
+type WantsAuthenticationClientSet interface {
+	SetAuthenticationClientSet(authenticationclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -87,6 +101,9 @@ type pluginInitializer struct {
 	seedManagementClient    seedmanagementclientset.Interface
 
 	settingsInformers settingsinformers.SharedInformerFactory
+
+	authenticationInformers authenticationinformers.SharedInformerFactory
+	authenticationClient    authenticationclientset.Interface
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface

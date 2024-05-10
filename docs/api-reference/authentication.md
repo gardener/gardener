@@ -10,15 +10,12 @@
 </p>
 Resource Types:
 <ul><li>
-<a href="#authentication.gardener.cloud/v1alpha1.AdminKubeconfigRequest">AdminKubeconfigRequest</a>
-</li><li>
-<a href="#authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequest">ViewerKubeconfigRequest</a>
+<a href="#authentication.gardener.cloud/v1alpha1.CredentialsBinding">CredentialsBinding</a>
 </li></ul>
-<h3 id="authentication.gardener.cloud/v1alpha1.AdminKubeconfigRequest">AdminKubeconfigRequest
+<h3 id="authentication.gardener.cloud/v1alpha1.CredentialsBinding">CredentialsBinding
 </h3>
 <p>
-<p>AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
-for a Shoot cluster.</p>
+<p>CredentialsBinding represents a binding to credentials in the same or another namespace.</p>
 </p>
 <table>
 <thead>
@@ -43,8 +40,83 @@ authentication.gardener.cloud/v1alpha1
 <code>kind</code></br>
 string
 </td>
-<td><code>AdminKubeconfigRequest</code></td>
+<td><code>CredentialsBinding</code></td>
 </tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#authentication.gardener.cloud/v1alpha1.CredentialsBindingProvider">
+CredentialsBindingProvider
+</a>
+</em>
+</td>
+<td>
+<p>Provider defines the provider type of the CredentialsBinding.
+This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>CredentialsRef is a reference to a resource holding the credentials.
+Accepted resources are core/v1.Secret and authentication.gardener.cloud/v1alpha1.WorkloadIdentity</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>quotas</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+[]Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Quotas is a list of references to Quota objects in the same or another namespace.
+This field is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="authentication.gardener.cloud/v1alpha1.AdminKubeconfigRequest">AdminKubeconfigRequest
+</h3>
+<p>
+<p>AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
+for a Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td>
 <code>metadata</code></br>
@@ -103,99 +175,6 @@ AdminKubeconfigRequestStatus
 </td>
 <td>
 <p>Status is the status of the AdminKubeconfigRequest.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequest">ViewerKubeconfigRequest
-</h3>
-<p>
-<p>ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
-for a Shoot cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code></br>
-string</td>
-<td>
-<code>
-authentication.gardener.cloud/v1alpha1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code></br>
-string
-</td>
-<td><code>ViewerKubeconfigRequest</code></td>
-</tr>
-<tr>
-<td>
-<code>metadata</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code></br>
-<em>
-<a href="#authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequestSpec">
-ViewerKubeconfigRequestSpec
-</a>
-</em>
-</td>
-<td>
-<p>Spec is the specification of the ViewerKubeconfigRequest.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>expirationSeconds</code></br>
-<em>
-int64
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExpirationSeconds is the requested validity duration of the credential. The
-credential issuer may return a credential with a different validity duration so a
-client needs to check the &lsquo;expirationTimestamp&rsquo; field in a response.
-Defaults to 1 hour.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<code>status</code></br>
-<em>
-<a href="#authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequestStatus">
-ViewerKubeconfigRequestStatus
-</a>
-</em>
-</td>
-<td>
-<p>Status is the status of the ViewerKubeconfigRequest.</p>
 </td>
 </tr>
 </tbody>
@@ -274,6 +253,112 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <p>ExpirationTimestamp is the expiration timestamp of the returned credential.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="authentication.gardener.cloud/v1alpha1.CredentialsBindingProvider">CredentialsBindingProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#authentication.gardener.cloud/v1alpha1.CredentialsBinding">CredentialsBinding</a>)
+</p>
+<p>
+<p>CredentialsBindingProvider defines the provider type of the CredentialsBinding.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the provider.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequest">ViewerKubeconfigRequest
+</h3>
+<p>
+<p>ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
+for a Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequestSpec">
+ViewerKubeconfigRequestSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec is the specification of the ViewerKubeconfigRequest.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>expirationSeconds</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExpirationSeconds is the requested validity duration of the credential. The
+credential issuer may return a credential with a different validity duration so a
+client needs to check the &lsquo;expirationTimestamp&rsquo; field in a response.
+Defaults to 1 hour.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#authentication.gardener.cloud/v1alpha1.ViewerKubeconfigRequestStatus">
+ViewerKubeconfigRequestStatus
+</a>
+</em>
+</td>
+<td>
+<p>Status is the status of the ViewerKubeconfigRequest.</p>
 </td>
 </tr>
 </tbody>

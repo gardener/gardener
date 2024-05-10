@@ -213,7 +213,7 @@ authentication_groups() {
   echo "Generating API groups for pkg/apis/authentication"
 
   bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
+    client,deepcopy,defaulter,informer,lister \
     github.com/gardener/gardener/pkg/client/authentication \
     "" \
     github.com/gardener/gardener/pkg/apis \

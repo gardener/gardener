@@ -14,6 +14,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
 
+	authenticationrest "github.com/gardener/gardener/pkg/apiserver/registry/authentication/rest"
 	corerest "github.com/gardener/gardener/pkg/apiserver/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/apiserver/registry/operations/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/rest"
@@ -86,9 +87,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		authenticationAPIGroupInfo = (authenticationrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
-	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo, &authenticationAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	authenticationinstall "github.com/gardener/gardener/pkg/apis/authentication/install"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
@@ -94,6 +95,7 @@ var (
 		settingsinstall.AddToScheme,
 		operationsinstall.AddToScheme,
 		apiregistrationscheme.AddToScheme,
+		authenticationinstall.AddToScheme,
 	)
 
 	seedSchemeBuilder = runtime.NewSchemeBuilder(

@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -167,6 +168,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.apiService(secretCAGardener, seedmanagementv1alpha1.SchemeGroupVersion.Group, seedmanagementv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, operationsv1alpha1.SchemeGroupVersion.Group, operationsv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
+		g.apiService(secretCAGardener, authenticationv1alpha1.SchemeGroupVersion.Group, authenticationv1alpha1.SchemeGroupVersion.Version),
 		g.service(),
 		g.endpoints(serviceRuntime.Spec.ClusterIP),
 		g.clusterRole(),

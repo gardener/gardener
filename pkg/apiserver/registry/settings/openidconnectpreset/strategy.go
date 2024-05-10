@@ -21,7 +21,7 @@ type oidcPresetStrategy struct {
 	names.NameGenerator
 }
 
-// Strategy defines the storage strategy for openidconnectpresetss.
+// Strategy defines the storage strategy for openidconnectpresets.
 var Strategy = oidcPresetStrategy{api.Scheme, names.SimpleNameGenerator}
 
 func (oidcPresetStrategy) NamespaceScoped() bool {
