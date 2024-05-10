@@ -22,6 +22,7 @@ tests:
               topology: seed
               condition: ExtensionsReady
               name: seed-flapping
+              mute_on_weekends: "true"
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -47,6 +48,7 @@ tests:
               topology: seed
               condition: SystemComponentsHealthy
               name: seed-one
+              mute_on_weekends: "true"
             exp_annotations:
               summary: >-
                 Seed Condition Failing
@@ -58,6 +60,7 @@ tests:
               topology: seed
               condition: SeedSystemComponentsHealthy
               name: seed-two
+              mute_on_weekends: "true"
             exp_annotations:
               summary: >-
                 Seed Condition Failing
