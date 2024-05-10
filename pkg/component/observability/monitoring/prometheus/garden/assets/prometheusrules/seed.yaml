@@ -66,7 +66,7 @@ spec:
 
     - alert: SeedAPIServerUnavailable
       expr: |
-        max_over_time((
+        last_over_time((
             garden_shoot_condition{condition = "APIServerAvailable",
                                    operation = "Reconcile",
                                    is_seed   = "true"} < 1)[2m:])
@@ -327,7 +327,7 @@ spec:
 
     - alert: SeedControlPlaneUnhealthy
       expr: |
-        max_over_time((
+        last_over_time((
           garden_shoot_condition{condition = "ControlPlaneHealthy",
                                  operation = "Reconcile",
                                  is_seed   = "true"} <= 0)[2m:])
@@ -360,7 +360,7 @@ spec:
 
     - alert: SeedSystemComponentsUnhealthy
       expr: |
-        max_over_time((
+        last_over_time((
           garden_shoot_condition{condition = "SystemComponentsHealthy",
                                  operation = "Reconcile",
                                  is_seed   = "true"} <= 0)[2m:])
