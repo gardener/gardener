@@ -44,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
@@ -165,7 +164,7 @@ type SystemComponents struct {
 	Namespaces          component.DeployWaiter
 	NodeLocalDNS        component.DeployWaiter
 	NodeProblemDetector component.DeployWaiter
-	NodeExporter        nodeexporter.Interface
+	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
 	VPNShoot            vpnshoot.Interface
 }
