@@ -484,7 +484,6 @@ func (h *Health) checkObservabilityComponents(
 			ctx,
 			h.shoot.SeedNamespace,
 			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
-			ComputeRequiredMonitoringStatefulSets(),
 			monitoringSelector,
 			condition,
 		); err != nil || exitCondition != nil {
@@ -583,11 +582,6 @@ func (h *Health) checkWorkers(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
-}
-
-// ComputeRequiredMonitoringStatefulSets returns names of monitoring statefulsets based on the given shoot.
-func ComputeRequiredMonitoringStatefulSets() sets.Set[string] {
-	return sets.New(v1beta1constants.StatefulSetNamePrometheus)
 }
 
 // ComputeRequiredMonitoringSeedDeployments returns names of monitoring deployments based on the given shoot.

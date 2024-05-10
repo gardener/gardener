@@ -42,11 +42,11 @@ import (
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -173,8 +173,9 @@ type SystemComponents struct {
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
-	Alertmanager alertmanager.Interface
-	Monitoring   monitoring.Interface
+	Alertmanager     alertmanager.Interface
+	Prometheus       prometheus.Interface
+	BlackboxExporter blackboxexporter.Interface
 }
 
 // Logging contains references to logging deployers.

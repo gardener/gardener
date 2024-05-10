@@ -50,7 +50,7 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 - shoot nodes (node-exporter)
 - blackbox-exporter used to measure [connectivity](connectivity.md)
 
-**Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive [alerts](user_alerts.md) based on these metrics. Gardener operators will receive a different set of [alerts](operator_alerts.md). For alerting internals refer to [this](alerting.md) document.
+**Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive alerts based on these metrics. For alerting internals refer to [this](alerting.md) document.
 
 ## Collect all Shoot Prometheus with remote write
 
@@ -62,11 +62,6 @@ monitoring:
       url: https://remoteWriteUrl # remote write URL
       keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
       - kube_pod_container_info
-      queueConfig: | # queue_config of prometheus remote write as multiline string
-        max_shards: 100
-        batch_send_deadline: 20s
-        min_backoff: 500ms
-        max_backoff: 60s
     externalLabels: # add additional labels to metrics to identify it on the central instance
       additional: label
 ```

@@ -17,7 +17,7 @@ spec:
       - john.doe@example.com
 ```
 
-`emailReceivers` is a list of emails that will receive alerts if something is wrong with the shoot cluster. A list of alerts for users can be found in the [User Alerts](user_alerts.md) topic.
+`emailReceivers` is a list of emails that will receive alerts if something is wrong with the shoot cluster.
 
 # Alerting for Operators
 
@@ -25,8 +25,6 @@ Currently, Gardener supports two options for alerting:
 
 - [Email Alerting](#email-alerting)
 - [Sending Alerts to an External Alertmanager](#external-alertmanager)
-
-A list of operator alerts can be found in the [Operator Alerts](operator_alerts.md) topic.
 
 ## Email Alerting
 

@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -42,8 +43,7 @@ import (
 )
 
 const (
-	labelValue        = "blackbox-exporter"
-	labelKeyComponent = "component"
+	labelValue = "blackbox-exporter"
 
 	volumeMountPathConfig = "/etc/blackbox_exporter"
 	dataKeyConfig         = "blackbox.yaml"
@@ -71,6 +71,8 @@ type Values struct {
 	Image string
 	// ClusterType is the type of the cluster.
 	ClusterType component.ClusterType
+	// IsGardenCluster is specifying whether the component is deployed to the garden cluster.
+	IsGardenCluster bool
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the cluster.
 	VPAEnabled bool
 	// KubernetesVersion is the Kubernetes version of the cluster.
@@ -83,6 +85,8 @@ type Values struct {
 	PodLabels map[string]string
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
+	// Replicas is the number of replicas
+	Replicas int32
 }
 
 // New creates a new instance of DeployWaiter for blackbox-exporter.
@@ -200,11 +204,13 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Name:      "blackbox-exporter",
 				Namespace: b.runtimeNamespace(),
 				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
+				// TODO(rfranzke): Remove this annotation after v1.100 got released.
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
+				Replicas:             &b.values.Replicas,
 				RevisionHistoryLimit: ptr.To[int32](2),
-				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{labelKeyComponent: labelValue}},
+				Selector:             &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: labelValue}},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{},
@@ -283,7 +289,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Name:      "blackbox-exporter",
 				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
-					labelKeyComponent: labelValue,
+					v1beta1constants.LabelApp: labelValue,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -296,7 +302,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 					},
 				},
 				Selector: map[string]string{
-					labelKeyComponent: labelValue,
+					v1beta1constants.LabelApp: labelValue,
 				},
 			},
 		}
@@ -307,7 +313,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: b.runtimeNamespace(),
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					labelKeyComponent:           labelValue,
+					v1beta1constants.LabelApp:   labelValue,
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
@@ -323,10 +329,16 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
 
 	if b.values.ClusterType == component.ClusterTypeSeed {
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		networkPolicyPort := networkingv1.NetworkPolicyPort{
 			Port:     ptr.To(intstr.FromInt32(port)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
+		}
+
+		if b.values.IsGardenCluster {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, networkPolicyPort))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkPolicyPort))
+		}
 	}
 
 	if b.values.VPAEnabled {
@@ -368,61 +380,65 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
 
-		caGardenerSecret, found := b.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
+		accessSecretName := shootprometheus.AccessSecretName
+		if b.values.IsGardenCluster {
+			accessSecretName = gardenprometheus.AccessSecretName
 		}
 
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: volumeNameClusterAccess,
-				VolumeSource: corev1.VolumeSource{
-					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To(int32(420)),
-						Sources: []corev1.VolumeProjection{
-							{
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
-									Items: []corev1.KeyToPath{{
-										Key:  secrets.DataKeyCertificateBundle,
-										Path: secrets.DataKeyCertificateBundle,
-									}},
-									Optional: ptr.To(false),
-								},
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameClusterAccess,
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To(int32(420)),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{Name: caSecret.Name},
+								Items: []corev1.KeyToPath{{
+									Key:  secrets.DataKeyCertificateBundle,
+									Path: secrets.DataKeyCertificateBundle,
+								}},
+								Optional: ptr.To(false),
 							},
-							{
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{Name: gardenprometheus.AccessSecretName},
-									Items: []corev1.KeyToPath{{
-										Key:  resourcesv1alpha1.DataKeyToken,
-										Path: resourcesv1alpha1.DataKeyToken,
-									}},
-									Optional: ptr.To(false),
-								},
+						},
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{Name: accessSecretName},
+								Items: []corev1.KeyToPath{{
+									Key:  resourcesv1alpha1.DataKeyToken,
+									Path: resourcesv1alpha1.DataKeyToken,
+								}},
+								Optional: ptr.To(false),
 							},
 						},
 					},
 				},
 			},
-			corev1.Volume{
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameClusterAccess,
+			MountPath: VolumeMountPathClusterAccess,
+		})
+
+		if b.values.IsGardenCluster {
+			caGardenerSecret, found := b.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
+			if !found {
+				return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
+			}
+
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 				Name: volumeNameGardenerCA,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: caGardenerSecret.Name,
 					},
 				},
-			},
-		)
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			corev1.VolumeMount{
-				Name:      volumeNameClusterAccess,
-				MountPath: VolumeMountPathClusterAccess,
-			},
-			corev1.VolumeMount{
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeNameGardenerCA,
 				MountPath: VolumeMountPathGardenerCA,
-			},
-		)
+			})
+		}
 	}
 
 	return registry.AddAllAndSerialize(
@@ -437,7 +453,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		labelKeyComponent:               labelValue,
+		v1beta1constants.LabelApp:       labelValue,
 		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 	}

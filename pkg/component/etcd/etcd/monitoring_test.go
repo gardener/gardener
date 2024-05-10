@@ -419,18 +419,18 @@ static_configs:
       summary: Etcd delta snapshot failure.
   - alert: KubeEtcdFullBackupFailed
     expr:
-            (
-                (
-                    time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"}
-                  > bool
-                    86400
-                )
-              *
-                etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"}
-            )
+          (
+              (
+                  time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"}
+                > bool
+                  86400
+              )
+            *
+              etcdbr_snapshot_required{job="kube-etcd3-backup-restore-` + testRole + `",kind="Full"}
+          )
           * on (pod, role)
             etcd_server_is_leader{job="kube-etcd3-` + testRole + `"}
-        >
+          >
           0
     for: 15m
     labels:

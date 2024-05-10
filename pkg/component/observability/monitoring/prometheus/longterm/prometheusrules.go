@@ -35,7 +35,7 @@ func init() {
 // CentralPrometheusRules returns the central PrometheusRule resources for the long-term prometheus.
 func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 	return []*monitoringv1.PrometheusRule{
-		recording,
-		sla,
+		recording.DeepCopy(),
+		sla.DeepCopy(),
 	}
 }

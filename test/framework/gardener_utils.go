@@ -216,16 +216,13 @@ func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Conte
 		return err
 	}
 
-	// TODO(acumino): Remove this once prometheus is moved to golang component based deployment.
+	// TODO(rfranzke): Remove this after v1.97 has been released.
 	{
-		ingress := &networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "prometheus",
-				Namespace: shoot.Status.TechnicalID,
-			},
-		}
-		if err := client.IgnoreNotFound(seedClient.Delete(ctx, ingress)); err != nil {
-			return fmt.Errorf("error deleting ingress %s: %w", client.ObjectKeyFromObject(ingress), err)
+		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
+			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: shoot.Status.TechnicalID}},
+			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-shoot", Namespace: shoot.Status.TechnicalID}},
+		); err != nil {
+			return fmt.Errorf("error deleting Prometheus ingress: %w", err)
 		}
 	}
 

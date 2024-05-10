@@ -13,6 +13,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -40,13 +42,22 @@ func (p *prometheus) service() *corev1.Service {
 		},
 	}
 
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-		Port:     ptr.To(intstr.FromInt32(port)),
-		Protocol: ptr.To(corev1.ProtocolTCP),
-	}))
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-	}}))
+	switch p.values.ClusterType {
+	case component.ClusterTypeShoot:
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{
+			corev1.LabelMetadataName: v1beta1constants.GardenNamespace,
+		}}))
+
+	default:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     ptr.To(intstr.FromInt32(port)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+		}}))
+	}
 
 	return service
 }

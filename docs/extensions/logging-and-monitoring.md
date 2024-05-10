@@ -4,7 +4,7 @@ Gardener provides an integrated logging and monitoring stack for alerting, monit
 
 The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/) and [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) (managed via [`prometheus-operator`](https://github.com/prometheus-operator/prometheus-operator), and [Plutono](https://github.com/credativ/plutono) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-operator](https://github.com/fluent/fluent-operator) and [Vali](https://github.com/credativ/plutono) in the `garden` namespace too.
 
-Each shoot namespace hosts managed logging and monitoring components. As part of the shoot reconciliation flow, Gardener deploys a shoot-specific Prometheus, Plutono and, if configured, an Alertmanager into the shoot namespace, next to the other control plane components. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, it deploys a shoot-specific Vali in the shoot namespace too.
+Each shoot namespace hosts managed logging and monitoring components. As part of the shoot reconciliation flow, Gardener deploys a shoot-specific Prometheus, blackbox-exporter, Plutono, and, if configured, an Alertmanager into the shoot namespace, next to the other control plane components. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, it deploys a shoot-specific Vali in the shoot namespace too.
 
 The logging and monitoring stack is extensible by configuration. Gardener extensions can take advantage of that and contribute monitoring configurations encoded in `ConfigMap`s for their own, specific dashboards, alerts and other supported assets and integrate with it. As with other Gardener resources, they will be continuously reconciled. The extensions can also deploy directly fluent-operator custom resources which will be created in the seed cluster and plugged into the fluent-bit instance.
 
@@ -132,16 +132,204 @@ Examples for this would be a cloud-controller-manager or CSI controller deployme
 
 #### Extensions Monitoring Integration
 
+In case an extension wants to extend the configuration for the shoot Prometheus, they can create the [`prometheus-operator`'s custom resources](https://github.com/prometheus-operator/prometheus-operator?tab=readme-ov-file#customresourcedefinitions) and label them with `prometheus=shoot`.
+
+##### `ServiceMonitor`
+
+When the component runs in the seed cluster (e.g., as part of the shoot control plane), `ServiceMonitor` resources should be used:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    prometheus: shoot
+  name: shoot-my-controlplane-component
+  namespace: shoot--foo--bar
+spec:
+  selector:
+    matchLabels:
+      app: my-component
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(metric1|metric2|...)$
+      sourceLabels:
+      - __name__
+    port: metrics
+```
+
+In case `HTTPS` scheme is used, the CA certificate should be provided like this:
+
+```yaml
+spec:
+  scheme: HTTPS
+  tlsConfig:
+    ca:
+      secret:
+        name: <name-of-ca-bundle-secret>
+        key: bundle.crt
+```
+
+In case the component requires credentials when contacting its metrics endpoint, provide them like this:
+
+```yaml
+spec:
+  authorization:
+    credentials:
+      name: <name-of-secret-containing-credentials>
+      key: <data-keyin-secret>
+```
+
+If the component delegates authorization to the `kube-apiserver` of the shoot cluster, you can use the `shoot-access-prometheus-shoot` secret:
+
+```yaml
+spec:
+  authorization:
+    credentials:
+      name: shoot-access-prometheus-shoot
+      key: token
+  # in case the component's server certificate is signed by the cluster CA:
+  scheme: HTTPS
+  tlsConfig:
+    ca:
+      secret:
+        name: <name-of-ca-bundle-secret>
+        key: bundle.crt
+```
+
+##### `ScrapeConfig`s
+
+If the component runs in the shoot cluster itself, metrics are scraped via the `kube-apiserver` proxy.
+In this case, Prometheus needs to authenticate itself with the API server.
+This can be done like this:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  labels:
+    prometheus: shoot
+  name: shoot-my-cluster-component
+  namespace: shoot--foo--bar
+spec:
+  authorization:
+    credentials:
+      name: shoot-access-prometheus-shoot
+      key: token
+  scheme: HTTPS
+  tlsConfig:
+    ca:
+      secret:
+        name: <name-of-ca-bundle-secret>
+        key: bundle.crt
+  kubernetesSDConfigs:
+  - apiServer: https://kube-apiserver
+    authorization:
+      credentials:
+        name: shoot-access-prometheus-shoot
+        key: token
+    followRedirects: true
+    namespaces:
+      names:
+      - kube-system
+    role: endpoints
+    tlsConfig:
+      ca:
+        secret:
+          name: <name-of-ca-bundle-secret>
+          key: bundle.crt
+      cert: {}
+  metricRelabelings:
+  - sourceLabels:
+    - __name__
+    action: keep
+    regex: ^(metric1|metric2)$
+  - sourceLabels:
+    - namespace
+    action: keep
+    regex: kube-system
+  relabelings:
+  - action: replace
+    replacement: my-cluster-component
+    targetLabel: job
+  - sourceLabels: [__meta_kubernetes_service_name, __meta_kubernetes_pod_container_port_name]
+    separator: ;
+    regex: my-component-service;metrics
+    replacement: $1
+    action: keep
+  - sourceLabels: [__meta_kubernetes_endpoint_node_name]
+    separator: ;
+    regex: (.*)
+    targetLabel: node
+    replacement: $1
+    action: replace
+  - sourceLabels: [__meta_kubernetes_pod_name]
+    separator: ;
+    regex: (.*)
+    targetLabel: pod
+    replacement: $1
+    action: replace
+  - targetLabel: __address__
+    replacement: kube-apiserver:443
+  - sourceLabels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
+    separator: ;
+    regex: (.+);(.+)
+    targetLabel: __metrics_path__
+    replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+    action: replace
+```
+
+##### `PrometheusRule`
+
+Similar to `ServiceMonitor`s, `PrometheusRule`s can be created with the `prometheus=shoot` label:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: shoot
+  name: shoot-my-component
+  namespace: shoot--foo--bar
+spec:
+  groups:
+  - name: my.rules
+    rules:
+    # ...
+```
+
+##### Plutono Dashboards
+
+A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the shoot cluster's namespace for visualizing monitoring metrics and logs via dashboards.
+In order to provide custom dashboards, create a `ConfigMap` in the shoot cluster's namespace labelled with `dashboard.monitoring.gardener.cloud/shoot=true` that contains the respective JSON documents, for example:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    dashboard.monitoring.gardener.cloud/shoot: "true"
+  name: extension-foo-my-custom-dashboard
+  namespace: shoot--project--name
+data:
+  my-custom-dashboard.json: <dashboard-JSON-document>
+```
+
+#### Legacy Method of Providing Observability Configuration
+
+> [!CAUTION]
+> The following documentation refers to the previous/legacy method of providing observability configuration.
+> This way is deprecated and will be removed after Gardener v1.100 has been released.
+> Consult [this section](#plutono-dashboards) for information about how to provide the dashboards.
+
 Before deploying the shoot-specific Prometheus instance, Gardener will read all `ConfigMap`s in the shoot namespace, which are labeled with `extensions.gardener.cloud/configuration=monitoring`.
 Such `ConfigMap`s may contain four fields in their `data`:
 
-* `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
-* `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
+* (DEPRECATED) `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
+* (DEPRECATED) `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
 * (DEPRECATED) `dashboard_operators`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
 * (DEPRECATED) `dashboard_users`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
-
-> [!CAUTION]
-> Providing Plutono dashboards this way is deprecated and will be removed in a future release. Consult [this section](#plutono-dashboards) for information about how to provide the dashboards.
 
 **Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules, dashboards, and logging configuration for exposing logs to the end users.
 
@@ -198,23 +386,6 @@ data:
           annotations:
             description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
             summary: Cloud controller manager is down.
-```
-
-##### Plutono Dashboards
-
-A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardenlet` into the shoot cluster's namespace for visualizing monitoring metrics and logs via dashboards.
-In order to provide custom dashboards, create a `ConfigMap` in the shoot cluster's namespace labelled with `dashboard.monitoring.gardener.cloud/shoot=true` that contains the respective JSON documents, for example:
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  labels:
-    dashboard.monitoring.gardener.cloud/shoot: "true"
-  name: extension-foo-my-custom-dashboard
-  namespace: shoot--project--name
-data:
-  my-custom-dashboard.json: <dashboard-JSON-document>
 ```
 
 ## Logging

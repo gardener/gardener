@@ -827,11 +827,6 @@ func (in *RemoteWriteMonitoringConfig) DeepCopyInto(out *RemoteWriteMonitoringCo
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.QueueConfig != nil {
-		in, out := &in.QueueConfig, &out.QueueConfig
-		*out = new(string)
-		**out = **in
-	}
 	return
 }
 

@@ -147,20 +147,6 @@ In addition, each alert must contain the following labels:
   * `info`: All issues that do not affect the cluster or its core functionality, but if this component is down we cannot determine if a blocker alert is firing. (i.e. A component with an info level severity is a dependency for a component with a blocker severity)
   * `warning`: No current existing issue, rather a hint for situations which could lead to real issue in the close future e.g. `HighLatencyApiServerToWorkers` or `ApiServerResponseSlow`.
 
-### Alert Tests
-
-To test the Prometheus alerts:
-
-```bash
-make test-prometheus
-```
-
-If you want to add alert tests:
-
-1. Create a new file in `rules-tests` in the form `<alert-group-name>.rules.test.yaml` or if the alerts are for an existing component with existing tests, simply add the tests to the appropriate files.
-
-2. Make sure that newly added tests succeed. See above.
-
 ## Adding Plutono Dashboards
 
 The dashboard definition files are located in `charts/seed-monitoring/charts/plutono/dashboards`. Every dashboard needs its own file.

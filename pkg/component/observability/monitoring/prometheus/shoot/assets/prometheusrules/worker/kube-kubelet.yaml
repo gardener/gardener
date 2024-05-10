@@ -1,0 +1,81 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kube-kubelet
+spec:
+  groups:
+  - name: kube-kubelet.rules
+    rules:
+    - alert: KubeKubeletNodeDown
+      expr: up{job="kube-kubelet", type="shoot"} == 0
+      for: 1h
+      labels:
+        service: kube-kubelet
+        severity: warning
+        type: shoot
+        visibility: owner
+      annotations:
+        description: The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.
+        summary: Kubelet unavailable
+    - alert: KubeletTooManyOpenFileDescriptorsShoot
+      expr: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds{job=~"^(?:kube-kubelet)$"} > 50
+      for: 30m
+      labels:
+        service: kube-kubelet
+        severity: warning
+        type: shoot
+        visibility: owner
+      annotations:
+        description: 'Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Shoot-kubelet has too many open file descriptors.'
+    - alert: KubeletTooManyOpenFileDescriptorsShoot
+      expr: 100 * process_open_fds{job="kube-kubelet"} / process_max_fds{job="kube-kubelet"} > 80
+      for: 30m
+      labels:
+        service: kube-kubelet
+        severity: critical
+        type: shoot
+        visibility: owner
+      annotations:
+        description: 'Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Shoot-kubelet has too many open file descriptors.'
+    - alert: KubeletTooManyOpenFileDescriptorsSeed
+      expr: 100 * process_open_fds{job="kube-kubelet-seed"} / process_max_fds{job="kube-kubelet-seed"} > 80
+      for: 30m
+      labels:
+        service: kube-kubelet
+        severity: critical
+        type: seed
+        visibility: operator
+      annotations:
+        description: 'Seed-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Seed-kubelet has too many open file descriptors.'
+    - alert: KubePersistentVolumeUsageCritical
+      expr: 100 * kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 5
+      for: 1h
+      labels:
+        service: kube-kubelet
+        severity: critical
+        type: seed
+        visibility: operator
+      annotations:
+        description: The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is only {{ printf "%0.2f" $value }}% free.
+        summary: PersistentVolume almost full.
+    - alert: KubePersistentVolumeFullInFourDays
+      expr: |
+        100 * (
+          kubelet_volume_stats_available_bytes{type="seed", persistentvolumeclaim!~"vali-.*"}
+            /
+          kubelet_volume_stats_capacity_bytes{type="seed", persistentvolumeclaim!~"vali-.*"}
+        ) < 15
+        and
+        predict_linear(kubelet_volume_stats_available_bytes{type="seed", persistentvolumeclaim!~"vali-.*"}[30m], 4 * 24 * 3600) <= 0
+      for: 1h
+      labels:
+        service: kube-kubelet
+        severity: warning
+        type: seed
+        visibility: operator
+      annotations:
+        description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to fill up within four days. Currently {{ printf "%0.2f" $value }}% is available.
+        summary: PersistentVolume will be full in four days.

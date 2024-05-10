@@ -195,9 +195,6 @@ The main specifications there are:
 
 ### Plutono
 
-The Plutono configurations can be found on `charts/seed-bootstrap/charts/templates/plutono/plutono-datasources-configmap.yaml` and
-`charts/seed-monitoring/charts/plutono/tempates/plutono-datasources-configmap.yaml`
-
 This is the Vali configuration that Plutono uses:
 
 ```

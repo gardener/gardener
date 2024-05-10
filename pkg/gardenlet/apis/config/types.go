@@ -546,8 +546,6 @@ type RemoteWriteMonitoringConfig struct {
 	URL string
 	// Keep contains a list of metrics that will be remote written
 	Keep []string
-	// QueueConfig contains the queue_config for prometheus remote write.
-	QueueConfig *string
 }
 
 // NodeToleration contains information about node toleration options.

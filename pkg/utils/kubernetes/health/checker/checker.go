@@ -128,26 +128,6 @@ func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 	return nil
 }
 
-func (h *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
-	actualNames := sets.New[string]()
-	for _, object := range objects {
-		actualNames.Insert(object.Name)
-	}
-
-	return h.checkRequiredResourceNames(condition, requiredNames, actualNames, "StatefulSetMissing", "Missing required stateful sets")
-}
-
-func (h *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
-	for _, object := range objects {
-		if err := health.CheckStatefulSet(&object); err != nil {
-			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %q is unhealthy: %v", object.Name, err.Error()))
-			return &c
-		}
-	}
-
-	return nil
-}
-
 // kubeletConfigProblemRegex is used to check if an error occurred due to a kubelet configuration problem.
 var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
 
@@ -344,7 +324,6 @@ func (h *HealthChecker) CheckMonitoringControlPlane(
 	ctx context.Context,
 	namespace string,
 	requiredMonitoringDeployments sets.Set[string],
-	requiredMonitoringStatefulSets sets.Set[string],
 	appsSelector labels.Selector,
 	condition gardencorev1beta1.Condition,
 ) (
@@ -356,23 +335,11 @@ func (h *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	statefulSetList := &appsv1.StatefulSetList{}
-	if err := h.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: appsSelector}); err != nil {
-		return nil, err
-	}
-
 	if exitCondition := h.checkRequiredDeployments(condition, requiredMonitoringDeployments, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 
 	if exitCondition := h.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	if exitCondition := h.checkRequiredStatefulSets(condition, requiredMonitoringStatefulSets, statefulSetList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := h.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 

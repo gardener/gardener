@@ -1,0 +1,90 @@
+rule_files:
+- ../kube-kubelet.prometheusrule.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # KubeKubeletNodeDown
+  - series: 'up{job="kube-kubelet", type="shoot"}'
+    values: '0+0x60'
+  # KubeletTooManyOpenFileDescriptorsShoot
+  - series: 'process_open_fds{kubernetes_io_hostname="hostname", job="kube-kubelet"}'
+    values: '81+0x60'
+  - series: 'process_max_fds{kubernetes_io_hostname="hostname", job="kube-kubelet"}'
+    values: '100+0x60'
+  # KubeletTooManyOpenFileDescriptorsSeed
+  - series: 'process_open_fds{kubernetes_io_hostname="hostname", job="kube-kubelet-seed"}'
+    values: '81+0x60'
+  - series: 'process_max_fds{kubernetes_io_hostname="hostname", job="kube-kubelet-seed"}'
+    values: '100+0x60'
+  # KubePersistentVolumeUsageCritical KubePersistentVolumeFullInFourDays
+  - series: 'kubelet_volume_stats_available_bytes{job="kube-kubelet", type="seed", persistentvolumeclaim="pvc1"}'
+    values: '0+0x240'
+  - series: 'kubelet_volume_stats_capacity_bytes{job="kube-kubelet", type="seed", persistentvolumeclaim="pvc1"}'
+    values: '100+0x240'
+  alert_rule_test:
+  - eval_time: 30m
+    alertname: KubeletTooManyOpenFileDescriptorsShoot
+    exp_alerts:
+    - exp_labels:
+        job: kube-kubelet
+        service: kube-kubelet
+        severity: warning
+        visibility: owner
+        type: shoot
+        kubernetes_io_hostname: hostname
+      exp_annotations:
+        description: 'Shoot-kubelet (hostname) is using 81% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Shoot-kubelet has too many open file descriptors.'
+    - exp_labels:
+        job: kube-kubelet
+        service: kube-kubelet
+        severity: critical
+        type: shoot
+        visibility: owner
+        kubernetes_io_hostname: hostname
+      exp_annotations:
+        description: 'Shoot-kubelet (hostname) is using 81% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Shoot-kubelet has too many open file descriptors.'
+  - eval_time: 30m
+    alertname: KubeletTooManyOpenFileDescriptorsSeed
+    exp_alerts:
+    - exp_labels:
+        job: kube-kubelet-seed
+        service: kube-kubelet
+        severity: critical
+        visibility: operator
+        type: seed
+        kubernetes_io_hostname: hostname
+      exp_annotations:
+        description: 'Seed-kubelet (hostname) is using 81% of the available file/socket descriptors. Kubelet could be under heavy load.'
+        summary: 'Seed-kubelet has too many open file descriptors.'
+  - eval_time: 1h
+    alertname: KubePersistentVolumeUsageCritical
+    exp_alerts:
+    - exp_labels:
+        job: kube-kubelet
+        service: kube-kubelet
+        severity: critical
+        type: seed
+        visibility: operator
+        persistentvolumeclaim: pvc1
+      exp_annotations:
+        description: The PersistentVolume claimed by pvc1 is only 0.00% free.
+        summary: PersistentVolume almost full.
+  - eval_time: 2h
+    alertname: KubePersistentVolumeFullInFourDays
+    exp_alerts:
+    - exp_labels:
+        job: kube-kubelet
+        service: kube-kubelet
+        severity: warning
+        type: seed
+        visibility: operator
+        persistentvolumeclaim: pvc1
+      exp_annotations:
+        description: Based on recent sampling, the PersistentVolume claimed by pvc1 is expected to fill up within four days. Currently 0.00% is available.
+        summary: PersistentVolume will be full in four days.
+

@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Core monitoring components
-name: core
-version: 0.1.0

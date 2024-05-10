@@ -38,7 +38,7 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 		tlsSecretName = ingressTLSSecret.Name
 	}
 
-	return &networkingv1.Ingress{
+	obj := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
 			Namespace: p.namespace,
@@ -73,5 +73,19 @@ func (p *prometheus) ingress(ctx context.Context) (*networkingv1.Ingress, error)
 				},
 			}},
 		},
-	}, nil
+	}
+
+	if p.values.Ingress.BlockManagementAndTargetAPIAccess {
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "nginx.ingress.kubernetes.io/server-snippet", `location /-/reload {
+  return 403;
+}
+location /-/quit {
+  return 403;
+}
+location /api/v1/targets {
+  return 403;
+}`)
+	}
+
+	return obj, nil
 }

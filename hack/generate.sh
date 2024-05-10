@@ -6,7 +6,7 @@
 
 set -e
 
-WHAT="protobuf codegen manifests logcheck monitoring-docs"
+WHAT="protobuf codegen manifests logcheck"
 CODEGEN_GROUPS=""
 MANIFESTS_DIRS=""
 MODE=""
@@ -96,11 +96,8 @@ run_target() {
     logcheck)
       cd "$REPO_ROOT/$LOGCHECK_DIR" && go generate ./...
       ;;
-    monitoring-docs)
-      $REPO_ROOT/hack/generate-monitoring-docs.sh
-      ;;
     *)
-      printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'monitoring-docs'.\n\n"
+      printf "ERROR: Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck'.\n\n"
       ;;
   esac
 }

@@ -1211,7 +1211,6 @@ func Convert_config_NodeToleration_To_v1alpha1_NodeToleration(in *config.NodeTol
 func autoConvert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitoringConfig(in *RemoteWriteMonitoringConfig, out *config.RemoteWriteMonitoringConfig, s conversion.Scope) error {
 	out.URL = in.URL
 	out.Keep = *(*[]string)(unsafe.Pointer(&in.Keep))
-	out.QueueConfig = (*string)(unsafe.Pointer(in.QueueConfig))
 	return nil
 }
 
@@ -1223,7 +1222,6 @@ func Convert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitorin
 func autoConvert_config_RemoteWriteMonitoringConfig_To_v1alpha1_RemoteWriteMonitoringConfig(in *config.RemoteWriteMonitoringConfig, out *RemoteWriteMonitoringConfig, s conversion.Scope) error {
 	out.URL = in.URL
 	out.Keep = *(*[]string)(unsafe.Pointer(&in.Keep))
-	out.QueueConfig = (*string)(unsafe.Pointer(in.QueueConfig))
 	return nil
 }
 

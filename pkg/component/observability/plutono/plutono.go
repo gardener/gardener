@@ -291,7 +291,7 @@ providers:
 }
 
 func (p *plutono) getDataSource() string {
-	prometheusSuffix, maxLine := "web", "1000"
+	prometheusSuffix, maxLine := "shoot", "1000"
 	if p.values.IsGardenCluster {
 		prometheusSuffix, maxLine = "garden", "5000"
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
@@ -862,8 +862,8 @@ func (p *plutono) getPodLabels() map[string]string {
 		})
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
-			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
 

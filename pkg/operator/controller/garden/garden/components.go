@@ -1201,6 +1201,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			SigningCA:              operatorv1alpha1.SecretNameCARuntime,
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
+		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
 		// TODO(rfranzke): Remove this after v1.95 has been released.
 		DataMigration: monitoring.DataMigration{
 			StatefulSetName: "garden-prometheus",
@@ -1280,6 +1281,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 		r.GardenNamespace,
 		blackboxexporter.Values{
 			ClusterType:       component.ClusterTypeSeed,
+			IsGardenCluster:   true,
 			VPAEnabled:        true,
 			KubernetesVersion: r.RuntimeVersion,
 			PodLabels: map[string]string{
@@ -1291,6 +1293,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
 			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
+			Replicas:          1,
 		},
 	)
 }

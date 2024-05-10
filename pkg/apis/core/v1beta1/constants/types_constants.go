@@ -186,9 +186,6 @@ const (
 	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
 	// the vali pod.
 	StatefulSetNameVali = "vali"
-	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
-	// the prometheus pod.
-	StatefulSetNamePrometheus = "prometheus"
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
@@ -416,6 +413,9 @@ const (
 	// LabelExtensionPrefix is used to prefix extension specific labels.
 	LabelExtensionPrefix = "extensions.gardener.cloud/"
 	// LabelExtensionConfiguration is used to identify the provider's configuration which will be added to Gardener configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	LabelExtensionConfiguration = LabelExtensionPrefix + "configuration"
 	// LabelLogging is a constant for a label for logging stack configurations
 	LabelLogging = "logging"
@@ -692,8 +692,14 @@ const (
 	// FluentBitConfigMapParser is a constant for the Fluent Bit ConfigMap's section regarding Parsers for common container types
 	FluentBitConfigMapParser = "parsers.conf"
 	// PrometheusConfigMapAlertingRules is a constant for the Prometheus alerting rules tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PrometheusConfigMapAlertingRules = "alerting_rules"
 	// PrometheusConfigMapScrapeConfig is a constant for the Prometheus scrape config tag in provider-specific monitoring configuration
+	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see
+	// https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md#plutono-dashboards.
+	// TODO(rfranzke): Remove this constant after v1.100 has been released.
 	PrometheusConfigMapScrapeConfig = "scrape_config"
 	// PlutonoConfigMapUserDashboard is a constant for the Plutono user dashboard tag in provider-specific monitoring configuration
 	// Deprecated: This field will be removed in a future version. Migrate to the new approach, for more details see

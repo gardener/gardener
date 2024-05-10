@@ -324,13 +324,18 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		deleteAlertmanager = g.Add(flow.Task{
-			Name:         "Deleting Shoot alertmanager",
+			Name:         "Deleting Shoot Alertmanager",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Alertmanager.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
-		deleteSeedMonitoring = g.Add(flow.Task{
-			Name:         "Deleting shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Monitoring.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		deletePrometheus = g.Add(flow.Task{
+			Name:         "Deleting Shoot Prometheus",
+			Fn:           flow.TaskFn(botanist.DestroyPrometheus).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		deleteBlackboxExporter = g.Add(flow.Task{
+			Name:         "Destroying control plane blackbox-exporter",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteClusterAutoscaler = g.Add(flow.Task{
@@ -650,7 +655,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		syncPoint = flow.NewTaskIDs(
 			deleteAlertmanager,
-			deleteSeedMonitoring,
+			deletePrometheus,
+			deleteBlackboxExporter,
 			deletePlutono,
 			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,

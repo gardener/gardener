@@ -40,7 +40,7 @@ var _ = Describe("ServiceMonitors", func() {
 								`{__name__="kubeproxy_sync_proxy:quantile"}`,
 							},
 						},
-						Port: "metrics",
+						Port: "web",
 						RelabelConfigs: []*monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",

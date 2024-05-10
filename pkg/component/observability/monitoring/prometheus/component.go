@@ -15,6 +15,7 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,8 +32,11 @@ import (
 const (
 	dataKeyAdditionalScrapeConfigs       = "prometheus.yaml"
 	dataKeyAdditionalAlertRelabelConfigs = "configs.yaml"
-	port                                 = 9090
-	servicePort                          = 80
+	dataKeyAdditionalAlertmanagerConfigs = "configs.yaml"
+
+	port        = 9090
+	servicePort = 80
+
 	// ServicePortName is the name of the port in the Service specification.
 	ServicePortName = "web"
 )
@@ -46,6 +50,12 @@ type Interface interface {
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
+	// SetAdditionalScrapeConfigs sets the additional scrape configs.
+	SetAdditionalScrapeConfigs([]string)
+	// SetAdditionalResources sets the additional resources.
+	SetAdditionalResources(...client.Object)
+	// SetNamespaceUID sets the namespace UID.
+	SetNamespaceUID(name types.UID)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -56,6 +66,8 @@ type Values struct {
 	Image string
 	// Version is the version of prometheus.
 	Version string
+	// ClusterType is the type of the cluster.
+	ClusterType component.ClusterType
 	// PriorityClassName is the name of the priority class for the deployment.
 	PriorityClassName string
 	// StorageCapacity is the storage capacity of Prometheus.
@@ -78,6 +90,8 @@ type Values struct {
 	ExternalLabels map[string]string
 	// AdditionalPodLabels is a map containing additional labels for the created pods.
 	AdditionalPodLabels map[string]string
+	// NamespaceUID is the UID of the namespace.
+	NamespaceUID *types.UID
 	// CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should
 	// only contain configuration that cannot be directly assigned to another component package.
 	CentralConfigs CentralConfigs
@@ -85,13 +99,18 @@ type Values struct {
 	Ingress *IngressValues
 	// Alerting contains alerting configuration for this Prometheus instance.
 	Alerting *AlertingValues
+	// RemoteWrite contains remote write configuration for this Prometheus instance.
+	RemoteWrite *RemoteWriteValues
 	// AdditionalResources contains any additional resources which get added to the ManagedResource.
 	AdditionalResources []client.Object
 	// Cortex contains configuration for the cortex frontend sidecar container.
 	Cortex *CortexValues
+	// TargetCluster contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
+	// virtual garden, or shoot cluster) or other components running in this cluster.
+	TargetCluster *TargetClusterValues
 
 	// DataMigration is a struct for migrating data from existing disks.
-	// TODO(rfranzke): Remove this as soon as the PV migration code is removed.
+	// TODO(rfranzke): Remove this after v1.97 has been released.
 	DataMigration monitoring.DataMigration
 }
 
@@ -115,6 +134,18 @@ type CentralConfigs struct {
 type AlertingValues struct {
 	// AlertmanagerName is the name of the alertmanager to which alerts should be sent.
 	AlertmanagerName string
+	// AdditionalAlertmanager contains the data of the 'alerting' secret (url, credentials, etc.).
+	AdditionalAlertmanager map[string][]byte
+}
+
+// RemoteWriteValues contains remote write configuration for this Prometheus instance.
+type RemoteWriteValues struct {
+	// URL is the remote url.
+	URL string
+	// KeptMetrics is a list of metrics to keep.
+	KeptMetrics []string
+	// GlobalShootRemoteWriteSecret is a secret containing basic auth credentials for the remote write endpoint.
+	GlobalShootRemoteWriteSecret *corev1.Secret
 }
 
 // IngressValues contains configuration for exposing this Prometheus instance via an Ingress resource.
@@ -132,6 +163,19 @@ type IngressValues struct {
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
 	// ingress domain. If not provided, a self-signed server certificate will be created.
 	WildcardCertSecretName *string
+	// BlockManagementAndTargetAPIAccess controls whether access to the management and target APIs is blocked when
+	// accessing Prometheus via ingress.
+	BlockManagementAndTargetAPIAccess bool
+}
+
+// TargetClusterValues contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
+// virtual garden, or shoot cluster) or other components running in this cluster.
+type TargetClusterValues struct {
+	// ServiceAccountName is the name of the ServiceAccount.
+	ServiceAccountName string
+	// ScrapesMetrics specifies whether this Prometheus has scrape configs for scraping metrics from components running
+	// in the target cluster.
+	ScrapesMetrics bool
 }
 
 // CortexValues contains configuration for the cortex frontend sidecar container.
@@ -184,15 +228,14 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if p.values.Alerting != nil {
-		if err := registry.Add(p.secretAdditionalAlertRelabelConfigs()); err != nil {
-			return err
-		}
-	}
-
 	var cortexConfigMap *corev1.ConfigMap
 	if p.values.Cortex != nil {
 		cortexConfigMap = p.cortexConfigMap()
+	}
+
+	prometheusObj, err := p.prometheus(takeOverExistingPV, cortexConfigMap)
+	if err != nil {
+		return err
 	}
 
 	resources, err := registry.AddAllAndSerialize(
@@ -200,8 +243,11 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
+		p.secretAdditionalAlertRelabelConfigs(),
+		p.secretAdditionalAlertmanagerConfigs(),
+		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
-		p.prometheus(takeOverExistingPV, cortexConfigMap),
+		prometheusObj,
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,
@@ -222,6 +268,26 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if p.values.TargetCluster != nil {
+		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		resourcesTarget, err := registryTarget.AddAllAndSerialize(
+			p.clusterRoleTarget(),
+			p.clusterRoleBindingTarget(),
+		)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShootWithLabels(ctx, p.client, p.namespace, p.name()+"-target", managedresources.LabelValueGardener, false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resourcesTarget); err != nil {
+			return err
+		}
+	} else {
+		if err := managedresources.DeleteForShoot(ctx, p.client, p.namespace, p.name()+"-target"); err != nil {
+			return err
+		}
+	}
+
 	if takeOverExistingPV {
 		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
 			return err
@@ -235,6 +301,9 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 }
 
 func (p *prometheus) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForShoot(ctx, p.client, p.namespace, p.name()+"-target"); err != nil {
+		return err
+	}
 	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, p.name())
 }
 
@@ -270,6 +339,18 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 
 func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
 	p.values.CentralConfigs.ScrapeConfigs = configs
+}
+
+func (p *prometheus) SetAdditionalScrapeConfigs(configs []string) {
+	p.values.CentralConfigs.AdditionalScrapeConfigs = configs
+}
+
+func (p *prometheus) SetAdditionalResources(resources ...client.Object) {
+	p.values.AdditionalResources = resources
+}
+
+func (p *prometheus) SetNamespaceUID(uid types.UID) {
+	p.values.NamespaceUID = &uid
 }
 
 func (p *prometheus) name() string {

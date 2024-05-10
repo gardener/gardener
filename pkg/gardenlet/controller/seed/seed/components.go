@@ -51,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
@@ -647,7 +646,9 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                                                                       v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.IstioSystemNamespace + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:                         v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-web", 9090):                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-shoot", 9090):                                                     v1beta1constants.LabelNetworkPolicyAllowed,
+			// TODO(rfranzke): Remove this label after v1.97 has been released.
+			gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		Ingress: &prometheus.IngressValues{
 			Host:           seed.GetIngressFQDN(v1beta1constants.IngressDomainPrefixPrometheusAggregate),
@@ -694,7 +695,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		extensions.CentralLoggingConfiguration,
 		dependencywatchdog.CentralLoggingConfiguration,
 		alertmanager.CentralLoggingConfiguration,
-		monitoring.CentralLoggingConfiguration,
+		prometheus.CentralLoggingConfiguration,
 		plutono.CentralLoggingConfiguration,
 		// shoot control plane components
 		clusterautoscaler.CentralLoggingConfiguration,

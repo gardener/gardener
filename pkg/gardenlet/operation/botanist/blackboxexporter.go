@@ -7,15 +7,55 @@ package botanist
 import (
 	"context"
 
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
-	shootblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot"
+	clusterblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/cluster"
+	controlplaneblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/shoot/controlplane"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// DefaultBlackboxExporter returns a deployer for the blackbox-exporter.
-func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error) {
+// DefaultBlackboxExporterControlPlane returns a deployer for the blackbox-exporter.
+func (b *Botanist) DefaultBlackboxExporterControlPlane() (blackboxexporter.Interface, error) {
+	return sharedcomponent.NewBlackboxExporter(
+		b.SeedClientSet.Client(),
+		b.SecretsManager,
+		b.Shoot.SeedNamespace,
+		blackboxexporter.Values{
+			ClusterType:       component.ClusterTypeSeed,
+			VPAEnabled:        true,
+			KubernetesVersion: b.Seed.KubernetesVersion,
+			PodLabels: map[string]string{
+				// needed to talk to shoot API server via istio-ingressgateway
+				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias+"-istio-ingressgateway", 9443): v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port):                   v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+			Config:            controlplaneblackboxexporter.Config(),
+			ScrapeConfigs:     controlplaneblackboxexporter.ScrapeConfig(b.Shoot.SeedNamespace, monitoringv1alpha1.Target("https://"+gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)+"/healthz")),
+			Replicas:          b.Shoot.GetReplicas(1),
+		},
+	)
+}
+
+// ReconcileBlackboxExporterControlPlane deploys or destroys the blackbox-exporter component depending on whether shoot
+// monitoring is enabled or not.
+func (b *Botanist) ReconcileBlackboxExporterControlPlane(ctx context.Context) error {
+	if b.Operation.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.Monitoring.BlackboxExporter.Deploy(ctx)
+	}
+
+	return b.Shoot.Components.Monitoring.BlackboxExporter.Destroy(ctx)
+}
+
+// DefaultBlackboxExporterCluster returns a deployer for the blackbox-exporter.
+func (b *Botanist) DefaultBlackboxExporterCluster() (blackboxexporter.Interface, error) {
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
@@ -31,13 +71,15 @@ func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error)
 				v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: "system-cluster-critical",
-			Config:            shootblackboxexporter.Config(),
+			Config:            clusterblackboxexporter.Config(),
+			Replicas:          1,
 		},
 	)
 }
 
-// ReconcileBlackboxExporter deploys or destroys the blackbox-exporter component depending on whether shoot monitoring is enabled or not.
-func (b *Botanist) ReconcileBlackboxExporter(ctx context.Context) error {
+// ReconcileBlackboxExporterCluster deploys or destroys the blackbox-exporter component depending on whether shoot
+// monitoring is enabled or not.
+func (b *Botanist) ReconcileBlackboxExporterCluster(ctx context.Context) error {
 	if b.Operation.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.SystemComponents.BlackboxExporter.Deploy(ctx)
 	}
