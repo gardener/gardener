@@ -19,7 +19,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -59,18 +58,15 @@ var _ = Describe("KubeControllerManager", func() {
 		kubeControllerManager Interface
 		values                Values
 
-		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
-		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
-		namespace                     = "shoot--foo--bar"
-		version                       = "1.27.3"
-		semverVersion, _              = semver.NewVersion(version)
-		runtimeKubernetesVersion      = semver.MustParse("1.26.3")
-		image                         = "registry.k8s.io/kube-controller-manager:v1.25.3"
-		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
-		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
-		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeOff)}
-		isWorkerless                  = false
-		priorityClassName             = v1beta1constants.PriorityClassNameShootControlPlane300
+		_, podCIDR, _            = net.ParseCIDR("100.96.0.0/11")
+		_, serviceCIDR, _        = net.ParseCIDR("100.64.0.0/13")
+		namespace                = "shoot--foo--bar"
+		version                  = "1.27.3"
+		semverVersion, _         = semver.NewVersion(version)
+		runtimeKubernetesVersion = semver.MustParse("1.26.3")
+		image                    = "registry.k8s.io/kube-controller-manager:v1.25.3"
+		isWorkerless             = false
+		priorityClassName        = v1beta1constants.PriorityClassNameShootControlPlane300
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
@@ -119,41 +115,13 @@ var _ = Describe("KubeControllerManager", func() {
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
-		hvpaName                         = "kube-controller-manager"
-		pdbName                          = "kube-controller-manager"
-		secretName                       = "shoot-access-kube-controller-manager"
-		serviceName                      = "kube-controller-manager"
-		managedResourceName              = "shoot-core-kube-controller-manager"
-		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
-
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-					Name:       v1beta1constants.DeploymentNameKubeControllerManager,
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: "kube-controller-manager",
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("50Mi"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("10G"),
-						},
-						ControlledValues: &controlledValues,
-					}},
-				},
-			},
-		}
+		// TODO(andrerun): Remove this after v1.97 has been released.
+		hvpaName                  = "kube-controller-manager"
+		pdbName                   = "kube-controller-manager"
+		secretName                = "shoot-access-kube-controller-manager"
+		serviceName               = "kube-controller-manager"
+		managedResourceName       = "shoot-core-kube-controller-manager"
+		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -202,98 +170,40 @@ var _ = Describe("KubeControllerManager", func() {
 			return pdb
 		}
 
-		hvpaFor = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
-			scaleDownUpdateMode := config.ScaleDownUpdateMode
-			if scaleDownUpdateMode == nil {
-				scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
-			}
-
-			return &hvpav1alpha1.Hvpa{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      hvpaName,
-					Namespace: namespace,
-					Labels: map[string]string{
-						"app":  "kubernetes",
-						"role": "controller-manager",
-						"high-availability-config.resources.gardener.cloud/type": "controller",
-					},
-					ResourceVersion: "1",
-				},
-				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: ptr.To[int32](1),
-					Hpa: hvpav1alpha1.HpaSpec{
-						Deploy: false,
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"app":  "kubernetes",
-								"role": "controller-manager",
-							},
-						},
-						Template: hvpav1alpha1.HpaTemplate{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"app":  "kubernetes",
-									"role": "controller-manager",
-								},
-							},
-							Spec: hvpav1alpha1.HpaTemplateSpec{
-								MinReplicas: ptr.To[int32](1),
-								MaxReplicas: int32(1),
-							},
-						},
-					},
-					Vpa: hvpav1alpha1.VpaSpec{
-						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							v1beta1constants.LabelRole: "kube-controller-manager-vpa",
-						}},
-						Deploy: true,
-						ScaleUp: hvpav1alpha1.ScaleType{
-							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-								UpdateMode: ptr.To(hvpav1alpha1.UpdateModeAuto),
-							},
-						},
-						ScaleDown: hvpav1alpha1.ScaleType{
-							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-								UpdateMode: scaleDownUpdateMode,
-							},
-						},
-						Template: hvpav1alpha1.VpaTemplate{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									v1beta1constants.LabelRole: "kube-controller-manager-vpa",
-								},
-							},
-							Spec: hvpav1alpha1.VpaTemplateSpec{
-								ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-										ContainerName: "kube-controller-manager",
-										MinAllowed: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("50Mi"),
-										},
-										MaxAllowed: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("4"),
-											corev1.ResourceMemory: resource.MustParse("10G"),
-										},
-										ControlledValues: &controlledValues,
-									}},
-								},
-							},
-						},
-					},
-					WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{
-						{
-							VpaWeight:         hvpav1alpha1.VpaOnly,
-							StartReplicaCount: 1,
-							LastReplicaCount:  1,
-						},
-					},
-					TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-						APIVersion: appsv1.SchemeGroupVersion.String(),
+		vpaFor = func(isScaleDownDisabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
+			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
+				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+					TargetRef: &autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "apps/v1",
 						Kind:       "Deployment",
 						Name:       "kube-controller-manager",
 					},
+					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					},
+					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+							ContainerName: "kube-controller-manager",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("50Mi"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("4"),
+								corev1.ResourceMemory: resource.MustParse("10G"),
+							},
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						}},
+					},
 				},
 			}
+
+			if isScaleDownDisabled {
+				vpa.Labels = map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"}
+				vpa.Annotations = map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"}
+			}
+
+			return vpa
 		}
 
 		service = &corev1.Service{
@@ -575,7 +485,6 @@ namespace: kube-system
 			Image:                 image,
 			Config:                &kcmConfig,
 			PriorityClassName:     priorityClassName,
-			HVPAConfig:            hvpaConfigDisabled,
 			IsWorkerless:          isWorkerless,
 			PodNetwork:            podCIDR,
 			ServiceNetwork:        serviceCIDR,
@@ -628,7 +537,7 @@ namespace: kube-system
 	})
 
 	Describe("#Deploy", func() {
-		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -664,15 +573,9 @@ namespace: kube-system
 
 			actualHVPA := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
-			if hvpaConfig.Enabled {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(Succeed())
-				Expect(actualHVPA).To(Equal(hvpaFor(hvpaConfig)))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(BeNotFoundError())
-			} else {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(Succeed())
-				Expect(actualVPA).To(DeepEqual(vpa))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(BeNotFoundError())
-			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(Succeed())
+			Expect(actualVPA).To(DeepEqual(vpaFor(isScaleDownDisabled)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(BeNotFoundError())
 
 			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
@@ -684,7 +587,7 @@ namespace: kube-system
 		}
 
 		DescribeTable("success tests for various kubernetes versions (shoots with workers)",
-			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, runtimeKubernetesVersion *semver.Version) {
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, runtimeKubernetesVersion *semver.Version) {
 				isWorkerless = false
 				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
@@ -695,7 +598,7 @@ namespace: kube-system
 					Image:                  image,
 					Config:                 config,
 					PriorityClassName:      priorityClassName,
-					HVPAConfig:             hvpaConfig,
+					IsScaleDownDisabled:    isScaleDownDisabled,
 					IsWorkerless:           isWorkerless,
 					PodNetwork:             podCIDR,
 					ServiceNetwork:         serviceCIDR,
@@ -708,22 +611,21 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, hvpaConfig, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
 			},
 
-			Entry("w/o config k8s >=1.26", emptyConfig, hvpaConfigDisabled, runtimeKubernetesVersion),
-			Entry("w/o config k8s < 1.26", emptyConfig, hvpaConfigDisabled, semver.MustParse("1.25.0")),
-			Entry("with HVPA", emptyConfig, hvpaConfigEnabled, runtimeKubernetesVersion),
-			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff, runtimeKubernetesVersion),
-			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled, runtimeKubernetesVersion),
-			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled, runtimeKubernetesVersion),
-			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled, runtimeKubernetesVersion),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled, runtimeKubernetesVersion),
-			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, runtimeKubernetesVersion),
+			Entry("w/o config k8s >=1.26", emptyConfig, false, runtimeKubernetesVersion),
+			Entry("w/o config k8s < 1.26", emptyConfig, false, semver.MustParse("1.25.0")),
+			Entry("with scale-down disabled", emptyConfig, true, runtimeKubernetesVersion),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, runtimeKubernetesVersion),
+			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, runtimeKubernetesVersion),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, runtimeKubernetesVersion),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, runtimeKubernetesVersion),
 		)
 
 		DescribeTable("success tests for various kubernetes versions (workerless shoot)",
-			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers) {
 				isWorkerless = true
 				semverVersion, err := semver.NewVersion(version)
 				Expect(err).NotTo(HaveOccurred())
@@ -734,7 +636,7 @@ namespace: kube-system
 					Image:                  image,
 					Config:                 config,
 					PriorityClassName:      priorityClassName,
-					HVPAConfig:             hvpaConfig,
+					IsScaleDownDisabled:    isScaleDownDisabled,
 					IsWorkerless:           isWorkerless,
 					PodNetwork:             podCIDR,
 					ServiceNetwork:         serviceCIDR,
@@ -747,18 +649,17 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, hvpaConfig, controllerWorkers, true)
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, true)
 			},
 
-			Entry("w/o config", emptyConfig, hvpaConfigDisabled, controllerWorkers),
-			Entry("with HVPA", emptyConfig, hvpaConfigEnabled, controllerWorkers),
-			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
-			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
-			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
-			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
-			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
-			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
+			Entry("w/o config", emptyConfig, false, controllerWorkers),
+			Entry("with scale-down disabled", emptyConfig, true, controllerWorkers),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers),
+			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers),
+			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers),
+			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers),
 		)
 
 		DescribeTable("success tests for various runtime config",
@@ -872,16 +773,16 @@ namespace: kube-system
 		Context("when name prefix is set", func() {
 			BeforeEach(func() {
 				values = Values{
-					RuntimeVersion:    runtimeKubernetesVersion,
-					TargetVersion:     semverVersion,
-					Image:             image,
-					Config:            &kcmConfig,
-					PriorityClassName: priorityClassName,
-					HVPAConfig:        hvpaConfigDisabled,
-					IsWorkerless:      isWorkerless,
-					PodNetwork:        podCIDR,
-					ServiceNetwork:    serviceCIDR,
-					NamePrefix:        "virtual-garden-",
+					RuntimeVersion:      runtimeKubernetesVersion,
+					TargetVersion:       semverVersion,
+					Image:               image,
+					Config:              &kcmConfig,
+					PriorityClassName:   priorityClassName,
+					IsScaleDownDisabled: false,
+					IsWorkerless:        isWorkerless,
+					PodNetwork:          podCIDR,
+					ServiceNetwork:      serviceCIDR,
+					NamePrefix:          "virtual-garden-",
 				}
 				kubeControllerManager = New(
 					testLogger,

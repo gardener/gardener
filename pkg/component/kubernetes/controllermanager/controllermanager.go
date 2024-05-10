@@ -17,7 +17,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -89,14 +88,6 @@ type Interface interface {
 	SetShootClient(c client.Client)
 }
 
-// HVPAConfig contains information for configuring the HVPA object for the etcd.
-type HVPAConfig struct {
-	// Enabled states whether an HVPA object shall be deployed.
-	Enabled bool
-	// The update mode to use for scale down.
-	ScaleDownUpdateMode *string
-}
-
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
 func New(
 	log logr.Logger,
@@ -139,8 +130,8 @@ type Values struct {
 	Config *gardencorev1beta1.KubeControllerManagerConfig
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
-	// HVPAConfig is the configuration for HVPA.
-	HVPAConfig *HVPAConfig
+	// IsScaleDownDisabled - if true, pod requests can be scaled up, but never down
+	IsScaleDownDisabled bool
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
 	// PodNetwork is the pod CIDR of the target cluster.
@@ -244,42 +235,14 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 	var (
 		vpa                 = k.emptyVPA()
-		hvpa                = k.emptyHVPA()
 		service             = k.emptyService()
 		shootAccessSecret   = k.newShootAccessSecret()
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 
-		port               int32 = 10257
-		probeURIScheme           = corev1.URISchemeHTTPS
-		command                  = k.computeCommand(port)
-		controlledValues         = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		hvpaResourcePolicy       = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-				ContainerName: containerName,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("4"),
-					corev1.ResourceMemory: resource.MustParse("10G"),
-				},
-				ControlledValues: &controlledValues,
-			}},
-		}
-		vpaResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-				ContainerName: containerName,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("4"),
-					corev1.ResourceMemory: resource.MustParse("10G"),
-				},
-				ControlledValues: &controlledValues,
-			}},
-		}
+		port           int32 = 10257
+		probeURIScheme       = corev1.URISchemeHTTPS
+		command              = k.computeCommand(port)
 	)
 
 	resourceRequirements, err := k.computeResourceRequirements(ctx)
@@ -476,102 +439,45 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if k.values.HVPAConfig != nil && k.values.HVPAConfig.Enabled {
-		if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), vpa); err != nil {
-			return err
+	// TODO(andrerun): Remove this after v1.97 has been released.
+	if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), k.emptyHVPA()); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), vpa, func() error {
+		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+			Kind:       "Deployment",
+			Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
+		}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+		}
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName: containerName,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
+				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("4"),
+					corev1.ResourceMemory: resource.MustParse("10G"),
+				},
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			}},
 		}
 
-		var (
-			updateModeAuto = hvpav1alpha1.UpdateModeAuto
-			vpaLabels      = map[string]string{v1beta1constants.LabelRole: "kube-controller-manager-vpa"}
-		)
-
-		scaleDownUpdateMode := k.values.HVPAConfig.ScaleDownUpdateMode
-		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeAuto)
+		if k.values.IsScaleDownDisabled {
+			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
+		} else {
+			delete(vpa.GetLabels(), v1beta1constants.LabelVPAEvictionRequirementsController)
+			delete(vpa.GetAnnotations(), v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction)
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {
-			hvpa.Labels = utils.MergeStringMaps(
-				hvpa.Labels,
-				getLabels(),
-				map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				},
-			)
-			hvpa.Spec.Replicas = ptr.To[int32](1)
-			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
-				Deploy:   false,
-				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
-				Template: hvpav1alpha1.HpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels(),
-					},
-					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: ptr.To[int32](1),
-						MaxReplicas: int32(1),
-					},
-				},
-			}
-			hvpa.Spec.Vpa = hvpav1alpha1.VpaSpec{
-				Selector: &metav1.LabelSelector{MatchLabels: vpaLabels},
-				Deploy:   true,
-				ScaleUp: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeAuto,
-					},
-				},
-				ScaleDown: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: scaleDownUpdateMode,
-					},
-				},
-				Template: hvpav1alpha1.VpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: vpaLabels,
-					},
-					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: hvpaResourcePolicy,
-					},
-				},
-			}
-			hvpa.Spec.WeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
-				{
-					VpaWeight:         hvpav1alpha1.VpaOnly,
-					StartReplicaCount: 1,
-					LastReplicaCount:  1,
-				},
-			}
-			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-				Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-	} else {
-		if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), hvpa); err != nil {
-			return err
-		}
-
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), vpa, func() error {
-			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-				Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
-			}
-			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &vpaUpdateMode,
-			}
-			vpa.Spec.ResourcePolicy = vpaResourcePolicy
-			return nil
-		}); err != nil {
-			return err
-		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// controller-manager deployed for garden cluster
@@ -860,16 +766,15 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 	return horizontalPodAutoscalerConfig
 }
 
+// TODO(andrerun): Remove this after v1.97 has been released.
+// After the transitory period, we'll no longer need the reconciliation carrying-over the request value.
+// At that time, just set the fixed static request value (100m/128Mi, see below).
 func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context) (corev1.ResourceRequirements, error) {
 	defaultResources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("128Mi"),
 		},
-	}
-
-	if k.values.HVPAConfig == nil || !k.values.HVPAConfig.Enabled {
-		return defaultResources, nil
 	}
 
 	existingDeployment := k.emptyDeployment()
