@@ -16,5 +16,6 @@ func RegisterFeatureGates() {
 		features.DefaultSeccompProfile,
 		features.HVPA,
 		features.VPAForETCD,
+		features.VPAAndHPAForAPIServer,
 	)))
 }
