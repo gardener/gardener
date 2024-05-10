@@ -279,8 +279,35 @@ spec:
                       description: |-
                         UserData is a base64-encoded string that contains the data that is sent to the provider's APIs
                         when a new machine/VM that is part of this worker pool shall be spawned.
+                        Either this or UserDataSecretRef must be provided.
+                        Deprecated: This field will be removed in future release.
+                        TODO(rfranzke): Remove this field after v1.100 has been released.
                       format: byte
                       type: string
+                    userDataSecretRef:
+                      description: |-
+                        UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when
+                        a new machine/VM that is part of this worker pool shall be spawned.
+                        Either this or UserData must be provided.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: |-
+                            Name of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
                     volume:
                       description: Volume contains information about the root disks
                         that should be used for this worker pool.
@@ -314,7 +341,6 @@ spec:
                   - maximum
                   - minimum
                   - name
-                  - userData
                   type: object
                 type: array
               providerConfig:

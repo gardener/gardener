@@ -73,6 +73,7 @@ var _ = Describe("Worker", func() {
 		worker1MachineImageVersion            = "worker1machineimagev1"
 		worker1MCMSettings                    = &gardencorev1beta1.MachineControllerManagerSettings{}
 		worker1UserData                       = []byte("bootstrap-me")
+		worker1UserDataSecretName             = "user-data-secret-name-w1"
 		worker1VolumeName                     = "worker1volumename"
 		worker1VolumeType                     = "worker1volumetype"
 		worker1VolumeSize                     = "42Gi"
@@ -98,6 +99,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageName          = "worker2machineimage"
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
+		worker2UserDataSecretName        = "user-data-secret-name-w2"
 		worker2Arch                      = ptr.To("arm64")
 
 		machineTypes = []gardencorev1beta1.MachineType{
@@ -162,12 +164,14 @@ var _ = Describe("Worker", func() {
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
 					Init: operatingsystemconfig.Data{
-						Content: string(worker1UserData),
+						Content:    string(worker1UserData),
+						SecretName: &worker1UserDataSecretName,
 					},
 				},
 				worker2Name: {
 					Init: operatingsystemconfig.Data{
-						Content: string(worker2UserData),
+						Content:    string(worker2UserData),
+						SecretName: &worker2UserDataSecretName,
 					},
 				},
 			},
@@ -282,8 +286,9 @@ var _ = Describe("Worker", func() {
 						Name:    worker1MachineImageName,
 						Version: worker1MachineImageVersion,
 					},
-					ProviderConfig: worker1ProviderConfig,
-					UserData:       worker1UserData,
+					ProviderConfig:    worker1ProviderConfig,
+					UserData:          worker1UserData,
+					UserDataSecretRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: worker1UserDataSecretName}, Key: "cloud_config"},
 					Volume: &extensionsv1alpha1.Volume{
 						Name:      &worker1VolumeName,
 						Type:      &worker1VolumeType,
@@ -327,6 +332,7 @@ var _ = Describe("Worker", func() {
 					},
 					KubernetesVersion: &workerKubernetesVersion,
 					UserData:          worker2UserData,
+					UserDataSecretRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: worker2UserDataSecretName}, Key: "cloud_config"},
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
 					ClusterAutoscaler: emptyAutoscalerOptions,

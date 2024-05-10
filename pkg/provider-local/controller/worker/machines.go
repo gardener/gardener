@@ -25,7 +25,7 @@ import (
 // DeployMachineClasses generates and creates the local provider specific machine classes.
 func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	if w.machineClasses == nil {
-		if err := w.generateMachineConfig(); err != nil {
+		if err := w.generateMachineConfig(ctx); err != nil {
 			return err
 		}
 	}
@@ -46,16 +46,16 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 }
 
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.
-func (w *workerDelegate) GenerateMachineDeployments(_ context.Context) (worker.MachineDeployments, error) {
+func (w *workerDelegate) GenerateMachineDeployments(ctx context.Context) (worker.MachineDeployments, error) {
 	if w.machineDeployments == nil {
-		if err := w.generateMachineConfig(); err != nil {
+		if err := w.generateMachineConfig(ctx); err != nil {
 			return nil, err
 		}
 	}
 	return w.machineDeployments, nil
 }
 
-func (w *workerDelegate) generateMachineConfig() error {
+func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineClassSecrets []*corev1.Secret
 		machineClasses      []*machinev1alpha1.MachineClass
@@ -79,6 +79,11 @@ func (w *workerDelegate) generateMachineConfig() error {
 			Image:   image,
 		})
 
+		userData, err := worker.FetchUserData(ctx, w.client, w.worker.Namespace, pool)
+		if err != nil {
+			return err
+		}
+
 		var (
 			deploymentName = fmt.Sprintf("%s-%s", w.worker.Namespace, pool.Name)
 			className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
@@ -95,7 +100,7 @@ func (w *workerDelegate) generateMachineConfig() error {
 				Labels:    map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.GardenPurposeMachineClass},
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{"userData": pool.UserData},
+			Data: map[string][]byte{"userData": userData},
 		})
 
 		machineClasses = append(machineClasses, &machinev1alpha1.MachineClass{

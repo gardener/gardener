@@ -117,6 +117,25 @@ var _ = Describe("Worker validation tests", func() {
 			}))))
 		})
 
+		It("should complain Worker resources without user data", func() {
+			workerCopy := worker.DeepCopy()
+
+			workerCopy.Spec.Pools[0].UserData = nil
+
+			Expect(ValidateWorker(workerCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.pools[0].userData"),
+			}))))
+		})
+
+		It("should allow Worker resources with user data secret ref", func() {
+			workerCopy := worker.DeepCopy()
+
+			workerCopy.Spec.Pools[0].UserDataSecretRef = &corev1.SecretKeySelector{}
+
+			Expect(ValidateWorker(workerCopy)).To(BeEmpty())
+		})
+
 		It("should allow valid worker resources", func() {
 			errorList := ValidateWorker(worker)
 

@@ -17,7 +17,7 @@ import (
 // UpdateMachineImagesStatus implements genericactuator.WorkerDelegate.
 func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	if w.machineImages == nil {
-		if err := w.generateMachineConfig(); err != nil {
+		if err := w.generateMachineConfig(ctx); err != nil {
 			return fmt.Errorf("unable to generate the machine config: %w", err)
 		}
 	}
