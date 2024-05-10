@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
@@ -89,6 +90,14 @@ var _ = Describe("Secrets", func() {
 					ExtensionUnits: []extensionsv1alpha1.Unit{{
 						Name: "some-other-unit.service",
 					}},
+					ExtensionFiles: []extensionsv1alpha1.File{{
+						Path: "/some/other/path",
+					}},
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							LastUpdateTime: metav1.Now(),
+						},
+					},
 				},
 			}
 		})
@@ -101,7 +110,7 @@ var _ = Describe("Secrets", func() {
 					Name:      secretName,
 					Namespace: "kube-system",
 					Annotations: map[string]string{
-						"checksum/data-script": "b0a0d190d45f0d67d97bf30d7e45d9cbbaa86bbe99f34bc095a6fd172d1a18a2",
+						"checksum/data-script": "931abcfaf3fd3152748ec51b8f139a22a48a3ac6d8fff1c56a3aa2e07d2a39f1",
 					},
 					Labels: map[string]string{
 						"gardener.cloud/role":        "operating-system-config",
@@ -111,12 +120,7 @@ var _ = Describe("Secrets", func() {
 				Data: map[string][]byte{"osc.yaml": []byte(`apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
 metadata:
-  annotations:
-    bar: foo
   creationTimestamp: null
-  labels:
-    foo: bar
-  name: osc-name
 spec:
   files:
   - content:
@@ -129,6 +133,9 @@ spec:
   units:
   - name: some-unit.service
 status:
+  extensionFiles:
+  - content: {}
+    path: /some/other/path
   extensionUnits:
   - name: some-other-unit.service
 `)},
