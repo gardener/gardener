@@ -2,7 +2,7 @@
 - |
   kind: ClusterConfiguration
   apiServer:
-{{- if .Values.gardener.apiserverRelay.deployed }}  
+{{- if .Values.gardener.apiserverRelay.deployed }}
     certSANs:
       - localhost
       - 127.0.0.1
@@ -29,4 +29,5 @@
   serializeImagePulls: false
   registryPullQPS: 10
   registryBurst: 20
+  serverTLSBootstrap: true
 {{- end -}}
