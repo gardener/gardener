@@ -29,73 +29,73 @@ trap cleanup_output EXIT
 
 # Define the path map
 declare -A path_map=(
-  ["attachdetach"]="pkg/controller/volume/attachdetach/attach_detach_controller.go"
-  ["bootstrapsigner"]="pkg/controller/bootstrap/bootstrapsigner.go"
-  ["cloud-node-lifecycle"]="staging/src/k8s.io/cloud-provider/controllers/nodelifecycle/node_lifecycle_controller.go"
-  ["clusterrole-aggregation"]="pkg/controller/clusterroleaggregation/clusterroleaggregation_controller.go"
-  ["cronjob"]="pkg/controller/cronjob/cronjob_controllerv2.go"
-  ["csrapproving"]="pkg/controller/certificates/approver/sarapprove.go"
-  ["csrcleaner"]="pkg/controller/certificates/cleaner/cleaner.go"
-  ["csrsigning"]="pkg/controller/certificates/signer/signer.go"
-  ["daemonset"]="pkg/controller/daemon/daemon_controller.go"
-  ["deployment"]="pkg/controller/deployment/deployment_controller.go"
-  ["disruption"]="pkg/controller/disruption/disruption.go"
-  ["endpoint"]="pkg/controller/endpoint/endpoints_controller.go"
-  ["endpointslice"]="pkg/controller/endpointslice/endpointslice_controller.go"
-  ["endpointslicemirroring"]="pkg/controller/endpointslicemirroring/endpointslicemirroring_controller.go"
-  ["ephemeral-volume"]="pkg/controller/volume/ephemeral/controller.go"
-  ["garbagecollector"]="pkg/controller/garbagecollector/garbagecollector.go"
-  ["horizontalpodautoscaling"]="pkg/controller/podautoscaler/horizontal.go"
-  ["job"]="pkg/controller/job/job_controller.go"
-  ["legacy-service-account-token-cleaner"]="pkg/controller/serviceaccount/legacy_serviceaccount_token_cleaner.go"
-  ["namespace"]="pkg/controller/namespace/namespace_controller.go"
-  ["nodeipam"]="pkg/controller/nodeipam/node_ipam_controller.go"
-  ["nodelifecycle"]="pkg/controller/nodelifecycle/node_lifecycle_controller.go"
-  ["persistentvolume-binder"]="pkg/controller/volume/persistentvolume/pv_controller_base.go"
-  ["persistentvolume-expander"]="pkg/controller/volume/expand/expand_controller.go"
-  ["podgc"]="pkg/controller/podgc/gc_controller.go"
-  ["pv-protection"]="pkg/controller/volume/pvprotection/pv_protection_controller.go"
-  ["pvc-protection"]="pkg/controller/volume/pvcprotection/pvc_protection_controller.go"
-  ["replicaset"]="pkg/controller/replicaset/replica_set.go"
-  ["replicationcontroller"]="pkg/controller/replication/replication_controller.go"
-  ["resource-claim-controller"]="pkg/controller/resourceclaim/controller.go"
-  ["resourcequota"]="pkg/controller/resourcequota/resource_quota_controller.go"
-  ["root-ca-cert-publisher"]="pkg/controller/certificates/rootcacertpublisher/publisher.go"
-  ["route"]="staging/src/k8s.io/cloud-provider/controllers/route/route_controller.go"
-  ["service"]="staging/src/k8s.io/cloud-provider/controllers/service/controller.go"
-  ["service-cidr"]="pkg/controller/servicecidrs/servicecidrs_controller.go"
-  ["serviceaccount"]="pkg/controller/serviceaccount/serviceaccounts_controller.go"
-  ["serviceaccount-token"]="pkg/controller/serviceaccount/tokens_controller.go"
-  ["statefulset"]="pkg/controller/statefulset/stateful_set.go"
-  ["storage-version-gc"]="pkg/controller/storageversiongc/gc_controller.go"
-  ["tokencleaner"]="pkg/controller/bootstrap/tokencleaner.go"
-  ["ttl"]="pkg/controller/ttl/ttl_controller.go"
-  ["ttl-after-finished"]="pkg/controller/ttlafterfinished/ttlafterfinished_controller.go"
+  ["persistentvolume-attach-detach-controller"]="pkg/controller/volume/attachdetach/attach_detach_controller.go"
+  ["bootstrap-signer-controller"]="pkg/controller/bootstrap/bootstrapsigner.go"
+  ["cloud-node-controller"]="staging/src/k8s.io/cloud-provider/controllers/node/node_controller.go"
+  ["cloud-node-lifecycle-controller"]="staging/src/k8s.io/cloud-provider/controllers/nodelifecycle/node_lifecycle_controller.go"
+  ["clusterrole-aggregation-controller"]="pkg/controller/clusterroleaggregation/clusterroleaggregation_controller.go"
+  ["cronjob-controller"]="pkg/controller/cronjob/cronjob_controllerv2.go"
+  ["certificatesigningrequest-approving-controller"]="pkg/controller/certificates/approver/sarapprove.go"
+  ["certificatesigningrequest-cleaner-controller"]="pkg/controller/certificates/cleaner/cleaner.go"
+  ["certificatesigningrequest-signing-controller"]="pkg/controller/certificates/signer/signer.go"
+  ["daemonset-controller"]="pkg/controller/daemon/daemon_controller.go"
+  ["deployment-controller"]="pkg/controller/deployment/deployment_controller.go"
+  ["disruption-controller"]="pkg/controller/disruption/disruption.go"
+  ["endpoints-controller"]="pkg/controller/endpoint/endpoints_controller.go"
+  ["endpointslice-controller"]="pkg/controller/endpointslice/endpointslice_controller.go"
+  ["endpointslice-mirroring-controller"]="pkg/controller/endpointslicemirroring/endpointslicemirroring_controller.go"
+  ["ephemeral-volume-controller"]="pkg/controller/volume/ephemeral/controller.go"
+  ["garbage-collector-controller"]="pkg/controller/garbagecollector/garbagecollector.go"
+  ["horizontal-pod-autoscaler-controller"]="pkg/controller/podautoscaler/horizontal.go"
+  ["job-controller"]="pkg/controller/job/job_controller.go"
+  ["legacy-serviceaccount-token-cleaner-controller"]="pkg/controller/serviceaccount/legacy_serviceaccount_token_cleaner.go"
+  ["namespace-controller"]="pkg/controller/namespace/namespace_controller.go"
+  ["node-ipam-controller"]="pkg/controller/nodeipam/node_ipam_controller.go"
+  ["node-lifecycle-controller"]="pkg/controller/nodelifecycle/node_lifecycle_controller.go"
+  ["persistentvolume-binder-controller"]="pkg/controller/volume/persistentvolume/pv_controller_base.go"
+  ["persistentvolume-expander-controller"]="pkg/controller/volume/expand/expand_controller.go"
+  ["pod-garbage-collector-controller"]="pkg/controller/podgc/gc_controller.go"
+  ["persistentvolume-protection-controller"]="pkg/controller/volume/pvprotection/pv_protection_controller.go"
+  ["persistentvolumeclaim-protection-controller"]="pkg/controller/volume/pvcprotection/pvc_protection_controller.go"
+  ["replicaset-controller"]="pkg/controller/replicaset/replica_set.go"
+  ["replicationcontroller-controller"]="pkg/controller/replication/replication_controller.go"
+  ["resourceclaim-controller"]="pkg/controller/resourceclaim/controller.go"
+  ["resourcequota-controller"]="pkg/controller/resourcequota/resource_quota_controller.go"
+  ["root-ca-certificate-publisher-controller"]="pkg/controller/certificates/rootcacertpublisher/publisher.go"
+  ["node-route-controller"]="staging/src/k8s.io/cloud-provider/controllers/route/route_controller.go"
+  ["service-lb-controller"]="staging/src/k8s.io/cloud-provider/controllers/service/controller.go"
+  ["service-cidr-controller"]="pkg/controller/servicecidrs/servicecidrs_controller.go"
+  ["serviceaccount-controller"]="pkg/controller/serviceaccount/serviceaccounts_controller.go"
+  ["serviceaccount-token-controller"]="pkg/controller/serviceaccount/tokens_controller.go"
+  ["statefulset-controller"]="pkg/controller/statefulset/stateful_set.go"
+  ["storageversion-garbage-collector-controller"]="pkg/controller/storageversiongc/gc_controller.go"
+  ["storage-version-migrator-controller"]="pkg/controller/storageversionmigrator/storageversionmigrator.go"
+  ["taint-eviction-controller"]="pkg/controller/tainteviction/taint_eviction.go"
+  ["token-cleaner-controller"]="pkg/controller/bootstrap/tokencleaner.go"
+  ["ttl-controller"]="pkg/controller/ttl/ttl_controller.go"
+  ["ttl-after-finished-controller"]="pkg/controller/ttlafterfinished/ttlafterfinished_controller.go"
+  ["validatingadmissionpolicy-status-controller"]="pkg/controller/validatingadmissionpolicystatus/controller.go"
 )
 
 for version in "${versions[@]}"; do
+  if [ "$version" \< "1.28" ]; then
+    echo "Versions less than 1.28 are not supported."
+    exit 1
+  fi
+
   rm -rf "${out_dir}/kubernetes-${version}"
   rm -f "${out_dir}/k8s-controllers-${version}.txt"
 
   git clone --depth 1 --filter=blob:none --sparse https://github.com/kubernetes/kubernetes -b "release-${version}" "${out_dir}/kubernetes-${version}"
   pushd "${out_dir}/kubernetes-${version}" > /dev/null
-  git sparse-checkout set "cmd/kube-controller-manager" "pkg/controller" "staging/src/k8s.io/cloud-provider/controllers"
+  git sparse-checkout set "cmd/kube-controller-manager" "pkg/controller" "staging/src/k8s.io/cloud-provider"
   popd > /dev/null
 
-  if [ "$version" \< "1.26" ]; then
-    names=$(grep -o 'controllers\["[^"]*' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/app/controllermanager.go" | awk -F '"' '{print $2}')
-    # This is a special controller which is not initialized normally, see https://github.com/kubernetes/kubernetes/blob/99151c39b7d4595632f7745ba7fb4dea4356f7fd/cmd/kube-controller-manager/app/controllermanager.go#L405-L411
-    names+=" serviceaccount-token"
-  elif [ "$version" \< "1.28" ]; then
-    names=$(grep -o 'register("[^"]*' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/app/controllermanager.go" | awk -F '"' '{print $2}')
-    # This is a special controller which is not initialized normally, see https://github.com/kubernetes/kubernetes/blob/99151c39b7d4595632f7745ba7fb4dea4356f7fd/cmd/kube-controller-manager/app/controllermanager.go#L405-L411
-    names+=" serviceaccount-token"
-  else
-    names=$(grep -E 'func KCMControllerAliases\(\) map\[string\]string \{' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/names/controller_names.go" -A 200 | awk -F '[" :]+' '/^		\"[a-zA-Z0-9-]+\"/ {print $2}')
-  fi
-
+  names=$(awk '/const \(/,/\)/' "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/names/controller_names.go" "${out_dir}/kubernetes-${version}/staging/src/k8s.io/cloud-provider/names/controller_names.go" | sed -n 's/.*"\(.*\)".*/\1/p')
+  
   for name in $names; do
     if [ ! "${path_map[$name]}" ]; then
+      echo
       echo "No path mapping found for $name", The controller could have been removed or the path might have changed.
       echo "Please enhance the map in the script with the path for this controller."
       exit 1

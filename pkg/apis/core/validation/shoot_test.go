@@ -5954,7 +5954,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("MemorySwap",
-			func(allowSwap bool, swapBehavior *string, matcher gomegatypes.GomegaMatcher) {
+			func(allowSwap bool, swapBehavior *string, version string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{}
 				if swapBehavior != nil {
 					kubeletConfig.MemorySwap = &core.MemorySwapConfiguration{SwapBehavior: (*core.SwapBehavior)(swapBehavior)}
@@ -5967,15 +5967,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					kubeletConfig.FailSwapOn = ptr.To(false)
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "1.26", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
 				Expect(errList).To(matcher)
 			},
 
-			Entry("should allow empty memory swap", false, nil, BeEmpty()),
-			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, BeEmpty()),
-			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), BeEmpty()),
-			Entry("should allow UnlimitedSwap behavior", true, ptr.To("UnlimitedSwap"), BeEmpty()),
-			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), ConsistOf(
+			Entry("should allow empty memory swap", false, nil, "1.26", BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.26", BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, ptr.To("LimitedSwap"), "1.26", BeEmpty()),
+			Entry("should allow UnlimitedSwap behavior for Kubernetes versions < 1.30", true, ptr.To("UnlimitedSwap"), "1.29", BeEmpty()),
+			Entry("should forbid UnlimitedSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("UnlimitedSwap"), "1.30", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeNotSupported),
+					"Field":  Equal("memorySwap.swapBehavior"),
+					"Detail": Equal("supported values: \"NoSwap\", \"LimitedSwap\""),
+				})),
+			)),
+			Entry("should forbid NoSwap behavior for Kubernetes versions < 1.30", true, ptr.To("NoSwap"), "1.29", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeNotSupported),
+					"Field":  Equal("memorySwap.swapBehavior"),
+					"Detail": Equal("supported values: \"LimitedSwap\", \"UnlimitedSwap\""),
+				})),
+			)),
+			Entry("should allow NoSwap behavior for Kubernetes versions >= 1.30", true, ptr.To("NoSwap"), "1.30", BeEmpty()),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, ptr.To("LimitedSwap"), "1.26", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("memorySwap"),
