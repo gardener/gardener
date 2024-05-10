@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +30,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -39,10 +46,10 @@ import (
 )
 
 const (
-	// LabelValue is used as value for LabelApp.
-	LabelValue = "vpn-shoot"
+	labelValue = "vpn-shoot"
 
 	managedResourceName = "shoot-core-vpn-shoot"
+	name                = "vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
 	initContainerName   = "vpn-shoot-init"
@@ -56,12 +63,6 @@ const (
 	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"
 	volumeMountPathDevNetTun = "/dev/net/tun"
 )
-
-// Interface contains functions for a VPNShoot Deployer
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
 
 // ReversedVPNValues contains the configuration values for the ReversedVPN.
 type ReversedVPNValues struct {
@@ -101,7 +102,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) Interface {
+) component.DeployWaiter {
 	return &vpnShoot{
 		client:         client,
 		namespace:      namespace,
@@ -125,6 +126,127 @@ type vpnSecret struct {
 }
 
 func (v *vpnShoot) Deploy(ctx context.Context) error {
+	scrapeConfig := v.emptyScrapeConfig()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+			HonorLabels: ptr.To(false),
+			MetricsPath: ptr.To("/probe"),
+			Params:      map[string][]string{"module": {"http_apiserver"}},
+			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+				Role:       "pod",
+				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
+				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: shoot.AccessSecretName},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				// This is needed because we do not fetch the correct cluster CA bundle right now
+				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+			}},
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					TargetLabel: "type",
+					Replacement: ptr.To("seed"),
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
+					Action:       "keep",
+					Regex:        `vpn-shoot-(0|.+-.+);vpn-shoot-init`,
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
+					TargetLabel:  "__param_target",
+					Regex:        `(.+);(.+)`,
+					Replacement:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port) + `/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1`),
+					Action:       "replace",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__param_target"},
+					TargetLabel:  "instance",
+					Action:       "replace",
+				},
+				{
+					TargetLabel: "__address__",
+					Replacement: ptr.To("blackbox-exporter:9115"),
+					Action:      "replace",
+				},
+				{
+					Action:      "replace",
+					Replacement: ptr.To("tunnel-probe-apiserver-proxy"),
+					TargetLabel: "job",
+				},
+			},
+			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+				"probe_http_status_code",
+				"probe_success",
+			),
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	prometheusRule := v.emptyPrometheusRule()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "vpn.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Alert: "VPNShootNoPods",
+						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + deploymentName + `"} == 0`),
+						For:   ptr.To(monitoringv1.Duration("30m")),
+						Labels: map[string]string{
+							"service":    "vpn",
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "vpn-shoot deployment in Shoot cluster has 0 available pods.VPN won't work.",
+							"summary":     "VPN Shoot deployment no pods",
+						},
+					},
+					{
+						Alert: "VPNHAShootNoPods",
+						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + deploymentName + `"} == 0`),
+						For:   ptr.To(monitoringv1.Duration("30m")),
+						Labels: map[string]string{
+							"service":    "vpn",
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods.VPN won't work.",
+							"summary":     "VPN HA Shoot statefulset no pods",
+						},
+					},
+					{
+						Alert: "VPNProbeAPIServerProxyFailed",
+						Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
+						For:   ptr.To(monitoringv1.Duration("30m")),
+						Labels: map[string]string{
+							"service":    "vpn-test",
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "all",
+						},
+						Annotations: map[string]string{
+							"description": "The API Server proxy functionality is not working.Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
+							"summary":     "API Server Proxy not usable",
+						},
+					},
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	var (
 		config = &secretsutils.CertificateSecretConfig{
 			Name:                        "vpn-shoot-client",
@@ -179,6 +301,13 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 }
 
 func (v *vpnShoot) Destroy(ctx context.Context) error {
+	if err := kubernetesutils.DeleteObjects(ctx, v.client,
+		v.emptyScrapeConfig(),
+		v.emptyPrometheusRule(),
+	); err != nil {
+		return err
+	}
+
 	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceName)
 }
 
@@ -198,6 +327,14 @@ func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
+}
+
+func (v *vpnShoot) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("tunnel-probe-apiserver-proxy", v.namespace, shoot.Label)}
+}
+
+func (v *vpnShoot) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("tunnel-probe-apiserver-proxy", v.namespace, shoot.Label)}
 }
 
 func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNShoot []vpnSecret) (map[string][]byte, error) {
@@ -283,7 +420,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		labels = map[string]string{
 			v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-			v1beta1constants.LabelApp:       LabelValue,
+			v1beta1constants.LabelApp:       labelValue,
 			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 		}
 		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth)
@@ -412,7 +549,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				v1beta1constants.LabelApp:       LabelValue,
+				v1beta1constants.LabelApp:       labelValue,
 				managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				"type":                          "tunnel",
 			},
@@ -525,7 +662,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 }
 
 func getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelApp: LabelValue}
+	return map[string]string{v1beta1constants.LabelApp: labelValue}
 }
 
 func (v *vpnShoot) indexedReversedHeader(index *int) string {

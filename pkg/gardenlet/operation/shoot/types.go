@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
-	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
@@ -166,7 +165,7 @@ type SystemComponents struct {
 	NodeProblemDetector component.DeployWaiter
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
-	VPNShoot            vpnshoot.Interface
+	VPNShoot            component.DeployWaiter
 }
 
 // Monitoring contains references to monitoring deployers.
