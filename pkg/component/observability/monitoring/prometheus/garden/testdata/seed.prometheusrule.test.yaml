@@ -28,3 +28,39 @@ tests:
               description: >
                 The seed cluster seed-flapping in landscape-unit-tests
                 has a failing condition: ExtensionsReady.
+
+  - name: SeedConditionFailing:MultipleSeeds
+    interval: 1m
+    input_series:
+      - series: garden_shoot_condition{is_seed="true", operation="Reconcile", condition="SystemComponentsHealthy", name="seed-one"}
+        values: "0x6"
+      - series: garden_seed_condition{condition="SeedSystemComponentsHealthy", name="seed-two"}
+        values: "0x6"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: SeedConditionFailing
+        eval_time: 6m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: SystemComponentsHealthy
+              name: seed-one
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >
+                The seed cluster seed-one in landscape-unit-tests
+                has a failing condition: SystemComponentsHealthy.
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: SeedSystemComponentsHealthy
+              name: seed-two
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >
+                The seed cluster seed-two in landscape-unit-tests
+                has a failing condition: SeedSystemComponentsHealthy.
