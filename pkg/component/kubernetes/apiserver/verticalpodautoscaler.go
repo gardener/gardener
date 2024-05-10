@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/apiserver"
@@ -25,7 +26,7 @@ func (k *kubeAPIServer) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalP
 }
 
 func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
-	switch mode := k.values.Autoscaling.Mode; mode {
+	switch k.values.Autoscaling.Mode {
 	case apiserver.AutoscalingModeHVPA:
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), verticalPodAutoscaler)
 	case apiserver.AutoscalingModeVPAAndHPA:
@@ -36,9 +37,6 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 }
 
 func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInBaselineMode(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeOff
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -47,12 +45,12 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInBaselineMode(ctx context
 				Name:       deployment.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &vpaUpdateMode,
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeOff),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 					ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-					ControlledValues: &controlledValues,
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				}},
 			},
 		}
@@ -62,7 +60,6 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInBaselineMode(ctx context
 }
 
 func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx context.Context, verticalPodAutoscaler *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
-	updateMode := vpaautoscalingv1.UpdateModeAuto
 	kubeAPIServerMinAllowed := corev1.ResourceList{
 		corev1.ResourceCPU:    resource.MustParse("20m"),
 		corev1.ResourceMemory: resource.MustParse("200M"),
@@ -81,7 +78,7 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 				Name:       deployment.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &updateMode,
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),

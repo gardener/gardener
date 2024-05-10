@@ -90,9 +90,9 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInBaselineMode(ctx conte
 }
 
 func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	// The chosen value is 6 CPU: 1 CPU less than the VPA's maxAllowed 7 CPU in VPAAndHPA mode to have a headroom for the horizontal scaling.
+	// The chosen value is 6 CPU: 1 CPU less (ratio 1/7) than the VPA's maxAllowed 7 CPU in VPAAndHPA mode to have a headroom for the horizontal scaling.
 	hpaTargetAverageValueCPU := resource.MustParse("6")
-	// The chosen value is 24G: 4G less than the VPA's maxAllowed 28G in VPAAndHPA mode to have a headroom for the horizontal scaling.
+	// The chosen value is 24G: 4G less (ratio 1/7) than the VPA's maxAllowed 28G in VPAAndHPA mode to have a headroom for the horizontal scaling.
 	hpaTargetAverageValueMemory := resource.MustParse("24G")
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
