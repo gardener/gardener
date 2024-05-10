@@ -145,6 +145,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.podDisruptionBudget(),
 		g.serviceRuntime(),
+		g.horizontalPodAutoscaler(),
 		g.verticalPodAutoscaler(),
 		g.hvpa(),
 		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
