@@ -10,12 +10,12 @@ tests:
         values: 0x2 2 -1 2 0
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-progressing-for-long"}
-        values: 2x2 0x4
+        values: 2x2 0x2 2x2 0x4
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 6m
+        eval_time: 10m
         exp_alerts:
           - exp_labels:
               severity: critical
@@ -34,14 +34,14 @@ tests:
     interval: 1m
     input_series:
       - series: garden_shoot_condition{is_seed="true", operation="Reconcile", condition="SystemComponentsHealthy", name="seed-one"}
-        values: "0x6"
+        values: "0x10"
       - series: garden_seed_condition{condition="SeedSystemComponentsHealthy", name="seed-two"}
-        values: "0x6"
+        values: "0x10"
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 6m
+        eval_time: 10m
         exp_alerts:
           - exp_labels:
               severity: critical

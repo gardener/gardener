@@ -287,7 +287,7 @@ spec:
             or
             garden_shoot_condition{is_seed   = "true",
                                    operation = "Reconcile"} <= 0)[5m:]))
-      for: 6m
+      for: 10m
       labels:
         severity: critical
         topology: seed
