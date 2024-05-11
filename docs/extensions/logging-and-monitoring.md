@@ -280,6 +280,9 @@ spec:
     action: replace
 ```
 
+> [!TIP]
+> Developers can make use of the `pkg/component/observability/monitoring/prometheus/shoot.ClusterComponentScrapeConfigSpec` function in order to generate a `ScrapeConfig` like above.
+
 ##### `PrometheusRule`
 
 Similar to `ServiceMonitor`s, `PrometheusRule`s can be created with the `prometheus=shoot` label:
