@@ -31,8 +31,7 @@ import (
 )
 
 const (
-	// DaemonSetNamePrefix is the prefix for the names of the kube-proxy DaemonSets.
-	DaemonSetNamePrefix = "kube-proxy"
+	daemonSetNamePrefix = "kube-proxy"
 	// ConfigNamePrefix is the prefix for the name of the kube-proxy ConfigMap.
 	ConfigNamePrefix = "kube-proxy-config"
 

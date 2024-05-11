@@ -325,7 +325,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
 			b.Shoot.Components.SystemComponents.BlackboxExporter,
 			b.Shoot.Components.SystemComponents.CoreDNS,
-			b.Shoot.Components.SystemComponents.KubeProxy,
 		)
 
 		if b.Shoot.WantsClusterAutoscaler {
