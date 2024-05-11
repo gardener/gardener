@@ -37,7 +37,6 @@ import (
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
-	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -164,7 +163,7 @@ type SystemComponents struct {
 	KubeProxy           kubeproxy.Interface
 	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
-	NodeLocalDNS        nodelocaldns.Interface
+	NodeLocalDNS        component.DeployWaiter
 	NodeProblemDetector component.DeployWaiter
 	NodeExporter        nodeexporter.Interface
 	Resources           shootsystem.Interface

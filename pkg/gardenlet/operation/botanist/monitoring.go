@@ -334,10 +334,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
 		}
 
-		if b.Shoot.NodeLocalDNSEnabled {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
-		}
-
 		if b.Shoot.WantsClusterAutoscaler {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
 		}

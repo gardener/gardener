@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mocknodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/mock"
+	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -79,7 +79,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 	Describe("#ReconcileNodeLocalDNS", func() {
 		var (
-			nodelocaldns     *mocknodelocaldns.MockInterface
+			nodelocaldns     *mockcomponent.MockDeployWaiter
 			kubernetesClient *kubernetesmock.MockInterface
 			c                client.Client
 
@@ -88,7 +88,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		)
 
 		BeforeEach(func() {
-			nodelocaldns = mocknodelocaldns.NewMockInterface(ctrl)
+			nodelocaldns = mockcomponent.NewMockDeployWaiter(ctrl)
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
