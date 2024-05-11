@@ -8,12 +8,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewBlackboxExporter creates a new blackbox-exporter deployer.
-func NewBlackboxExporter(c client.Client, secretsManager secretsmanager.Interface, namespace string, values blackboxexporter.Values) (blackboxexporter.Interface, error) {
+func NewBlackboxExporter(c client.Client, secretsManager secretsmanager.Interface, namespace string, values blackboxexporter.Values) (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err

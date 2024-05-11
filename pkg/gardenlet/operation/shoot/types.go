@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
@@ -155,7 +154,7 @@ type Extensions struct {
 // SystemComponents contains references to system components.
 type SystemComponents struct {
 	APIServerProxy      apiserverproxy.Interface
-	BlackboxExporter    blackboxexporter.Interface
+	BlackboxExporter    component.DeployWaiter
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
 	KubeProxy           kubeproxy.Interface
@@ -172,7 +171,7 @@ type SystemComponents struct {
 type Monitoring struct {
 	Alertmanager     alertmanager.Interface
 	Prometheus       prometheus.Interface
-	BlackboxExporter blackboxexporter.Interface
+	BlackboxExporter component.DeployWaiter
 }
 
 // Logging contains references to logging deployers.

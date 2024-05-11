@@ -11,10 +11,12 @@ import (
 	prometheuscommonconfig "github.com/prometheus/common/config"
 )
 
+const moduleName = "http_kubernetes_service"
+
 // Config returns the blackbox-exporter config for the shoot cluster use-case.
 func Config() blackboxexporterconfig.Config {
 	return blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-		"http_kubernetes_service": {
+		moduleName: {
 			Prober:  "http",
 			Timeout: 10 * time.Second,
 			HTTP: blackboxexporterconfig.HTTPProbe{
