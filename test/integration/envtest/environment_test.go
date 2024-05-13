@@ -12,6 +12,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -39,5 +40,10 @@ var _ = Describe("GardenerTestEnvironment", func() {
 	It("should be able to manipulate resource from operations.gardener.cloud/v1alpha1", func() {
 		bastion := &operationsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name}}
 		Expect(testClient.Create(ctx, bastion)).To(MatchError(ContainSubstring("Bastion.operations.gardener.cloud \"\" is invalid")))
+	})
+
+	It("should be able to manipulate resource from security.gardener.cloud/v1alpha1", func() {
+		credentialsBinding := &securityv1alpha1.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name}}
+		Expect(testClient.Create(ctx, credentialsBinding)).To(MatchError(MatchRegexp("CredentialsBinding.security.gardener.cloud \"test-.+\" is invalid")))
 	})
 })

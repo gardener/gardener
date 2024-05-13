@@ -10,6 +10,7 @@ import (
 )
 
 // GroupName is the name of the authentication API group.
+// "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
 const GroupName = "authentication.gardener.cloud"
 
 // SchemeGroupVersion is group version used to register these objects.
@@ -36,8 +37,6 @@ var (
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&KubeconfigRequest{},
-		&CredentialsBinding{},
-		&CredentialsBindingList{},
 	)
 
 	return nil

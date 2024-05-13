@@ -127,7 +127,7 @@ Gardener as an OIDC compatible token issuer.
 
 ### API Changes
 
-A new resource `WorkloadIdentity` in `authentication.gardener.cloud` API Group
+A new resource `WorkloadIdentity` in `security.gardener.cloud` API Group
 will be implemented. It will specify different characteristics of the JWT, like
 the value for the `aud` claim.
 
@@ -152,7 +152,7 @@ otherwise Gardener users will have to deduce it themselves which could turn out
 to be error prone.
 
 ```yaml
-apiVersion: authentication.gardener.cloud/v1alpha1
+apiVersion: security.gardener.cloud/v1alpha1
 kind: WorkloadIdentity
 metadata:
   name: banana-testing
@@ -164,7 +164,7 @@ spec:
   targetSystem: # Required field.
     type: aws # Required field.
     providerConfig: # Optional field of type *runtime.RawExtension, extensions can make it mandatory via admission webhooks.
-      apiVersion: aws.authentication.gardener.cloud/v1alpha1
+      apiVersion: aws.security.gardener.cloud/v1alpha1
       kind: Config
       iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
 status:
@@ -174,7 +174,7 @@ status:
 JWTs will be available when the clients send `create` requests on the
 `WorkloadIdentity/token` subresource. As the clients will be providing various
 custom information that will be used for the generation of the JWT, yet another
-resource `TokenRequest` in the API group `authentication.gardener.cloud` will be
+resource `TokenRequest` in the API group `security.gardener.cloud` will be
 used, similar to `TokenRequest` from `authentication.k8s.io/v1` API. It is
 envisioned this resource to contain just metadata for the context where the JWT
 is being used, e.g. shoot or backup entry identifier. Gardener API server must
@@ -194,7 +194,7 @@ client as response. The expiration timestamp of the token will be also available
 in the status via the `.status.expirationTimestamp` field.
 
 ```yaml
-apiVersion: authentication.gardener.cloud/v1alpha1
+apiVersion: security.gardener.cloud/v1alpha1
 kind: TokenRequest
 spec:
   contextObject: # Optional field, various metadata about context of use of the token
@@ -218,7 +218,7 @@ refer `WorkloadIdentity` as infrastructure credentials, from user experience
 point of view `SecretBinding` is not the best name for such resource, because it
 is no longer limited to referring only secrets as its name implies. Therefore, a
 new resource named `CredentialsBinding` in the API group
-`authentication.gardener.cloud` will be implemented. It will have all features
+`security.gardener.cloud` will be implemented. It will have all features
 of `SecretBinding`, but on top of that will be extended to refer to
 `WorkloadIdentity` resources via `.credentialsRef` field of type
 `ObjectReference`.
@@ -237,7 +237,7 @@ In a nutshell, the changes introduced compared to `SecretBinding` are:
   validation is possible for the given extension.
 
 ```yaml
-apiVersion: authentication.gardener.cloud/v1alpha1
+apiVersion: security.gardener.cloud/v1alpha1
 kind: CredentialsBinding
 metadata:
   name: my-credentials
@@ -245,7 +245,7 @@ metadata:
 provider:
   type: aws # {aws,azure,gcp,...}
 credentialsRef:
-  apiVersion: authentication.gardener.cloud/v1alpha1 # or "v1", when secret is being used
+  apiVersion: security.gardener.cloud/v1alpha1 # or "v1", when secret is being used
   kind: WorkloadIdentity # or "Secret", when secret is being used
   name: my-provider-account
   # namespace: "...", allow reference across namespaces
@@ -440,18 +440,18 @@ Kubernetes Secrets will be the resource holding the JWT, the provider config,
 and metadata about the used workload identity. The JWT will be stored under the
 `token` data key, while the provider config will use the `config` data key. The
 name and namespace of the used `WorkloadIdentity` will be stored in the
-annotations `workloadidentity.authentication.gardener.cloud/name` and
-`workloadidentity.authentication.gardener.cloud/namespace` respectively. The
-annotation `workloadidentity.authentication.gardener.cloud/context-object`, if
+annotations `workloadidentity.security.gardener.cloud/name` and
+`workloadidentity.security.gardener.cloud/namespace` respectively. The
+annotation `workloadidentity.security.gardener.cloud/context-object`, if
 present, will hold reference to the object using the workload identity, the
 value will be JSON document and have the format
 `{"apiVersion":"...","kind":"...","name":"...","namespace":"...","uid":"..."}`.
 It will be the source for the `spec.contextObject` field of the `TokenRequest`.
 To let the controller(s) easily select or distinguish these secrets, they will
 be labeled with
-`authentication.gardener.cloud/purpose: workload-identity-token-requestor`. The
+`security.gardener.cloud/purpose: workload-identity-token-requestor`. The
 secrets will be also labeled with
-`workloadidentity.authentication.gardener.cloud/provider=<WorkloadIdentity.spec.targetSystem.type>`
+`workloadidentity.security.gardener.cloud/provider=<WorkloadIdentity.spec.targetSystem.type>`
 so that the extensions can easily select them and make adjustments via admission
 webhooks, e.g. transform the service provider config and the token into
 canonical form usable by the respective service provider SDK.
@@ -473,12 +473,12 @@ metadata:
   name: cloudprovider
   namespace: shoot--local--foo
   annotations:
-    workloadidentity.authentication.gardener.cloud/namespace: garden-local
-    workloadidentity.authentication.gardener.cloud/name: banana-testing
-    workloadidentity.authentication.gardener.cloud/context-object: '{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot","name":"foo","namespace":"garden-local","uid":"54d09554-6a68-4f46-a23a-e3592385d820"}'
+    workloadidentity.security.gardener.cloud/namespace: garden-local
+    workloadidentity.security.gardener.cloud/name: banana-testing
+    workloadidentity.security.gardener.cloud/context-object: '{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot","name":"foo","namespace":"garden-local","uid":"54d09554-6a68-4f46-a23a-e3592385d820"}'
   labels:
-    authentication.gardener.cloud/purpose: workload-identity-token-requestor
-    workloadidentity.authentication.gardener.cloud/provider: aws # {aws,azure,gcp,...}
+    security.gardener.cloud/purpose: workload-identity-token-requestor
+    workloadidentity.security.gardener.cloud/provider: aws # {aws,azure,gcp,...}
 type: Opaque
 ```
 

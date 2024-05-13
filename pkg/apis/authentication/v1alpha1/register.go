@@ -4,12 +4,12 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // GroupName is the name of the authentication API group.
+// "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
 const GroupName = "authentication.gardener.cloud"
 
 // SchemeGroupVersion is group version used to register these objects
@@ -38,11 +38,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&AdminKubeconfigRequest{},
 		&ViewerKubeconfigRequest{},
-		&CredentialsBinding{},
-		&CredentialsBindingList{},
 	)
-
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 
 	return nil
 }

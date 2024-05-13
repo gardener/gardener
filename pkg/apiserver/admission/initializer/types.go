@@ -12,10 +12,10 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	authenticationclientset "github.com/gardener/gardener/pkg/client/authentication/clientset/versioned"
-	authenticationinformers "github.com/gardener/gardener/pkg/client/authentication/informers/externalversions"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformers "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
@@ -51,15 +51,15 @@ type WantsSeedManagementClientSet interface {
 	admission.InitializationValidator
 }
 
-// WantsAuthenticationInformerFactory defines a function which sets authentication InformerFactory for admission plugins that need it.
-type WantsAuthenticationInformerFactory interface {
-	SetAuthenticationInformerFactory(authenticationinformers.SharedInformerFactory)
+// WantsSecurityInformerFactory defines a function which sets security InformerFactory for admission plugins that need it.
+type WantsSecurityInformerFactory interface {
+	SetSecurityInformerFactory(securityinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
-// WantsAuthenticationClientSet defines a function which sets Authentication Clientset for admission plugins that need it.
-type WantsAuthenticationClientSet interface {
-	SetAuthenticationClientSet(authenticationclientset.Interface)
+// WantsSecurityClientSet defines a function which sets Security Clientset for admission plugins that need it.
+type WantsSecurityClientSet interface {
+	SetSecurityClientSet(securityclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -102,8 +102,8 @@ type pluginInitializer struct {
 
 	settingsInformers settingsinformers.SharedInformerFactory
 
-	authenticationInformers authenticationinformers.SharedInformerFactory
-	authenticationClient    authenticationclientset.Interface
+	securityInformers securityinformers.SharedInformerFactory
+	securityClient    securityclientset.Interface
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface
