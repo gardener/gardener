@@ -229,6 +229,18 @@ rules:
   - patch
   - update
   - delete
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - backupbuckets
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
 # TODO(rfranzke): Remove this rule as soon as the Prometheus and Alertmanager migration code is getting deleted.
 - apiGroups:
   - ""

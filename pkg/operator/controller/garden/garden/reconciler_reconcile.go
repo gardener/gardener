@@ -28,6 +28,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -44,6 +45,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -216,10 +218,33 @@ func (r *Reconciler) reconcile(
 			deployNginxIngressController,
 		)
 
+		backupBucket              = &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
+		reconcileEtcdBackupBucket = g.Add(flow.Task{
+			Name: "Reconciling main ETCD backup bucket",
+			Fn: func(ctx context.Context) error {
+				if err := r.deployEtcdMainBackupBucket(ctx, garden, backupBucket); err != nil {
+					return err
+				}
+
+				return extensions.WaitUntilExtensionObjectReady(
+					ctx,
+					r.RuntimeClientSet.Client(),
+					log,
+					backupBucket,
+					extensionsv1alpha1.BackupBucketResource,
+					2*time.Second,
+					30*time.Second,
+					time.Minute,
+					nil,
+				)
+			},
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName != nil,
+			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
+		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, reconcileEtcdBackupBucket),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
@@ -518,7 +543,42 @@ func (r *Reconciler) reconcile(
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
 
-func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
+func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden, backupBucket *extensionsv1alpha1.BackupBucket) error {
+	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig == nil || etcdConfig.Main == nil || etcdConfig.Main.Backup == nil {
+		return fmt.Errorf("no ETCD main backup configuration found in Garden resource")
+	}
+	if garden.Spec.RuntimeCluster.Provider.Region == nil {
+		return fmt.Errorf("no region found in spec.runtimeCluster.provider.region in Garden resource")
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), backupBucket, func() error {
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
+
+		backupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider,
+				ProviderConfig: garden.Spec.VirtualCluster.ETCD.Main.Backup.ProviderConfig,
+			},
+			Region: *garden.Spec.RuntimeCluster.Provider.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      garden.Spec.VirtualCluster.ETCD.Main.Backup.SecretRef.Name,
+				Namespace: r.GardenNamespace,
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func etcdMainBackupBucketName(garden *operatorv1alpha1.Garden) string {
+	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil && etcdConfig.Main.Backup.BucketName != nil {
+		return *etcdConfig.Main.Backup.BucketName
+	}
+	return "garden-" + string(garden.UID)
+}
+
+func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface, backupBucket *extensionsv1alpha1.BackupBucket) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
@@ -538,15 +598,20 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			container, prefix := etcdConfig.Main.Backup.BucketName, "virtual-garden-etcd-main"
-			if idx := strings.Index(etcdConfig.Main.Backup.BucketName, "/"); idx != -1 {
-				container = etcdConfig.Main.Backup.BucketName[:idx]
-				prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(etcdConfig.Main.Backup.BucketName[idx+1:], "/"), prefix)
+			container, prefix := etcdMainBackupBucketName(garden), "virtual-garden-etcd-main"
+			if idx := strings.Index(container, "/"); idx != -1 {
+				container = container[:idx]
+				prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(container[idx+1:], "/"), prefix)
+			}
+
+			secretRefName := etcdConfig.Main.Backup.SecretRef.Name
+			if backupBucket.Status.GeneratedSecretRef != nil {
+				secretRefName = backupBucket.Status.GeneratedSecretRef.Name
 			}
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             etcdConfig.Main.Backup.Provider,
-				SecretRefName:        etcdConfig.Main.Backup.SecretRef.Name,
+				SecretRefName:        secretRefName,
 				Container:            container,
 				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,
