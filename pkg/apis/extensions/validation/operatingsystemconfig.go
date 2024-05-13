@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"net/url"
 	"slices"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -61,6 +63,7 @@ func ValidateOperatingSystemConfigSpec(spec *extensionsv1alpha1.OperatingSystemC
 		}
 	}
 
+	allErrs = append(allErrs, ValidateCriConfig(spec.CRIConfig, spec.Purpose, fldPath.Child("criConfig"))...)
 	allErrs = append(allErrs, ValidateUnits(spec.Units, pathsFromFiles, fldPath.Child("units"))...)
 	allErrs = append(allErrs, ValidateFiles(spec.Files, fldPath.Child("files"))...)
 
@@ -73,6 +76,103 @@ func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSys
 
 	allErrs = append(allErrs, ValidateUnits(status.ExtensionUnits, pathsFromFiles, fldPath.Child("extensionUnits"))...)
 	allErrs = append(allErrs, ValidateFiles(status.ExtensionFiles, fldPath.Child("extensionFiles"))...)
+
+	return allErrs
+}
+
+// ValidateCriConfig validates the spec of a CRIConfig object.
+func ValidateCriConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if config.Containerd == nil &&
+		config.Name == extensionsv1alpha1.CRINameContainerD &&
+		purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+		allErrs = append(allErrs, field.Required(fldPath.Child("containerd"), "containerd config is required when CRI is configured"))
+	}
+
+	allErrs = append(allErrs, ValidateContainerdConfig(config.Containerd, purpose, fldPath.Child("containerd"))...)
+
+	return allErrs
+}
+
+// ValidateContainerdConfig validates the spec of a ContainerdConfig object.
+func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "containerd config is not allowed for OperatingSystemConfig with purpose 'provision'"))
+		return allErrs
+	}
+
+	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
+
+	return allErrs
+}
+
+// ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
+func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
+	const form = "; desired format: https://host[:port]"
+
+	allErrs := field.ErrorList{}
+
+	duplicateUpstream := sets.Set[string]{}
+	for i, r := range registries {
+		idxPath := fldPath.Index(i)
+
+		if duplicateUpstream.Has(r.Upstream) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("upstream"), r.Upstream))
+		}
+		duplicateUpstream.Insert(r.Upstream)
+
+		if r.Upstream != "_default" {
+			allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(idxPath.Child("upstream"), r.Upstream)...)
+		}
+
+		if r.Server != nil {
+			serverFld := idxPath.Child("server")
+
+			if u, err := url.Parse(*r.Server); err != nil {
+				allErrs = append(allErrs, field.Required(serverFld, "url must be a valid URL: "+err.Error()+form))
+			} else {
+				if u.Scheme != "http" && u.Scheme != "https" {
+					allErrs = append(allErrs, field.NotSupported(serverFld, u.Scheme, []string{"http", "https"}))
+				}
+				if len(u.Host) == 0 {
+					allErrs = append(allErrs, field.Invalid(serverFld, u.Host, "host must be provided"+form))
+				}
+			}
+		}
+
+		for j, host := range r.Hosts {
+			hostFld := idxPath.Child("hosts").Index(j)
+
+			if u, err := url.Parse(host.URL); err != nil {
+				allErrs = append(allErrs, field.Required(hostFld.Child("url"), "url must be a valid URL: "+err.Error()+form))
+			} else {
+				if len(u.Host) == 0 {
+					allErrs = append(allErrs, field.Invalid(hostFld.Child("url"), u.Host, "host must be provided"+form))
+				}
+			}
+
+			for k, capability := range host.Capabilities {
+				capFld := hostFld.Child("capabilities").Index(k)
+
+				switch capability {
+				case "push", "pull", "resolve":
+				default:
+					allErrs = append(allErrs, field.NotSupported(capFld, capability, []string{"push", "pull", "resolve"}))
+				}
+			}
+		}
+	}
 
 	return allErrs
 }
