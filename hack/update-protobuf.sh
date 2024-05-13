@@ -22,7 +22,7 @@ if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
 fi
 
 pushd "$PROJECT_ROOT" > /dev/null
-APIROOTS=${APIROOTS:-$(git grep --files-with-matches -e '// +k8s:protobuf-gen=package' cmd pkg | \
+APIROOTS=${APIROOTS:-$(git grep --untracked --files-with-matches -e '// +k8s:protobuf-gen=package' cmd pkg | \
 	xargs -n 1 dirname | \
 	sed 's,^,github.com/gardener/gardener/,;' | \
 	sort | uniq

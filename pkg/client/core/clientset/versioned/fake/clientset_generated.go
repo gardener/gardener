@@ -8,6 +8,8 @@ package fake
 
 import (
 	clientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	corev1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1"
+	fakecorev1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1/fake"
 	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	fakecorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,4 +72,9 @@ var (
 // CoreV1beta1 retrieves the CoreV1beta1Client
 func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
 	return &fakecorev1beta1.FakeCoreV1beta1{Fake: &c.Fake}
+}
+
+// CoreV1 retrieves the CoreV1Client
+func (c *Clientset) CoreV1() corev1.CoreV1Interface {
+	return &fakecorev1.FakeCoreV1{Fake: &c.Fake}
 }
