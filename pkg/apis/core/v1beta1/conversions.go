@@ -6,6 +6,7 @@
 package v1beta1
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/conversion"
@@ -239,4 +240,78 @@ func removeRoleFromRoles(roles []string, role string) []string {
 		}
 	}
 	return newRoles
+}
+
+func Convert_v1beta1_ControllerDeployment_To_core_ControllerDeployment(in *ControllerDeployment, out *core.ControllerDeployment, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_ControllerDeployment_To_core_ControllerDeployment(in, out, s); err != nil {
+		return err
+	}
+
+	customType := false
+	switch in.Type {
+	case ControllerDeploymentTypeHelm:
+		helmDeployment := &HelmControllerDeployment{}
+		if len(in.ProviderConfig.Raw) > 0 {
+			if err := json.Unmarshal(in.ProviderConfig.Raw, helmDeployment); err != nil {
+				return err
+			}
+		}
+
+		out.Helm = &core.HelmControllerDeployment{}
+		if err := Convert_v1beta1_HelmControllerDeployment_To_core_HelmControllerDeployment(helmDeployment, out.Helm, s); err != nil {
+			return err
+		}
+	default:
+		customType = true
+	}
+
+	if !customType {
+		// type and providerConfig are only used for custom types
+		// built-in types are represented in the respective substructures
+		out.Type = ""
+		out.ProviderConfig = nil
+	}
+
+	return nil
+}
+
+func Convert_core_ControllerDeployment_To_v1beta1_ControllerDeployment(in *core.ControllerDeployment, out *ControllerDeployment, s conversion.Scope) error {
+	if err := autoConvert_core_ControllerDeployment_To_v1beta1_ControllerDeployment(in, out, s); err != nil {
+		return err
+	}
+
+	if in.Helm != nil {
+		out.Type = ControllerDeploymentTypeHelm
+
+		helmDeployment := &HelmControllerDeployment{}
+		if err := Convert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(in.Helm, helmDeployment, s); err != nil {
+			return err
+		}
+
+		var err error
+		out.ProviderConfig.Raw, err = json.Marshal(helmDeployment)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Convert_v1beta1_HelmControllerDeployment_To_core_HelmControllerDeployment(in *HelmControllerDeployment, out *core.HelmControllerDeployment, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_HelmControllerDeployment_To_core_HelmControllerDeployment(in, out, s); err != nil {
+		return err
+	}
+
+	out.RawChart = in.Chart
+	return nil
+}
+
+func Convert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(in *core.HelmControllerDeployment, out *HelmControllerDeployment, s conversion.Scope) error {
+	if err := autoConvert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(in, out, s); err != nil {
+		return err
+	}
+
+	out.Chart = in.RawChart
+	return nil
 }

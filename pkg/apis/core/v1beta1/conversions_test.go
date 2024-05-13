@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -519,6 +520,124 @@ var _ = Describe("Conversion", func() {
 				HaveKeyWithValue("baz", BeEquivalentTo("bing")),
 				HaveKeyWithValue("bar", BeEquivalentTo("blub")),
 			))
+		})
+	})
+
+	Describe("ControllerDeployment conversion", func() {
+		Describe("convert from v1beta1 to internal", func() {
+			var (
+				in  *ControllerDeployment
+				out *core.ControllerDeployment
+			)
+
+			BeforeEach(func() {
+				in = &ControllerDeployment{}
+				out = &core.ControllerDeployment{}
+			})
+
+			Context("helm type", func() {
+				BeforeEach(func() {
+					in.Type = "helm"
+					in.ProviderConfig = runtime.RawExtension{
+						Raw: []byte(`{"chart":"Zm9v","values":{"foo":["bar","baz"]}}`),
+					}
+				})
+
+				It("should convert legacy helm deployment to new structure", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(BeEmpty(), "type is empty for non-custom type")
+					Expect(out.ProviderConfig).To(BeNil(), "providerConfig is empty for non-custom type")
+					Expect(out.Helm).To(Equal(&core.HelmControllerDeployment{
+						RawChart: []byte("foo"),
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":["bar","baz"]}`),
+						},
+					}))
+				})
+
+				It("should correctly handle empty providerConfig", func() {
+					in.ProviderConfig.Raw = nil
+
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Helm).To(Equal(&core.HelmControllerDeployment{
+						RawChart: nil,
+						Values:   nil,
+					}))
+				})
+			})
+
+			Context("custom type", func() {
+				BeforeEach(func() {
+					in.Type = "custom"
+					in.ProviderConfig = runtime.RawExtension{
+						Raw: []byte(`{"foo":"bar"}`),
+					}
+				})
+
+				It("should keep type and providerConfig", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(Equal("custom"))
+					Expect(out.ProviderConfig).To(Equal(&runtime.Unknown{
+						ContentType: "application/json",
+						Raw:         []byte(`{"foo":"bar"}`),
+					}))
+					Expect(out.Helm).To(BeNil())
+				})
+			})
+		})
+
+		Describe("convert from internal to v1beta1", func() {
+			var (
+				in  *core.ControllerDeployment
+				out *ControllerDeployment
+			)
+
+			BeforeEach(func() {
+				in = &core.ControllerDeployment{}
+				out = &ControllerDeployment{}
+			})
+
+			Context("helm type", func() {
+				BeforeEach(func() {
+					in.Helm = &core.HelmControllerDeployment{
+						RawChart: []byte("foo"),
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":["bar","baz"]}`),
+						},
+					}
+				})
+
+				It("should convert new helm deployment to legacy structure", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(Equal("helm"))
+					Expect(out.ProviderConfig).To(Equal(runtime.RawExtension{
+						Raw: []byte(`{"chart":"Zm9v","values":{"foo":["bar","baz"]}}`),
+					}))
+				})
+			})
+
+			Context("custom type", func() {
+				BeforeEach(func() {
+					in.Type = "custom"
+					in.ProviderConfig = &runtime.Unknown{
+						ContentType: "application/json",
+						Raw:         []byte(`{"foo":"bar"}`),
+					}
+				})
+
+				It("should keep type and providerConfig", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(Equal("custom"))
+					Expect(out.ProviderConfig).To(Equal(runtime.RawExtension{
+						Raw: []byte(`{"foo":"bar"}`),
+					}))
+				})
+			})
 		})
 	})
 })
