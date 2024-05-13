@@ -1,0 +1,7 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: garden
+manifests:
+  rawYaml:
+    - example/operator/20-garden.yaml
