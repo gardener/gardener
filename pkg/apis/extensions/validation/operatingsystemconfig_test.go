@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/extensions/validation"
@@ -30,7 +31,24 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Type:           "provider",
 					ProviderConfig: &runtime.RawExtension{},
 				},
-				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+				CRIConfig: &extensionsv1alpha1.CRIConfig{
+					Name: extensionsv1alpha1.CRINameContainerD,
+					Containerd: &extensionsv1alpha1.ContainerdConfig{
+						Registries: []extensionsv1alpha1.RegistryConfig{
+							{
+								Upstream: "docker.io",
+								Server:   ptr.To("https://docker.io"),
+								Hosts: []extensionsv1alpha1.RegistryHost{
+									{
+										URL:          "https://registry-1.docker.io",
+										Capabilities: []string{"pull", "resolve"},
+									},
+								},
+							},
+						},
+					},
+				},
 				Units: []extensionsv1alpha1.Unit{
 					{
 						Name: "foo",
@@ -273,6 +291,130 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
+		It("should allow setting CRI name for provisioning OSC", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
+			oscCopy.Spec.CRIConfig.Containerd = nil
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
+		})
+
+		It("should forbid setting containerd config for provisioning OSC", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.criConfig.containerd"),
+				"Detail": Equal(`containerd config is not allowed for OperatingSystemConfig with purpose 'provision'`),
+			}))))
+		})
+
+		It("should forbid omitting containerd config if cri name is containerd", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Name = extensionsv1alpha1.CRINameContainerD
+			oscCopy.Spec.CRIConfig.Containerd = nil
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.criConfig.containerd"),
+				"Detail": Equal("containerd config is required when CRI is configured"),
+			}))))
+		})
+
+		It("should forbid containerd config with duplicated registry host", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = append(oscCopy.Spec.CRIConfig.Containerd.Registries, oscCopy.Spec.CRIConfig.Containerd.Registries[0])
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeDuplicate),
+				"Field":    Equal("spec.criConfig.containerd.registries[1].upstream"),
+				"BadValue": Equal("docker.io"),
+			}))))
+		})
+
+		It("should forbid containerd config with an invalid upstream name", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "a/b.io",
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.criConfig.containerd.registries[0].upstream"),
+				"BadValue": Equal("a/b.io"),
+			}))))
+		})
+
+		It("should allow containerd config with _default upstream name", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "_default",
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
+		})
+
+		It("should forbid containerd with an invalid server name", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "foo.bar",
+					Server:   ptr.To("ftp://foo.bar"),
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeNotSupported),
+				"Field":    Equal("spec.criConfig.containerd.registries[0].server"),
+				"BadValue": Equal("ftp"),
+			}))))
+		})
+
+		It("should forbid containerd with an invalid hosts url", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "foo.bar",
+					Hosts: []extensionsv1alpha1.RegistryHost{
+						{
+							URL: "1a",
+						},
+					},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.criConfig.containerd.registries[0].hosts[0].url"),
+			}))))
+		})
+
+		It("should forbid containerd with invalid hosts capabilities", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "foo.bar",
+					Hosts: []extensionsv1alpha1.RegistryHost{
+						{
+							URL:          "http://foo.bar/us",
+							Capabilities: []string{"foo"},
+						},
+					},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeNotSupported),
+				"Field":    Equal("spec.criConfig.containerd.registries[0].hosts[0].capabilities[0]"),
+				"BadValue": Equal("foo"),
+			}))))
+		})
+
 		It("should allow valid osc resources", func() {
 			errorList := ValidateOperatingSystemConfig(osc)
 
@@ -301,17 +443,24 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 		It("should prevent updating the type and purpose", func() {
 			newOperatingSystemConfig := prepareOperatingSystemConfigForUpdate(osc)
 			newOperatingSystemConfig.Spec.Type = "changed-type"
-			newOperatingSystemConfig.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeReconcile
+			newOperatingSystemConfig.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
 
 			errorList := ValidateOperatingSystemConfigUpdate(newOperatingSystemConfig, osc)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.type"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.purpose"),
-			}))))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.type"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.purpose"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.criConfig.containerd"),
+					"Detail": Equal(`containerd config is not allowed for OperatingSystemConfig with purpose 'provision'`),
+				})),
+			))
 		})
 
 		It("should allow updating the units, files, and the provider config", func() {

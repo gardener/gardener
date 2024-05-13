@@ -323,13 +323,23 @@ spec:
   purpose: reconcile
   cri:
     name: containerd
+#   containerd:
+#      registries:
+#      - upstream: docker.io
+#        server: https://registry-1.docker.io
+#        hosts:
+#        - url: http://<service-ip>:<port>
 ...
 ```
 
-To support ContainerD, an OS extension must satisfy the following criteria:
-1. The operating system must have built-in [ContainerD](https://containerd.io/) and the [Client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/).
-1. ContainerD must listen on its default socket path: `unix:///run/containerd/containerd.sock`
-1. ContainerD must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (Created by Gardener).
+To support `containerd`, an OS extension must satisfy the following criteria:
+1. The operating system must have built-in [containerd](https://containerd.io/) and the [Client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/).
+1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
+1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (Created by Gardener).
+
+For a convenient handling, [gardener-node-agent](../concepts/node-agent.md) can manage various aspects of containerd's config, e.g. the registry configuration, if given in the `OperatingSystemConfig`.
+Any Gardener extension which needs to modify the config, should check the functionality exposed through this API first.
+If applicable, adjustments can be implemented through mutating webhooks, acting on the created or updated `OperatingSystemConfig` resource.
 
 If CRI configurations are not supported, it is recommended to create a validating webhook running in the garden cluster that prevents specifying the `.spec.providers.workers[].cri` section in the `Shoot` objects.
 

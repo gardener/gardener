@@ -65,6 +65,51 @@ spec:
                 description: CRI config is a structure contains configurations of
                   the CRI library
                 properties:
+                  containerd:
+                    description: ContainerdConfig is the containerd configuration.
+                    properties:
+                      registries:
+                        description: Registries configures the registry hosts for
+                          containerd.
+                        items:
+                          description: RegistryConfig contains registry configuration
+                            options.
+                          properties:
+                            hosts:
+                              description: Hosts are the registry hosts.
+                              items:
+                                description: RegistryHost contains configuration values
+                                  for a registry host.
+                                properties:
+                                  caCerts:
+                                    description: CACerts are paths to public key certificates
+                                      used for TLS.
+                                    items:
+                                      type: string
+                                    type: array
+                                  capabilities:
+                                    description: |-
+                                      Capabilities determine what operations a host is
+                                      capable of performing. Defaults to
+                                       - pull
+                                       - resolve
+                                    items:
+                                      type: string
+                                    type: array
+                                  url:
+                                    description: URL is the endpoint address of the
+                                      registry mirror.
+                                    type: string
+                                required:
+                                - url
+                                type: object
+                              type: array
+                            server:
+                              description: Server is the registry server.
+                              type: string
+                          type: object
+                        type: array
+                    type: object
                   name:
                     description: Name is a mandatory string containing the name of
                       the CRI library. Supported values are `containerd`.

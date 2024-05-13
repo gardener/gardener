@@ -2032,6 +2032,20 @@ CRIName
 <p>Name is a mandatory string containing the name of the CRI library. Supported values are <code>containerd</code>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>containerd</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">
+ContainerdConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContainerdConfig is the containerd configuration.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.CRIName">CRIName
@@ -2356,6 +2370,39 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 <p>Selector is the label selector used by the extension to match the nodes belonging to the worker pool.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ContainerdConfig">ContainerdConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig</a>)
+</p>
+<p>
+<p>ContainerdConfig contains configuration options for containerd.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>registries</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.RegistryConfig">
+[]RegistryConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Registries configures the registry hosts for containerd.</p>
 </td>
 </tr>
 </tbody>
@@ -3914,6 +3961,130 @@ config spec. It contains a reference to a secret as the result may contain confi
 <p>
 <p>Purpose is a string alias.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.RegistryConfig">RegistryConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">ContainerdConfig</a>)
+</p>
+<p>
+<p>RegistryConfig contains registry configuration options.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>upstream</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Upstream is the upstream name of the registry.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>server</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Server is the URL to registry server of this upstream.
+It corresponds to the server field in the <code>hosts.toml</code> file, see <a href="https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field">https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field</a> for more information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>hosts</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.RegistryHost">
+[]RegistryHost
+</a>
+</em>
+</td>
+<td>
+<p>Hosts are the registry hosts.
+It corresponds to the host fields in the <code>hosts.toml</code> file, see <a href="https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format">https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format</a> for more information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>probeHosts</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ReadinessProbe determines if host registry endpoints should be probed before they are added to the containerd config.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.RegistryHost">RegistryHost
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.RegistryConfig">RegistryConfig</a>)
+</p>
+<p>
+<p>RegistryHost contains configuration values for a registry host.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>url</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>URL is the endpoint address of the registry mirror.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Capabilities determine what operations a host is
+capable of performing. Defaults to
+- pull
+- resolve</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>caCerts</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>CACerts are paths to public key certificates used for TLS.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.Spec">Spec
 </h3>
 <p>

@@ -229,7 +229,48 @@ const (
 // CRIConfig contains configurations of the CRI library.
 type CRIConfig struct {
 	// Name is a mandatory string containing the name of the CRI library. Supported values are `containerd`.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Enum="containerd"
 	Name CRIName `json:"name"`
+	// ContainerdConfig is the containerd configuration.
+	// +optional
+	Containerd *ContainerdConfig `json:"containerd,omitempty"`
+}
+
+// ContainerdConfig contains configuration options for containerd.
+type ContainerdConfig struct {
+	// Registries configures the registry hosts for containerd.
+	// +optional
+	Registries []RegistryConfig `json:"registries,omitempty"`
+}
+
+// RegistryConfig contains registry configuration options.
+type RegistryConfig struct {
+	// Upstream is the upstream name of the registry.
+	Upstream string `json:"upstream"`
+	// Server is the URL to registry server of this upstream.
+	// It corresponds to the server field in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field for more information.
+	// +optional
+	Server *string `json:"server,omitempty"`
+	// Hosts are the registry hosts.
+	// It corresponds to the host fields in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format for more information.
+	Hosts []RegistryHost `json:"hosts,omitempty"`
+	// ReadinessProbe determines if host registry endpoints should be probed before they are added to the containerd config.
+	// +optional
+	ReadinessProbe *bool `json:"probeHosts,omitempty"`
+}
+
+// RegistryHost contains configuration values for a registry host.
+type RegistryHost struct {
+	// URL is the endpoint address of the registry mirror.
+	URL string `json:"url"`
+	// Capabilities determine what operations a host is
+	// capable of performing. Defaults to
+	//  - pull
+	//  - resolve
+	Capabilities []string `json:"capabilities,omitempty"`
+	// CACerts are paths to public key certificates used for TLS.
+	CACerts []string `json:"caCerts,omitempty"`
 }
 
 // CRIName is a type alias for the CRI name string.
