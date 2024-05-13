@@ -28,6 +28,28 @@ spec:
           $labels.instance
           | query | first | value}}).
 
+    - alert: DiscoveryServerDown
+      expr: |
+        probe_success{job     = "blackbox-discovery-server",
+                      purpose = "availability"}
+        == 0
+      for: 5m
+      labels:
+        severity: critical
+        topology: garden
+        service: discovery-server
+      annotations:
+        summary: Discovery Server is Down in landscape {{$externalLabels.landscape}}
+        description: >
+          The http health probe to the Gardener Discovery Server failed for at least 5
+          minutes (instance is {{$labels.instance}}).
+          (Status code is
+          {{printf `probe_http_status_code{job      = "blackbox-discovery-server"
+          ,                                purpose  = "availability"
+          ,                                instance = "%s"}`
+          $labels.instance
+          | query | first | value}}).
+
     - alert: ApiServerDown
       expr: |
         probe_success{job     = "blackbox-apiserver",

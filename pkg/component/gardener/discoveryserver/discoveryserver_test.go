@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,6 +71,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		podDisruptionBudget       *policyv1.PodDisruptionBudget
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                   *networkingv1.Ingress
+		serviceMonitor            *monitoringv1.ServiceMonitor
 
 		secretConfig *corev1.Secret
 
@@ -385,6 +387,26 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "garden-gardener-discovery-server",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "garden"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "discovery-server",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+				}},
+			},
+		}
 
 		secretConfig = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -568,6 +590,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					podDisruptionBudget,
 					vpa,
 					ingress,
+					serviceMonitor,
 				}
 				expectedVirtualObjects = []client.Object{
 					clusterRole,

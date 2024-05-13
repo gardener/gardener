@@ -17,7 +17,7 @@ import (
 func (g *GardenerDiscoveryServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName + "-vpa",
+			Name:      DeploymentName + "-vpa",
 			Namespace: g.namespace,
 			Labels:    labels(),
 		},
@@ -25,7 +25,7 @@ func (g *GardenerDiscoveryServer) verticalPodAutoscaler() *vpaautoscalingv1.Vert
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       deploymentName,
+				Name:       DeploymentName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),

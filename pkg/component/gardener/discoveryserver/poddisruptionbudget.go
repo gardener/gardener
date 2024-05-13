@@ -16,7 +16,7 @@ import (
 func (g *GardenerDiscoveryServer) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: g.namespace,
 			Labels:    labels(),
 		},

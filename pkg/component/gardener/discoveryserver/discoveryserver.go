@@ -30,7 +30,7 @@ const (
 	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
 	ManagedResourceNameVirtual = "gardener-discovery-server-virtual"
 
-	deploymentName = "gardener-discovery-server"
+	DeploymentName = "gardener-discovery-server"
 	role           = "discovery-server"
 )
 
@@ -89,8 +89,8 @@ func (g *GardenerDiscoveryServer) Deploy(ctx context.Context) error {
 	tlsSecretName := ptr.Deref(g.values.TLSSecretName, "")
 	if tlsSecretName == "" {
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        deploymentName + "-tls",
-			CommonName:                  deploymentName,
+			Name:                        DeploymentName + "-tls",
+			CommonName:                  DeploymentName,
 			DNSNames:                    []string{g.values.Hostname},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
@@ -113,6 +113,7 @@ func (g *GardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
 		g.ingress(),
+		g.serviceMonitor(),
 	)
 	if err != nil {
 		return err

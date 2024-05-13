@@ -24,7 +24,7 @@ var _ = Describe("ScrapeConfig", func() {
 		)
 
 		It("should compute the scrape configs", func() {
-			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget)).To(ContainElements(
+			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget)).To(ConsistOf(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -177,6 +177,56 @@ var _ = Describe("ScrapeConfig", func() {
 							},
 						},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
+						}},
+					},
+				},
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-blackbox-discovery-server",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						Params:      map[string][]string{"module": {"http_gardener_discovery_server"}},
+						MetricsPath: ptr.To("/probe"),
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"},
+							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+						}},
+						RelabelConfigs: []*monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__address__"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "__param_target",
+								Replacement:  `$1`,
+								Action:       "replace",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__param_target"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "instance",
+								Replacement:  `$1`,
+								Action:       "replace",
+							},
+							{
+								Separator:   ptr.To(";"),
+								Regex:       `(.*)`,
+								TargetLabel: "__address__",
+								Replacement: "blackbox-exporter:9115",
+								Action:      "replace",
+							},
+							{
+								Action:      "replace",
+								Replacement: "blackbox-discovery-server",
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,

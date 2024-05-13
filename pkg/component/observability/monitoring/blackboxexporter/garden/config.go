@@ -15,10 +15,11 @@ import (
 )
 
 const (
-	httpGardenerAPIServerModuleName    = "http_gardener_apiserver"
-	httpKubeAPIServerModuleName        = "http_kube_apiserver"
-	httpKubeAPIServerRootCAsModuleName = "http_kube_apiserver_root_cas"
-	httpGardenerDashboardModuleName    = "http_gardener_dashboard"
+	httpGardenerAPIServerModuleName       = "http_gardener_apiserver"
+	httpKubeAPIServerModuleName           = "http_kube_apiserver"
+	httpKubeAPIServerRootCAsModuleName    = "http_kube_apiserver_root_cas"
+	httpGardenerDashboardModuleName       = "http_gardener_dashboard"
+	httpGardenerDiscoveryServerModuleName = "http_gardener_discovery_server"
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
@@ -38,10 +39,11 @@ func Config() blackboxexporterconfig.Config {
 			}
 		}
 
-		httpGardenerAPIServerModule    = defaultModuleConfig()
-		httpKubeAPIServerModule        = defaultModuleConfig()
-		httpKubeAPIServerRootCAsModule = defaultModuleConfig()
-		httpGardenerDashboardModule    = defaultModuleConfig()
+		httpGardenerAPIServerModule       = defaultModuleConfig()
+		httpKubeAPIServerModule           = defaultModuleConfig()
+		httpKubeAPIServerRootCAsModule    = defaultModuleConfig()
+		httpGardenerDashboardModule       = defaultModuleConfig()
+		httpGardenerDiscoveryServerModule = defaultModuleConfig()
 
 		pathGardenerAPIServerCABundle = blackboxexporter.VolumeMountPathGardenerCA + "/" + secretsutils.DataKeyCertificateBundle
 		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
@@ -54,9 +56,10 @@ func Config() blackboxexporterconfig.Config {
 	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 
 	return blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
-		httpGardenerAPIServerModuleName:    httpGardenerAPIServerModule,
-		httpKubeAPIServerModuleName:        httpKubeAPIServerModule,
-		httpKubeAPIServerRootCAsModuleName: httpKubeAPIServerRootCAsModule,
-		httpGardenerDashboardModuleName:    httpGardenerDashboardModule,
+		httpGardenerAPIServerModuleName:       httpGardenerAPIServerModule,
+		httpKubeAPIServerModuleName:           httpKubeAPIServerModule,
+		httpKubeAPIServerRootCAsModuleName:    httpKubeAPIServerRootCAsModule,
+		httpGardenerDashboardModuleName:       httpGardenerDashboardModule,
+		httpGardenerDiscoveryServerModuleName: httpGardenerDiscoveryServerModule,
 	}}
 }

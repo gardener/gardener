@@ -15,7 +15,7 @@ import (
 func (g *GardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: g.namespace,
 			Labels:    labels(),
 			Annotations: map[string]string{

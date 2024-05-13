@@ -16,7 +16,7 @@ import (
 const serviceAccountIssuerConfigSecretName = "shoot-service-account-issuer"
 
 func (g *GardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(deploymentName, g.namespace)
+	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)
 }
 
 func (g *GardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.Secret {

@@ -44,7 +44,7 @@ func (g *GardenerDiscoveryServer) deployment(
 ) {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: g.namespace,
 			Labels: utils.MergeStringMaps(labels(), map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
@@ -74,7 +74,7 @@ func (g *GardenerDiscoveryServer) deployment(
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            deploymentName,
+							Name:            DeploymentName,
 							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{

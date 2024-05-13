@@ -15,7 +15,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const serviceName = deploymentName
+const serviceName = DeploymentName
 
 func (g *GardenerDiscoveryServer) service() *corev1.Service {
 	service := &corev1.Service{
