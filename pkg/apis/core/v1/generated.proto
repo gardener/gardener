@@ -8,9 +8,42 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.core.v1;
 
+import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
+import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1";
+
+// ControllerDeployment contains information about how this controller is deployed.
+message ControllerDeployment {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Helm configures that an extension controller is deployed using helm.
+  // +optional
+  optional HelmControllerDeployment helm = 2;
+}
+
+// ControllerDeploymentList is a collection of ControllerDeployments.
+message ControllerDeploymentList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ControllerDeployments.
+  repeated ControllerDeployment items = 2;
+}
+
+// HelmControllerDeployment configures how an extension controller is deployed using helm.
+message HelmControllerDeployment {
+  // RawChart is the base64-encoded, gzip'ed, tar'ed extension controller chart.
+  // +optional
+  optional bytes rawChart = 1;
+
+  // Values are the chart values.
+  // +optional
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
+}
 

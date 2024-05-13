@@ -7,12 +7,17 @@
 package fake
 
 import (
+	v1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
 type FakeCoreV1 struct {
 	*testing.Fake
+}
+
+func (c *FakeCoreV1) ControllerDeployments() v1.ControllerDeploymentInterface {
+	return &FakeControllerDeployments{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

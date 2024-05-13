@@ -16,11 +16,16 @@ import (
 
 type CoreV1Interface interface {
 	RESTClient() rest.Interface
+	ControllerDeploymentsGetter
 }
 
 // CoreV1Client is used to interact with features provided by the core.gardener.cloud group.
 type CoreV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *CoreV1Client) ControllerDeployments() ControllerDeploymentInterface {
+	return newControllerDeployments(c)
 }
 
 // NewForConfig creates a new CoreV1Client for the given config.

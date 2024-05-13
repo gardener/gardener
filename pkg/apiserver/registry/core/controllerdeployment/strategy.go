@@ -47,7 +47,8 @@ func (controllerDeploymentStrategy) PrepareForUpdate(_ context.Context, obj, old
 func mustIncreaseGeneration(oldControllerDeployment, newControllerDeployment *core.ControllerDeployment) bool {
 	// The ControllerDeployment specification changes.
 	if !apiequality.Semantic.DeepEqual(oldControllerDeployment.ProviderConfig, newControllerDeployment.ProviderConfig) ||
-		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Type, newControllerDeployment.Type) {
+		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Type, newControllerDeployment.Type) ||
+		!apiequality.Semantic.DeepEqual(oldControllerDeployment.Helm, newControllerDeployment.Helm) {
 		return true
 	}
 

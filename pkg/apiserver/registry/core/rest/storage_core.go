@@ -57,8 +57,12 @@ func (p StorageProvider) GroupName() string {
 	return core.GroupName
 }
 
-func (p StorageProvider) v1Storage(_ generic.RESTOptionsGetter) map[string]rest.Storage {
+func (p StorageProvider) v1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
+
+	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
+	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
+
 	return storage
 }
 

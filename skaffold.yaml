@@ -135,8 +135,10 @@ build:
             - pkg/client/core/clientset/versioned/typed/core/v1beta1
             - pkg/client/core/informers/externalversions
             - pkg/client/core/informers/externalversions/core
+            - pkg/client/core/informers/externalversions/core/v1
             - pkg/client/core/informers/externalversions/core/v1beta1
             - pkg/client/core/informers/externalversions/internalinterfaces
+            - pkg/client/core/listers/core/v1
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
