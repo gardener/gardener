@@ -14,3 +14,8 @@ deploy:
               - bash
               - -ec
               - hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy
+        - host:
+            command:
+              - bash
+              - -ec
+              - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > dev/virtual-garden-kubeconfig
