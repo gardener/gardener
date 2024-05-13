@@ -92,6 +92,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.FailureTolerance":                           schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener":                                   schema_pkg_apis_core_v1beta1_Gardener(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.GardenerResourceData":                       schema_pkg_apis_core_v1beta1_GardenerResourceData(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HelmControllerDeployment":                   schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                                schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                        schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                           schema_pkg_apis_core_v1beta1_HighAvailability(ref),
@@ -3547,6 +3548,34 @@ func schema_pkg_apis_core_v1beta1_GardenerResourceData(ref common.ReferenceCallb
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "HelmControllerDeployment configures how an extension controller is deployed using helm. This is the legacy structure that used to be defined in gardenlet's ControllerInstallation controller for ControllerDeployment's with type=helm. While this is not a proper API type, we need to define the structure in the API package so that we can convert it to the internal API version in the new representation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"chart": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Chart is a Helm chart tarball.",
+							Type:        []string{"string"},
+							Format:      "byte",
+						},
+					},
+					"values": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Values is a map of values for the given chart.",
+							Ref:         ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
 	}
 }
 

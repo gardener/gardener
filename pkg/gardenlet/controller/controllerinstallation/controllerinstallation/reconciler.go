@@ -150,16 +150,18 @@ func (r *Reconciler) reconcile(
 		providerConfig = &controllerDeployment.ProviderConfig
 	}
 
-	var helmDeployment struct {
-		// chart is a Helm chart tarball.
-		Chart []byte `json:"chart,omitempty"`
-		// Values is a map of values for the given chart.
-		Values map[string]any `json:"values,omitempty"`
-	}
-
-	if err := json.Unmarshal(providerConfig.Raw, &helmDeployment); err != nil {
+	helmDeployment := &gardencorev1beta1.HelmControllerDeployment{}
+	if err := json.Unmarshal(providerConfig.Raw, helmDeployment); err != nil {
 		conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart Information cannot be unmarshalled: %+v", err))
 		return reconcile.Result{}, err
+	}
+
+	var helmValues map[string]interface{}
+	if helmDeployment.Values != nil {
+		if err := json.Unmarshal(helmDeployment.Values.Raw, &helmValues); err != nil {
+			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart values cannot be unmarshalled: %+v", err))
+			return reconcile.Result{}, err
+		}
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
@@ -242,7 +244,7 @@ func (r *Reconciler) reconcile(
 		},
 	}
 
-	release, err := r.SeedClientSet.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
+	release, err := r.SeedClientSet.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("chart rendering process failed: %+v", err))
 		return reconcile.Result{}, err

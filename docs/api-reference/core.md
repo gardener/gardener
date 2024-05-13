@@ -5138,6 +5138,49 @@ map[string]string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.HelmControllerDeployment">HelmControllerDeployment
+</h3>
+<p>
+<p>HelmControllerDeployment configures how an extension controller is deployed using helm.
+This is the legacy structure that used to be defined in gardenlet&rsquo;s ControllerInstallation controller for
+ControllerDeployment&rsquo;s with type=helm.
+While this is not a proper API type, we need to define the structure in the API package so that we can convert it
+to the internal API version in the new representation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>chart</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<p>Chart is a Helm chart tarball.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#json-v1-apiextensions-k8s-io">
+Kubernetes apiextensions/v1.JSON
+</a>
+</em>
+</td>
+<td>
+<p>Values is a map of values for the given chart.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Hibernation">Hibernation
 </h3>
 <p>

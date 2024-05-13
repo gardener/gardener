@@ -113,7 +113,7 @@ func (p *helmTypePredicate) isResponsible(obj client.Object) bool {
 		if err := p.reader.Get(p.ctx, client.ObjectKey{Name: deploymentName.Name}, controllerDeployment); err != nil {
 			return false
 		}
-		return controllerDeployment.Type == "helm"
+		return controllerDeployment.Type == gardencorev1beta1.ControllerDeploymentTypeHelm
 	}
 
 	return false
