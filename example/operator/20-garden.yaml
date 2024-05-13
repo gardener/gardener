@@ -242,6 +242,7 @@ spec:
     #       description: A nice container for debugging purposes
       gardenerDiscoveryServer:
         hostname: discovery.ingress.runtime-garden.local.gardener.cloud
+      # tlsSecretName: gardener-discovery-server-tls
     maintenance:
       timeWindow:
         begin: 220000+0100

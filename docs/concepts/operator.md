@@ -147,8 +147,11 @@ The Gardener control plane components are:
 - `gardener-controller-manager`
 - `gardener-scheduler`
 
-Besides those, the optional [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) can also get deployed when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set.
-You can read more about it and its configuration in [this section](#gardener-dashboard).
+Besides those, the `gardener-operator` is able to deploy the following optional components:
+ - [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set. 
+ You can read more about it and its configuration in [this section](#gardener-dashboard).
+ - [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) when `.spec.virtualCluster.gardener.gardenerDiscoveryServer` is set.
+ Please, find the full list of avalable configurations in the [discovery server section](#gardener-discovery-server) of this document.
 
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
@@ -261,6 +264,16 @@ This section highlights the most prominent fields:
   When set, the [`terminal-controller-manager`](https://github.com/gardener/terminal-controller-manager) will be deployed to the runtime cluster.
   The `allowedHosts` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
+
+##### [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server)
+`.spec.virtualCluster.gardener.gardenerDiscoveryServer` serves a few configuration options for the discovery server.
+- `hostname`: This is the hostname that will serve the OIDC discovery documents of the shoot clusters.
+  In addition to that the value will be used for calculating the service account issuer of a shoot cluster in the format `https://<hostname>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
+  This configuration applies for all seeds registered with the Garden cluster. Once set it should not be modified.
+- `tlsSecretName`: This is the name of the secret that will be used by the discovery server for serving TLS.
+  Usually this secret contains a ceritificate issued for the `hostname` configured in the previously mentioned field.
+  The secret should contain two data keys `tls.key` and `tls.crt` containing the private key and the TLS certificate respectively.
+  If not provided, a self-signed certificate will be generated.
 
 ##### Observability
 
