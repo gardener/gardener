@@ -1450,6 +1450,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					Expect(managedResourceVirtual).To(consistOf(
+						apiServiceFor("core.gardener.cloud", "v1"),
 						apiServiceFor("core.gardener.cloud", "v1beta1"),
 						apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"),
 						apiServiceFor("operations.gardener.cloud", "v1alpha1"),
