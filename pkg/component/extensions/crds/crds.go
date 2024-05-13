@@ -39,19 +39,22 @@ var (
 	//go:embed assets/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 
-	resources []string
+	generalCRDs []string
+	shootCRDs   []string
 )
 
 func init() {
-	resources = append(resources,
+	generalCRDs = append(generalCRDs,
 		backupBucketCRD,
+		dnsRecordCRD,
+		extensionCRD,
+	)
+	shootCRDs = append(shootCRDs,
 		backupEntryCRD,
 		bastionCRD,
 		clusterCRD,
 		containerRuntimeCRD,
 		controlPlaneCRD,
-		dnsRecordCRD,
-		extensionCRD,
 		infrastructureCRD,
 		networkCRD,
 		operatingSystemConfigCRD,
@@ -60,19 +63,26 @@ func init() {
 }
 
 type crd struct {
-	applier kubernetes.Applier
+	applier          kubernetes.Applier
+	excludeShootCRDs bool
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(a kubernetes.Applier) component.DeployWaiter {
+func NewCRD(a kubernetes.Applier, excludeShootCRDs bool) component.DeployWaiter {
 	return &crd{
-		applier: a,
+		applier:          a,
+		excludeShootCRDs: excludeShootCRDs,
 	}
 }
 
 // Deploy creates and updates the CRD definitions for the gardener extensions.
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
+
+	resources := generalCRDs
+	if !c.excludeShootCRDs {
+		resources = append(generalCRDs, shootCRDs...)
+	}
 
 	for _, resource := range resources {
 		r := resource
