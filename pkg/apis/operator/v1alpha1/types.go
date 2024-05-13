@@ -197,6 +197,17 @@ type DNS struct {
 	// +kubebuilder:validation:MinItems=1
 	// +optional
 	Domains []string `json:"domains,omitempty"`
+	// Provider is a provider name. This field is immutable.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
+	// +optional
+	Provider *string `json:"provider,omitempty"`
+	// ProviderConfig is the provider-specific configuration passed to DNSRecord resource.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
+	// SecretRef is a reference to a Secret object containing the DNS provider credentials where the records are
+	// managed.
+	// +optional
+	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.

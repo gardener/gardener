@@ -203,6 +203,21 @@ func (in *DNS) DeepCopyInto(out *DNS) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Provider != nil {
+		in, out := &in.Provider, &out.Provider
+		*out = new(string)
+		**out = **in
+	}
+	if in.ProviderConfig != nil {
+		in, out := &in.ProviderConfig, &out.ProviderConfig
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.SecretRef != nil {
+		in, out := &in.SecretRef, &out.SecretRef
+		*out = new(corev1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 

@@ -387,6 +387,45 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
 The first given domain in this list is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provider is a provider name. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the provider-specific configuration passed to DNSRecord resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecretRef is a reference to a Secret object containing the DNS provider credentials where the records are
+managed.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.DashboardGitHub">DashboardGitHub

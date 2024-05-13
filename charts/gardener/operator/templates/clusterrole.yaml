@@ -233,6 +233,7 @@ rules:
   - extensions.gardener.cloud
   resources:
   - backupbuckets
+  - dnsrecords
   verbs:
   - get
   - list

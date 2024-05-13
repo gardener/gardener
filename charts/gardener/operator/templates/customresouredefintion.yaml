@@ -255,6 +255,30 @@ spec:
                           type: string
                         minItems: 1
                         type: array
+                      provider:
+                        description: Provider is a provider name. This field is immutable.
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Provider is immutable
+                          rule: self == oldSelf
+                      providerConfig:
+                        description: ProviderConfig is the provider-specific configuration
+                          passed to DNSRecord resource.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      secretRef:
+                        description: |-
+                          SecretRef is a reference to a Secret object containing the DNS provider credentials where the records are
+                          managed.
+                        properties:
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
                     type: object
                   etcd:
                     description: ETCD contains configuration for the etcds of the
