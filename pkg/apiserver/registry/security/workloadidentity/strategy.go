@@ -6,8 +6,10 @@ package workloadidentity
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
 
@@ -28,8 +30,20 @@ func (workloadIdentityStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (workloadIdentityStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
+func (s workloadIdentityStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+	wi := obj.(*security.WorkloadIdentity)
+	if string(wi.GetUID()) == "" {
+		wi.SetUID(uuid.NewUUID())
+	}
 
+	if wi.GetName() == "" {
+		wi.SetName(s.GenerateName(wi.GetGenerateName()))
+	}
+
+	p, d := validation.GetSubClaimPrefixAndDelimiterFunc()
+	if wi.Status.Sub == "" {
+		wi.Status.Sub = strings.Join([]string{p, wi.GetNamespace(), wi.GetName(), string(wi.GetUID())}, d)
+	}
 }
 
 func (workloadIdentityStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {

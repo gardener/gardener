@@ -19,7 +19,9 @@ import (
 // GetSubClaimPrefixAndDelimiterFunc is func providing the prefix value for the 'sub' claim
 // and the delimiter used to concatenate the various parts.
 var GetSubClaimPrefixAndDelimiterFunc = func() (string, string) {
-	return "gardener.cloud:workloadidentity", ":"
+	d := ":"
+	p := strings.Join([]string{"gardener.cloud", "workloadidentity"}, d)
+	return p, d
 }
 
 // ValidateWorkloadIdentity validates a WorkloadIdentity.
@@ -28,7 +30,7 @@ func ValidateWorkloadIdentity(workloadIdentity *security.WorkloadIdentity) field
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&workloadIdentity.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateSpec(workloadIdentity.Spec, field.NewPath("spec"))...)
-	allErrs = append(allErrs, validateSubClaim(*workloadIdentity, GetSubClaimPrefixAndDelimiterFunc)...)
+	allErrs = append(allErrs, validateSubClaim(*workloadIdentity, GetSubClaimPrefixAndDelimiterFunc, field.NewPath("status").Child("sub"))...)
 
 	return allErrs
 }
@@ -74,18 +76,26 @@ func validateTargetSystem(targetSystem security.TargetSystem, fldPath *field.Pat
 	return allErrs
 }
 
-func validateSubClaim(obj security.WorkloadIdentity, getPrefixAndDelimiter func() (string, string)) field.ErrorList {
+func validateSubClaim(obj security.WorkloadIdentity, getPrefixAndDelimiter func() (string, string), fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	if len(obj.Status.Sub) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must specify sub claim value"))
+	}
+
 	prefix, delimiter := getPrefixAndDelimiter()
-	subClaimValue := prefix + delimiter + obj.Namespace + delimiter + obj.Name + delimiter + string(obj.UID)
-	for idx, r := range subClaimValue {
+	expectedSubClaimValue := strings.Join([]string{prefix, obj.Namespace, obj.Name, string(obj.UID)}, delimiter)
+	if expectedSubClaimValue != obj.Status.Sub {
+		allErrs = append(allErrs, field.Invalid(fldPath, obj.Status.Sub, fmt.Sprintf("sub claim does not match expected value: %q", expectedSubClaimValue)))
+	}
+
+	for idx, r := range expectedSubClaimValue {
 		if r > unicode.MaxASCII {
-			allErrs = append(allErrs, field.Invalid(nil, subClaimValue, fmt.Sprintf("sub claim contains non-ascii symbol(%q) at index %d", r, idx)))
+			allErrs = append(allErrs, field.Invalid(fldPath, expectedSubClaimValue, fmt.Sprintf("sub claim contains non-ascii symbol(%q) at index %d", r, idx)))
 		}
 	}
 
-	if len(subClaimValue) > 255 {
-		allErrs = append(allErrs, field.Invalid(nil, subClaimValue, "sub claim is too long, it is allowed to be no more than 255 ASCII characters"))
+	if len(expectedSubClaimValue) > 255 {
+		allErrs = append(allErrs, field.Invalid(fldPath, expectedSubClaimValue, fmt.Sprintf("sub claim is too long (%d), it is allowed to be no more than 255 ASCII characters", len(expectedSubClaimValue))))
 	}
 
 	return allErrs
@@ -98,6 +108,9 @@ func ValidateWorkloadIdentityUpdate(newWorkloadIdentity, oldWorkloadIdentity *se
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newWorkloadIdentity.ObjectMeta, &oldWorkloadIdentity.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorkloadIdentity.Spec.TargetSystem.Type, oldWorkloadIdentity.Spec.TargetSystem.Type, field.NewPath("spec").Child("targetSystem").Child("type"))...)
 	allErrs = append(allErrs, ValidateWorkloadIdentity(newWorkloadIdentity)...)
+	if len(oldWorkloadIdentity.Status.Sub) != 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorkloadIdentity.Status.Sub, oldWorkloadIdentity.Status.Sub, field.NewPath("status").Child("sub"))...)
+	}
 
 	return allErrs
 }

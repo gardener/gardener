@@ -40,6 +40,9 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 					ProviderConfig: nil,
 				},
 			},
+			Status: security.WorkloadIdentityStatus{
+				Sub: "gardener.cloud:workloadidentity:garden:identity:b0f6d68e-aae4-483e-aab1-eab98d9e608c",
+			},
 		}
 		GetSubClaimPrefixAndDelimiterFunc = originalPrefixAndDelimiterFunc
 	})
@@ -55,6 +58,8 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 		DescribeTable("WorkloadIdentity metadata",
 			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
 				workloadIdentity.ObjectMeta = objectMeta
+				p, d := GetSubClaimPrefixAndDelimiterFunc()
+				workloadIdentity.Status.Sub = strings.Join([]string{p, objectMeta.GetNamespace(), objectMeta.GetName(), string(objectMeta.GetUID())}, d)
 
 				errorList := ValidateWorkloadIdentity(workloadIdentity)
 
@@ -97,6 +102,7 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 		It("should forbid empty WorkloadIdentity resources", func() {
 			workloadIdentity.ObjectMeta = metav1.ObjectMeta{}
 			workloadIdentity.Spec = security.WorkloadIdentitySpec{}
+			workloadIdentity.Status = security.WorkloadIdentityStatus{}
 
 			errorList := ValidateWorkloadIdentity(workloadIdentity)
 			Expect(errorList).To(ConsistOf(
@@ -115,6 +121,16 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.audiences"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("status.sub"),
+					"Detail": Equal("must specify sub claim value"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.sub"),
+					"Detail": Equal(`sub claim does not match expected value: "gardener.cloud:workloadidentity:::"`),
 				})),
 			))
 		})
@@ -210,43 +226,61 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 			),
 		)
 
-		DescribeTable("sub claim",
-			func(namespace, name string, f func() (string, string), matcher gomegatypes.GomegaMatcher) {
-				workloadIdentity.Namespace = namespace
+		DescribeTable("Sub claim",
+			func(name string, f func() (string, string), matcher gomegatypes.GomegaMatcher) {
 				workloadIdentity.Name = name
 
 				if f != nil {
 					GetSubClaimPrefixAndDelimiterFunc = f
 				}
+				p, d := GetSubClaimPrefixAndDelimiterFunc()
+				workloadIdentity.Status.Sub = strings.Join([]string{p, workloadIdentity.Namespace, workloadIdentity.Name, string(workloadIdentity.UID)}, d)
 
 				errList := ValidateWorkloadIdentity(workloadIdentity)
 				Expect(errList).To(matcher)
 			},
-			Entry("should allow ascii chars only sub claim shorter than 255 characters",
-				"my-namespace", "my-name", nil,
+			Entry("should allow sub claim value containing only ascii chars shorter than 255 symbols",
+				"my-name", nil,
 				BeEmpty(),
 			),
-			Entry("should forbid ascii chars only sub claim longer than 255 characters",
-				"my-namespace", strings.Repeat("x", 256-82), nil,
+			Entry("should allow sub claim value containing only ascii chars 255 symbols long",
+				strings.Repeat("x", 179), nil, // 255 - len("garden"=6) - len(uid=36) - 3*1(delimiter) - len(prefix="workloadidentity:gardener.cloud"=31) = 179
+				BeEmpty(),
+			),
+			Entry("should forbid sub claim value containing only ascii chars longer than 255 symbols",
+				strings.Repeat("x", 180), nil, // 256 - len("garden"=6) - len(uid=36) - 3*1(delimiter) - len(prefix="workloadidentity:gardener.cloud"=31) = 180
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("<nil>"),
+						"Field": Equal("status.sub"),
 					})),
 				),
 			),
 			Entry("should forbid non-ascii chars sub claim",
-				"my-namespace", "my-name", func() (string, string) {
+				"my-name", func() (string, string) {
 					return "Ω", ":"
 				},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("<nil>"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("status.sub"),
+						"Detail": ContainSubstring(`sub claim contains non-ascii symbol('Ω') at index 0`),
 					})),
 				),
 			),
 		)
+
+		It("should forbid sub value to not match expected value", func() {
+			workloadIdentity.Status.Sub = "foo"
+			errList := ValidateWorkloadIdentity(workloadIdentity)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.sub"),
+					"Detail": Equal(`sub claim does not match expected value: "gardener.cloud:workloadidentity:garden:identity:b0f6d68e-aae4-483e-aab1-eab98d9e608c"`),
+				})),
+			))
+		})
 
 	})
 
@@ -261,6 +295,26 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.targetSystem.type"),
+				})),
+			))
+		})
+
+		It("should forbid updating the WorkloadIdentity sub claim value when the field is already set", func() {
+			newWorkloadIdentity := prepareWorkloadIdentityForUpdate(workloadIdentity)
+			newWorkloadIdentity.Status.Sub = "new-sub"
+
+			errorList := ValidateWorkloadIdentityUpdate(newWorkloadIdentity, workloadIdentity)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.sub"),
+					"Detail": Equal("field is immutable"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.sub"),
+					"Detail": ContainSubstring("sub claim does not match expected value: "),
 				})),
 			))
 		})
