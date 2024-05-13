@@ -163,7 +163,7 @@ func (r *Reconciler) instantiateComponents(
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
-	c.extensionCRD = extensioncrds.NewCRD(applier, true)
+	c.extensionCRD = extensioncrds.NewCRD(applier, false, true)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

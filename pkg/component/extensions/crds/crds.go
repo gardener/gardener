@@ -63,15 +63,17 @@ func init() {
 }
 
 type crd struct {
-	applier          kubernetes.Applier
-	excludeShootCRDs bool
+	applier            kubernetes.Applier
+	excludeGeneralCRDs bool
+	excludeShootCRDs   bool
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(a kubernetes.Applier, excludeShootCRDs bool) component.DeployWaiter {
+func NewCRD(a kubernetes.Applier, excludeGeneralCRDs, excludeShootCRDs bool) component.DeployWaiter {
 	return &crd{
-		applier:          a,
-		excludeShootCRDs: excludeShootCRDs,
+		applier:            a,
+		excludeGeneralCRDs: excludeGeneralCRDs,
+		excludeShootCRDs:   excludeShootCRDs,
 	}
 }
 
@@ -79,9 +81,12 @@ func NewCRD(a kubernetes.Applier, excludeShootCRDs bool) component.DeployWaiter 
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	resources := generalCRDs
+	var resources []string
+	if !c.excludeGeneralCRDs {
+		resources = append(resources, generalCRDs...)
+	}
 	if !c.excludeShootCRDs {
-		resources = append(generalCRDs, shootCRDs...)
+		resources = append(resources, shootCRDs...)
 	}
 
 	for _, resource := range resources {

@@ -52,7 +52,7 @@ var _ = Describe("#CRDs", func() {
 
 	When("shoot CRDs are not excluded", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, false)
+			crdDeployer = crds.NewCRD(applier, false, false)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -99,7 +99,7 @@ var _ = Describe("#CRDs", func() {
 
 	When("shoot CRDs are excluded", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, true)
+			crdDeployer = crds.NewCRD(applier, false, true)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -141,6 +141,53 @@ var _ = Describe("#CRDs", func() {
 			Entry("Network", "networks.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", BeNotFoundError()),
 			Entry("Worker", "workers.extensions.gardener.cloud", BeNotFoundError()),
+		)
+	})
+
+	When("general CRDs are excluded", func() {
+		BeforeEach(func() {
+			crdDeployer = crds.NewCRD(applier, true, false)
+		})
+
+		DescribeTable("CRD is deployed",
+			func(crdName string, matcher gomegatypes.GomegaMatcher) {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(matcher)
+			},
+
+			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
+			Entry("Bastion", "bastions.extensions.gardener.cloud", Succeed()),
+			Entry("Cluster", "clusters.extensions.gardener.cloud", Succeed()),
+			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", Succeed()),
+			Entry("ControlPlane", "controlplanes.extensions.gardener.cloud", Succeed()),
+			Entry("DNSRecord", "dnsrecords.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("Extension", "extensions.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("Infrastructure", "infrastructures.extensions.gardener.cloud", Succeed()),
+			Entry("Network", "networks.extensions.gardener.cloud", Succeed()),
+			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", Succeed()),
+			Entry("Worker", "workers.extensions.gardener.cloud", Succeed()),
+		)
+
+		DescribeTable("should re-create CRD if it is deleted",
+			func(crdName string, matcher gomegatypes.GomegaMatcher) {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Or(Succeed(), BeNotFoundError()))
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(matcher)
+			},
+
+			Entry("BackupBucket", "backupbuckets.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("BackupEntry", "backupentries.extensions.gardener.cloud", Succeed()),
+			Entry("Bastion", "bastions.extensions.gardener.cloud", Succeed()),
+			Entry("Cluster", "clusters.extensions.gardener.cloud", Succeed()),
+			Entry("ContainerRuntime", "containerruntimes.extensions.gardener.cloud", Succeed()),
+			Entry("ControlPlane", "controlplanes.extensions.gardener.cloud", Succeed()),
+			Entry("DNSRecord", "dnsrecords.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("Extension", "extensions.extensions.gardener.cloud", BeNotFoundError()),
+			Entry("Infrastructure", "infrastructures.extensions.gardener.cloud", Succeed()),
+			Entry("Network", "networks.extensions.gardener.cloud", Succeed()),
+			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", Succeed()),
+			Entry("Worker", "workers.extensions.gardener.cloud", Succeed()),
 		)
 	})
 })
