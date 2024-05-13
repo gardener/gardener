@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -109,11 +110,11 @@ func (p *helmTypePredicate) isResponsible(obj client.Object) bool {
 	}
 
 	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
-		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+		controllerDeployment := &gardencorev1.ControllerDeployment{}
 		if err := p.reader.Get(p.ctx, client.ObjectKey{Name: deploymentName.Name}, controllerDeployment); err != nil {
 			return false
 		}
-		return controllerDeployment.Type == gardencorev1beta1.ControllerDeploymentTypeHelm
+		return controllerDeployment.Helm != nil
 	}
 
 	return false

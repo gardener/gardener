@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
@@ -115,18 +116,18 @@ var _ = Describe("Add", func() {
 			fakeClient client.Client
 			p          predicate.Predicate
 
-			controllerDeployment *gardencorev1beta1.ControllerDeployment
+			controllerDeployment *gardencorev1.ControllerDeployment
 		)
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			p = reconciler.HelmTypePredicate(ctx, fakeClient)
 
-			controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+			controllerDeployment = &gardencorev1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "deployment",
 				},
-				Type: "helm",
+				Helm: &gardencorev1.HelmControllerDeployment{},
 			}
 			controllerInstallation.Spec.DeploymentRef = &corev1.ObjectReference{Name: controllerDeployment.Name}
 		})
@@ -147,7 +148,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false if the deployment ref is not of type helm", func() {
-				controllerDeployment.Type = "foo"
+				controllerDeployment.Helm = nil
 				Expect(fakeClient.Create(ctx, controllerDeployment)).To(Succeed())
 
 				Expect(f(controllerInstallation)).To(BeFalse())
