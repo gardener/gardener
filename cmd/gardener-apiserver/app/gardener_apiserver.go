@@ -423,6 +423,7 @@ func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interf
 		settingsv1alpha1.SchemeGroupVersion,
 		operationsv1alpha1.SchemeGroupVersion,
 		securityv1alpha1.SchemeGroupVersion,
+		// Note: "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
 	)
 
 	mergedResourceConfig, err := resourceconfig.MergeAPIResourceConfigs(resourceConfig, nil, api.Scheme)

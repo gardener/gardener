@@ -6,7 +6,8 @@
 </ul>
 <h2 id="authentication.gardener.cloud/v1alpha1">authentication.gardener.cloud/v1alpha1</h2>
 <p>
-<p>Package v1alpha1 is a version of the API.</p>
+<p>Package v1alpha1 is a version of the API.
+&ldquo;authentication.gardener.cloud/v1alpha1&rdquo; API is already used for CRD registration and must not be served by the API server.</p>
 </p>
 Resource Types:
 <ul></ul>

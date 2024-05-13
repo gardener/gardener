@@ -12,5 +12,6 @@
 //go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/authentication-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/authentication.md
 
 // Package v1alpha1 is a version of the API.
+// "authentication.gardener.cloud/v1alpha1" API is already used for CRD registration and must not be served by the API server.
 // +groupName=authentication.gardener.cloud
 package v1alpha1
