@@ -166,21 +166,18 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		var (
-			// TODO(rfranzke): Remove userData after v1.100 has been released.
-			userData          []byte
-			userDataSecretRef *corev1.SecretKeySelector
-			oscKey            string
-		)
-		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Init.Content)
-
-			userDataSecretRef = &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: val.Init.SecretName},
-				Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
-			}
-			oscKey = val.Init.KeyName
+		oscConfig, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]
+		if !ok {
+			return nil, fmt.Errorf("missing operating system config for worker pool %v", workerPool.Name)
 		}
+
+		// TODO(rfranzke): Remove userData after v1.100 has been released.
+		userData := []byte(oscConfig.Init.Content)
+		userDataSecretRef := &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: oscConfig.Init.SecretName},
+			Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
+		}
+		oscKey := oscConfig.Init.KeyName
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
 		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
