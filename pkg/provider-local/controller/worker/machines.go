@@ -6,16 +6,19 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
@@ -104,6 +107,23 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Data: map[string][]byte{"userData": userData},
 		})
 
+		providerConfig := map[string]interface{}{
+			"image": image,
+		}
+
+		ipFamilies := sets.New(w.cluster.Shoot.Spec.Networking.IPFamilies...)
+		if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv4) {
+			providerConfig["ipPoolNameV4"] = infrastructure.IPPoolName(w.worker.Namespace, string(gardencorev1beta1.IPFamilyIPv4))
+		}
+		if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv6) {
+			providerConfig["ipPoolNameV6"] = infrastructure.IPPoolName(w.worker.Namespace, string(gardencorev1beta1.IPFamilyIPv6))
+		}
+
+		providerConfigBytes, err := json.Marshal(providerConfig)
+		if err != nil {
+			return err
+		}
+
 		machineClasses = append(machineClasses, &machinev1alpha1.MachineClass{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
@@ -122,7 +142,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				Namespace: w.worker.Spec.SecretRef.Namespace,
 			},
 			Provider:     local.Type,
-			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `","ipPoolName":"` + infrastructure.IPPoolName(w.worker.Namespace) + `"}`)},
+			ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
