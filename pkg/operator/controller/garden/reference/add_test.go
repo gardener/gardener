@@ -78,6 +78,12 @@ var _ = Describe("Add", func() {
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 
+		It("should return true because the DNS secret field changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.VirtualCluster.DNS.SecretRef = &corev1.LocalObjectReference{Name: "secret-name"}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
 		It("should return true because the SNI secret field changed", func() {
 			oldShoot := garden.DeepCopy()
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI = &operatorv1alpha1.SNI{SecretName: "secret-sni"}
