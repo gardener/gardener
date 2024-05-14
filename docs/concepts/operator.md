@@ -694,14 +694,14 @@ kubectl apply -f example/operator/20-garden.yaml
 You can wait for the `Garden` to be ready by running:
 
 ```shell
-./hack/usage/wait-for.sh garden local Reconciled
+./hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable VirtualComponentsHealthy
 ```
 
 Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
 
 ```shell
-NAME     RECONCILED    AGE
-garden   Progressing   1s
+NAME    LAST OPERATION   RUNTIME   VIRTUAL   API SERVER   OBSERVABILITY   AGE
+local   Processing       False     False     False        False           1s
 ```
 
 (Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
@@ -721,7 +721,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 
 # Manually created to access local Gardener virtual garden cluster.
 # TODO: Remove this again when the virtual garden cluster access is no longer required.
-127.0.0.1 api.virtual-garden.local.gardener.cloud
+127.0.0.3 api.virtual-garden.local.gardener.cloud
 EOF
 ```
 
