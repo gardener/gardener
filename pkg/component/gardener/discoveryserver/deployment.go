@@ -38,10 +38,7 @@ func (g *GardenerDiscoveryServer) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameTLS string,
-) (
-	*appsv1.Deployment,
-	error,
-) {
+) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,
@@ -159,5 +156,5 @@ func (g *GardenerDiscoveryServer) deployment(
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	return deployment, nil
+	return deployment
 }

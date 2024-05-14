@@ -289,7 +289,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Deploying Gardener Discovery Server",
 			Fn: func(ctx context.Context) error {
-				return r.deployGardenerDiscoveryServer(ctx, c.gardenerDiscoveryServer, garden, secretsManager)
+				return r.deployGardenerDiscoveryServer(ctx, c.gardenerDiscoveryServer, garden)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
@@ -732,7 +732,7 @@ func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gard
 	return component.OpWait(dashboard).Deploy(ctx)
 }
 
-func (r *Reconciler) deployGardenerDiscoveryServer(ctx context.Context, discoveryServer component.DeployWaiter, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) error {
+func (r *Reconciler) deployGardenerDiscoveryServer(ctx context.Context, discoveryServer component.DeployWaiter, garden *operatorv1alpha1.Garden) error {
 	if garden.Spec.VirtualCluster.Gardener.DiscoveryServer == nil {
 		return component.OpDestroyAndWait(discoveryServer).Destroy(ctx)
 	}

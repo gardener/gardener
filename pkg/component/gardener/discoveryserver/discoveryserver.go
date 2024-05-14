@@ -30,6 +30,7 @@ const (
 	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
 	ManagedResourceNameVirtual = "gardener-discovery-server-virtual"
 
+	// DeploymentName is the name of the Gardener Discovery Server deployment.
 	DeploymentName = "gardener-discovery-server"
 	role           = "discovery-server"
 )
@@ -63,6 +64,7 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 
 var _ component.DeployWaiter = (*GardenerDiscoveryServer)(nil)
 
+// GardenerDiscoveryServer is capable of deploying the Gardener Discovery Server.
 type GardenerDiscoveryServer struct {
 	client         client.Client
 	namespace      string
@@ -70,6 +72,7 @@ type GardenerDiscoveryServer struct {
 	values         Values
 }
 
+// Deploy deploys the Gardener Discovery Server.
 func (g *GardenerDiscoveryServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
@@ -102,13 +105,8 @@ func (g *GardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		tlsSecretName = ingressTLSSecret.Name
 	}
 
-	deployment, err := g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName)
-	if err != nil {
-		return err
-	}
-
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
-		deployment,
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
@@ -141,6 +139,7 @@ func (g *GardenerDiscoveryServer) Deploy(ctx context.Context) error {
 	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, managedResourceLabels, virtualResources)
 }
 
+// Wait waits for the Gardener Discovery Server to become healthy.
 func (g *GardenerDiscoveryServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
@@ -155,6 +154,7 @@ func (g *GardenerDiscoveryServer) Wait(ctx context.Context) error {
 	)(timeoutCtx)
 }
 
+// Destroy uninstalls the Gardener Discovery Server.
 func (g *GardenerDiscoveryServer) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual); err != nil {
 		return err
@@ -167,6 +167,7 @@ func (g *GardenerDiscoveryServer) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
 }
 
+// WaitCleanup waits for the Gardener Discovery Server resources to be removed.
 func (g *GardenerDiscoveryServer) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
