@@ -24,9 +24,10 @@ deploy:
 apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
-  name: domain-secrets
+  name: garden-namespace
 manifests:
   rawYaml:
+    - example/00-namespace-garden.yaml
     - example/gardener-local/controlplane/domain-secrets.yaml
 deploy:
   kubectl: {}

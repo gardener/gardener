@@ -29,3 +29,5 @@ spec:
       serializeImagePulls: false
       registryPullQPS: 10
       registryBurst: 20
+    verticalPodAutoscaler:
+      enabled: true

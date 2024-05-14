@@ -31,6 +31,11 @@ const (
 	// 'networking.gardener.cloud/to-istio-ingressgateway=allowed' to istio-ingressgateway pods running in
 	// 'istio-ingress' namespace.
 	LabelNetworkPolicyToIstioIngressGateway = "networking.gardener.cloud/to-istio-ingressgateway"
+
+	// LabelNetworkPolicyToVirtualGarden allows Egress from pods labeled with
+	// 'networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443' to istio-ingressgateway
+	// pods running in the namespaces 'istio-ingress' and 'virtual-garden-istio-ingress'.
+	LabelNetworkPolicyToVirtualGarden = "networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443"
 )
 
 var (

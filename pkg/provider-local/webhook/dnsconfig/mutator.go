@@ -63,6 +63,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 	}
 
 	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
+	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToVirtualGarden, v1beta1constants.LabelNetworkPolicyAllowed)
 	injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIPs)
 	return nil
 }
