@@ -25,7 +25,7 @@ Deployed in the `garden` namespace. Important scrape targets:
 - other Prometheus instances
 - logging components
 
-**Purpose**: Store pre-aggregated data from [cache Prometheus](#cache-prometheus) and [shoot Prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster.
+**Purpose**: Store pre-aggregated data from the [cache Prometheus](#cache-prometheus) and [shoot Prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster. Such pre-aggregated data is also used for alerting.
 
 ### Seed Prometheus
 
