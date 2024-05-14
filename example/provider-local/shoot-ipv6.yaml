@@ -13,8 +13,7 @@ spec:
     type: calico
     ipFamilies:
     - IPv6
-    pods: 2001:db8:1::/48
-    services: 2001:db8:3::/108
+    nodes: fd00:10:a::/64
   provider:
     type: local
     workers:

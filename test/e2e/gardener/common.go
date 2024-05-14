@@ -77,7 +77,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type: ptr.To("calico"),
+				Type:  ptr.To("calico"),
+				Nodes: ptr.To("10.10.0.0/16"),
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
@@ -109,9 +110,12 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 		},
 	}
+
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
 	}
+
 	return shoot
 }
 
@@ -142,11 +146,13 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 				},
 			}},
 	}
+
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking = &gardencorev1beta1.Networking{
 			IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 		}
 	}
+
 	return shoot
 }
 

@@ -12,6 +12,7 @@ spec:
   region: local
   networking:
     type: calico
+    nodes: 10.10.0.0/16
   provider:
     type: local
     workers:

@@ -19,6 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -121,7 +122,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				Namespace: w.worker.Spec.SecretRef.Namespace,
 			},
 			Provider:     local.Type,
-			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `"}`)},
+			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `","ipPoolName":"` + infrastructure.IPPoolName(w.worker.Namespace) + `"}`)},
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
