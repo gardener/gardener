@@ -99,7 +99,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx cont
 		minReplicas := k.values.Autoscaling.MinReplicas
 		if k.values.Autoscaling.ScaleDownDisabled && hpa.Spec.MinReplicas != nil {
 			// If scale-down is disabled and the HPA resource exists and HPA's spec.minReplicas is not nil,
-			// then minReplicas is max(spec.minReplicas, status.desiredReplcias).
+			// then minReplicas is max(spec.minReplicas, status.desiredReplicas).
 			// When scale-down is disabled, this allows operators to specify a custom value for HPA spec.minReplicas
 			// and this value not to be reverted by gardenlet.
 			minReplicas = max(*hpa.Spec.MinReplicas, hpa.Status.DesiredReplicas)

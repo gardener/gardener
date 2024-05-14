@@ -980,7 +980,7 @@ exemptions:
 				apiserver.AutoscalingConfig{},
 				nil,
 			),
-			Entry("set the existing requirements when the deployment is found",
+			Entry("set the existing requirements when the deployment is found and autoscaling mode is HVPA",
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1000,6 +1000,50 @@ exemptions:
 					})).To(Succeed())
 				},
 				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA},
+				&apiServerResources,
+			),
+			Entry("set the existing requirements when the deployment is found and scale-down is disabled",
+				func() {
+					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: namespace,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{
+										Name:      "kube-apiserver",
+										Resources: apiServerResources,
+									}},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+				apiserver.AutoscalingConfig{ScaleDownDisabled: true},
+				&apiServerResources,
+			),
+			Entry("set the existing requirements when the deployment is found and autoscaling mode is VPAAndHPA",
+				func() {
+					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: namespace,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{
+										Name:      "kube-apiserver",
+										Resources: apiServerResources,
+									}},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
 				&apiServerResources,
 			),
 		)
