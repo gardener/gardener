@@ -1,0 +1,29 @@
+config:
+  gardenClientConnection:
+    bootstrapKubeconfig:
+      kubeconfig: |
+        apiVersion: v1
+        kind: Config
+        current-context: gardenlet-bootstrap
+        clusters:
+        - cluster:
+            insecure-skip-tls-verify: true
+            # We use the kind node's hostname (docker container name) as the garden cluster address.
+            # This works from within the kind cluster itself, from within ManagedSeeds, and from within additional kind clusters.
+            # Note that this doesn't work in IPv6 single-stack kind clusters,
+            # ref https://github.com/kubernetes-sigs/kind/issues/3114
+            server: https://api.virtual-garden.local.gardener.cloud
+          name: default
+        contexts:
+        - context:
+            cluster: default
+            user: gardenlet-bootstrap
+          name: gardenlet-bootstrap
+        users:
+        - name: gardenlet-bootstrap
+          user:
+            token: 07401b.f395accd246ae52d
+  featureGates:
+    ShootManagedIssuer: false
+podLabels:
+  networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed

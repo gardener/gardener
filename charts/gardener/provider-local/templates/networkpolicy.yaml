@@ -19,3 +19,27 @@ spec:
         cidr: fd00:10::/64
   policyTypes:
   - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-virtual-garden-istio
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    gardener.cloud/description: Allows egress from pods labeled with 'networking.gardener.cloud/to-virtual-garden-istio-ingress-tcp-443=allowed'
+      to the istio gateway of the virtual garden.
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-virtual-garden-istio: allowed
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: virtual-garden-istio-ingress
+      podSelector:
+        matchLabels:
+          app: istio-ingressgateway
+          istio: ingressgateway
+  policyTypes:
+  - Egress

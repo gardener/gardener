@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -27,10 +28,11 @@ var (
 )
 
 const (
-	nodePortIstioIngressGateway      int32 = 30443
-	nodePortIstioIngressGatewayZone0 int32 = 30444
-	nodePortIstioIngressGatewayZone1 int32 = 30445
-	nodePortIstioIngressGatewayZone2 int32 = 30446
+	nodePortIstioIngressGateway        int32 = 30443
+	nodePortIstioIngressGatewayZone0   int32 = 30444
+	nodePortIstioIngressGatewayZone1   int32 = 30445
+	nodePortIstioIngressGatewayZone2   int32 = 30446
+	nodePortVirtualGardenKubeAPIServer int32 = 31443
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -66,29 +68,57 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	log.Info("Reconciling service")
 
 	var (
-		ip    string
-		patch = client.MergeFrom(service.DeepCopy())
+		ips      []string
+		nodePort int32
+		patch    = client.MergeFrom(service.DeepCopy())
 	)
 
-	for i, servicePort := range service.Spec.Ports {
-		switch {
-		case (key == keyIstioIngressGateway || key == keyVirtualGardenIstioIngressGateway) && servicePort.Name == "tcp":
-			service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
-			if r.IsMultiZone {
-				// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
-				// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
-				service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+	switch {
+	case key == keyIstioIngressGateway:
+		nodePort = nodePortIstioIngressGateway
+		if r.IsMultiZone {
+			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
+			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
+			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+		}
+		if err := r.Client.Get(ctx, keyVirtualGardenIstioIngressGateway, ptr.To(corev1.Service{})); err != nil {
+			if apierrors.IsNotFound(err) {
+				if nodes, err := r.getNodesInternalIPs(ctx); err != nil {
+					return reconcile.Result{}, err
+				} else {
+					ips = append(ips, nodes...)
+				}
 			}
-			ip = r.HostIP
-		case key == keyIstioIngressGatewayZone0 && servicePort.Name == "tcp":
-			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone0
-			ip = r.Zone0IP
-		case key == keyIstioIngressGatewayZone1 && servicePort.Name == "tcp":
-			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone1
-			ip = r.Zone1IP
-		case key == keyIstioIngressGatewayZone2 && servicePort.Name == "tcp":
-			service.Spec.Ports[i].NodePort = nodePortIstioIngressGatewayZone2
-			ip = r.Zone2IP
+		}
+		// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
+		// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
+		ips = append(ips, r.HostIP)
+	case key == keyIstioIngressGatewayZone0:
+		nodePort = nodePortIstioIngressGatewayZone0
+		ips = append(ips, r.Zone0IP)
+	case key == keyIstioIngressGatewayZone1:
+		nodePort = nodePortIstioIngressGatewayZone1
+		ips = append(ips, r.Zone1IP)
+	case key == keyIstioIngressGatewayZone2:
+		nodePort = nodePortIstioIngressGatewayZone2
+		ips = append(ips, r.Zone2IP)
+	case key == keyVirtualGardenIstioIngressGateway:
+		nodePort = nodePortVirtualGardenKubeAPIServer
+		if r.IsMultiZone {
+			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
+			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
+			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
+		}
+		if nodes, err := r.getNodesInternalIPs(ctx, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+			return reconcile.Result{}, err
+		} else {
+			ips = append(ips, nodes...)
+		}
+	}
+
+	for i, servicePort := range service.Spec.Ports {
+		if servicePort.Name == "tcp" {
+			service.Spec.Ports[i].NodePort = nodePort
 		}
 	}
 
@@ -103,24 +133,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	patch = client.MergeFrom(service.DeepCopy())
 	service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{}
 
-	nodes := &corev1.NodeList{}
-	if err := r.Client.List(ctx, nodes); err != nil {
-		return reconcile.Result{}, err
+	for _, ip := range ips {
+		service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: ip})
 	}
 
+	return reconcile.Result{}, r.Client.Status().Patch(ctx, service, patch)
+}
+
+func (r *Reconciler) getNodesInternalIPs(ctx context.Context, opts ...client.ListOption) ([]string, error) {
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes, opts...); err != nil {
+		return nil, err
+	}
+
+	var ips []string
 	for _, node := range nodes.Items {
 		for _, address := range node.Status.Addresses {
 			if address.Type == corev1.NodeInternalIP {
-				service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: address.Address})
+				ips = append(ips, address.Address)
 			}
 		}
 	}
-
-	// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
-	// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
-	service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{IP: ip})
-
-	return reconcile.Result{}, r.Client.Status().Patch(ctx, service, patch)
+	return ips, nil
 }
 
 func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.Logger) error {

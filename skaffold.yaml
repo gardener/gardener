@@ -871,6 +871,12 @@ profiles:
         paths:
           - example/provider-local/garden/skaffold
           - example/provider-local/seed-kind-ha-multi-zone/skaffold
+  - name: operator
+    manifests:
+      kustomize:
+        paths:
+          - example/provider-local/garden/skaffold
+          - example/provider-local/seed-operator/skaffold
 ---
 apiVersion: skaffold/v4beta7
 kind: Config
@@ -1597,3 +1603,14 @@ profiles:
           replicaCount: 1
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
+  - name: operator
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: example/gardener-local/gardenlet/values-operator.yaml
+      - op: replace
+        path: /deploy/helm/hooks/after/0/host/command
+        value:
+          - bash
+          - -ec
+          - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady
