@@ -5,6 +5,7 @@
 package reference
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +43,7 @@ func Predicate(oldObj, newObj client.Object) bool {
 	return kubeAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		gardenerAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
 		etcdBackupSecretChanged(oldGarden.Spec.VirtualCluster.ETCD, newGarden.Spec.VirtualCluster.ETCD) ||
+		dnsSecretChanged(oldGarden.Spec.VirtualCluster.DNS.SecretRef, newGarden.Spec.VirtualCluster.DNS.SecretRef) ||
 		authenticationWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		sniSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		kubeAPIServerAuditWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
@@ -85,6 +87,20 @@ func etcdBackupSecretChanged(oldETCD, newETCD *operatorv1alpha1.ETCD) bool {
 
 	if newETCD != nil && newETCD.Main != nil && newETCD.Main.Backup != nil {
 		newSecret = newETCD.Main.Backup.SecretRef.Name
+	}
+
+	return oldSecret != newSecret
+}
+
+func dnsSecretChanged(oldDNSSecretRef, newDNSSecretRef *corev1.LocalObjectReference) bool {
+	var oldSecret, newSecret string
+
+	if oldDNSSecretRef != nil {
+		oldSecret = oldDNSSecretRef.Name
+	}
+
+	if newDNSSecretRef != nil {
+		newSecret = newDNSSecretRef.Name
 	}
 
 	return oldSecret != newSecret
@@ -199,6 +215,10 @@ func getReferencedSecretNames(obj client.Object) []string {
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
 		out = append(out, virtualCluster.ETCD.Main.Backup.SecretRef.Name)
+	}
+
+	if virtualCluster.DNS.SecretRef != nil {
+		out = append(out, virtualCluster.DNS.SecretRef.Name)
 	}
 
 	if virtualCluster.Kubernetes.KubeAPIServer != nil {
