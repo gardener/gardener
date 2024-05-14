@@ -292,7 +292,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						{
 							ContainerName: "gardener-apiserver",
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("400M"),
+								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
 							MaxAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("7"),
@@ -316,7 +316,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 				MinReplicas: ptr.To[int32](2),
-				MaxReplicas: 4,
+				MaxReplicas: 6,
 				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
@@ -1607,6 +1607,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Context("when autoscaling mode is VPAAndHPA", func() {
 					BeforeEach(func() {
 						values.Values.Autoscaling.Mode = apiserver.AutoscalingModeVPAAndHPA
+						values.Values.Autoscaling.MinReplicas = 2
+						values.Values.Autoscaling.MaxReplicas = 6
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 

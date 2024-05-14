@@ -38,8 +38,8 @@ func (g *gardenerAPIServer) horizontalPodAutoscalerInVPAAndHPAMode() *autoscalin
 			Labels:    utils.MergeStringMaps(GetLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			MinReplicas: ptr.To[int32](2),
-			MaxReplicas: 4,
+			MinReplicas: ptr.To[int32](g.values.Autoscaling.MinReplicas),
+			MaxReplicas: g.values.Autoscaling.MaxReplicas,
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
