@@ -64,7 +64,8 @@ type Values struct {
 	AnnotateOperation bool
 	// Type is the type of the DNSRecord provider.
 	Type string
-	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.)
+	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.). If not provided, the
+	// secret in the Namespace with name SecretName will be referenced in the DNSRecord object.
 	SecretData map[string][]byte
 	// Zone is the DNS hosted zone of the DNSRecord.
 	Zone *string
@@ -89,7 +90,7 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-	return &dnsRecord{
+	deployer := &dnsRecord{
 		log:                 log,
 		client:              client,
 		values:              values,
@@ -103,13 +104,18 @@ func New(
 				Namespace: values.Namespace,
 			},
 		},
-		secret: &corev1.Secret{
+	}
+
+	if values.SecretData != nil {
+		deployer.secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      values.SecretName,
 				Namespace: values.Namespace,
 			},
-		},
+		}
 	}
+
+	return deployer
 }
 
 type dnsRecord struct {
@@ -148,14 +154,16 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, gardenerutils.AnnotationKeyIPStack, d.values.IPStack)
 		}
 
+		secretRef := corev1.SecretReference{Name: d.values.SecretName, Namespace: d.values.Namespace}
+		if d.secret != nil {
+			secretRef = corev1.SecretReference{Name: d.secret.Name, Namespace: d.secret.Namespace}
+		}
+
 		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: d.values.Type,
 			},
-			SecretRef: corev1.SecretReference{
-				Name:      d.secret.Name,
-				Namespace: d.secret.Namespace,
-			},
+			SecretRef:  secretRef,
 			Zone:       d.values.Zone,
 			Name:       d.values.DNSName,
 			RecordType: d.values.RecordType,
@@ -201,6 +209,10 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 }
 
 func (d *dnsRecord) deploySecret(ctx context.Context) error {
+	if d.secret == nil {
+		return nil
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.secret, func() error {
 		d.secret.Type = corev1.SecretTypeOpaque
 		d.secret.Data = d.values.SecretData
