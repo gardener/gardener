@@ -183,13 +183,12 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 
 func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed corev1.ResourceList) []vpaautoscalingv1.ContainerResourcePolicy {
 	var (
-		controlledValues             = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
 			{
 				ContainerName:    ContainerNameKubeAPIServer,
 				MinAllowed:       kubeAPIServerMinAllowed,
 				MaxAllowed:       kubeAPIServerMaxAllowed,
-				ControlledValues: &controlledValues,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			},
 		}
 	)
@@ -201,7 +200,7 @@ func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(ku
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("20Mi"),
 				},
-				ControlledValues: &controlledValues,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			})
 		}
 		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
@@ -209,7 +208,7 @@ func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(ku
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("20Mi"),
 			},
-			ControlledValues: &controlledValues,
+			ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 		})
 	}
 
