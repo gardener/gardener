@@ -10,23 +10,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ControllerDeployment controller tests", func() {
 	var (
-		controllerDeployment   *gardencorev1beta1.ControllerDeployment
+		controllerDeployment   *gardencorev1.ControllerDeployment
 		controllerRegistration *gardencorev1beta1.ControllerRegistration
 	)
 
 	BeforeEach(func() {
-		controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+		controllerDeployment = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 				Labels:       map[string]string{testID: testRunID},
 			},
-			Type: "helm",
+			Helm: &gardencorev1.HelmControllerDeployment{
+				RawChart: []byte("foo"),
+			},
 		}
 
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
