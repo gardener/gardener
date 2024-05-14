@@ -257,6 +257,7 @@ kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
 kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_NAME = gardener-local-ha-single-zone
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_NAME = gardener-local2-ha-single-zone
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_NAME = gardener-local-ha-multi-zone
+kind-operator-up kind-operator-down: export CLUSTER_NAME = gardener-operator-local
 # KIND_KUBECONFIG
 kind-up kind-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
@@ -297,14 +298,14 @@ kind-extensions-clean:
 
 kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
-		--cluster-name gardener-operator-local \
+		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
 		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
 	./hack/kind-down.sh \
-		--cluster-name gardener-operator-local \
+		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG)
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator

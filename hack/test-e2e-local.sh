@@ -105,6 +105,10 @@ if [[ "$1" != "operator" ]]; then
   fi
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 else
+  local_address="127.0.0.3"
+  if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
+    local_address="::3"
+  fi
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     printf "\n$local_address api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
     printf "\n$local_address plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
