@@ -362,6 +362,13 @@ metadata:
 										Name:            "dashboard-refresher",
 										Image:           values.ImageDashboardRefresher,
 										ImagePullPolicy: corev1.PullIfNotPresent,
+										Command: []string{
+											"python",
+											"-u",
+											"sidecar.py",
+											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
+											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
+										},
 										Env: []corev1.EnvVar{
 											{Name: "LOG_LEVEL", Value: "INFO"},
 											{Name: "RESOURCE", Value: "configmap"},
@@ -372,19 +379,17 @@ metadata:
 											{Name: "METHOD", Value: "WATCH"},
 											{Name: "REQ_URL", Value: "http://localhost:3000/api/admin/provisioning/dashboards/reload"},
 											{Name: "REQ_METHOD", Value: "POST"},
-											{Name: "REQ_USERNAME", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "plutono-admin-68aadabd"},
-												Key:                  "username",
-											}}},
-											{Name: "REQ_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "plutono-admin-68aadabd"},
-												Key:                  "password",
-											}}},
 										},
-										VolumeMounts: []corev1.VolumeMount{{
-											Name:      "storage",
-											MountPath: "/var/lib/plutono",
-										}},
+										VolumeMounts: []corev1.VolumeMount{
+											{
+												Name:      "storage",
+												MountPath: "/var/lib/plutono",
+											},
+											{
+												Name:      "admin-user",
+												MountPath: "/etc/dashboard-refresher/plutono-admin",
+											},
+										},
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -419,6 +424,14 @@ metadata:
 										VolumeSource: corev1.VolumeSource{
 											Secret: &corev1.SecretVolumeSource{
 												SecretName: "plutono-config-fd97f886",
+											},
+										},
+									},
+									{
+										Name: "admin-user",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: "plutono-admin-68aadabd",
 											},
 										},
 									},

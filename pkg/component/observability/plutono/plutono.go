@@ -57,11 +57,13 @@ const (
 	volumeNameDashboards         = "dashboards"
 	volumeNameConfig             = "config"
 	volumeNameStorage            = "storage"
+	volumeNameAdminUser          = "admin-user"
 
 	dataKeyConfig             = "plutono.ini"
 	volumeMountPathStorage    = "/var/lib/plutono"
 	volumeMountPathDashboards = volumeMountPathStorage + "/dashboards"
 	volumeMountPathConfig     = "/usr/local/etc/plutono"
+	volumeMountPathAdminUser  = "/etc/dashboard-refresher/plutono-admin"
 )
 
 var (
@@ -615,6 +617,13 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 							Name:            "dashboard-refresher",
 							Image:           p.values.ImageDashboardRefresher,
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"python",
+								"-u",
+								"sidecar.py",
+								"--req-username-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyUserName,
+								"--req-password-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyPassword,
+							},
 							Env: []corev1.EnvVar{
 								{Name: "LOG_LEVEL", Value: "INFO"},
 								{Name: "RESOURCE", Value: "configmap"},
@@ -625,19 +634,17 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								{Name: "METHOD", Value: "WATCH"},
 								{Name: "REQ_URL", Value: "http://localhost:" + strconv.Itoa(port) + "/api/admin/provisioning/dashboards/reload"},
 								{Name: "REQ_METHOD", Value: "POST"},
-								{Name: "REQ_USERNAME", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
-									Key:                  secretsutils.DataKeyUserName,
-								}}},
-								{Name: "REQ_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: plutonoAdminUserSecret.Name},
-									Key:                  secretsutils.DataKeyPassword,
-								}}},
 							},
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      volumeNameStorage,
-								MountPath: volumeMountPathStorage,
-							}},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeNameStorage,
+									MountPath: volumeMountPathStorage,
+								},
+								{
+									Name:      volumeNameAdminUser,
+									MountPath: volumeMountPathAdminUser,
+								},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -672,6 +679,14 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: plutonoConfigSecret.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameAdminUser,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: plutonoAdminUserSecret.Name,
 								},
 							},
 						},
