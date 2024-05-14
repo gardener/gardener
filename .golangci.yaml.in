@@ -245,6 +245,8 @@ linters-settings:
         alias: resourcemanagerpredicate
       - pkg: github.com/gardener/gardener/pkg/utils/(\w+)
         alias: ${1}utils
+      - pkg: github.com/gardener/gardener/pkg/utils/oci/fake
+        alias: ocifake
       - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager
         alias: secretsmanager
       - pkg: github.com/gardener/gardener/pkg/utils/secrets/manager/fake

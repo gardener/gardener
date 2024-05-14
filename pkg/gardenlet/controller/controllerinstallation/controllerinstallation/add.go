@@ -22,6 +22,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
 // ControllerName is the name of this controller.
@@ -37,6 +38,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+	if r.HelmRegistry == nil {
+		helmRegisty, err := oci.NewHelmRegistry()
+		if err != nil {
+			return err
+		}
+		r.HelmRegistry = helmRegisty
 	}
 
 	return builder.

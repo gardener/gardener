@@ -35,6 +35,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		controllerRegistration *gardencorev1beta1.ControllerRegistration
 		controllerDeployment   *gardencorev1.ControllerDeployment
 		controllerInstallation *gardencorev1beta1.ControllerInstallation
+
+		rawChart []byte
 	)
 
 	BeforeEach(func() {
@@ -48,7 +50,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		// created via the following commands in the ./testdata/chart directory:
 		//   helm package . --version 0.1.0 --app-version 0.1.0 --destination /tmp/chart
 		//   cat /tmp/chart/test-0.1.0.tgz | base64 | tr -d '\n'
-		rawChart, err := base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyUz2rDMAzGc/ZT6AkcOXHb4WvP22GMwo6i0RbT/DGxWhhp3300XQcLjB22rozldxGSkW2Z77NwlHRZUif6heoquQSIiHNrh4iI44jGLhJjc5PnmZkvbIImM7N5AniR24zYRqEuwW+fNR7uj0DBr7iLvm0c7IyiEN5T1EajKjiuOx9kKD1wFFW2NTsoRUJ0abq5idq3aclVrRo6rhwlpXYfd7n2mBOfMPhfuA4VCcd03TZP/vmHv4Kv/J9lOPK/zWc4+f83GPl/45vCwXJQwS0FVbNQQUJOAZzcfVLIWxoDrdlB34O+54opsr47l+FwUOfWHVVbjg72qu9B2keqK9CroQh78E3BjYA9dlz7PSYmJib+C68BAAD//6xO2UUADAAA`)
+		var err error
+		rawChart, err = base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyUz2rDMAzGc/ZT6AkcOXHb4WvP22GMwo6i0RbT/DGxWhhp3300XQcLjB22rozldxGSkW2Z77NwlHRZUif6heoquQSIiHNrh4iI44jGLhJjc5PnmZkvbIImM7N5AniR24zYRqEuwW+fNR7uj0DBr7iLvm0c7IyiEN5T1EajKjiuOx9kKD1wFFW2NTsoRUJ0abq5idq3aclVrRo6rhwlpXYfd7n2mBOfMPhfuA4VCcd03TZP/vmHv4Kv/J9lOPK/zWc4+f83GPl/45vCwXJQwS0FVbNQQUJOAZzcfVLIWxoDrdlB34O+54opsr47l+FwUOfWHVVbjg72qu9B2keqK9CroQh78E3BjYA9dlz7PSYmJib+C68BAAD//6xO2UUADAAA`)
 		Expect(err).NotTo(HaveOccurred())
 
 		controllerDeployment = &gardencorev1.ControllerDeployment{
@@ -141,6 +144,45 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		})
 	})
 
+	Context("responsible with OCI", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
+		})
+		BeforeEach(func() {
+			oci := &gardencorev1.OCIRepository{
+				Repository: "test",
+				Tag:        "0.1.0",
+			}
+			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
+				OCIRepository: oci,
+			}
+			fakeRegistry.AddArtifact(oci, rawChart)
+		})
+		It("should deploy the chart", func() {
+			By("Ensure chart was deployed correctly")
+			values := make(map[string]any)
+			Eventually(func(g Gomega) {
+				managedResource := &resourcesv1alpha1.ManagedResource{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+				configMap := &corev1.ConfigMap{}
+				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+			}).Should(Succeed())
+
+			By("Ensure conditions are maintained correctly")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(And(
+				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+			))
+		})
+	})
 	Context("responsible", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
