@@ -30,4 +30,3 @@ manifests:
     - example/gardener-local/controlplane/domain-secrets.yaml
 deploy:
   kubectl: {}
-
