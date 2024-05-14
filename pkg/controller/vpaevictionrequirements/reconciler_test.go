@@ -26,14 +26,14 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 var _ = Describe("Reconciler", func() {
 	var (
 		ctx                    = context.TODO()
 		reconciler             reconcile.Reconciler
-		fakeClock              = testclock.NewFakeClock(time.Now())
+		fakeDateAndTime        time.Time
+		fakeClock              *testclock.FakeClock
 		request                reconcile.Request
 		seedClient             client.Client
 		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
@@ -43,10 +43,12 @@ var _ = Describe("Reconciler", func() {
 		}}
 		maintenanceWindowBegin string
 		maintenanceWindowEnd   string
-		maintenanceTimeWindow  *timewindow.MaintenanceTimeWindow
 	)
 
 	BeforeEach(func() {
+		fakeDateAndTime, _ = time.Parse(time.DateTime, "2024-05-14 19:59:39")
+		fakeClock = testclock.NewFakeClock(fakeDateAndTime)
+
 		testSchemeBuilder := runtime.NewSchemeBuilder(
 			kubernetes.AddGardenSchemeToScheme,
 			vpaautoscalingv1.AddToScheme,
@@ -91,18 +93,34 @@ var _ = Describe("Reconciler", func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
 		})
 
-		When("the Shoot is outside its maintenance window", func() {
+		When("the Shoot is outside its maintenance window and the next window begins on the next day", func() {
 			BeforeEach(func() {
 				maintenanceWindowBegin = fakeClock.Now().Add(5 * time.Hour).Format("150405-0700")
 				maintenanceWindowEnd = fakeClock.Now().Add(6 * time.Hour).Format("150405-0700")
-				maintenanceTimeWindow, _ = timewindow.ParseMaintenanceTimeWindow(maintenanceWindowBegin, maintenanceWindowEnd)
 				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
 			})
 
 			It("should add an EvictionRequirement that prevents downscaling and requeue at the beginning of the next Shoot maintenance window", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result.RequeueAfter).To(Equal(maintenanceTimeWindow.AdjustedBegin(fakeClock.Now()).Sub(fakeClock.Now())))
+				Expect(result.RequeueAfter).To(Equal(5 * time.Hour))
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
+				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
+			})
+		})
+
+		When("the Shoot is outside its maintenance window and the next window begins today", func() {
+			BeforeEach(func() {
+				maintenanceWindowBegin = fakeClock.Now().Add(2 * time.Hour).Format("150405-0700")
+				maintenanceWindowEnd = fakeClock.Now().Add(3 * time.Hour).Format("150405-0700")
+				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
+			})
+
+			It("should add an EvictionRequirement that prevents downscaling and requeue at the beginning of the next Shoot maintenance window", func() {
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.RequeueAfter).To(Equal(2 * time.Hour))
 
 				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
 				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
@@ -113,7 +131,6 @@ var _ = Describe("Reconciler", func() {
 			BeforeEach(func() {
 				maintenanceWindowBegin = fakeClock.Now().Format("150405-0700")
 				maintenanceWindowEnd = fakeClock.Now().Add(1 * time.Hour).Format("150405-0700")
-				maintenanceTimeWindow, _ = timewindow.ParseMaintenanceTimeWindow(maintenanceWindowBegin, maintenanceWindowEnd)
 				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
 				vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
 			})
@@ -121,7 +138,7 @@ var _ = Describe("Reconciler", func() {
 			It("should remove the EvictionRequirement to allow downscaling and requeue for the end of the maintenance window", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result.RequeueAfter).To(Equal(maintenanceTimeWindow.AdjustedEnd(fakeClock.Now()).Sub(fakeClock.Now())))
+				Expect(result.RequeueAfter).To(Equal(1 * time.Hour))
 
 				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
 				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(BeEmpty())
