@@ -12,9 +12,9 @@ Deployed in the `garden` namespace. Important scrape targets:
 - node-exporter
 - kube-state-metrics
 
-**Purpose**: Acts as a cache for other Prometheus instances. The metrics are kept for a short amount of time (~2 hours) due to the high cardinality. For example if another Prometheus needs access to cadvisor metrics it will query this Prometheus instead of the cadvisor. This also reduces load on the kubelets and API Server.
+**Purpose**: Act as a reverse proxy that supports server-side filtering, which is not supported by Prometheus exporters but by federation. Metrics in this Prometheus are kept for a short amount of time (~1 day) since other Prometheus instances are expected to federate from it and move metrics over. For example, the [shoot Prometheus](#shoot-prometheus) queries this Prometheus to retrieve metrics corresponding to the shoot's control plane. This way, we achieve isolation so that shoot owners are only able to query metrics for their shoots. Please note Prometheus does not support isolation features. Another example is if another Prometheus needs access to cadvisor metrics, which does not support server-side filtering, so it will query this Prometheus instead of the cadvisor. This strategy also reduces load on the kubelets and API Server.
 
-Some of the high cardinality metrics are aggregated with recording rules. These _pre-aggregated_ metrics are scraped by the [aggregate Prometheus](#aggregate-prometheus).
+Note some of these Prometheus' metrics have high cardinality (e.g., metrics related to all shoots managed by the seed). Some of these are aggregated with recording rules. These _pre-aggregated_ metrics are scraped by the [aggregate Prometheus](#aggregate-prometheus).
 
 This Prometheus is not used for alerting.
 
