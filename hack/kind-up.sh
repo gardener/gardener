@@ -249,7 +249,7 @@ fi
 # Adjust version of kindest/node image according to the latest supported Kubernetes version in Gardener
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --image "kindest/node:v1.29.2" \
+  --image "kindest/node:v1.29.4" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # Configure the default StorageClass in the kind cluster
