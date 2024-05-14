@@ -35,11 +35,6 @@ const (
 	KubeConfigSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-probe"
 	// managedResourceName is the name of the managed resource created for DWD.
 	managedResourceName = "shoot-core-dependency-watchdog"
-
-	// ExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
-	ExternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-external-probe"
-	// InternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
-	InternalProbeSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-internal-probe"
 )
 
 // NewAccess creates a new instance of the deployer for shoot cluster access for the dependency-watchdog.
@@ -48,7 +43,7 @@ func NewAccess(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values AccessValues,
-) Interface {
+) component.Deployer {
 	return &dependencyWatchdogAccess{
 		client:         client,
 		namespace:      namespace,
@@ -70,46 +65,10 @@ type AccessValues struct {
 	ServerInCluster string
 }
 
-// Interface exposes methods for deploying dependency-watchdog.
-type Interface interface {
-	component.Deployer
-	DeployMigrate(ctx context.Context) error
-}
-
 func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 	caSecret, found := d.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	if err := d.createShootAccessSecret(ctx, caSecret); err != nil {
-		return err
-	}
-
-	return d.createManagedResource(ctx)
-}
-
-// TODO(aaronfern): Remove this function after v1.93 got released.
-func (d *dependencyWatchdogAccess) DeployMigrate(ctx context.Context) error {
-	secretList := &corev1.SecretList{}
-	if err := d.client.List(ctx, secretList, client.InNamespace(d.namespace), client.MatchingLabels{
-		secretsmanager.LabelKeyBundleFor:       v1beta1constants.SecretNameCACluster,
-		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
-		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
-	}); err != nil {
-		return err
-	}
-
-	// Find the newest secret in system (there could be multiple bundle secrets in case a rotation is going on).
-	var caSecret *corev1.Secret
-	for _, secret := range secretList.Items {
-		if caSecret == nil || caSecret.CreationTimestamp.Time.Before(secret.CreationTimestamp.Time) {
-			caSecret = secret.DeepCopy()
-		}
-	}
-
-	if caSecret == nil {
-		return fmt.Errorf("could not find CA bundle secret in namespace %s", d.namespace)
 	}
 
 	if err := d.createShootAccessSecret(ctx, caSecret); err != nil {
