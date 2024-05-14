@@ -4,7 +4,7 @@
 
 ![monitoring](./images/monitoring.png)
 
-### Prometheus
+### Cache Prometheus
 
 Deployed in the `garden` namespace. Important scrape targets:
 
@@ -25,7 +25,7 @@ Deployed in the `garden` namespace. Important scrape targets:
 - other prometheus instances
 - logging components
 
-**Purpose**: Store pre-aggregated data from [prometheus](#prometheus) and [shoot prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster.
+**Purpose**: Store pre-aggregated data from [cache Prometheus](#cache-prometheus) and [shoot prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster.
 
 ### Seed Prometheus
 
