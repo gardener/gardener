@@ -68,15 +68,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			return err
 		}
 
-		nginxIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
-			"app":       "nginx-ingress",
-			"component": "controller",
-		}})
-		if err != nil {
-			return err
-		}
-
-		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, predicate.Or(virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
+		if err := (&service.Reconciler{IsMultiZone: true}).AddToManager(mgr, virtualGardenIstioIngressPredicate); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)
 		}
 	}
