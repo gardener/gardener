@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -148,12 +149,14 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					},
 					{
 						NewObject: func() client.Object {
-							return &gardencorev1beta1.ControllerDeployment{
+							return &gardencorev1.ControllerDeployment{
 								ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
-								Type:       "helm",
+								Helm: &gardencorev1.HelmControllerDeployment{
+									RawChart: []byte("foo"),
+								},
 							}
 						},
-						NewEmptyList: func() client.ObjectList { return &gardencorev1beta1.ControllerDeploymentList{} },
+						NewEmptyList: func() client.ObjectList { return &gardencorev1.ControllerDeploymentList{} },
 					},
 					{
 						NewObject: func() client.Object {
