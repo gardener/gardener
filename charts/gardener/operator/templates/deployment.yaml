@@ -140,10 +140,6 @@ spec:
         {{- end }}
         - name: gardener-operator-config
           mountPath: /etc/gardener-operator/config
-{{- if .Values.hostAliases }}
-      hostAliases:
-{{ toYaml .Values.hostAliases | indent 6 }}
-{{- end }}
 {{- if .Values.additionalVolumeMounts }}
 {{ toYaml .Values.additionalVolumeMounts | indent 8 }}
 {{- end }}

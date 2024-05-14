@@ -60,7 +60,6 @@ type serviceValues struct {
 	namePrefix                  string
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
-	clusterIP                   string
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -74,7 +73,6 @@ func NewService(
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
-	clusterIP string,
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
@@ -91,7 +89,6 @@ func NewService(
 	var (
 		internalValues = &serviceValues{
 			annotationsFunc: func() map[string]string { return map[string]string{} },
-			clusterIP:       clusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -170,9 +167,6 @@ func (s *service) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt32(kubeapiserverconstants.Port),
 			},
 		}, corev1.ServiceTypeClusterIP)
-		if obj.Spec.ClusterIP == "" && s.values.clusterIP != "" {
-			obj.Spec.ClusterIP = s.values.clusterIP
-		}
 
 		return nil
 	}); err != nil {

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -516,11 +515,6 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		annotations = settings.LoadBalancerServices.Annotations
 	}
 
-	var clusterIP string
-	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
-		clusterIP = "10.2.10.2"
-	}
-
 	return kubeapiserverexposure.NewService(
 		log,
 		r.RuntimeClientSet.Client(),
@@ -537,7 +531,6 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		nil,
 		nil,
-		clusterIP,
 	), nil
 }
 

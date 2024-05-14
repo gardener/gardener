@@ -36,7 +36,6 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 			b.APIServerAddress = address
 			b.newDNSComponentsTargetingAPIServerAddress()
 		},
-		"",
 	)
 }
 
