@@ -181,6 +181,30 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		It("should only deploy the DNSRecord resource but not the secret", func() {
+			values.SecretData = nil
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
+		})
+
 		It("should deploy the DNSRecord with operation annotation if it exists with desired spec and AnnotateOperation==true", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
