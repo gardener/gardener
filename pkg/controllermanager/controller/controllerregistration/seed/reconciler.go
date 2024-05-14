@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -398,13 +399,13 @@ func deployNeededInstallations(
 		registrationLog.Info("Deploying wanted ControllerInstallation for ControllerRegistration")
 
 		var (
-			controllerDeployment   *gardencorev1beta1.ControllerDeployment
+			controllerDeployment   *gardencorev1.ControllerDeployment
 			controllerRegistration = controllerRegistrations[registrationName].obj
 		)
 
 		if controllerRegistration.Spec.Deployment != nil && len(controllerRegistration.Spec.Deployment.DeploymentRefs) > 0 {
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
-			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
+			controllerDeployment = &gardencorev1.ControllerDeployment{}
 
 			if err := c.Get(ctx, client.ObjectKey{Name: controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name}, controllerDeployment); err != nil {
 				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %w", err)
@@ -428,7 +429,7 @@ func deployNeededInstallation(
 	ctx context.Context,
 	c client.Client,
 	seed *gardencorev1beta1.Seed,
-	controllerDeployment *gardencorev1beta1.ControllerDeployment,
+	controllerDeployment *gardencorev1.ControllerDeployment,
 	controllerRegistration *gardencorev1beta1.ControllerRegistration,
 	existingControllerInstallation *gardencorev1beta1.ControllerInstallation,
 ) error {
@@ -469,8 +470,9 @@ func deployNeededInstallation(
 		if controllerDeployment != nil {
 			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
 			hashFields := map[string]any{
-				"type":           controllerDeployment.Type,
-				"providerConfig": controllerDeployment.ProviderConfig,
+				"type":           controllerDeployment.Annotations[gardencorev1.MigrationControllerDeploymentType],
+				"providerConfig": controllerDeployment.Annotations[gardencorev1.MigrationControllerDeploymentProviderConfig],
+				"helm":           controllerDeployment.Helm,
 			}
 
 			deploymentMap, err := convertObjToMap(hashFields)

@@ -15,11 +15,11 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -197,12 +197,13 @@ var _ = Describe("Reconciler", func() {
 			Provider: type9,
 		}
 
-		controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+		controllerDeployment = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fooDeployment",
 			},
-			Type:           "helm",
-			ProviderConfig: runtime.RawExtension{},
+			Helm: &gardencorev1.HelmControllerDeployment{
+				RawChart: []byte("foo"),
+			},
 		}
 
 		controllerRegistration1 = &gardencorev1beta1.ControllerRegistration{
@@ -716,8 +717,8 @@ var _ = Describe("Reconciler", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			k8sClient = mockclient.NewMockClient(ctrl)
 
-			k8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: controllerDeployment.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerDeployment, _ ...client.GetOption) error {
+			k8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: controllerDeployment.Name}, gomock.AssignableToTypeOf(&gardencorev1.ControllerDeployment{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, obj *gardencorev1.ControllerDeployment, _ ...client.GetOption) error {
 					*obj = *controllerDeployment
 					return nil
 				},
@@ -777,7 +778,7 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "d37bba62f222c81b",
+					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
@@ -818,7 +819,7 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "d37bba62f222c81b",
+					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
@@ -872,7 +873,7 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "d37bba62f222c81b",
+					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
@@ -907,7 +908,7 @@ var _ = Describe("Reconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "d37bba62f222c81b",
+					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
@@ -926,7 +927,7 @@ var _ = Describe("Reconciler", func() {
 				registrations[registration2.Name] = controllerRegistration{obj: registration2, deployAlways: false}
 				installation2 = controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					ControllerDeploymentHash: "d37bba62f222c81b",
+					ControllerDeploymentHash: "deb30f197b882cd1",
 					RegistrationSpecHash:     "61ca93a1782c5fa3",
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}

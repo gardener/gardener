@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -84,7 +85,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.ControllerDeployment{}),
+		source.Kind(mgr.GetCache(), &gardencorev1.ControllerDeployment{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
@@ -327,7 +328,7 @@ func (r *Reconciler) MapControllerInstallationToSeed(_ context.Context, _ logr.L
 // MapControllerDeploymentToAllSeeds returns reconcile.Request objects for all seeds in case there is at least one
 // ControllerRegistration which references the ControllerDeployment.
 func (r *Reconciler) MapControllerDeploymentToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	controllerDeployment, ok := obj.(*gardencorev1beta1.ControllerDeployment)
+	controllerDeployment, ok := obj.(*gardencorev1.ControllerDeployment)
 	if !ok {
 		return nil
 	}
