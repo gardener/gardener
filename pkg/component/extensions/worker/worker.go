@@ -170,6 +170,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			// TODO(rfranzke): Remove userData after v1.100 has been released.
 			userData          []byte
 			userDataSecretRef *corev1.SecretKeySelector
+			oscKey            string
 		)
 		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
 			userData = []byte(val.Init.Content)
@@ -178,6 +179,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				LocalObjectReference: corev1.LocalObjectReference{Name: val.Init.SecretName},
 				Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
 			}
+			oscKey = val.Init.KeyName
 		}
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
@@ -229,7 +231,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, oscKey),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{

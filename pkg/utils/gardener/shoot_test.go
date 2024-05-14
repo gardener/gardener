@@ -288,13 +288,14 @@ var _ = Describe("Shoot", func() {
 		})
 
 		It("should maintain the common labels", func() {
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+			Expect(NodeLabelsForWorkerPool(workerPool, false, "osc-key")).To(And(
 				HaveKeyWithValue("node.kubernetes.io/role", "node"),
 				HaveKeyWithValue("kubernetes.io/arch", "arm64"),
 				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "false"),
 				HaveKeyWithValue("worker.gardener.cloud/system-components", "true"),
 				HaveKeyWithValue("worker.gardener.cloud/pool", "worker"),
 				HaveKeyWithValue("worker.garden.sapcloud.io/group", "worker"),
+				HaveKeyWithValue("worker.gardener.cloud/operating-system-config", "osc-key"),
 			))
 		})
 
@@ -303,7 +304,7 @@ var _ = Describe("Shoot", func() {
 				"test": "foo",
 				"bar":  "baz",
 			}
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+			Expect(NodeLabelsForWorkerPool(workerPool, false, "osc-key")).To(And(
 				HaveKeyWithValue("test", "foo"),
 				HaveKeyWithValue("bar", "baz"),
 			))
@@ -311,16 +312,16 @@ var _ = Describe("Shoot", func() {
 
 		It("should not add system components label if they are not allowed", func() {
 			workerPool.SystemComponents.Allow = false
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).NotTo(
+			Expect(NodeLabelsForWorkerPool(workerPool, false, "osc-key")).NotTo(
 				HaveKey("worker.gardener.cloud/system-components"),
 			)
 		})
 
 		It("should correctly handle the node-local-dns label", func() {
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(
+			Expect(NodeLabelsForWorkerPool(workerPool, false, "osc-key")).To(
 				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "false"),
 			)
-			Expect(NodeLabelsForWorkerPool(workerPool, true)).To(
+			Expect(NodeLabelsForWorkerPool(workerPool, true, "osc-key")).To(
 				HaveKeyWithValue("networking.gardener.cloud/node-local-dns-enabled", "true"),
 			)
 		})
@@ -337,7 +338,7 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			}
-			Expect(NodeLabelsForWorkerPool(workerPool, false)).To(And(
+			Expect(NodeLabelsForWorkerPool(workerPool, false, "osc-key")).To(And(
 				HaveKeyWithValue("worker.gardener.cloud/cri-name", "containerd"),
 				HaveKeyWithValue("containerruntime.worker.gardener.cloud/gvisor", "true"),
 				HaveKeyWithValue("containerruntime.worker.gardener.cloud/kata", "true"),

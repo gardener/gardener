@@ -195,7 +195,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			worker1OriginalCommand = "/foo"
 			worker1OriginalUnits   = []string{"w1u1", "w1u2"}
 			worker1OriginalFiles   = []string{"w1f1", "w1f2"}
-			worker1Key             string
+			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
@@ -203,12 +203,13 @@ var _ = Describe("operatingsystemconfig", func() {
 			worker2OriginalUnits         = []string{"w2u2", "w2u2", "w2u3"}
 			worker2OriginalFiles         = []string{"w2f2", "w2f2", "w2f3"}
 			worker2KubernetesVersion     = "4.5.6"
-			worker2Key                   string
+			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
 					Original: operatingsystemconfig.Data{
+						KeyName: worker1Key,
 						Content: worker1OriginalContent,
 						Command: &worker1OriginalCommand,
 						Units:   worker1OriginalUnits,
@@ -226,6 +227,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				},
 				worker2Name: {
 					Original: operatingsystemconfig.Data{
+						KeyName: worker2Key,
 						Content: worker2OriginalContent,
 						Command: &worker2OriginalCommand,
 						Units:   worker2OriginalUnits,
@@ -248,9 +250,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		)
 
 		JustBeforeEach(func() {
-			worker1Key = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
-			worker2Key = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
-
 			botanist.Shoot.SeedNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{

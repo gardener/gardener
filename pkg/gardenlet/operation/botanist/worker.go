@@ -159,6 +159,12 @@ func nodeToBeDeleted(node corev1.Node, secretOSCKey string) (bool, error) {
 	if nodeTaintedForNoSchedule(node) {
 		return true, nil
 	}
+
+	if val, ok := node.Labels[v1beta1constants.LabelWorkerPoolOperatingSystemConfig]; ok {
+		return val != secretOSCKey, nil
+	}
+
+	// TODO(MichaelEischer): remove after Gardener 1.100
 	return nodeOSCKeyDifferentFromSecretOSCKey(node, secretOSCKey)
 }
 
