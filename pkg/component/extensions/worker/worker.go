@@ -166,19 +166,17 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		// TODO(rfranzke): Remove this after v1.100 has been released.
 		var (
+			// TODO(rfranzke): Remove userData after v1.100 has been released.
 			userData          []byte
 			userDataSecretRef *corev1.SecretKeySelector
 		)
 		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
 			userData = []byte(val.Init.Content)
 
-			if val.Init.SecretName != nil {
-				userDataSecretRef = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: *val.Init.SecretName},
-					Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
-				}
+			userDataSecretRef = &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: val.Init.SecretName},
+				Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
 			}
 		}
 

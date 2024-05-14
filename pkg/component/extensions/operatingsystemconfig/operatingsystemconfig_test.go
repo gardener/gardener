@@ -730,7 +730,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker1Name: {
 						Init: Data{
 							Content:    "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
-							SecretName: ptr.To("cc-" + expected[0].Name),
+							SecretName: "cc-" + expected[0].Name,
 							Command:    ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-init"),
 							Units: []string{
 								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
@@ -740,7 +740,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content:    "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
-							SecretName: ptr.To("cc-" + expected[1].Name),
+							SecretName: "cc-" + expected[1].Name,
 							Command:    ptr.To("foo-gardener-node-agent-" + worker1Name + "-77ac3-type1-original"),
 							Units: []string{
 								"bar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
@@ -752,7 +752,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker2Name: {
 						Init: Data{
 							Content:    "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
-							SecretName: ptr.To("cc-" + expected[2].Name),
+							SecretName: "cc-" + expected[2].Name,
 							Command:    ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-init"),
 							Units: []string{
 								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
@@ -762,7 +762,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content:    "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
-							SecretName: ptr.To("cc-" + expected[3].Name),
+							SecretName: "cc-" + expected[3].Name,
 							Command:    ptr.To("foo-gardener-node-agent-" + worker2Name + "-d9e53-type2-original"),
 							Units: []string{
 								"bar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",

@@ -165,13 +165,13 @@ var _ = Describe("Worker", func() {
 				worker1Name: {
 					Init: operatingsystemconfig.Data{
 						Content:    string(worker1UserData),
-						SecretName: &worker1UserDataSecretName,
+						SecretName: worker1UserDataSecretName,
 					},
 				},
 				worker2Name: {
 					Init: operatingsystemconfig.Data{
 						Content:    string(worker2UserData),
-						SecretName: &worker2UserDataSecretName,
+						SecretName: worker2UserDataSecretName,
 					},
 				},
 			},
