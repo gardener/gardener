@@ -15,7 +15,6 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,26 +32,8 @@ func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
-	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-			}},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-
 	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
-		Ingress: []networkingv1.NetworkPolicyIngressRule{{
-			From: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}}},
-			},
-		}},
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{
 				{
@@ -75,13 +56,11 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 			MatchLabels: map[string]string{"app": "machine"},
 		},
 		PolicyTypes: []networkingv1.PolicyType{
-			networkingv1.PolicyTypeIngress,
 			networkingv1.PolicyTypeEgress,
 		},
 	}
 
 	for _, obj := range []client.Object{
-		networkPolicyAllowToMachinePods,
 		networkPolicyAllowMachinePods,
 	} {
 		if err := a.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
@@ -97,7 +76,6 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
-		emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace),
 	)
 }
 
