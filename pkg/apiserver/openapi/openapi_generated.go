@@ -31,6 +31,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeployment":                            schema_pkg_apis_core_v1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1.ControllerDeploymentList":                        schema_pkg_apis_core_v1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment":                        schema_pkg_apis_core_v1_HelmControllerDeployment(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository":                                   schema_pkg_apis_core_v1_OCIRepository(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                           schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                          schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                      schema_pkg_apis_core_v1beta1_Addon(ref),
@@ -136,6 +137,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking":                                 schema_pkg_apis_core_v1beta1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress":                               schema_pkg_apis_core_v1beta1_NginxIngress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS":                               schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository":                              schema_pkg_apis_core_v1beta1_OCIRepository(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                                 schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation":                      schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":          schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
@@ -918,11 +920,58 @@ func schema_pkg_apis_core_v1_HelmControllerDeployment(ref common.ReferenceCallba
 							Ref:         ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
 						},
 					},
+					"ociRepository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OCIRepository defines where to pull the chart.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
+			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
+	}
+}
+
+func schema_pkg_apis_core_v1_OCIRepository(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ref is the full artifact Ref and takes precedence over all other fields.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"repository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Repository is a reference to an OCI artifact repository.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag is the image tag to pull.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Digest of the image to pull, takes precedence over tag. The value should be in the format 'sha256:<HASH>'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -3571,11 +3620,17 @@ func schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref common.ReferenceC
 							Ref:         ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
 						},
 					},
+					"ociRepository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OCIRepository defines where to pull the chart.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
 	}
 }
 
@@ -5781,6 +5836,47 @@ func schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref common.ReferenceCallback) com
 					},
 				},
 				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_OCIRepository(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ref is the full artifact Ref and takes precedence over all other fields.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"repository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Repository is a reference to an OCI artifact repository.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag is the image tag to pull.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Digest of the image to pull, takes precedence over tag.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}

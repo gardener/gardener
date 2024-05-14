@@ -77,6 +77,43 @@ var _ = Describe("ControllerDeployment roundtrip conversion", func() {
 		})
 	})
 
+	Context("helm type with OCI", func() {
+		BeforeEach(func() {
+			values := `{"foo":{"bar":"baz"},"boom":42}`
+			valuesJSON := &apiextensionsv1.JSON{
+				Raw: []byte(values),
+			}
+
+			expectedV1 = &gardencorev1.ControllerDeployment{
+				Helm: &gardencorev1.HelmControllerDeployment{
+					Values: valuesJSON.DeepCopy(),
+					OCIRepository: &gardencorev1.OCIRepository{
+						Ref: "foo:1.0.0",
+					},
+				},
+			}
+
+			expectedV1beta1 = &gardencorev1beta1.ControllerDeployment{
+				Type: "helm",
+				ProviderConfig: runtime.RawExtension{
+					Raw: []byte(`{"values":` + values + `,"ociRepository":{"ref":"foo:1.0.0"}}`),
+				},
+			}
+		})
+
+		It("should perform lossless roundtrip conversion", func() {
+			By("converting from v1 to v1beta1")
+			actualV1beta1 := &gardencorev1beta1.ControllerDeployment{}
+			convert(scheme, expectedV1, actualV1beta1)
+			Expect(actualV1beta1).To(DeepEqual(expectedV1beta1))
+
+			By("converting from v1beta1 to v1")
+			actualV1 := &gardencorev1.ControllerDeployment{}
+			convert(scheme, actualV1beta1, actualV1)
+			Expect(actualV1).To(DeepEqual(expectedV1))
+		})
+	})
+
 	Context("custom type", func() {
 		BeforeEach(func() {
 			deploymentType := "custom"

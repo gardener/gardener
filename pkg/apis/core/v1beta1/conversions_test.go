@@ -600,7 +600,7 @@ var _ = Describe("Conversion", func() {
 				out = &ControllerDeployment{}
 			})
 
-			Context("helm type", func() {
+			Context("helm type with rawChart", func() {
 				BeforeEach(func() {
 					in.Helm = &core.HelmControllerDeployment{
 						RawChart: []byte("foo"),
@@ -616,6 +616,30 @@ var _ = Describe("Conversion", func() {
 					Expect(out.Type).To(Equal("helm"))
 					Expect(out.ProviderConfig).To(Equal(runtime.RawExtension{
 						Raw: []byte(`{"chart":"Zm9v","values":{"foo":["bar","baz"]}}`),
+					}))
+				})
+			})
+
+			Context("helm type with ociRepository", func() {
+				BeforeEach(func() {
+					in.Helm = &core.HelmControllerDeployment{
+						OCIRepository: &core.OCIRepository{
+							Repository: "url",
+							Tag:        "1.0.0",
+							Digest:     "sha256:foo",
+						},
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":["bar","baz"]}`),
+						},
+					}
+				})
+
+				It("should convert new helm deployment to legacy structure", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(Equal("helm"))
+					Expect(out.ProviderConfig).To(Equal(runtime.RawExtension{
+						Raw: []byte(`{"values":{"foo":["bar","baz"]},"ociRepository":{"repository":"url","tag":"1.0.0","digest":"sha256:foo"}}`),
 					}))
 				})
 			})

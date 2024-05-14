@@ -52,4 +52,19 @@ type HelmControllerDeployment struct {
 	RawChart []byte
 	// Values are the chart values.
 	Values *apiextensionsv1.JSON
+	// OCIRepository defines where to pull the chart.
+	OCIRepository *OCIRepository
+}
+
+// OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.
+type OCIRepository struct {
+	// Ref is the full artifact Ref and takes precedence over all other fields.
+	Ref string
+	// Repository is a reference to an OCI artifact repository.
+	Repository string
+	// Tag is the image tag to pull.
+	Tag string
+	// Digest of the image to pull, takes precedence over tag.
+	// The value should be in the format 'sha256:<HASH>'.
+	Digest string
 }

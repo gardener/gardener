@@ -35,7 +35,7 @@ var _ = Describe("Conversion", func() {
 				out = &core.ControllerDeployment{}
 			})
 
-			Context("helm type", func() {
+			Context("helm type with rawChart", func() {
 				BeforeEach(func() {
 					in.Helm = &HelmControllerDeployment{
 						RawChart: []byte("foo"),
@@ -52,6 +52,38 @@ var _ = Describe("Conversion", func() {
 					Expect(out.ProviderConfig).To(BeNil(), "providerConfig is empty for non-custom type")
 					Expect(out.Helm).To(Equal(&core.HelmControllerDeployment{
 						RawChart: []byte("foo"),
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":["bar","baz"]}`),
+						},
+					}))
+				})
+			})
+
+			Context("helm type with ociRepository", func() {
+				BeforeEach(func() {
+					in.Helm = &HelmControllerDeployment{
+						OCIRepository: &OCIRepository{
+							Repository: "url",
+							Tag:        "1.0.0",
+							Digest:     "sha256:foo",
+						},
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"foo":["bar","baz"]}`),
+						},
+					}
+				})
+
+				It("should keep helm deployment", func() {
+					Expect(scheme.Convert(in, out, nil)).To(Succeed())
+
+					Expect(out.Type).To(BeEmpty(), "type is empty for non-custom type")
+					Expect(out.ProviderConfig).To(BeNil(), "providerConfig is empty for non-custom type")
+					Expect(out.Helm).To(Equal(&core.HelmControllerDeployment{
+						OCIRepository: &core.OCIRepository{
+							Repository: "url",
+							Tag:        "1.0.0",
+							Digest:     "sha256:foo",
+						},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte(`{"foo":["bar","baz"]}`),
 						},
