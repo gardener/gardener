@@ -1,0 +1,7 @@
+apiVersion: core.gardener.cloud/v1
+kind: ControllerDeployment
+metadata:
+  name: provider-local
+helm:
+  ociRepository:
+    ref: gardener-extension-provider-local/charts/extension:v0.0.0

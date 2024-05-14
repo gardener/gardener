@@ -79,7 +79,10 @@ metrics:
 
 coredns:
   enabled: true
-
+  # ipFamilies:
+  #   - IPv6
+  #   - IPv4
+  # ipFamilyPolicy: PreferDualStack
 gardener:
   version: ""
   gardenlet:

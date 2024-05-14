@@ -1,0 +1,40 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: provider-local
+  annotations:
+    security.gardener.cloud/pod-security-enforce: privileged
+spec:
+  deployment:
+    policy: Always
+    deploymentRefs:
+      - name: provider-local
+  resources:
+    - kind: BackupBucket
+      type: local
+    - kind: BackupEntry
+      type: local
+    - kind: DNSRecord
+      type: local
+    - kind: ControlPlane
+      type: local
+    - kind: Infrastructure
+      type: local
+    - kind: OperatingSystemConfig
+      type: local
+    - kind: Worker
+      type: local
+    - kind: Extension
+      type: local-ext-seed
+      lifecycle:
+        reconcile: BeforeKubeAPIServer
+        delete: AfterKubeAPIServer
+        migrate: AfterKubeAPIServer
+      workerlessSupported: true
+    - kind: Extension
+      type: local-ext-shoot
+      workerlessSupported: true
+    - kind: Extension
+      type: local-ext-shoot-after-worker
+      lifecycle:
+        reconcile: AfterWorker

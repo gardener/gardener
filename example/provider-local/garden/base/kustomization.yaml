@@ -3,42 +3,13 @@ kind: Kustomization
 
 resources:
 - cloudprofile.yaml
-- controller-registration.yaml
+- controllerregistration.yaml
+- controllerdeployment.yaml
 - project.yaml
 - secret-backup.yaml
 - secretbinding.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.35.0/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.39.1/example/controller-registration.yaml
 
-
 patches:
-- patch: |
-    - op: add
-      path: /spec/resources/-
-      value:
-        kind: Extension
-        type: local-ext-seed
-        lifecycle:
-          reconcile: BeforeKubeAPIServer
-          delete: AfterKubeAPIServer
-          migrate: AfterKubeAPIServer
-        workerlessSupported: true
-    - op: add
-      path: /spec/resources/-
-      value:
-        kind: Extension
-        type: local-ext-shoot
-        workerlessSupported: true
-    - op: add
-      path: /spec/resources/-
-      value:
-        kind: Extension
-        type: local-ext-shoot-after-worker
-        lifecycle:
-          reconcile: AfterWorker
-  target:
-    group: core.gardener.cloud
-    kind: ControllerRegistration
-    name: provider-local
-- path: patch-controller-registrations.yaml
 - path: patch-imagevector-overwrite.yaml

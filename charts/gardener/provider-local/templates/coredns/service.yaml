@@ -21,9 +21,10 @@ spec:
     protocol: UDP
     targetPort: 9053
     nodePort: 30053
-  # uncomment to generate charts for controllerdeployment in example/provider-local/garden/ipv6/patch-controller-deployment.yaml
-  # ipFamilies:
-  # - IPv6
-  # - IPv4
-  # ipFamilyPolicy: PreferDualStack
+  {{- with .Values.coredns.ipFamilies }}
+  ipFamilies: {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  {{- with .Values.coredns.ipFamilyPolicy }}
+  ipFamilyPolicy: {{ . }}
+  {{- end }}
 {{- end -}}
