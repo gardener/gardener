@@ -91,7 +91,6 @@ var _ = Describe("VpnSeedServer", func() {
 					Labels: map[string]string{
 						v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
 						v1beta1constants.LabelApp:                                       "vpn-seed-server",
-						v1beta1constants.LabelNetworkPolicyToShootNetworks:              v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToDNS:                        v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:            v1beta1constants.LabelNetworkPolicyAllowed,
 						"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
