@@ -40,7 +40,10 @@ prometheus.io/name=<name>
 - cadvisor metrics from pods in the garden and extension namespaces
 
 The job name label will be applied to all metrics from that service.
+
 **Purpose**: Entrypoint for operators when debugging issues with extensions or other garden components.
+
+This Prometheus is not used for alerting.
 
 ### Shoot Prometheus
 
