@@ -90,12 +90,17 @@ type Values struct {
 	VPAUpdateDisabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
+	// SeedPodNetwork is the pod CIDR of the seed
+	SeedPodNetwork string
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
+	// DisableRewrite disable VPN go-rewrite
+	// TODO (MartinWeindel) remove after Oct 2024
+	DisableRewrite bool
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -475,6 +480,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 				containerNames = append(containerNames, fmt.Sprintf("%s-s%d", containerName, i))
 			}
+			containerNames = append(containerNames, "tunnel-controller")
 		}
 		var containerPolicies []vpaautoscalingv1.ContainerResourcePolicy
 		for _, name := range containerNames {
@@ -580,6 +586,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
 		}
+		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
 	}
 
 	return template
@@ -603,12 +610,36 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("100m"),
-				corev1.ResourceMemory: resource.MustParse("100Mi"),
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("10Mi"),
 			},
 			Limits: v.getResourceLimits(),
 		},
 		VolumeMounts: v.getVolumeMounts(secrets),
+	}
+}
+
+func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
+	return &corev1.Container{
+		Name:            "tunnel-controller",
+		Image:           v.values.Image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/tunnel-controller"},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("10Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("20Mi"),
+			},
+		},
 	}
 }
 
@@ -703,18 +734,22 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: v.indexedReversedHeader(index),
 		},
 		corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+			Name:  "IS_SHOOT_CLIENT",
 			Value: "true",
 		},
 		corev1.EnvVar{
-			Name:  "IS_SHOOT_CLIENT",
-			Value: "true",
+			Name:  "SEED_POD_NETWORK",
+			Value: v.values.SeedPodNetwork,
 		},
 	)
 
 	if index != nil {
 		envVariables = append(envVariables,
 			[]corev1.EnvVar{
+				{
+					Name:  "IS_HA",
+					Value: "true",
+				},
 				{
 					Name:  "VPN_SERVER_INDEX",
 					Value: strconv.Itoa(*index),
@@ -730,17 +765,26 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			}...)
 	}
 
+	if v.values.DisableRewrite {
+		envVariables = append(envVariables,
+			corev1.EnvVar{
+				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+				Value: "true",
+			},
+		)
+	}
+
 	return envVariables
 }
 
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("100Mi"),
+			corev1.ResourceMemory: resource.MustParse("40Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("120Mi"),
+		corev1.ResourceMemory: resource.MustParse("60Mi"),
 	}
 }
 
@@ -830,11 +874,20 @@ func (v *vpnShoot) getVolumes(secret []vpnSecret, secretCA, secretTLSAuth *corev
 }
 
 func (v *vpnShoot) getInitContainers() []corev1.Container {
+	var ipFamilies []string
+	for _, v := range v.values.ReversedVPN.IPFamilies {
+		ipFamilies = append(ipFamilies, string(v))
+	}
 	container := corev1.Container{
 		Name:            initContainerName,
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/vpn-client", "setup"},
 		Env: []corev1.EnvVar{
+			{
+				Name:  "IP_FAMILIES",
+				Value: strings.Join(ipFamilies, ","),
+			},
 			{
 				Name:  "IS_SHOOT_CLIENT",
 				Value: "true",
@@ -846,10 +899,6 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 						FieldPath: "metadata.name",
 					},
 				},
-			},
-			{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
@@ -868,7 +917,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 	if v.values.HighAvailabilityEnabled {
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
-				Name:  "CONFIGURE_BONDING",
+				Name:  "IS_HA",
 				Value: "true",
 			},
 			{
@@ -880,6 +929,21 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
+	}
+	if v.values.DisableRewrite {
+		container.Command = nil
+		container.Env = append(container.Env,
+			corev1.EnvVar{
+				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+				Value: "true",
+			})
+		if v.values.HighAvailabilityEnabled {
+			container.Env = append(container.Env,
+				corev1.EnvVar{
+					Name:  "CONFIGURE_BONDING",
+					Value: "true",
+				})
+		}
 	}
 	return []corev1.Container{container}
 }

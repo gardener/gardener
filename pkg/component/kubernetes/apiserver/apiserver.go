@@ -172,6 +172,11 @@ type VPNConfig struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
+	// DisableRewrite disable VPN go-rewrite
+	// TODO (MartinWeindel) remove after Oct 2024
+	DisableRewrite bool
+	// IPFamilies are the IPFamilies of the shoot.
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.

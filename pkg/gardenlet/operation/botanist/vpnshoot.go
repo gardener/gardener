@@ -14,7 +14,11 @@ import (
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpnShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	nameVpnShootClient := imagevector.ImageNameVpnClient
+	if b.Shoot.VPNDisableRewrite {
+		nameVpnShootClient = imagevector.ImageNameVpnShootClient
+	}
+	image, err := imagevector.Containers().FindImage(nameVpnShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +36,9 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+		DisableRewrite:                       b.Shoot.VPNDisableRewrite,
 		KubernetesVersion:                    b.Shoot.KubernetesVersion,
+		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
 	}
 
 	return vpnshoot.New(

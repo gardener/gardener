@@ -176,6 +176,10 @@ images:
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.25.4"
   targetVersion: "1.25.x"
+- name: vpn-server
+  sourceRepository: github.com/gardener/vpn2
+  repository: localhost:5001/europe-docker_pkg_dev_gardener-project_public_gardener_vpn-server
+  tag: 0.27.0-dev
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-seed-server
@@ -378,6 +382,10 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 
 # Shoot core addons
+- name: vpn-client
+  sourceRepository: github.com/gardener/vpn2
+  repository: localhost:5001/europe-docker_pkg_dev_gardener-project_public_gardener_vpn-client
+  tag: 0.27.0-dev
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
