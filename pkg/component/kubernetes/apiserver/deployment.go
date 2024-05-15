@@ -611,6 +611,14 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 
+	// vpn-path-controller uses ping to probe clients. By default, the kernel allows no groups to do unprivileged pings.
+	// Configuring this parameter allows group 0 to do unprivileged pings.
+	deployment.Spec.Template.Spec.SecurityContext.Sysctls = append(deployment.Spec.Template.Spec.SecurityContext.Sysctls,
+		corev1.Sysctl{
+			Name:  "net.ipv4.ping_group_range",
+			Value: "0 0",
+		})
+
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
@@ -832,7 +840,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/path-controller.sh"},
+		Args:            []string{"path-controller"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "SERVICE_NETWORK",
@@ -863,6 +871,8 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot: ptr.To(false),
 			RunAsUser:    ptr.To[int64](0),
+			// group needs to be set to a concrete value to allow unprivileged ping socket when configuring sysctl net.ipv4.ping_group_range
+			RunAsGroup: ptr.To[int64](0),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
