@@ -97,13 +97,14 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 	}
 
 	values := prometheus.Values{
-		Name:              "shoot",
-		PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
-		StorageCapacity:   resource.MustParse(b.Seed.GetValidVolumeSize("20Gi")),
-		ClusterType:       component.ClusterTypeShoot,
-		Replicas:          b.Shoot.GetReplicas(1),
-		Retention:         ptr.To(monitoringv1.Duration("30d")),
-		RetentionSize:     "15GB",
+		Name:                "shoot",
+		PriorityClassName:   v1beta1constants.PriorityClassNameShootControlPlane100,
+		StorageCapacity:     resource.MustParse(b.Seed.GetValidVolumeSize("20Gi")),
+		ClusterType:         component.ClusterTypeShoot,
+		Replicas:            b.Shoot.GetReplicas(1),
+		Retention:           ptr.To(monitoringv1.Duration("30d")),
+		RetentionSize:       "15GB",
+		RestrictToNamespace: true,
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyScrapeTargets:  v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-prometheus-cache", 9090):  v1beta1constants.LabelNetworkPolicyAllowed,

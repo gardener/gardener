@@ -87,6 +87,13 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		},
 	}
 
+	if p.values.RestrictToNamespace {
+		obj.Spec.ServiceMonitorNamespaceSelector = nil
+		obj.Spec.PodMonitorNamespaceSelector = nil
+		obj.Spec.ProbeNamespaceSelector = nil
+		obj.Spec.ScrapeConfigNamespaceSelector = nil
+	}
+
 	if p.values.Ingress != nil {
 		obj.Spec.ExternalURL = "https://" + p.values.Ingress.Host
 	}
