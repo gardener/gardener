@@ -856,7 +856,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				corev1.ResourceMemory: resource.MustParse("32Mi"),
 			},
 			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("32Mi"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 	}
