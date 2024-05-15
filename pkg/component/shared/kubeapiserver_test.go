@@ -975,12 +975,12 @@ exemptions:
 				Expect(DeployKubeAPIServer(ctx, runtimeClient, namespace, kubeAPIServer, serviceAccountConfig, serverCertificateConfig, sniConfig, externalHostname, externalServer, &nodeNetworkCIDR, nil, nil, etcdEncryptionKeyRotationPhase, wantScaleDown)).To(Succeed())
 			},
 
-			Entry("nothing is set because deployment is not found",
+			Entry("nothing is set when deployment is not found",
 				nil,
 				apiserver.AutoscalingConfig{},
 				nil,
 			),
-			Entry("nothing is set because HVPA is disabled",
+			Entry("set the existing requirements when the deployment is found and autoscaling mode is HVPA",
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
@@ -999,10 +999,10 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{HVPAEnabled: false},
-				nil,
+				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA},
+				&apiServerResources,
 			),
-			Entry("set the existing requirements because deployment found and HVPA enabled",
+			Entry("set the existing requirements when the deployment is found and scale-down is disabled",
 				func() {
 					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1021,7 +1021,29 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{HVPAEnabled: true},
+				apiserver.AutoscalingConfig{ScaleDownDisabled: true},
+				&apiServerResources,
+			),
+			Entry("set the existing requirements when the deployment is found and autoscaling mode is VPAAndHPA",
+				func() {
+					Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: namespace,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{
+										Name:      "kube-apiserver",
+										Resources: apiServerResources,
+									}},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+				apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
 				&apiServerResources,
 			),
 		)

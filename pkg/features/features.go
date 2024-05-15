@@ -71,6 +71,15 @@ const (
 	// owner: @dimityrmirchev
 	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
+
+	// VPAAndHPAForAPIServer enables an autoscaling mechanism for shoot kube-apiserver where it is scaled simultaneously
+	// by VPA and HPA on the same metric (CPU and memory usage). The pod-trashing cycle between VPA and HPA scaling on
+	// the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and
+	// by picking the target average utilization values in sync with VPA's allowed maximums.
+	// The feature gate takes precedence over the `HVPA` feature gate when they are both enabled.
+	// owner: @ialidzhikov
+	// alpha: v1.95.0
+	VPAAndHPAForAPIServer = "VPAAndHPAForAPIServer"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -108,6 +117,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
+	VPAAndHPAForAPIServer:           {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

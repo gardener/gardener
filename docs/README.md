@@ -11,7 +11,7 @@
 
 * Components
   * [Gardener API server](concepts/apiserver.md)
-    * [In-Tree admission plugins](concepts/apiserver_admission_plugins.md)
+    * [In-Tree admission plugins](concepts/apiserver-admission-plugins.md)
   * [Gardener Controller Manager](concepts/controller-manager.md)
   * [Gardener Scheduler](concepts/scheduler.md)
   * [Gardener Admission Controller](concepts/admission-controller.md)

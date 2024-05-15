@@ -1467,9 +1467,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 
-				Context("when HVPA is disabled", func() {
+				Context("when autoscaling mode is baseline", func() {
 					BeforeEach(func() {
-						values.Values.Autoscaling.HVPAEnabled = false
+						values.Values.Autoscaling.Mode = apiserver.AutoscalingModeBaseline
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
@@ -1485,9 +1485,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 				})
 
-				Context("when HVPA is enabled", func() {
+				Context("when autoscaling mode is HVPA", func() {
 					BeforeEach(func() {
-						values.Values.Autoscaling.HVPAEnabled = true
+						values.Values.Autoscaling.Mode = apiserver.AutoscalingModeHVPA
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
