@@ -71,6 +71,7 @@
 * [Admission Configuration for the `PodSecurity` Admission Plugin](usage/pod-security.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot_supported_architectures.md)
 * [Workerless `Shoot`s](usage/shoot_workerless.md)
+* [Tailscale VPN for Kubernetes API Server access](usage/tailscale.md)
 
 ## [API Reference](api-reference/README.md)
 
