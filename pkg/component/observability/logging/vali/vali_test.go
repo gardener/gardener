@@ -1172,7 +1172,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("200m"),
+									corev1.ResourceCPU:    resource.MustParse("20m"),
 									corev1.ResourceMemory: resource.MustParse("300Mi"),
 								},
 								Limits: corev1.ResourceList{
