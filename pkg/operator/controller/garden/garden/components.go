@@ -1202,6 +1202,15 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
 		},
 		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
+		AdditionalAlertLabelReconfigs: []monitoringv1.RelabelConfig{
+			{
+				SourceLabels: []monitoringv1.LabelName{"project", "name", "topology"},
+				Regex:        "(.+);(.+);shoot",
+				Action:       "replace",
+				Replacement:  ptr.To("https://dashboard." + ingressDomain + "/namespace/garden-$1/shoots/$2"),
+				TargetLabel:  "shoot_dashboard_url",
+			},
+		},
 		Ingress: &prometheus.IngressValues{
 			Host:                   "prometheus-garden." + ingressDomain,
 			SecretsManager:         secretsManager,
