@@ -209,3 +209,8 @@ func (s *Seed) IsDualStack() bool {
 	seed := s.GetInfo()
 	return len(seed.Spec.Networks.IPFamilies) == 2
 }
+
+// GetNodeCIDR returns the node CIDR of the seed.
+func (s *Seed) GetNodeCIDR() *string {
+	return s.GetInfo().Spec.Networks.Nodes
+}

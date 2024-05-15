@@ -300,4 +300,22 @@ var _ = Describe("seed", func() {
 			Expect(seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone1)).To(BeNil())
 		})
 	})
+
+	Describe("#GetNodeCIDR", func() {
+		It("should return the node network CIDR", func() {
+			var (
+				seed     = &Seed{}
+				nodeCIDR = "172.18.0.0/16"
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Networks: gardencorev1beta1.SeedNetworks{
+						Nodes: &nodeCIDR,
+					},
+				},
+			})
+
+			Expect(seed.GetNodeCIDR()).To(Equal(&nodeCIDR))
+		})
+	})
 })

@@ -600,8 +600,8 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
 		AdditionalResources: []client.Object{
-			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace),
-			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace),
+			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
+			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
 		},
 	})
 }
