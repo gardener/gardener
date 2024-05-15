@@ -250,7 +250,7 @@ test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kin
 kind2-ha-single-zone-up kind2-ha-single-zone-down gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL2_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
-kind-operator-up kind-operator-down operator%up operator-dev operator-debug operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+kind-operator-up kind-operator-down operator%up operator-dev operator-debug operator%down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 # CLUSTER_NAME
 kind-up kind-down: export CLUSTER_NAME = gardener-local
 kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
@@ -383,13 +383,16 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete
 
-operator-garden-seed-up: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/example/gardener-local/virtual-garden/kubeconfig
+operator-garden-seed-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/example/gardener-local/virtual-garden/kubeconfig
 
 operator-garden-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
 	$(SKAFFOLD) run -m garden-namespace -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments doesn't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
 	$(SKAFFOLD) run -m provider-local -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments doesn't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
 	$(SKAFFOLD) run -m gardenlet -p operator -f=skaffold.yaml
+
+operator-garden-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/operator-garden-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
