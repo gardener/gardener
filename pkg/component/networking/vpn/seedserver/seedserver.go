@@ -482,82 +482,13 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 		})
 	} else {
-		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
-		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
-			Name:            "openvpn-exporter",
-			Image:           v.values.ImageVPNSeedServer,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command: []string{
-				"/openvpn-exporter",
-				"-openvpn.status_paths",
-				statusPath,
-				"-web.listen-address",
-				fmt.Sprintf(":%d", metricsPort),
-			},
-			Ports: []corev1.ContainerPort{
-				{
-					Name:          metricsPortName,
-					ContainerPort: metricsPort,
-					Protocol:      corev1.ProtocolTCP,
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				Capabilities: &corev1.Capabilities{
-					Drop: []corev1.Capability{
-						"all",
-					},
-				},
-			},
-			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(metricsPort),
-					},
-				},
-			},
-			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(metricsPort),
-					},
-				},
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("20m"),
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
-				},
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      volumeNameStatusDir,
-					MountPath: volumeMountPathStatusDir,
-				},
-			},
-		})
-		template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "OPENVPN_STATUS_PATH",
-			Value: statusPath,
-		})
-		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameStatusDir,
-			MountPath: volumeMountPathStatusDir,
-		})
-		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameStatusDir,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-	}
-
-	if v.values.HighAvailabilityEnabled {
 		template.Spec.Containers[0].Env = append(
 			template.Spec.Containers[0].Env,
 			[]corev1.EnvVar{
+				{
+					Name:  "OPENVPN_STATUS_PATH",
+					Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+				},
 				{
 					Name:  "CLIENT_TO_CLIENT",
 					Value: "true",
@@ -575,6 +506,21 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 				},
 			}...)
+		template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
+			Name:          metricsPortName,
+			ContainerPort: MetricsPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameStatusDir,
+			MountPath: volumeMountPathStatusDir,
+		})
+		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameStatusDir,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
 	}
 
 	return template

@@ -274,55 +274,10 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				}...)
 				template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
-				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
-					Name:            "openvpn-exporter",
-					Image:           vpnImage,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command: []string{
-						"/openvpn-exporter",
-						"-openvpn.status_paths",
-						"/srv/status/openvpn.status",
-						"-web.listen-address",
-						":15000",
-					},
-					Ports: []corev1.ContainerPort{
-						{
-							Name:          "metrics",
-							ContainerPort: 15000,
-							Protocol:      corev1.ProtocolTCP,
-						},
-					},
-					ReadinessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(15000),
-							},
-						},
-					},
-					LivenessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(15000),
-							},
-						},
-					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Drop: []corev1.Capability{
-								"all",
-							},
-						},
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("20m"),
-							corev1.ResourceMemory: resource.MustParse("50Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
-						},
-					},
-					VolumeMounts: []corev1.VolumeMount{mount},
+				template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
+					Name:          "metrics",
+					ContainerPort: 15000,
+					Protocol:      corev1.ProtocolTCP,
 				})
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 					Name: "openvpn-status",
