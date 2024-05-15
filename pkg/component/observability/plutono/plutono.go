@@ -605,8 +605,8 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("32Mi"),
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("45Mi"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("400Mi"),
