@@ -193,7 +193,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 								},
 								Ports: []corev1.ContainerPort{
 									{
-										Name:          "http",
+										Name:          "https",
 										ContainerPort: 10443,
 										Protocol:      corev1.ProtocolTCP,
 									},
@@ -282,7 +282,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 				Ports: []corev1.ServicePort{
 					{
-						Name:       "http",
+						Name:       "https",
 						Port:       10443,
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt32(10443),

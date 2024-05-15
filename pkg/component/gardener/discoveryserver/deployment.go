@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	portNameServer  = "http"
+	portNameServer  = "https"
 	portNameMetrics = "metrics"
 	portNameHealthz = "healthz"
 
