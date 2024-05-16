@@ -87,7 +87,7 @@ honor_labels: true`
 		serviceAccount                      *corev1.ServiceAccount
 		service                             *corev1.Service
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
-		prometheusFor                       func(string) *monitoringv1.Prometheus
+		prometheusFor                       func(string, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                             *networkingv1.Ingress
 		prometheusRule                      *monitoringv1.PrometheusRule
@@ -203,7 +203,7 @@ honor_labels: true`
 				Namespace: namespace,
 			}},
 		}
-		prometheusFor = func(alertmanagerName string) *monitoringv1.Prometheus {
+		prometheusFor = func(alertmanagerName string, restrictToNamespace bool) *monitoringv1.Prometheus {
 			obj := &monitoringv1.Prometheus{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -272,6 +272,13 @@ honor_labels: true`
 					RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
 					RuleNamespaceSelector: &metav1.LabelSelector{},
 				},
+			}
+
+			if restrictToNamespace {
+				obj.Spec.ServiceMonitorNamespaceSelector = nil
+				obj.Spec.PodMonitorNamespaceSelector = nil
+				obj.Spec.ProbeNamespaceSelector = nil
+				obj.Spec.ScrapeConfigNamespaceSelector = nil
 			}
 
 			if alertmanagerName != "" {
@@ -593,7 +600,7 @@ honor_labels: true`
 					serviceAccount,
 					service,
 					clusterRoleBinding,
-					prometheusFor(""),
+					prometheusFor("", false),
 					vpa,
 					prometheusRule,
 					scrapeConfig,
@@ -630,7 +637,7 @@ honor_labels: true`
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor(""),
+						prometheusFor("", false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -645,6 +652,7 @@ honor_labels: true`
 			When("cluster type is shoot", func() {
 				BeforeEach(func() {
 					values.ClusterType = component.ClusterTypeShoot
+					values.RestrictToNamespace = true
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -663,7 +671,7 @@ honor_labels: true`
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor(""),
+						prometheusFor("", true),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -678,7 +686,7 @@ honor_labels: true`
 			When("ingress is configured", func() {
 				test := func() {
 					It("should successfully deploy all resources", func() {
-						prometheusObj := prometheusFor("")
+						prometheusObj := prometheusFor("", false)
 						prometheusObj.Spec.ExternalURL = "https://" + ingressHost
 
 						prometheusRule.Namespace = namespace
@@ -722,7 +730,7 @@ honor_labels: true`
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor("")
+							prometheusObj := prometheusFor("", false)
 							prometheusObj.Spec.ExternalURL = "https://" + ingressHost
 							ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = `location /-/reload {
   return 403;
@@ -787,7 +795,7 @@ location /api/v1/targets {
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor(alertmanagerName),
+						prometheusFor(alertmanagerName, false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -811,7 +819,7 @@ location /api/v1/targets {
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor(alertmanagerName)
+							prometheusObj := prometheusFor(alertmanagerName, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -862,7 +870,7 @@ basic_auth:
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor(alertmanagerName)
+							prometheusObj := prometheusFor(alertmanagerName, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -911,7 +919,7 @@ tls_config:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("")
+					prometheusObj := prometheusFor("", false)
 					prometheusObj.Spec.Replicas = ptr.To(int32(2))
 
 					prometheusRule.Namespace = namespace
@@ -943,7 +951,7 @@ tls_config:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("")
+					prometheusObj := prometheusFor("", false)
 					prometheusObj.Spec.ScrapeTimeout = "10s"
 
 					prometheusRule.Namespace = namespace
@@ -1013,7 +1021,7 @@ query_range:
 					}
 					Expect(kubernetesutils.MakeUnique(cortexConfigMap)).To(Succeed())
 
-					prometheusObj := prometheusFor("")
+					prometheusObj := prometheusFor("", false)
 					prometheusObj.Spec.Containers = append(prometheusObj.Spec.Containers, corev1.Container{
 						Name:            "cortex",
 						Image:           cortexImage,
@@ -1084,7 +1092,7 @@ query_range:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("")
+					prometheusObj := prometheusFor("", false)
 					prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
 						URL: "rw-url",
 						WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -1124,7 +1132,7 @@ query_range:
 					})
 
 					It("should successfully deploy all resources", func() {
-						prometheusObj := prometheusFor("")
+						prometheusObj := prometheusFor("", false)
 						prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
 							URL: "rw-url",
 							WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -1247,7 +1255,7 @@ query_range:
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor(""),
+						prometheusFor("", false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -1292,7 +1300,7 @@ query_range:
 							serviceAccount,
 							service,
 							clusterRoleBinding,
-							prometheusFor(""),
+							prometheusFor("", false),
 							vpa,
 							prometheusRule,
 							scrapeConfig,
