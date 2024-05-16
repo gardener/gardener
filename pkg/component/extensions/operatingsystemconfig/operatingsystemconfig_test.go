@@ -66,6 +66,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			mockNow *mocktime.MockNow
 			now     time.Time
 
+			poolHashesSecret            *corev1.Secret
 			apiServerURL                = "https://url-to-apiserver"
 			caBundle                    = ptr.To("ca-bundle")
 			clusterDNSAddress           = "cluster-dns"
@@ -175,7 +176,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 				}
 
-				key := Key(worker.Name, k8sVersion, worker.CRI)
+				key := KeyV1(worker.Name, k8sVersion, worker.CRI)
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
 				for imageName, image := range images {
@@ -320,6 +321,28 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 
+			poolHashesSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pool-hashes",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"persist": "true",
+					},
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"pools": []byte(`pools:
+    - name: worker1
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker1-77ac3
+    - name: worker2
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker2-d9e53
+`)},
+			}
+
 			expected = computeExpectedOperatingSystemConfigs(false)
 			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
@@ -444,7 +467,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := Key(worker.Name, k8sVersion, worker.CRI)
+					key := KeyV1(worker.Name, k8sVersion, worker.CRI)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
@@ -537,6 +560,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
 
+				clientGet := func(result client.Object) interface{} {
+					return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						switch obj.(type) {
+						case *corev1.Secret:
+							*obj.(*corev1.Secret) = *result.(*corev1.Secret)
+						}
+						return nil
+					}
+				}
+
+				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(poolHashesSecret), gomock.AssignableToTypeOf(poolHashesSecret)).
+					DoAndReturn(clientGet(poolHashesSecret))
+				mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(poolHashesSecret), client.RawPatch(types.MergePatchType, []byte("{}"))).
+					Return(nil)
+
 				defaultDepWaiter = New(log, mc, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 			})
@@ -544,16 +582,28 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Wait", func() {
 			It("should return error when no resources are found", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+				for i := range expected {
+					Expect(c.Delete(ctx, expected[i])).To(Succeed())
+				}
+
 				Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 			})
 
 			It("should return error when resource is not ready", func() {
+				defer test.WithVars(&TimeNow, mockNow.Do)()
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
 				errDescription := "Some error"
 
 				for i := range expected {
+					Expect(c.Delete(ctx, expected[i])).To(Succeed())
 					expected[i].Status.LastError = &gardencorev1beta1.LastError{
 						Description: errDescription,
 					}
+					// unconditional replace for testing
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 				}
 
@@ -561,13 +611,26 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should return error when status does not contain cloud config information", func() {
+				defer test.WithVars(
+					&TimeNow, mockNow.Do,
+				)()
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				// Deploy should fill internal state with the added timestamp annotation
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
 				for i := range expected {
+					Expect(c.Delete(ctx, expected[i])).To(Succeed())
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{}
+					expected[i].ObjectMeta.Annotations = map[string]string{
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
+					}
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
+						State:          gardencorev1beta1.LastOperationStateSucceeded,
+						LastUpdateTime: metav1.NewTime(now.UTC()),
 					}
+					// unconditional replace for testing
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 				}
 
@@ -674,12 +737,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("WorkerNameToOperatingSystemConfigsMap", func() {
 			It("should return the correct result from the Wait operation", func() {
+				defer test.WithVars(
+					&TimeNow, mockNow.Do,
+				)()
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				// Deploy should fill internal state with the added timestamp annotation
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
 				for i := range expected {
+					Expect(c.Delete(ctx, expected[i])).To(Succeed())
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{}
+					expected[i].ObjectMeta.Annotations = map[string]string{
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
+					}
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
+						State:          gardencorev1beta1.LastOperationStateSucceeded,
+						LastUpdateTime: metav1.Time{Time: now}.Rfc3339Copy(),
 					}
 					// set cloud-config secret information
 					expected[i].Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
@@ -704,19 +779,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				worker1OSCDownloader := expected[0]
-				worker1OSCDownloader.Annotations = nil
-
 				worker1OSCOriginal := expected[1]
-				worker1OSCOriginal.Annotations = nil
-
 				worker2OSCDownloader := expected[2]
-				worker2OSCDownloader.Annotations = nil
-
 				worker2OSCOriginal := expected[3]
-				worker2OSCOriginal.Annotations = nil
 
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
-				Expect(defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
+
+				wn := defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()
+				exp := map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
 							Content:                     "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
@@ -745,7 +815,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Object:                      worker2OSCOriginal,
 						},
 					},
-				}))
+				}
+				Expect(wn).To(Equal(exp))
 			})
 		})
 
@@ -876,9 +947,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				staleOSC.Name = "new-name"
 				Expect(c.Create(ctx, staleOSC)).To(Succeed())
 
-				for _, e := range expected {
-					Expect(c.Create(ctx, e)).To(Succeed())
-				}
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				Expect(defaultDepWaiter.DeleteStaleResources(ctx)).To(Succeed())
 
@@ -893,15 +962,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#WaitCleanupStaleResources", func() {
 			It("should not return error if all resources are gone", func() {
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+				for i := range expected {
+					Expect(c.Delete(ctx, expected[i])).To(Succeed())
+				}
+
 				Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
 			})
 
 			It("should not return error if wanted resources exist", func() {
-				Expect(c.Create(ctx, expected[0])).To(Succeed())
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
 				Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
 			})
 
 			It("should return error if stale resources still exist", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
 				staleOSC := expected[0].DeepCopy()
 				staleOSC.Name = "new-name"
 				Expect(c.Create(ctx, staleOSC)).To(Succeed(), "creating stale OSC succeeds")
@@ -918,16 +996,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should return an empty string", func() {
-			Expect(Key(workerName, nil, nil)).To(BeEmpty())
+			Expect(KeyV1(workerName, nil, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
+			Expect(KeyV1(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("is different for different worker.cri configurations", func() {
-			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			containerDKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+			otherKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
 			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 	})

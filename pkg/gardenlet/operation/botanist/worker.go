@@ -191,7 +191,7 @@ func nodeUsesOutdatedGardenerNodeAgentSecret(node corev1.Node, gardenerNodeAgent
 		criConfig = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName(v)}
 	}
 
-	return operatingsystemconfig.Key(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
+	return operatingsystemconfig.KeyV1(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
 }
 
 // exposed for testing

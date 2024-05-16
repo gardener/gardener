@@ -192,12 +192,12 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			worker1Name            = "worker1"
 			worker1OriginalContent = "w1content"
-			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
+			worker1Key             = operatingsystemconfig.KeyV1(worker1Name, semver.MustParse(kubernetesVersion), nil)
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
 			worker2KubernetesVersion     = "4.5.6"
-			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+			worker2Key                   = operatingsystemconfig.KeyV1(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
