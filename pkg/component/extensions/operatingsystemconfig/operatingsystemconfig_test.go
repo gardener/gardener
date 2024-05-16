@@ -374,6 +374,144 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}))
 			})
 
+			It("should successfully create the pool-hashes secret", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+				))
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"persist": "true",
+				}))
+				pools := secret.Data["pools"]
+				Expect(string(pools)).To(Equal(`pools:
+    - name: worker1
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker1-77ac3
+    - name: worker2
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker2-d9e53
+`))
+			})
+
+			calculateKeyForVersionFn := func(oscVersion int, _ *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+				switch oscVersion {
+				case 1:
+					return worker.Name + "-version1", nil
+				case 2:
+					return worker.Name + "-version2", nil
+				default:
+					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+				}
+			}
+
+			It("should successfully fill missing hashes and workers in the pool-hashes secret", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+					&LatestHashVersion, 2,
+					&CalculateKeyForVersion, calculateKeyForVersionFn,
+				))
+
+				poolHashesSecret.Data["pools"] = []byte(`pools:
+    - name: worker1
+      currentversion: 1
+`)
+				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"persist": "true",
+				}))
+				pools := secret.Data["pools"]
+				Expect(string(pools)).To(Equal(`pools:
+    - name: worker1
+      currentversion: 1
+      hashes:
+        1: worker1-version1
+        2: worker1-version2
+    - name: worker2
+      currentversion: 2
+      hashes:
+        2: worker2-version2
+`))
+
+			})
+
+			It("should successfully upgrade the hash versions in the pool-hashes secret", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+					&LatestHashVersion, 2,
+					&CalculateKeyForVersion, calculateKeyForVersionFn,
+				))
+
+				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"persist": "true",
+				}))
+				pools := secret.Data["pools"]
+				Expect(string(pools)).To(Equal(`pools:
+    - name: worker1
+      currentversion: 2
+      hashes:
+        2: worker1-version2
+    - name: worker2
+      currentversion: 2
+      hashes:
+        2: worker2-version2
+`))
+			})
+
+			calculateStableKeyForVersionFn := func(oscVersion int, kubernetesVersion *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+				switch oscVersion {
+				case 1:
+					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
+				case 2:
+					return worker.Name + "-version2", nil
+				default:
+					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+				}
+			}
+
+			It("should successfully keep the current hash versions if nothing changes in the pool-hashes secret", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+					&LatestHashVersion, 2,
+					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
+				))
+
+				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"persist": "true",
+				}))
+				pools := secret.Data["pools"]
+				Expect(string(pools)).To(Equal(`pools:
+    - name: worker1
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker1-77ac3
+        2: worker1-version2
+    - name: worker2
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker2-d9e53
+        2: worker2-version2
+`))
+
+			})
 			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
@@ -1007,6 +1145,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 			containerDKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
 			otherKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
 			Expect(containerDKey).NotTo(Equal(otherKey))
+		})
+
+		It("should return the expected key for version 1", func() {
+			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), &gardencorev1beta1.Worker{
+				Name: workerName,
+			})
+			Expect(err).To(Succeed())
+			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
+		})
+
+		It("should return an error for unknown versions", func() {
+			for _, version := range []int{0, 2} {
+				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil)
+				Expect(err).NotTo(Succeed())
+			}
 		})
 	})
 })
