@@ -764,10 +764,15 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-extension-provider-local
+    - image: provider-local-node
+      context: pkg/provider-local/node
+      docker: {}
 resourceSelector:
   allow:
     # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
     - groupKind: ControllerDeployment.core.gardener.cloud
+      image: [".*"]
+    - groupKind: CloudProfile.core.gardener.cloud
       image: [".*"]
 manifests:
   rawYaml:

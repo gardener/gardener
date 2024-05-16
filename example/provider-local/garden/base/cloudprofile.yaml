@@ -24,7 +24,7 @@ spec:
   machineImages:
   - name: local
     versions:
-    - version: 1.0.0
+    - version: 0.0.0
       cri:
       - name: containerd
   providerConfig:
@@ -33,5 +33,5 @@ spec:
     machineImages:
     - name: local
       versions:
-      - version: 1.0.0
-        image: ghcr.io/gardener/machine-controller-manager-provider-local/node:latest
+      - version: 0.0.0
+        image: provider-local-node:v0.0.0
