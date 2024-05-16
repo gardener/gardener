@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 
+	"use-logr/helper"
+
 	"github.com/go-logr/logr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -29,10 +31,16 @@ func WithValues(keysAndValues ...any) logr.Logger       { return logr.Logger{} }
 
 // begin test cases
 
-func notCallingFuncWithSelectorExpr() {
+func notCallingFuncWithoutSelectorExpr() {
 	Info("foo")
 	Error(errors.New("foo"), "bar")
 	WithValues("foo", "bar")
+}
+
+func notCallingFuncWithSelectorExpr() {
+	helper.Info("foo")
+	helper.Error(errors.New("foo"), "bar")
+	helper.WithValues("foo", "bar")
 }
 
 func notCallingRelevantMethod() {
