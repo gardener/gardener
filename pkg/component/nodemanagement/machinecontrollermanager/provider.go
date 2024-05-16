@@ -23,8 +23,7 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 		Name:            providerSidecarContainerName(providerName),
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"./machine-controller",
+		Args: []string{
 			"--control-kubeconfig=inClusterConfig",
 			"--machine-creation-timeout=20m",
 			"--machine-drain-timeout=2h",

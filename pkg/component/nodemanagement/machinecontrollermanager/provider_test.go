@@ -28,8 +28,7 @@ var _ = Describe("Provider", func() {
 			Name:            "machine-controller-manager-" + provider,
 			Image:           image,
 			ImagePullPolicy: "IfNotPresent",
-			Command: []string{
-				"./machine-controller",
+			Args: []string{
 				"--control-kubeconfig=inClusterConfig",
 				"--machine-creation-timeout=20m",
 				"--machine-drain-timeout=2h",
