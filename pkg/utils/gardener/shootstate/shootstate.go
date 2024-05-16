@@ -158,8 +158,7 @@ func computeSecretsToPersist(
 ) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
-		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
-		secretsmanager.LabelKeyPersist:   secretsmanager.LabelValueTrue,
+		secretsmanager.LabelKeyPersist: secretsmanager.LabelValueTrue,
 	}); err != nil {
 		return nil, fmt.Errorf("failed listing all secrets that must be persisted: %w", err)
 	}

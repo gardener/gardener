@@ -90,9 +90,9 @@ var _ = Describe("ShootState", func() {
 				Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 
 				By("Creating Gardener data")
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", seedNamespace, true))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", seedNamespace, false))).To(Succeed())
-				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", seedNamespace, true, true))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", seedNamespace, false, true))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true, false))).To(Succeed())
 
 				By("Creating extensions data")
 				purposeNormal, purposeExposure := extensionsv1alpha1.Normal, extensionsv1alpha1.Exposure
@@ -126,7 +126,7 @@ var _ = Describe("ShootState", func() {
 							Name:   "secret3",
 							Type:   "secret",
 							Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
-							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+							Labels: map[string]string{"persist": "true"},
 						},
 						{
 							Name: "machine-state",
@@ -239,17 +239,20 @@ var _ = Describe("ShootState", func() {
 	})
 })
 
-func newSecret(name, namespace string, withPersistLabel bool) *corev1.Secret {
+func newSecret(name, namespace string, withPersistLabel bool, withManagedByLabel bool) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    map[string]string{"managed-by": "secrets-manager"},
+			Labels:    map[string]string{},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{name: []byte("some-data")},
 	}
 
+	if withManagedByLabel {
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, "managed-by", "secrets-manager")
+	}
 	if withPersistLabel {
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, "persist", "true")
 	}
