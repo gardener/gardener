@@ -626,6 +626,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 
 	container := *k.vpnSeedClientContainer(0)
 	container.Name = "vpn-client-init"
+	container.Args = []string{"setup"}
 	container.Env = append(container.Env, []corev1.EnvVar{
 		{
 			Name:  "CONFIGURE_BONDING",
