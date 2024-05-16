@@ -279,6 +279,7 @@ honor_labels: true`
 				obj.Spec.PodMonitorNamespaceSelector = nil
 				obj.Spec.ProbeNamespaceSelector = nil
 				obj.Spec.ScrapeConfigNamespaceSelector = nil
+				obj.Spec.RuleNamespaceSelector = nil
 			}
 
 			if alertmanagerName != "" {

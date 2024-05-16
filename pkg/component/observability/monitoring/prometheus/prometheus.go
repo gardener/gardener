@@ -92,6 +92,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		obj.Spec.PodMonitorNamespaceSelector = nil
 		obj.Spec.ProbeNamespaceSelector = nil
 		obj.Spec.ScrapeConfigNamespaceSelector = nil
+		obj.Spec.RuleNamespaceSelector = nil
 	}
 
 	if p.values.Ingress != nil {
