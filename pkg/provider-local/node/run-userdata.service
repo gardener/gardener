@@ -1,0 +1,10 @@
+[Unit]
+Description=run-userdata
+Documentation=http://kubernetes.io/docs/
+
+[Service]
+ExecStart=/run-userdata.sh
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
