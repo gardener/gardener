@@ -556,9 +556,22 @@ var _ = Describe("VpnSeedServer", func() {
 			svc := expectedService.DeepCopy()
 			svc.Name = fmt.Sprintf("%s-%d", ServiceName, idx)
 			svc.Spec.Selector = map[string]string{
-				"statefulset.kubernetes.io/pod-name": svc.Name,
+				"sts-service-selector": svc.Name,
 			}
 			return svc
+		}
+
+		indexedPod = func(idx int) *corev1.Pod {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d", DeploymentName, idx),
+					Namespace: namespace,
+					Labels: map[string]string{
+						"test-key": "test-value",
+					},
+				},
+			}
+			return pod
 		}
 
 		expectedVpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -747,6 +760,12 @@ var _ = Describe("VpnSeedServer", func() {
 				deployment.ResourceVersion = ""
 				Expect(c.Create(ctx, deployment)).To(Succeed())
 
+				for i := 0; i < int(values.Replicas); i++ {
+					pod := indexedPod(i)
+					pod.ResourceVersion = ""
+					Expect(c.Create(ctx, pod)).To(Succeed())
+				}
+
 				dr := destinationRule()
 				dr.ResourceVersion = ""
 				Expect(c.Create(ctx, dr)).To(Succeed())
@@ -777,6 +796,13 @@ var _ = Describe("VpnSeedServer", func() {
 					expectedService := indexedService(i)
 					Expect(c.Get(ctx, kubernetesutils.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
 					Expect(actualService).To(DeepEqual(expectedService))
+				}
+
+				for i := 0; i < int(values.Replicas); i++ {
+					pod := &corev1.Pod{}
+					expectedPod := indexedPod(i)
+					Expect(c.Get(ctx, kubernetesutils.Key(expectedPod.Namespace, expectedPod.Name), pod)).To(Succeed())
+					Expect(pod.ObjectMeta.Labels).To(HaveKeyWithValue("sts-service-selector", expectedPod.Name))
 				}
 
 				actualConfigMap := &corev1.ConfigMap{}

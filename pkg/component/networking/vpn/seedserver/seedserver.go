@@ -210,6 +210,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		}
 
 		for i := 0; i < int(v.values.Replicas); i++ {
+			if err := v.updatePodLabel(ctx, &i); err != nil {
+				return err
+			}
+
 			if err := v.deployService(ctx, &i); err != nil {
 				return err
 			}
@@ -602,6 +606,18 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 	return v.deployPodDisruptionBudget(ctx, podLabels)
 }
 
+func (v *vpnSeedServer) updatePodLabel(ctx context.Context, idx *int) error {
+	pod := v.emptyPod(idx)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pod, func() error {
+		pod.ObjectMeta.Labels["sts-service-selector"] = v.indexedName(idx)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels map[string]string) error {
 	pdb := v.emptyPodDisruptionBudget()
 
@@ -684,7 +700,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 			}
 		} else {
 			service.Spec.Selector = map[string]string{
-				"statefulset.kubernetes.io/pod-name": v.indexedName(idx),
+				"sts-service-selector": v.indexedName(idx),
 			}
 		}
 
@@ -807,6 +823,10 @@ func (v *vpnSeedServer) indexedName(idx *int) string {
 
 func (v *vpnSeedServer) emptyService(idx *int) *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v.indexedName(idx), Namespace: v.namespace}}
+}
+
+func (v *vpnSeedServer) emptyPod(idx *int) *corev1.Pod {
+	return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: v.indexedName(idx), Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyDeployment() *appsv1.Deployment {

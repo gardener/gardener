@@ -46,6 +46,7 @@ rules:
   - watch
   - delete
   - deletecollection
+  - patch
 - apiGroups:
   - ""
   resources:
