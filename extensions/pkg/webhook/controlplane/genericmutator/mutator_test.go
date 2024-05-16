@@ -172,21 +172,6 @@ var _ = Describe("Mutator", func() {
 			Expect(err).To(Not(HaveOccurred()))
 		},
 			Entry(
-				"EnsureKubeAPIServerService with a kube-apiserver service",
-				func() {
-					newObj = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
-				},
-			),
-			Entry(
-				"EnsureKubeAPIServerService with a kube-apiserver service and existing service",
-				func() {
-					newObj = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					oldObj = newObj.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
-				},
-			),
-			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment",
 				func() {
 					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}

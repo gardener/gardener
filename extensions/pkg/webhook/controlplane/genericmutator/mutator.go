@@ -14,7 +14,6 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -36,9 +35,6 @@ import (
 // Ensurer ensures that various standard Kubernetes control plane objects conform to the provider requirements.
 // If they don't initially, they are mutated accordingly.
 type Ensurer interface {
-	// EnsureKubeAPIServerService ensures that the kube-apiserver service conforms to the provider requirements.
-	// "old" might be "nil" and must always be checked.
-	EnsureKubeAPIServerService(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *corev1.Service) error
 	// EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureKubeAPIServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
@@ -126,21 +122,6 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	gctx := extensionscontextwebhook.NewGardenContext(m.client, new)
 
 	switch x := new.(type) {
-	case *corev1.Service:
-		switch x.Name {
-		case v1beta1constants.DeploymentNameKubeAPIServer:
-			var oldSvc *corev1.Service
-			if old != nil {
-				var ok bool
-				oldSvc, ok = old.(*corev1.Service)
-				if !ok {
-					return errors.New("could not cast old object to corev1.Service")
-				}
-			}
-
-			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
-			return m.ensurer.EnsureKubeAPIServerService(ctx, gctx, x, oldSvc)
-		}
 	case *appsv1.Deployment:
 		var oldDep *appsv1.Deployment
 		if old != nil {

@@ -11,7 +11,6 @@ import (
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 
@@ -23,11 +22,6 @@ import (
 type NoopEnsurer struct{}
 
 var _ Ensurer = &NoopEnsurer{}
-
-// EnsureKubeAPIServerService ensures that the kube-apiserver service conforms to the provider requirements.
-func (e *NoopEnsurer) EnsureKubeAPIServerService(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *corev1.Service) error {
-	return nil
-}
 
 // EnsureKubeAPIServerDeployment ensures that the kube-apiserver deployment conforms to the provider requirements.
 func (e *NoopEnsurer) EnsureKubeAPIServerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *appsv1.Deployment) error {
