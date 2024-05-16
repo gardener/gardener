@@ -433,6 +433,10 @@ spec:
 				if highAvailable {
 					env = append(env, []corev1.EnvVar{
 						{
+							Name:  "IS_HA",
+							Value: "true",
+						},
+						{
 							Name:  "VPN_SERVER_INDEX",
 							Value: strconv.Itoa(*index),
 						},
