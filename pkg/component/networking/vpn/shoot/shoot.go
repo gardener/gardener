@@ -698,10 +698,6 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: v.indexedReversedHeader(index),
 		},
 		corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-			Value: "true",
-		},
-		corev1.EnvVar{
 			Name:  "IS_SHOOT_CLIENT",
 			Value: "true",
 		},
@@ -860,7 +856,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 	if v.values.HighAvailabilityEnabled {
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
-				Name:  "CONFIGURE_BONDING",
+				Name:  "IS_HA",
 				Value: "true",
 			},
 			{

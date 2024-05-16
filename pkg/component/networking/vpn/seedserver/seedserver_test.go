@@ -269,6 +269,10 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					{
+						Name:  "IS_HA",
+						Value: "true",
+					},
+					{
 						Name:  "HA_VPN_CLIENTS",
 						Value: "2",
 					},

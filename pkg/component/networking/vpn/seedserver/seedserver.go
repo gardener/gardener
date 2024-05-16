@@ -502,6 +502,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 				},
 				{
+					Name:  "IS_HA",
+					Value: "true",
+				},
+				{
 					Name:  "HA_VPN_CLIENTS",
 					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 				},

@@ -629,10 +629,6 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	container.Args = []string{"setup"}
 	container.Env = append(container.Env, []corev1.EnvVar{
 		{
-			Name:  "CONFIGURE_BONDING",
-			Value: "true",
-		},
-		{
 			Name: "POD_NAME",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -780,6 +776,10 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 				Value: strconv.Itoa(index),
 			},
 			{
+				Name:  "IS_HA",
+				Value: "true",
+			},
+			{
 				Name:  "HA_VPN_SERVERS",
 				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfSeedServers),
 			},
@@ -790,10 +790,6 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			{
 				Name:  "OPENVPN_PORT",
 				Value: strconv.Itoa(vpnseedserver.OpenVPNPort),
-			},
-			{
-				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-				Value: "true",
 			},
 		},
 		Resources: corev1.ResourceRequirements{
@@ -850,6 +846,10 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			{
 				Name:  "NODE_NETWORK",
 				Value: ptr.Deref(k.values.VPN.NodeNetworkCIDR, ""),
+			},
+			{
+				Name:  "IS_HA",
+				Value: "true",
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",
