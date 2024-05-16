@@ -1204,10 +1204,17 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
 		AdditionalAlertLabelReconfigs: []monitoringv1.RelabelConfig{
 			{
-				SourceLabels: []monitoringv1.LabelName{"project", "name", "topology"},
-				Regex:        "(.+);(.+);shoot",
+				SourceLabels: []monitoringv1.LabelName{"project", "name"},
+				Regex:        "(.+);(.+)",
 				Action:       "replace",
 				Replacement:  ptr.To("https://dashboard." + ingressDomain + "/namespace/garden-$1/shoots/$2"),
+				TargetLabel:  "shoot_dashboard_url",
+			},
+			{
+				SourceLabels: []monitoringv1.LabelName{"project", "name"},
+				Regex:        "garden;(.+)",
+				Action:       "replace",
+				Replacement:  ptr.To("https://dashboard." + ingressDomain + "/namespace/garden/shoots/$1"),
 				TargetLabel:  "shoot_dashboard_url",
 			},
 		},
