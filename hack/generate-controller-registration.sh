@@ -90,13 +90,12 @@ mkdir -p "$(dirname "$DEST")"
 
 cat <<EOM > "$DEST"
 ---
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: $NAME
-type: helm
-providerConfig:
-  chart: $chart
+helm:
+  rawChart: $chart
   values:
 EOM
 
