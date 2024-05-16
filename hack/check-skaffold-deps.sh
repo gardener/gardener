@@ -20,14 +20,15 @@ function run() {
 }
 
 # skaffold.yaml
-run "skaffold.yaml" "gardener-admission-controller"      "controlplane"
-run "skaffold.yaml" "gardener-apiserver"                 "controlplane"
-run "skaffold.yaml" "gardener-controller-manager"        "controlplane"
-run "skaffold.yaml" "gardener-extension-provider-local"  "provider-local"
-run "skaffold.yaml" "gardener-resource-manager"          "gardenlet"
-run "skaffold.yaml" "gardener-node-agent"                "gardenlet"
-run "skaffold.yaml" "gardener-scheduler"                 "controlplane"
-run "skaffold.yaml" "gardenlet"                          "gardenlet"
+run "skaffold.yaml" "gardener-admission-controller"             "controlplane"
+run "skaffold.yaml" "gardener-apiserver"                        "controlplane"
+run "skaffold.yaml" "gardener-controller-manager"               "controlplane"
+run "skaffold.yaml" "gardener-extension-provider-local"         "provider-local"
+run "skaffold.yaml" "machine-controller-manager-provider-local" "provider-local"
+run "skaffold.yaml" "gardener-resource-manager"                 "gardenlet"
+run "skaffold.yaml" "gardener-node-agent"                       "gardenlet"
+run "skaffold.yaml" "gardener-scheduler"                        "controlplane"
+run "skaffold.yaml" "gardenlet"                                 "gardenlet"
 
 # skaffold-operator.yaml
 run "skaffold-operator.yaml" "gardener-operator"             "gardener-operator"
