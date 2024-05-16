@@ -66,7 +66,7 @@ go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
 read -r -a go_dependencies <<< "$(sed -e "s#^#./#" "$path_actual_dependencies" | tr '\n' ' ')"
 # the EmbedPatterns are relative to the module, so we prepend the ImportPath
 go list -json "${go_dependencies[@]}" |\
-  jq -r '.ImportPath as $p | select(.EmbedPatterns!=null) | .EmbedPatterns[] |= $p+"/"+. | .EmbedPatterns[]' |\
+  yq eval -p=json -N ".ImportPath as \$p | select(.EmbedPatterns!=null) | .EmbedPatterns[] |= \$p+\"/\"+. | .EmbedPatterns[]" |\
   sed "s@$module_prefix@@g" >> "$path_actual_dependencies"
 
 # always add VERSION file
