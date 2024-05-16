@@ -100,6 +100,13 @@ func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client,
 	}
 
 	for _, pod := range podList.Items {
+		if pod.Annotations["cni.projectcalico.org/ipv4pools"] != "" || pod.Annotations["cni.projectcalico.org/ipv6pools"] != "" {
+			// machine-controller-manager-provider-local configures machine pods to use IPs from dedicated IPPools that
+			// correlate with the configured shoot node CIDR. I.e., such pods will use IPs outside the configured seed pod
+			// CIDR. Skip pods configuring non-default IPPools in this heuristic check accordingly.
+			continue
+		}
+
 		if !pod.Spec.HostNetwork && pod.Status.PodIP != "" {
 			if ip := net.ParseIP(pod.Status.PodIP); ip != nil && !seedConfigPods.Contains(ip) {
 				return fmt.Errorf("incorrect pod network specified in seed configuration (cluster pod=%q vs. config=%q)", ip, seedConfig.Spec.Networks.Pods)
