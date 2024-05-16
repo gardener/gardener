@@ -843,10 +843,6 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 					},
 				},
 			},
-			{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
-			},
 		},
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: ptr.To(true),
