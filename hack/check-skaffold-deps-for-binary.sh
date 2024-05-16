@@ -62,6 +62,13 @@ go list -f '{{ join .Deps "\n" }}' "./cmd/$binary_name" |\
   sort -f |\
   uniq >> "$path_actual_dependencies"
 
+# read dependencies into array and add prefix "./"
+read -r -a go_dependencies <<< "$(sed -e "s#^#./#" "$path_actual_dependencies" | tr '\n' ' ')"
+# the EmbedPatterns are relative to the module, so we prepend the ImportPath
+go list -json "${go_dependencies[@]}" |\
+  jq -r '.ImportPath as $p | select(.EmbedPatterns!=null) | .EmbedPatterns[] |= $p+"/"+. | .EmbedPatterns[]' |\
+  sed "s@$module_prefix@@g" >> "$path_actual_dependencies"
+
 # always add VERSION file
 echo "VERSION" >> "$path_actual_dependencies"
 # add vendor if the vendor/ dir exists
@@ -69,9 +76,8 @@ if [[ -d "$repo_root/vendor" ]]; then
   echo "vendor" >> "$path_actual_dependencies"
 fi
 
-# sort dependencies
-sort -fo "$path_current_skaffold_dependencies"{,}
-sort -fo "$path_actual_dependencies"{,}
+# sort dependencies and ensure uniqueness
+sort -u -fo "$path_actual_dependencies"{,}
 
 case "$operation" in
   check)
