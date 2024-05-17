@@ -5,7 +5,9 @@
 package cache
 
 import (
+	"bytes"
 	_ "embed"
+	"text/template"
 )
 
 var (
@@ -15,10 +17,33 @@ var (
 	kubelet string
 )
 
+// Data represents the data for the template.
+type Data struct {
+	IsManagedSeed bool
+}
+
 // AdditionalScrapeConfigs returns the additional scrape configs for the cache prometheus.
-func AdditionalScrapeConfigs() []string {
+func AdditionalScrapeConfigs(isManagedSeed bool) []string {
 	return []string{
-		cAdvisor,
-		kubelet,
+		process(cAdvisor, isManagedSeed),
+		process(kubelet, isManagedSeed),
 	}
+}
+
+func process(text string, isManagedSeed bool) string {
+	data := Data{
+		IsManagedSeed: isManagedSeed,
+	}
+
+	tmpl, err := template.New("Template").Parse(text)
+	if err != nil {
+		panic(err)
+	}
+
+	var result bytes.Buffer
+	if err := tmpl.Execute(&result, data); err != nil {
+		panic(err)
+	}
+
+	return result.String()
 }

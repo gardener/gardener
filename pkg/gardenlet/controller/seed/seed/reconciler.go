@@ -60,6 +60,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	managedSeed, err := kubernetesutils.GetManagedSeedByName(ctx, r.GardenClient, seed.Name)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, fmt.Errorf("failed to get managed seed: %w", err)
+		}
+	}
+	isManagedSeed := managedSeed != nil
+
 	operationType := gardencorev1beta1.LastOperationTypeReconcile
 	if seed.DeletionTimestamp != nil {
 		operationType = gardencorev1beta1.LastOperationTypeDelete
@@ -98,13 +106,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if seed.DeletionTimestamp != nil {
-		if err := r.delete(ctx, log, seedObj, seedIsGarden); err != nil {
+		if err := r.delete(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
 			return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.reconcile(ctx, log, seedObj, seedIsGarden); err != nil {
+	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 

@@ -33,6 +33,7 @@ func (r *Reconciler) delete(
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
+	isManagedSeed bool,
 ) error {
 	seed := seedObj.GetInfo()
 
@@ -78,7 +79,7 @@ func (r *Reconciler) delete(
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
-	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
+	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
 		return err
 	}
 
@@ -98,9 +99,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 	log logr.Logger,
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
+	isManagedSeed bool,
 ) error {
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil)
+	c, err := r.instantiateComponents(ctx, log, seed, nil, seedIsGarden, nil, nil, nil, isManagedSeed)
 	if err != nil {
 		return err
 	}
