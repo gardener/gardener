@@ -45,6 +45,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 			if !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, newShoot.Spec.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Status.SeedName, newShoot.Status.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, newShoot.Spec.SecretBindingName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, newShoot.Spec.CredentialsBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
 				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
@@ -83,6 +84,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeCredentialsBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 
@@ -96,6 +98,12 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		secretBindingVertex := g.getOrCreateVertex(VertexTypeSecretBinding, shoot.Namespace, *shoot.Spec.SecretBindingName)
 		g.addEdge(secretBindingVertex, shootVertex)
 	}
+
+	if shoot.Spec.CredentialsBindingName != nil {
+		credentialsBindingVertex := g.getOrCreateVertex(VertexTypeCredentialsBinding, shoot.Namespace, *shoot.Spec.CredentialsBindingName)
+		g.addEdge(credentialsBindingVertex, shootVertex)
+	}
+
 	g.addEdge(namespaceVertex, shootVertex)
 	g.addEdge(cloudProfileVertex, shootVertex)
 

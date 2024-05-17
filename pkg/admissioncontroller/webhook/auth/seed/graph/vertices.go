@@ -54,6 +54,8 @@ const (
 	VertexTypeShootState
 	// VertexTypeGardenlet is a constant for a 'Gardenlet' vertex.
 	VertexTypeGardenlet
+	// VertexTypeCredentialsBinding is a constant for a 'CredentialsBinding' vertex.
+	VertexTypeCredentialsBinding
 )
 
 var vertexTypes = map[VertexType]string{
