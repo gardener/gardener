@@ -31,6 +31,11 @@ func (workloadIdentityStrategy) NamespaceScoped() bool {
 }
 
 func (s workloadIdentityStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+	// During creation, the resource name (when generateName is used) and UID are set after all mutating plugins,
+	// also after defaulting. Because of this, it is not possible to set the `status.sub` field
+	// neither with the static default, nor with admission plugin (built-in or dynamic webhook).
+	// ref: https://github.com/kubernetes/kubernetes/issues/46107#issuecomment-537601110
+
 	wi := obj.(*security.WorkloadIdentity)
 	if string(wi.GetUID()) == "" {
 		wi.SetUID(uuid.NewUUID())
