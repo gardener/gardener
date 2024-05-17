@@ -16,6 +16,24 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/security/v1alpha1";
 
+// ContextObject identify the object the token is requested for.
+message ContextObject {
+  // Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.
+  optional string kind = 1;
+
+  // API version of the object the token is requested for.
+  optional string apiVersion = 2;
+
+  // Name of the object the token is requested for.
+  optional string name = 3;
+
+  // Namespace of the object the token is requested for.
+  optional string namespace = 4;
+
+  // UID of the object the token is requested for.
+  optional string uid = 5;
+}
+
 // CredentialsBinding represents a binding to credentials in the same or another namespace.
 message CredentialsBinding {
   // Standard object metadata.
@@ -60,6 +78,38 @@ message TargetSystem {
   // ProviderConfig is the configuration passed to extension resource.
   // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+}
+
+// TokenRequest is resource that can be used to request WorkloadIdentity tokens.
+message TokenRequest {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec holds configuration settings for the requested token.
+  optional TokenRequestSpec spec = 2;
+
+  // Status is bears the issued token with additional information back to the client.
+  optional TokenRequestStatus status = 3;
+}
+
+// TokenRequestSpec holds configuration settings for the requested token.
+message TokenRequestSpec {
+  // ContextObject identify the object the token is requested for.
+  // +optional
+  optional ContextObject contextObject = 1;
+
+  // Duration specifies for how long the requested token to be valid.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 2;
+}
+
+// TokenRequestStatus bears the issued token with additional information back to the client.
+message TokenRequestStatus {
+  // Token is the issued token.
+  optional string token = 1;
+
+  // ExpirationTimeStamp is the time of expiration of the returned token.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
 // WorkloadIdentity is resource that allows workloads to be presented before external systems

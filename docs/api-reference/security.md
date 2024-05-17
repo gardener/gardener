@@ -212,6 +212,80 @@ WorkloadIdentityStatus
 </tr>
 </tbody>
 </table>
+<h3 id="security.gardener.cloud/v1alpha1.ContextObject">ContextObject
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#security.gardener.cloud/v1alpha1.TokenRequestSpec">TokenRequestSpec</a>)
+</p>
+<p>
+<p>ContextObject identify the object the token is requested for.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind of the object the token is requested for. Valid kinds are &lsquo;Shoot&rsquo;, &lsquo;Seed&rsquo;, etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>apiVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>API version of the object the token is requested for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the object the token is requested for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespace</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Namespace of the object the token is requested for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>uid</code></br>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID of the object the token is requested for.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="security.gardener.cloud/v1alpha1.CredentialsBindingProvider">CredentialsBindingProvider
 </h3>
 <p>
@@ -280,6 +354,184 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig is the configuration passed to extension resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security.gardener.cloud/v1alpha1.TokenRequest">TokenRequest
+</h3>
+<p>
+<p>TokenRequest is resource that can be used to request WorkloadIdentity tokens.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#security.gardener.cloud/v1alpha1.TokenRequestSpec">
+TokenRequestSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec holds configuration settings for the requested token.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>contextObject</code></br>
+<em>
+<a href="#security.gardener.cloud/v1alpha1.ContextObject">
+ContextObject
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContextObject identify the object the token is requested for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>duration</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Duration specifies for how long the requested token to be valid.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#security.gardener.cloud/v1alpha1.TokenRequestStatus">
+TokenRequestStatus
+</a>
+</em>
+</td>
+<td>
+<p>Status is bears the issued token with additional information back to the client.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security.gardener.cloud/v1alpha1.TokenRequestSpec">TokenRequestSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#security.gardener.cloud/v1alpha1.TokenRequest">TokenRequest</a>)
+</p>
+<p>
+<p>TokenRequestSpec holds configuration settings for the requested token.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>contextObject</code></br>
+<em>
+<a href="#security.gardener.cloud/v1alpha1.ContextObject">
+ContextObject
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContextObject identify the object the token is requested for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>duration</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Duration specifies for how long the requested token to be valid.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security.gardener.cloud/v1alpha1.TokenRequestStatus">TokenRequestStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#security.gardener.cloud/v1alpha1.TokenRequest">TokenRequest</a>)
+</p>
+<p>
+<p>TokenRequestStatus bears the issued token with additional information back to the client.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>token</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Token is the issued token.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>expirationTimestamp</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<p>ExpirationTimeStamp is the time of expiration of the returned token.</p>
 </td>
 </tr>
 </tbody>

@@ -216,10 +216,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                         schema_pkg_apis_operations_v1alpha1_BastionList(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec":                         schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus":                       schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject":                         schema_pkg_apis_security_v1alpha1_ContextObject(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding":                    schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingList":                schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider":            schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem":                          schema_pkg_apis_security_v1alpha1_TargetSystem(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequest":                          schema_pkg_apis_security_v1alpha1_TokenRequest(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec":                      schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus":                    schema_pkg_apis_security_v1alpha1_TokenRequestStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity":                      schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityList":                  schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec":                  schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref),
@@ -9780,6 +9784,60 @@ func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallb
 	}
 }
 
+func schema_pkg_apis_security_v1alpha1_ContextObject(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ContextObject identify the object the token is requested for.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "API version of the object the token is requested for.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the object the token is requested for.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace of the object the token is requested for.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"uid": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UID of the object the token is requested for.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"kind", "apiVersion", "name", "namespace", "uid"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9945,6 +10003,114 @@ func schema_pkg_apis_security_v1alpha1_TargetSystem(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_TokenRequest(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "TokenRequest is resource that can be used to request WorkloadIdentity tokens.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec holds configuration settings for the requested token.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is bears the issued token with additional information back to the client.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus"),
+						},
+					},
+				},
+				Required: []string{"spec", "status"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestSpec", "github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "TokenRequestSpec holds configuration settings for the requested token.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"contextObject": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ContextObject identify the object the token is requested for.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"),
+						},
+					},
+					"duration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Duration specifies for how long the requested token to be valid.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_TokenRequestStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "TokenRequestStatus bears the issued token with additional information back to the client.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"token": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Token is the issued token.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationTimeStamp is the time of expiration of the returned token.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"token", "expirationTimestamp"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
