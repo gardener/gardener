@@ -6187,6 +6187,7 @@ func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.Sh
 	out.ControlPlane = (*core.ControlPlane)(unsafe.Pointer(in.ControlPlane))
 	out.SchedulerName = (*string)(unsafe.Pointer(in.SchedulerName))
 	out.CloudProfile = (*core.CloudProfileReference)(unsafe.Pointer(in.CloudProfile))
+	out.CredentialsBindingName = (*string)(unsafe.Pointer(in.CredentialsBindingName))
 	return nil
 }
 
@@ -6222,6 +6223,7 @@ func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *Sh
 	out.ControlPlane = (*ControlPlane)(unsafe.Pointer(in.ControlPlane))
 	out.SchedulerName = (*string)(unsafe.Pointer(in.SchedulerName))
 	out.CloudProfile = (*CloudProfileReference)(unsafe.Pointer(in.CloudProfile))
+	out.CredentialsBindingName = (*string)(unsafe.Pointer(in.CredentialsBindingName))
 	return nil
 }
 

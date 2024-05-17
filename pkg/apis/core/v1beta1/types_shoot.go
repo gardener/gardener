@@ -95,6 +95,7 @@ type ShootSpec struct {
 	Region string `json:"region" protobuf:"bytes,12,opt,name=region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
+	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
 	// +optional
 	SecretBindingName *string `json:"secretBindingName,omitempty" protobuf:"bytes,13,opt,name=secretBindingName"`
@@ -130,6 +131,11 @@ type ShootSpec struct {
 	// CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
 	// +optional
 	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,opt,name=cloudProfile"`
+	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+	// This field is immutable.
+	// +optional
+	CredentialsBindingName *string `json:"credentialsBindingName,omitempty" protobuf:"bytes,23,opt,name=credentialsBindingName"`
 }
 
 // GetProviderType gets the type of the provider.

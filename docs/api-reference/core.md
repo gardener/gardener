@@ -1914,6 +1914,7 @@ string
 <em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
+The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
 </td>
 </tr>
@@ -2038,6 +2039,20 @@ CloudProfileReference
 <td>
 <em>(Optional)</em>
 <p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsBindingName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -11619,6 +11634,7 @@ string
 <em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
+The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
 </td>
 </tr>
@@ -11743,6 +11759,20 @@ CloudProfileReference
 <td>
 <em>(Optional)</em>
 <p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsBindingName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -12288,6 +12318,7 @@ string
 <em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
+The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
 </td>
 </tr>
@@ -12412,6 +12443,20 @@ CloudProfileReference
 <td>
 <em>(Optional)</em>
 <p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsBindingName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
