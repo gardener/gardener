@@ -199,8 +199,6 @@ spec:
           name: probe
           protocol: TCP
         resources:
-          limits:
-            memory: 128Mi
           requests:
             cpu: 10m
             memory: 25Mi

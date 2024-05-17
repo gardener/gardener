@@ -251,9 +251,6 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceCPU:    resource.MustParse("50m"),
 										corev1.ResourceMemory: resource.MustParse("50Mi"),
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("250Mi"),
-									},
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
