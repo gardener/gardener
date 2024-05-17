@@ -15,10 +15,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
-// to given <obj> (either a CloudProfile, Seed, Secretbinding a or a ExposureClass object).
+// to given <obj> (either a CloudProfile, Seed, Secretbinding, CredentialsBinding or a ExposureClass object).
 func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader, obj any) ([]string, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := gardenClient.List(ctx, shootList); err != nil {
@@ -44,6 +45,11 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 			if ptr.Deref(shoot.Spec.SecretBindingName, "") == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
+		case *gardensecurityv1alpha1.CredentialsBinding:
+			binding := obj.(*gardensecurityv1alpha1.CredentialsBinding)
+			if ptr.Deref(shoot.Spec.CredentialsBindingName, "") == binding.Name && shoot.Namespace == binding.Namespace {
+				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
+			}
 		case *gardencorev1beta1.ExposureClass:
 			exposureClass := obj.(*gardencorev1beta1.ExposureClass)
 			if shoot.Spec.ExposureClassName != nil && *shoot.Spec.ExposureClassName == exposureClass.Name {
@@ -61,6 +67,25 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 // resources which are associated to given Quota <obj>.
 func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
 	bindings := &gardencorev1beta1.SecretBindingList{}
+	if err := c.List(ctx, bindings); err != nil {
+		return nil, err
+	}
+
+	var associatedBindings []string
+	for _, binding := range bindings.Items {
+		for _, quotaRef := range binding.Quotas {
+			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
+				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
+			}
+		}
+	}
+	return associatedBindings, nil
+}
+
+// DetermineCredentialsBindingAssociations gets a <bindingLister> to determine the CredentialsBinding
+// resources which are associated to given Quota <obj>.
+func DetermineCredentialsBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
+	bindings := &gardensecurityv1alpha1.CredentialsBindingList{}
 	if err := c.List(ctx, bindings); err != nil {
 		return nil, err
 	}
