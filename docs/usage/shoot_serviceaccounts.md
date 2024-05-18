@@ -67,7 +67,7 @@ If uncertain that these prerequisites are met, please contact your Gardener Admi
 
 ### Enablement
 
-If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer: managed`. Mind that once enabled this feature cannot be disabled. After the shoot is reconciled you can retrieve the new shoot service account issuer value from the shoot's status. A sample query that will retrieve the managed issuer looks like this:
+If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer=managed`. Mind that once enabled this feature cannot be disabled. After the shoot is reconciled you can retrieve the new shoot service account issuer value from the shoot's status. A sample query that will retrieve the managed issuer looks like this:
 
 ```bash
 kubectl -n my-project get shoot my-shoot -o jsonpath='{.status.advertisedAddresses[?(@.name=="service-account-issuer")].url}'
@@ -84,5 +84,3 @@ You can remove `A` from the `acceptedIssuers` when all currently active tokens h
 This can be ensured by using [projected token volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) with a short validity, or by rolling out all pods.
 Additionally, all [`ServiceAccount` token secrets](https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets) should be recreated.
 Apart from this, you should wait for at least `12h` to make sure the control plane and system components have received a new token from Gardener.
-
-

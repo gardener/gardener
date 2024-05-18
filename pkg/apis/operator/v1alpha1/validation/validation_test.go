@@ -1635,8 +1635,9 @@ var _ = Describe("Validation Tests", func() {
 						garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
 
 						Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.hostname"),
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.hostname"),
+							"Detail": Equal("hostname must be configured"),
 						}))))
 					})
 

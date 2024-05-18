@@ -13,7 +13,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const serviceAccountIssuerConfigSecretName = "shoot-service-account-issuer"
+const serviceAccountIssuerConfigSecretName = v1beta1constants.GardenRoleShootServiceAccountIssuer
 
 func (g *GardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)

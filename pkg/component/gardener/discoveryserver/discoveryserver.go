@@ -33,11 +33,11 @@ const (
 	// DeploymentName is the name of the Gardener Discovery Server deployment.
 	DeploymentName = "gardener-discovery-server"
 	role           = "discovery-server"
-)
 
-// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
-// deleted.
-var TimeoutWaitForManagedResource = 5 * time.Minute
+	// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
+	// deleted.
+	TimeoutWaitForManagedResource = 5 * time.Minute
+)
 
 // Values contains configuration values for the gardener-discovery-server resources.
 type Values struct {
