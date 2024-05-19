@@ -56,7 +56,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		port6TargetPort = intstr.FromInt32(1023)
 		port6Suffix     = fmt.Sprintf("-%s-%s", strings.ToLower(string(port6Protocol)), port6TargetPort.String())
 
-		ensureNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+		ensureNetworkPolicies = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
 				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
@@ -82,7 +82,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		ensureNetworkPoliciesDoNotGetCreated = ensureNetworkPolicies(ConsistentlyWithOffset, false)
 		ensureNetworkPoliciesDoNotGetDeleted = ensureNetworkPolicies(ConsistentlyWithOffset, true)
 
-		ensureCrossNamespaceNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+		ensureCrossNamespaceNetworkPolicies = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
 				// ingress rules
 				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
@@ -123,7 +123,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		ensureCrossNamespaceNetworkPoliciesGetDeleted      = ensureCrossNamespaceNetworkPolicies(EventuallyWithOffset, false)
 		ensureCrossNamespaceNetworkPoliciesDoNotGetCreated = ensureCrossNamespaceNetworkPolicies(ConsistentlyWithOffset, false)
 
-		ensureNetworkPoliciesWithCustomPodLabelSelectors = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+		ensureNetworkPoliciesWithCustomPodLabelSelectors = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
 				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
@@ -151,7 +151,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 		ensureNetworkPoliciesWithCustomPodLabelSelectorsGetCreated = ensureNetworkPoliciesWithCustomPodLabelSelectors(EventuallyWithOffset, true)
 		ensureNetworkPoliciesWithCustomPodLabelSelectorsGetDeleted = ensureNetworkPoliciesWithCustomPodLabelSelectors(EventuallyWithOffset, false)
 
-		ensureIngressFromWorldNetworkPolicy = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+		ensureIngressFromWorldNetworkPolicy = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 			return func() {
 				assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
 					networkPolicyList := &networkingv1.NetworkPolicyList{}
@@ -960,7 +960,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 	Context("service exposed via ingress", func() {
 		var (
-			ensureExposedViaIngressNetworkPolicies = func(asyncAssertion func(int, interface{}, ...interface{}) AsyncAssertion, should bool) func() {
+			ensureExposedViaIngressNetworkPolicies = func(asyncAssertion func(int, any, ...any) AsyncAssertion, should bool) func() {
 				return func() {
 					assertedFunc := func(g Gomega) []networkingv1.NetworkPolicy {
 						networkPolicyList := &networkingv1.NetworkPolicyList{}

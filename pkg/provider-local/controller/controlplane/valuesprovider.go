@@ -102,6 +102,6 @@ func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	_ *extensionscontroller.Cluster,
 	_ secretsmanager.Reader,
 	_ map[string]string,
-) (map[string]interface{}, error) {
-	return map[string]interface{}{}, nil
+) (map[string]any, error) {
+	return map[string]any{}, nil
 }

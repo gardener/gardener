@@ -146,7 +146,7 @@ func MatchControllerInstallation(label labels.Selector, field fields.Selector) s
 }
 
 // SeedRefNameIndexFunc returns spec.seedRef.name of given ControllerInstallation.
-func SeedRefNameIndexFunc(obj interface{}) ([]string, error) {
+func SeedRefNameIndexFunc(obj any) ([]string, error) {
 	controllerInstallation, ok := obj.(*core.ControllerInstallation)
 	if !ok {
 		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)
@@ -156,7 +156,7 @@ func SeedRefNameIndexFunc(obj interface{}) ([]string, error) {
 }
 
 // RegistrationRefNameIndexFunc returns spec.registrationRef.name of given ControllerInstallation.
-func RegistrationRefNameIndexFunc(obj interface{}) ([]string, error) {
+func RegistrationRefNameIndexFunc(obj any) ([]string, error) {
 	controllerInstallation, ok := obj.(*core.ControllerInstallation)
 	if !ok {
 		return nil, fmt.Errorf("expected *core.ControllerInstallation but got %T", obj)

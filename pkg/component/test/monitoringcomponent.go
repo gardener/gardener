@@ -20,7 +20,7 @@ func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfigs ...str
 	scrapeConfigs, err := c.ScrapeConfigs()
 	Expect(err).NotTo(HaveOccurred())
 
-	matchers := make([]interface{}, 0, len(expectedScrapeConfigs))
+	matchers := make([]any, 0, len(expectedScrapeConfigs))
 	for _, sc := range expectedScrapeConfigs {
 		matchers = append(matchers, Equal(sc))
 	}

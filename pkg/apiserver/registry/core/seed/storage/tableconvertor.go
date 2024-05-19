@@ -58,10 +58,10 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		}
 	}
 
-	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]interface{}, error) {
+	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]any, error) {
 		var (
 			seed  = obj.(*core.Seed)
-			cells = []interface{}{}
+			cells = []any{}
 		)
 
 		gardenletReadyCondition := helper.GetCondition(seed.Status.Conditions, core.SeedGardenletReady)

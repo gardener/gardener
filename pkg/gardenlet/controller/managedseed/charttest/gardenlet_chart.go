@@ -15,11 +15,11 @@ import (
 
 type gardenlet struct {
 	kubernetes.ChartApplier
-	values map[string]interface{}
+	values map[string]any
 }
 
 // NewGardenletChartApplier can be used to deploy the Gardenlet chart.
-func NewGardenletChartApplier(applier kubernetes.ChartApplier, values map[string]interface{}) component.Deployer {
+func NewGardenletChartApplier(applier kubernetes.ChartApplier, values map[string]any) component.Deployer {
 	return &gardenlet{
 		ChartApplier: applier,
 		values:       values,

@@ -55,7 +55,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	)
 
 	var script bytes.Buffer
-	if err := tplInitializer.Execute(&script, map[string]interface{}{
+	if err := tplInitializer.Execute(&script, map[string]any{
 		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
 		"pauseContainerImage": ctx.Images[imagevector.ImageNamePauseContainer],
 	}); err != nil {

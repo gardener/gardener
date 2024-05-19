@@ -594,7 +594,7 @@ func checkProvisionOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystem
 	ExpectWithOffset(1, customFile).To(Not(BeNil()))
 }
 
-func clientGet(result client.Object) interface{} {
+func clientGet(result client.Object) any {
 	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 		switch obj.(type) {
 		case *extensionsv1alpha1.Cluster:

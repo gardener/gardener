@@ -52,7 +52,7 @@ func init() {
 func (r *resourceManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": r.namespace, "namePrefix": r.values.NamePrefix}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]any{"namespace": r.namespace, "namePrefix": r.values.NamePrefix}); err != nil {
 		return nil, err
 	}
 

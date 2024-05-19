@@ -283,16 +283,16 @@ func (i *istiod) GetValues() Values {
 }
 
 func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
-	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
+	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]any{
 		"serviceName":       IstiodServiceName,
 		"trustDomain":       i.values.Istiod.TrustDomain,
 		"labels":            getIstiodLabels(),
 		"deployNamespace":   false,
 		"priorityClassName": i.values.Istiod.PriorityClassName,
-		"ports": map[string]interface{}{
+		"ports": map[string]any{
 			"https": PortWebhookServer,
 		},
-		"portsNames": map[string]interface{}{
+		"portsNames": map[string]any{
 			"metrics": istiodServicePortNameMetrics,
 		},
 		"image":     i.values.Istiod.Image,

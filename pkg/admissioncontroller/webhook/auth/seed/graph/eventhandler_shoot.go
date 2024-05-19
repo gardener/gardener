@@ -23,7 +23,7 @@ import (
 
 func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			shoot, ok := obj.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -31,7 +31,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 			g.handleShootCreateOrUpdate(ctx, shoot)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -54,7 +54,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

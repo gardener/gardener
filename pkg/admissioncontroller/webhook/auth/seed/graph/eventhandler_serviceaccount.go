@@ -19,7 +19,7 @@ import (
 
 func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			serviceAccount, ok := obj.(*corev1.ServiceAccount)
 			if !ok {
 				return
@@ -32,7 +32,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 			g.handleServiceAccountCreateOrUpdate(serviceAccount)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldServiceAccount, ok := oldObj.(*corev1.ServiceAccount)
 			if !ok {
 				return
@@ -48,7 +48,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

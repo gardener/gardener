@@ -27,7 +27,7 @@ var Analyzer = &analysis.Analyzer{
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
+func run(pass *analysis.Pass) (any, error) {
 	// find the logger type, so that we can later on check, if a given receiver is actually a logr.Logger instance
 	loggerType, err := findLogrLoggerType(pass)
 	if err != nil {

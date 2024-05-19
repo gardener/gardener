@@ -17,7 +17,7 @@ type ApplyOption interface {
 // ApplyOptions contains options for apply requests
 type ApplyOptions struct {
 	// Values to pass to chart.
-	Values interface{}
+	Values any
 
 	// Additional MergeFunctions.
 	MergeFuncs MergeFuncs
@@ -28,10 +28,10 @@ type ApplyOptions struct {
 }
 
 // Values applies values to ApplyOptions or DeleteOptions.
-var Values = func(values interface{}) ValueOption { return &withValue{values} }
+var Values = func(values any) ValueOption { return &withValue{values} }
 
 type withValue struct {
-	values interface{}
+	values any
 }
 
 func (v withValue) MutateApplyOptions(opts *ApplyOptions) {
@@ -85,7 +85,7 @@ type DeleteOption interface {
 // DeleteOptions contains options for delete requests
 type DeleteOptions struct {
 	// Values to pass to chart.
-	Values interface{}
+	Values any
 
 	// Forces the namespace for chart objects when applying the chart, this is because sometimes native chart
 	// objects do not come with a Release.Namespace option and leave the namespace field empty

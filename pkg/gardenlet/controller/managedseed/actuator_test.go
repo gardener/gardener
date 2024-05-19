@@ -83,7 +83,7 @@ var _ = Describe("Actuator", func() {
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig *gardenletv1alpha1.GardenletConfiguration
-		gardenletChartValues  map[string]interface{}
+		gardenletChartValues  map[string]any
 	)
 
 	BeforeEach(func() {
@@ -436,10 +436,10 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetGardenletChartValues = func(withBootstrap bool) {
-			gardenletChartValues = map[string]interface{}{"foo": "bar"}
+			gardenletChartValues = map[string]any{"foo": "bar"}
 
 			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
-				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletv1alpha1.GardenletConfiguration, _ string) (map[string]interface{}, error) {
+				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletv1alpha1.GardenletConfiguration, _ string) (map[string]any, error) {
 					if withBootstrap {
 						Expect(gc.GardenClientConnection.Kubeconfig).To(Equal(""))
 						Expect(gc.GardenClientConnection.KubeconfigSecret).To(Equal(&corev1.SecretReference{

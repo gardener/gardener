@@ -16,7 +16,7 @@ import (
 )
 
 // MarshalAndWriteConfig marshals the provided config and write is as a file to the provided path
-func MarshalAndWriteConfig(filepath string, config interface{}) error {
+func MarshalAndWriteConfig(filepath string, config any) error {
 	raw, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("unable to parse config: %w", err)

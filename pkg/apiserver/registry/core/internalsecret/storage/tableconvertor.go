@@ -52,10 +52,10 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		}
 	}
 
-	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]interface{}, error) {
+	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]any, error) {
 		var (
 			secret = obj.(*core.InternalSecret)
-			cells  = []interface{}{}
+			cells  = []any{}
 		)
 
 		cells = append(cells, secret.Name, string(secret.Type), int64(len(secret.Data)), metatable.ConvertToHumanReadableDateType(secret.CreationTimestamp))

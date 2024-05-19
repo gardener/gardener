@@ -117,7 +117,7 @@ WantedBy=multi-user.target`),
 
 func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 	var script bytes.Buffer
-	if err := tplUpdateLocalCaCertificates.Execute(&script, map[string]interface{}{
+	if err := tplUpdateLocalCaCertificates.Execute(&script, map[string]any{
 		"pathLocalSSLCerts": pathLocalSSLCerts,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err

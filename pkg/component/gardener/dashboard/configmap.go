@@ -33,14 +33,14 @@ const (
 )
 
 func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, error) {
-	var frontendConfig map[string]interface{}
+	var frontendConfig map[string]any
 	if g.values.FrontendConfigMapName != nil {
 		frontendConfigMap := &corev1.ConfigMap{}
 		if err := g.client.Get(ctx, client.ObjectKey{Name: *g.values.FrontendConfigMapName, Namespace: g.namespace}, frontendConfigMap); err != nil {
 			return nil, err
 		}
 
-		frontendConfig = make(map[string]interface{})
+		frontendConfig = make(map[string]any)
 		if err := yaml.Unmarshal([]byte(frontendConfigMap.Data[dataKeyFrontendConfig]), &frontendConfig); err != nil {
 			return nil, err
 		}
@@ -69,10 +69,10 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			loginCfg.LandingPageURL = v.(string)
 		}
 		if v, ok := frontendConfig["branding"]; ok {
-			loginCfg.Branding = v.(map[string]interface{})
+			loginCfg.Branding = v.(map[string]any)
 		}
 		if v, ok := frontendConfig["themes"]; ok {
-			loginCfg.Themes = v.(map[string]interface{})
+			loginCfg.Themes = v.(map[string]any)
 		}
 	}
 
@@ -103,12 +103,12 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 		}
 
 		if cfg.Frontend == nil {
-			cfg.Frontend = make(map[string]interface{})
+			cfg.Frontend = make(map[string]any)
 		}
 		if cfg.Frontend["features"] == nil {
-			cfg.Frontend["features"] = make(map[string]interface{})
+			cfg.Frontend["features"] = make(map[string]any)
 		}
-		cfg.Frontend["features"].(map[string]interface{})["terminalEnabled"] = true
+		cfg.Frontend["features"].(map[string]any)["terminalEnabled"] = true
 	}
 
 	if g.values.OIDC != nil {

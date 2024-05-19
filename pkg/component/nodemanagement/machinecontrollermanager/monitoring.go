@@ -220,7 +220,7 @@ func init() {
 func (m *machineControllerManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": m.namespace}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]any{"namespace": m.namespace}); err != nil {
 		return nil, err
 	}
 

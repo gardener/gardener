@@ -387,7 +387,7 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 
 // RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-manager
 // out of the results.
-func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
+func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]any, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
 	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
 	if err != nil {
 		return fmt.Errorf("could not render chart: %w", err)

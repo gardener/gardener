@@ -66,7 +66,7 @@ func NewWithServerVersion(serverVersion *version.Info) Interface {
 
 // RenderArchive loads the chart from the given location <chartPath> and calls the renderRelease() function
 // to convert it into a ChartRelease object.
-func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values any) (*RenderedChart, error) {
 	chart, err := helmloader.LoadArchive(bytes.NewReader(archive))
 	if err != nil {
 		return nil, fmt.Errorf("can't load chart from archive: %s", err)
@@ -76,7 +76,7 @@ func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace str
 
 // RenderEmbeddedFS loads the chart from the given embed.FS and calls the renderRelease() function
 // to convert it into a ChartRelease object.
-func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values any) (*RenderedChart, error) {
 	chart, err := loadEmbeddedFS(embeddedFS, chartPath)
 	if err != nil {
 		return nil, fmt.Errorf("can't load chart %q from embedded file system: %w", chartPath, err)
@@ -84,7 +84,7 @@ func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, release
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
-func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
+func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, namespace string, values any) (*RenderedChart, error) {
 	parsedValues, err := json.Marshal(values)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse values for chart %s: %w", chart.Metadata.Name, err)

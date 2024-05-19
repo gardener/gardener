@@ -108,7 +108,7 @@ func (r *Reconciler) reportFailedScheduling(ctx context.Context, log logr.Logger
 	}
 }
 
-func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
+func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...any) {
 	r.Recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
 }
 

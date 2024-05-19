@@ -29,14 +29,14 @@ func init() {
 
 // DeepEqual returns a Gomega matcher which checks whether the expected object is deeply equal with the object it is
 // being compared against.
-func DeepEqual(expected interface{}) types.GomegaMatcher {
+func DeepEqual(expected any) types.GomegaMatcher {
 	return newDeepEqualMatcher(expected)
 }
 
 // DeepDerivativeEqual is similar to DeepEqual except that unset fields in actual are
 // ignored (not compared). This allows us to focus on the fields that matter to
 // the semantic comparison.
-func DeepDerivativeEqual(expected interface{}) types.GomegaMatcher {
+func DeepDerivativeEqual(expected any) types.GomegaMatcher {
 	return newDeepDerivativeMatcher(expected)
 }
 
@@ -115,7 +115,7 @@ func BeInvalidError() types.GomegaMatcher {
 // ShareSameReferenceAs checks if objects shares the same underlying reference as the passed object.
 // This can be used to check if maps or slices have the same underlying data store.
 // Only objects that work for 'reflect.ValueOf(x).Pointer' can be compared.
-func ShareSameReferenceAs(expected interface{}) types.GomegaMatcher {
+func ShareSameReferenceAs(expected any) types.GomegaMatcher {
 	return &referenceMatcher{
 		expected: expected,
 	}

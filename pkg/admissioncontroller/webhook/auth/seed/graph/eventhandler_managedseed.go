@@ -24,7 +24,7 @@ import (
 
 func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -32,7 +32,7 @@ func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Inform
 			g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
 		},
 
-		UpdateFunc: func(_, newObj interface{}) {
+		UpdateFunc: func(_, newObj any) {
 			newManagedSeed, ok := newObj.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -40,7 +40,7 @@ func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Inform
 			g.handleManagedSeedCreateOrUpdate(ctx, newManagedSeed)
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

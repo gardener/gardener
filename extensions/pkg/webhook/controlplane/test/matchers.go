@@ -29,7 +29,7 @@ type containElementWithPrefixContainingMatcher struct {
 	prefix, value, sep string
 }
 
-func (m *containElementWithPrefixContainingMatcher) Match(actual interface{}) (success bool, err error) {
+func (m *containElementWithPrefixContainingMatcher) Match(actual any) (success bool, err error) {
 	items, ok := actual.([]string)
 	if !ok {
 		return false, fmt.Errorf("ContainElementWithPrefixContaining matcher expects []string")
@@ -42,10 +42,10 @@ func (m *containElementWithPrefixContainingMatcher) Match(actual interface{}) (s
 	return slices.Index(values, m.value) >= 0, nil
 }
 
-func (m *containElementWithPrefixContainingMatcher) FailureMessage(actual interface{}) (message string) {
+func (m *containElementWithPrefixContainingMatcher) FailureMessage(actual any) (message string) {
 	return fmt.Sprintf("Expected\n\t%#v\nto contain an element with prefix '%s' containing '%s'", actual, m.prefix, m.value)
 }
 
-func (m *containElementWithPrefixContainingMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (m *containElementWithPrefixContainingMatcher) NegatedFailureMessage(actual any) (message string) {
 	return fmt.Sprintf("Expected\n\t%#v\nnot to contain an element with prefix '%s' containing '%s'", actual, m.prefix, m.value)
 }

@@ -51,7 +51,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 	renderedChart := &chartrenderer.RenderedChart{}
 
 	for _, istioIngressGateway := range i.values.IngressGateway {
-		values := map[string]interface{}{
+		values := map[string]any{
 			"trustDomain":           istioIngressGateway.TrustDomain,
 			"labels":                istioIngressGateway.Labels,
 			"networkPolicyLabels":   istioIngressGateway.NetworkPolicyLabels,
@@ -66,7 +66,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
 			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
-			"vpn": map[string]interface{}{
+			"vpn": map[string]any{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},
 			"enforceSpreadAcrossHosts": istioIngressGateway.EnforceSpreadAcrossHosts,

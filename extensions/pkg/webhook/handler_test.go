@@ -147,7 +147,7 @@ var _ = Describe("Handler", func() {
 					{
 						Operation: "add",
 						Path:      "/metadata/annotations",
-						Value:     map[string]interface{}{"foo": "bar"},
+						Value:     map[string]any{"foo": "bar"},
 					},
 				},
 				AdmissionResponse: admissionv1.AdmissionResponse{

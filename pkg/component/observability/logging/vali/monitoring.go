@@ -149,11 +149,11 @@ func init() {
 func (v *vali) ScrapeConfigs() ([]string, error) {
 	var scrapeConfigVali, scrapeConfigValiTelegraf bytes.Buffer
 
-	if err := monitoringScrapeConfigValiTemplate.Execute(&scrapeConfigVali, map[string]interface{}{"namespace": v.namespace}); err != nil {
+	if err := monitoringScrapeConfigValiTemplate.Execute(&scrapeConfigVali, map[string]any{"namespace": v.namespace}); err != nil {
 		return nil, err
 	}
 
-	if err := monitoringScrapeConfigValiTelegrafTemplate.Execute(&scrapeConfigValiTelegraf, map[string]interface{}{"namespace": v.namespace}); err != nil {
+	if err := monitoringScrapeConfigValiTelegrafTemplate.Execute(&scrapeConfigValiTelegraf, map[string]any{"namespace": v.namespace}); err != nil {
 		return nil, err
 	}
 

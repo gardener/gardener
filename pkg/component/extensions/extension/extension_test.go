@@ -42,7 +42,7 @@ func (e *errorClient) Delete(_ context.Context, _ client.Object, _ ...client.Del
 }
 
 var (
-	objectIdentifier = Identifier(func(obj interface{}) string {
+	objectIdentifier = Identifier(func(obj any) string {
 		switch o := obj.(type) {
 		case extensionsv1alpha1.Extension:
 			return o.GetName()

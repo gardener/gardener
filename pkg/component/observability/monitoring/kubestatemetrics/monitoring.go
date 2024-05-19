@@ -315,7 +315,7 @@ func (k *kubeStateMetrics) ScrapeConfigs() ([]string, error) {
 		return []string{}, nil
 	}
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]any{
 		"jobName":          monitoringPrometheusJobName,
 		"serviceNamespace": k.namespace,
 		"allowedMetrics":   shootMonitoringAllowedMetrics,

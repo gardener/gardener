@@ -469,7 +469,7 @@ func deployNeededInstallation(
 
 		if controllerDeployment != nil {
 			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
-			hashFields := map[string]interface{}{
+			hashFields := map[string]any{
 				"type":           controllerDeployment.Type,
 				"providerConfig": controllerDeployment.ProviderConfig,
 			}
@@ -532,8 +532,8 @@ func deleteUnneededInstallations(
 	return nil
 }
 
-func convertObjToMap(in interface{}) (map[string]interface{}, error) {
-	var out map[string]interface{}
+func convertObjToMap(in any) (map[string]any, error) {
+	var out map[string]any
 
 	data, err := json.Marshal(in)
 	if err != nil {

@@ -178,7 +178,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 			value := secret.Data[secretKey]
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
-				decodedObj map[string]interface{}
+				decodedObj map[string]any
 			)
 
 			for indexInFile := 0; true; indexInFile++ {
@@ -952,9 +952,9 @@ func injectLabelsIntoVolumeClaimTemplate(obj *unstructured.Unstructured, labels 
 	}
 
 	for i, t := range volumeClaimTemplates {
-		template, ok := t.(map[string]interface{})
+		template, ok := t.(map[string]any)
 		if !ok {
-			return fmt.Errorf("failed to inject labels into .spec.volumeClaimTemplates[%d], is not a map[string]interface{}", i)
+			return fmt.Errorf("failed to inject labels into .spec.volumeClaimTemplates[%d], is not a map[string]any", i)
 		}
 
 		templateLabels, _, err := unstructured.NestedStringMap(template, "metadata", "labels")
@@ -970,12 +970,12 @@ func injectLabelsIntoVolumeClaimTemplate(obj *unstructured.Unstructured, labels 
 	return unstructured.SetNestedSlice(obj.Object, volumeClaimTemplates, "spec", "volumeClaimTemplates")
 }
 
-func mergeLabels(existingLabels, newLabels map[string]string) map[string]interface{} {
+func mergeLabels(existingLabels, newLabels map[string]string) map[string]any {
 	if existingLabels == nil {
 		return stringMapToInterfaceMap(newLabels)
 	}
 
-	labels := make(map[string]interface{}, len(existingLabels)+len(newLabels))
+	labels := make(map[string]any, len(existingLabels)+len(newLabels))
 	for k, v := range existingLabels {
 		labels[k] = v
 	}
@@ -985,8 +985,8 @@ func mergeLabels(existingLabels, newLabels map[string]string) map[string]interfa
 	return labels
 }
 
-func stringMapToInterfaceMap(in map[string]string) map[string]interface{} {
-	m := make(map[string]interface{}, len(in))
+func stringMapToInterfaceMap(in map[string]string) map[string]any {
+	m := make(map[string]any, len(in))
 	for k, v := range in {
 		m[k] = v
 	}

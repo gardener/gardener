@@ -166,7 +166,7 @@ kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.Stri
 			}
 		}
 
-		config := map[string]interface{}{}
+		config := map[string]any{}
 		if err := yaml.Unmarshal(plugin.Config.Raw, &config); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal plugin configuration for %s: %w", plugin.Name, err)
 		}
@@ -174,7 +174,7 @@ kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.Stri
 			return nil, fmt.Errorf(`expected "imagePolicy" key in configuration but it does not exist`)
 		}
 
-		config["imagePolicy"].(map[string]interface{})["kubeConfigFile"] = kubeconfigFilePath
+		config["imagePolicy"].(map[string]any)["kubeConfigFile"] = kubeconfigFilePath
 		return yaml.Marshal(config)
 
 	default:

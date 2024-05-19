@@ -52,10 +52,10 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		}
 	}
 
-	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]interface{}, error) {
+	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]any, error) {
 		var (
 			namespacedCloudProfile = obj.(*core.NamespacedCloudProfile)
-			cells                  = []interface{}{}
+			cells                  = []any{}
 		)
 
 		cells = append(cells, namespacedCloudProfile.Name)

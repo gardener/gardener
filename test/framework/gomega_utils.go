@@ -9,6 +9,6 @@ import (
 )
 
 // ExpectNoError checks if an error has occurred
-func ExpectNoError(actual interface{}, extra ...interface{}) {
+func ExpectNoError(actual any, extra ...any) {
 	gomega.ExpectWithOffset(1, actual, extra...).ToNot(gomega.HaveOccurred())
 }

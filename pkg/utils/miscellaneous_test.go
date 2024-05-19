@@ -96,7 +96,7 @@ baz`, spaces)).To(Equal(`foo
 
 	Describe("#ShallowCopyMapStringInterface", func() {
 		It("should create a shallow copy of the map", func() {
-			v := map[string]interface{}{"foo": nil, "bar": map[string]interface{}{"baz": nil}}
+			v := map[string]any{"foo": nil, "bar": map[string]any{"baz": nil}}
 
 			c := ShallowCopyMapStringInterface(v)
 
@@ -105,8 +105,8 @@ baz`, spaces)).To(Equal(`foo
 			c["foo"] = 1
 			Expect(v["foo"]).To(BeNil())
 
-			c["bar"].(map[string]interface{})["baz"] = "bang"
-			Expect(v["bar"].(map[string]interface{})["baz"]).To(Equal("bang"))
+			c["bar"].(map[string]any)["baz"] = "bang"
+			Expect(v["bar"].(map[string]any)["baz"]).To(Equal("bang"))
 		})
 	})
 
@@ -119,7 +119,7 @@ baz`, spaces)).To(Equal(`foo
 	)
 
 	Describe("#InterfaceMapToStringMap", func() {
-		input := map[string]interface{}{
+		input := map[string]any{
 			"foo":   nil,
 			"age":   32,
 			"alive": true,

@@ -204,7 +204,7 @@ func (v *vpnSeedServer) ScrapeConfigs() ([]string, error) {
 	if v.values.HighAvailabilityEnabled {
 		scrapeTemplate = monitoringScrapeConfigTemplateHA
 	}
-	if err := scrapeTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": v.namespace}); err != nil {
+	if err := scrapeTemplate.Execute(&scrapeConfig, map[string]any{"namespace": v.namespace}); err != nil {
 		return nil, err
 	}
 

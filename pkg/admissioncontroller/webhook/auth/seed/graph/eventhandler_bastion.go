@@ -17,7 +17,7 @@ import (
 
 func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			bastion, ok := obj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
@@ -25,7 +25,7 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) er
 			g.handleBastionCreateOrUpdate(bastion)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldBastion, ok := oldObj.(*operationsv1alpha1.Bastion)
 			if !ok {
 				return
@@ -41,7 +41,7 @@ func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) er
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

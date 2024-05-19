@@ -807,11 +807,11 @@ var _ = Describe("kubernetes", func() {
 				podTemplatehashKey: rs3PodTemplateHash,
 			}
 
-			rsListOptions = []interface{}{
+			rsListOptions = []any{
 				client.InNamespace(namespace),
 				client.MatchingLabels(labels),
 			}
-			podListOptions []interface{}
+			podListOptions []any
 
 			deployment = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{

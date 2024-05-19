@@ -111,7 +111,7 @@ var _ = Describe("Resources", func() {
 
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(managedResourceSecret.Data["referenced-resources"]), 1024)
-				decodedObj map[string]interface{}
+				decodedObj map[string]any
 			)
 
 			var i = 0

@@ -122,7 +122,7 @@ func init() {
 
 func generateInitScript(nodeAgentImage string) ([]byte, error) {
 	var initScript bytes.Buffer
-	if err := initScriptTpl.Execute(&initScript, map[string]interface{}{
+	if err := initScriptTpl.Execute(&initScript, map[string]any{
 		"image":           nodeAgentImage,
 		"binaryDirectory": nodeagentv1alpha1.BinaryDir,
 		"configFile":      nodeagentv1alpha1.ConfigFilePath,

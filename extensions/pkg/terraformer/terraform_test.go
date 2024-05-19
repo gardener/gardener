@@ -486,7 +486,7 @@ var _ = Describe("terraformer", func() {
 		)
 
 		It("should return err when state version is not supported", func() {
-			state := map[string]interface{}{
+			state := map[string]any{
 				"version": 1,
 			}
 			stateJSON, err := json.Marshal(state)
@@ -509,11 +509,11 @@ var _ = Describe("terraformer", func() {
 		})
 
 		It("should get state v3 output variables", func() {
-			state := map[string]interface{}{
+			state := map[string]any{
 				"version": 3,
-				"modules": []map[string]interface{}{
+				"modules": []map[string]any{
 					{
-						"outputs": map[string]interface{}{
+						"outputs": map[string]any{
 							"variableV3": map[string]string{
 								"value": "valueV3",
 							},
@@ -544,9 +544,9 @@ var _ = Describe("terraformer", func() {
 		})
 
 		It("should get state v4 output variables", func() {
-			state := map[string]interface{}{
+			state := map[string]any{
 				"version": 4,
-				"outputs": map[string]interface{}{
+				"outputs": map[string]any{
 					"variableV4": map[string]string{
 						"value": "valueV4",
 					},

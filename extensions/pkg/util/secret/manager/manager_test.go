@@ -348,7 +348,7 @@ func createOldCASecrets(c client.Client, cluster *extensionscontroller.Cluster, 
 }
 
 func consistOfConfigs(configs ...SecretConfigWithOptions) gomegatypes.GomegaMatcher {
-	elements := make([]interface{}, 0, len(configs))
+	elements := make([]any, 0, len(configs))
 	for _, config := range configs {
 		elements = append(elements, config)
 	}
@@ -356,7 +356,7 @@ func consistOfConfigs(configs ...SecretConfigWithOptions) gomegatypes.GomegaMatc
 }
 
 var (
-	objectIdentifier = Identifier(func(obj interface{}) string {
+	objectIdentifier = Identifier(func(obj any) string {
 		switch o := obj.(type) {
 		case corev1.Secret:
 			return o.GetName()

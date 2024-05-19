@@ -34,7 +34,7 @@ func (t *terraformer) GetRawState(ctx context.Context) (*RawState, error) {
 }
 
 // UnmarshalRawState transform passed rawState to RawState struct. It tries to decode the state
-func UnmarshalRawState(rawState interface{}) (*RawState, error) {
+func UnmarshalRawState(rawState any) (*RawState, error) {
 	var rawData []byte
 
 	switch v := rawState.(type) {

@@ -139,7 +139,7 @@ var (
 
 			annotations, found, _ := unstructured.NestedMap(oldObj.Object, "metadata", "annotations")
 			if found {
-				mergedAnnotations := make(map[string]interface{})
+				mergedAnnotations := make(map[string]any)
 				for key, value := range annotations {
 					annotation := key
 					annotationValue := value.(string)
@@ -174,15 +174,15 @@ var (
 					break
 				}
 
-				ports := make([]interface{}, 0, len(newPorts))
+				ports := make([]any, 0, len(newPorts))
 				for _, newPort := range newPorts {
-					np := newPort.(map[string]interface{})
+					np := newPort.(map[string]any)
 					npName, _, _ := unstructured.NestedString(np, "name")
 					npPort, _ := nestedFloat64OrInt64(np, "port")
 					nodePort, ok := nestedFloat64OrInt64(np, "nodePort")
 
 					for _, oldPortObj := range oldPorts {
-						op := oldPortObj.(map[string]interface{})
+						op := oldPortObj.(map[string]any)
 						opName, _, _ := unstructured.NestedString(op, "name")
 						opPort, _ := nestedFloat64OrInt64(op, "port")
 
@@ -247,7 +247,7 @@ var (
 	})
 )
 
-func nestedFloat64OrInt64(obj map[string]interface{}, fields ...string) (int64, bool) {
+func nestedFloat64OrInt64(obj map[string]any, fields ...string) (int64, bool) {
 	val, found, err := unstructured.NestedFieldNoCopy(obj, fields...)
 	if !found || err != nil {
 		return 0, found
@@ -285,7 +285,7 @@ func (a *defaultApplier) mergeObjects(newObj, oldObj *unstructured.Unstructured,
 	newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
 	// We do not want to overwrite the Finalizers.
-	newObj.Object["metadata"].(map[string]interface{})["finalizers"] = oldObj.Object["metadata"].(map[string]interface{})["finalizers"]
+	newObj.Object["metadata"].(map[string]any)["finalizers"] = oldObj.Object["metadata"].(map[string]any)["finalizers"]
 
 	if merge, ok := mergeFuncs[newObj.GroupVersionKind().GroupKind()]; ok {
 		merge(newObj, oldObj)
@@ -385,7 +385,7 @@ type manifestReader struct {
 func (m *manifestReader) Read() (*unstructured.Unstructured, error) {
 	// loop for skipping empty yaml objects
 	for {
-		var data map[string]interface{}
+		var data map[string]any
 
 		err := m.decoder.Decode(&data)
 		if err == io.EOF {

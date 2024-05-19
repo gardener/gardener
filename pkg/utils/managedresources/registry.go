@@ -105,7 +105,7 @@ func (r *Registry) Add(objs ...client.Object) error {
 		// or the issue is resolved upstream in yaml.v2
 		// Please see https://github.com/go-yaml/yaml/pull/736
 		if r.isYAMLSerializer {
-			var anyObj interface{}
+			var anyObj any
 			if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
 				return err
 			}

@@ -160,27 +160,27 @@ var _ = Describe("Actuator", func() {
 			"lb-readvertiser":          "d640460979ef9e3ff08ffeff15486a0c8ed6222be4c4f9ce1e10a7dd62b967a6",
 		}
 
-		configChartValues = map[string]interface{}{
+		configChartValues = map[string]any{
 			"cloudProviderConfig": `[Global]`,
 		}
 
-		controlPlaneChartValues = map[string]interface{}{
+		controlPlaneChartValues = map[string]any{
 			"clusterName": namespace,
 		}
 
-		controlPlaneShootChartValues = map[string]interface{}{
+		controlPlaneShootChartValues = map[string]any{
 			"foo": "bar",
 		}
 
-		controlPlaneShootCRDsChartValues = map[string]interface{}{
+		controlPlaneShootCRDsChartValues = map[string]any{
 			"foo": "bar",
 		}
 
-		storageClassesChartValues = map[string]interface{}{
+		storageClassesChartValues = map[string]any{
 			"foo": "bar",
 		}
 
-		controlPlaneExposureChartValues = map[string]interface{}{
+		controlPlaneExposureChartValues = map[string]any{
 			"replicas": 1,
 		}
 
@@ -724,7 +724,7 @@ webhooks:
 	)
 })
 
-func clientGet(result client.Object) interface{} {
+func clientGet(result client.Object) any {
 	return func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 		switch obj.(type) {
 		case *corev1.Secret:
@@ -787,7 +787,7 @@ func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.Secr
 }
 
 var (
-	objectIdentifier = Identifier(func(obj interface{}) string {
+	objectIdentifier = Identifier(func(obj any) string {
 		switch o := obj.(type) {
 		case corev1.Secret:
 			return o.GetName()

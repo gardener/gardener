@@ -397,7 +397,7 @@ func init() {
 
 // ScrapeConfigs returns the scrape configurations for Prometheus.
 func (e *etcd) ScrapeConfigs() ([]string, error) {
-	values := map[string]interface{}{
+	values := map[string]any{
 		"namespace": e.namespace,
 		"role":      e.values.Role,
 	}
@@ -439,7 +439,7 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 		etcdReplicas = *e.values.Replicas
 	}
 
-	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
+	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]any{
 		"role":               e.values.Role,
 		"Role":               cases.Title(language.English).String(e.values.Role),
 		"class":              e.values.Class,

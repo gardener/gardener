@@ -890,14 +890,14 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 
 func getNginxIngressConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
 	var (
-		defaultConfig = map[string]interface{}{
+		defaultConfig = map[string]any{
 			"enable-vts-status":            "false",
 			"server-name-hash-bucket-size": "256",
 			"use-proxy-protocol":           "false",
 			"worker-processes":             "2",
 			"allow-snippet-annotations":    "false",
 		}
-		providerConfig = map[string]interface{}{}
+		providerConfig = map[string]any{}
 	)
 
 	if garden.Spec.RuntimeCluster.Ingress.Controller.ProviderConfig != nil {

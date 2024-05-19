@@ -22,7 +22,7 @@ import (
 
 func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			seed, ok := obj.(*gardencorev1beta1.Seed)
 			if !ok {
 				return
@@ -31,7 +31,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 			g.handleManagedSeedIfSeedBelongsToIt(ctx, seed.Name)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
 			if !ok {
 				return
@@ -59,7 +59,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

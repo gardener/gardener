@@ -155,7 +155,7 @@ var _ = Describe("Actuator", func() {
 
 	Context("not scaling in or out", func() {
 		DescribeTable("#Reconcile",
-			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...interface{}) {
+			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...any) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, managedSeedSet).Return([]Replica{r0}, nil)
 
@@ -273,7 +273,7 @@ var _ = Describe("Actuator", func() {
 
 	Context("scaling out", func() {
 		DescribeTable("#Reconcile",
-			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...interface{}) {
+			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...any) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, managedSeedSet).Return([]Replica{r0}, nil)
 				recorder.EXPECT().Eventf(managedSeedSet, corev1.EventTypeNormal, reason, fmt, args)
@@ -404,7 +404,7 @@ var _ = Describe("Actuator", func() {
 
 	Context("scaling in", func() {
 		DescribeTable("#Reconcile",
-			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, success bool, reason, fmt string, args ...interface{}) {
+			func(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, success bool, reason, fmt string, args ...any) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, managedSeedSet).Return([]Replica{r0}, nil)
 				if success {

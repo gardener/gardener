@@ -47,7 +47,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 
 	f.Beta().CIt("should get container logs from logging-pod", func(ctx context.Context) {
 		ginkgo.By("Deploy the logging-pod")
-		loggerParams := map[string]interface{}{
+		loggerParams := map[string]any{
 			"LoggerName":          deploymentName,
 			"HelmDeployNamespace": namespace,
 			"AppLabel":            loggerAppLabel,
@@ -145,7 +145,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Deploy the source and target pod")
-		params := map[string]interface{}{
+		params := map[string]any{
 			"Name":        copyDeployment,
 			"Namespace":   namespace,
 			"AppLabel":    copyLabel,

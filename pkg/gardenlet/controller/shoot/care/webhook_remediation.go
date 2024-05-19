@@ -276,7 +276,7 @@ func (r *remediator) failurePolicy() *admissionregistrationv1.FailurePolicyType 
 	return &ignore
 }
 
-func (r *remediator) reportf(fieldName string, messageFmt string, args ...interface{}) {
+func (r *remediator) reportf(fieldName string, messageFmt string, args ...any) {
 	r.log.Info("Remediating", "fieldName", fieldName)
 	*r.remediations = append(*r.remediations, fmt.Sprintf("%s of webhook %q was %s", fieldName, r.webhookName, fmt.Sprintf(messageFmt, args...)))
 }
