@@ -248,7 +248,9 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 										corev1.ResourceCPU:    resource.MustParse("20m"),
 										corev1.ResourceMemory: resource.MustParse("20Mi"),
 									},
-									Limits: c.getResourceLimits(),
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("500Mi"),
+									},
 								},
 							},
 						},
@@ -365,18 +367,6 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 		service,
 		vpa,
 	)
-}
-
-func (c *nodeProblemDetector) getResourceLimits() corev1.ResourceList {
-	if c.values.VPAEnabled {
-		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("120Mi"),
-		}
-	}
-
-	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("500Mi"),
-	}
 }
 
 func getLabels() map[string]string {

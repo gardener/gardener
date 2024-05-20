@@ -157,7 +157,7 @@ status:
 `
 			hostPathFileOrCreate = corev1.HostPathFileOrCreate
 
-			daemonsetYAMLFor = func(apiserverHost string, vpaEnabled bool) string {
+			daemonsetYAMLFor = func(apiserverHost string) string {
 				out := `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -211,17 +211,9 @@ spec:
         ports:
         - containerPort: 20257
           name: exporter
-        resources:`
-				if vpaEnabled {
-					out += `
+        resources:
           limits:
-            memory: 120Mi`
-				} else {
-					out += `
-          limits:
-            memory: 500Mi`
-				}
-				out += `
+            memory: 500Mi
           requests:
             cpu: 20m
             memory: 20Mi
@@ -329,25 +321,24 @@ status: {}
 		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(5))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("")))
 			})
 		})
 
-		Context("w/ apiserver host,w/ vpaEnabled", func() {
+		Context("w/ apiserver host, w/ vpaEnabled", func() {
 			var (
 				apiserverHost = "apiserver.host"
-				vpaEnabled    = true
 			)
 
 			BeforeEach(func() {
 				values.APIServerHost = &apiserverHost
-				values.VPAEnabled = vpaEnabled
+				values.VPAEnabled = true
 			})
 
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceSecret.Data).To(HaveLen(6))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost)))
 			})
 		})
 	})
