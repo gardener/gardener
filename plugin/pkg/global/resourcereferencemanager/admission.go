@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,12 +37,15 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -69,6 +73,7 @@ type ReferenceManager struct {
 	seedLister                 gardencorev1beta1listers.SeedLister
 	shootLister                gardencorev1beta1listers.ShootLister
 	secretBindingLister        gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister   securityv1alpha1listers.CredentialsBindingLister
 	projectLister              gardencorev1beta1listers.ProjectLister
 	quotaLister                gardencorev1beta1listers.QuotaLister
 	controllerDeploymentLister gardencorev1beta1listers.ControllerDeploymentLister
@@ -175,6 +180,14 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced, configMapInformer.Informer().HasSynced)
 }
 
+// SetSecurityInformerFactory gets Lister from SharedInformerFactory.
+func (r *ReferenceManager) SetSecurityInformerFactory(f gardensecurityinformers.SharedInformerFactory) {
+	credentialsBindingInformer := f.Security().V1alpha1().CredentialsBindings()
+	r.credentialsBindingLister = credentialsBindingInformer.Lister()
+
+	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
+}
+
 // SetCoreClientSet sets the Gardener client.
 func (r *ReferenceManager) SetCoreClientSet(c versioned.Interface) {
 	r.gardenCoreClient = c
@@ -215,6 +228,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
+	}
+	if r.credentialsBindingLister == nil {
+		return errors.New("missing credentials binding lister")
 	}
 	if r.quotaLister == nil {
 		return errors.New("missing quota lister")
@@ -272,7 +288,17 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		if utils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
-		err = r.ensureSecretBindingReferences(ctx, a, binding)
+		err = r.ensureBindingReferences(ctx, a, binding)
+
+	case security.Kind("CredentialsBinding"):
+		binding, ok := a.GetObject().(*security.CredentialsBinding)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into CredentialsBinding object")
+		}
+		if utils.SkipVerification(operation, binding.ObjectMeta) {
+			return nil
+		}
+		err = r.ensureBindingReferences(ctx, a, binding)
 
 	case core.Kind("Shoot"):
 		var (
@@ -585,22 +611,43 @@ func (r *ReferenceManager) ensureProjectNamespace(project *core.Project) error {
 	return nil
 }
 
-func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, attributes admission.Attributes, binding *core.SecretBinding) error {
+func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attributes admission.Attributes, binding runtime.Object) error {
+	var (
+		quotas          []corev1.ObjectReference
+		secretNamespace string
+		secretName      string
+	)
+	switch attributes.GetKind().GroupKind() {
+	case core.Kind("SecretBinding"):
+		b := binding.(*core.SecretBinding)
+		quotas = b.Quotas
+		secretNamespace = b.SecretRef.Namespace
+		secretName = b.SecretRef.Name
+	case security.Kind("CredentialsBinding"):
+		// TODO(dimityrmirchev): This code should eventually handle
+		// references to Workload Identity
+		b := binding.(*security.CredentialsBinding)
+		quotas = b.Quotas
+		secretNamespace = b.CredentialsRef.Namespace
+		secretName = b.CredentialsRef.Name
+	default:
+		return fmt.Errorf("%s is neither of kind SecretBinding nor CredentialsBinding", attributes.GetKind().GroupKind())
+	}
 	readAttributes := authorizer.AttributesRecord{
 		User:            attributes.GetUserInfo(),
 		Verb:            "get",
 		APIGroup:        "",
 		APIVersion:      "v1",
 		Resource:        "secrets",
-		Namespace:       binding.SecretRef.Namespace,
-		Name:            binding.SecretRef.Name,
+		Namespace:       secretNamespace,
+		Name:            secretName,
 		ResourceRequest: true,
 	}
 	if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
-		return errors.New("SecretBinding cannot reference a secret you are not allowed to read")
+		return fmt.Errorf("%s cannot reference a secret you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
 	}
 
-	if err := r.lookupSecret(ctx, binding.SecretRef.Namespace, binding.SecretRef.Name); err != nil {
+	if err := r.lookupSecret(ctx, secretNamespace, secretName); err != nil {
 		return err
 	}
 
@@ -609,7 +656,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, at
 		projectQuotaCount int
 	)
 
-	for _, quotaRef := range binding.Quotas {
+	for _, quotaRef := range quotas {
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
 			Verb:            "get",
@@ -623,7 +670,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, at
 			Path:            "",
 		}
 		if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
-			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
+			return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
 		}
 
 		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
@@ -667,6 +714,12 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 	if shoot.Spec.SecretBindingName != nil && !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
 		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName); err != nil {
+			return err
+		}
+	}
+
+	if shoot.Spec.CredentialsBindingName != nil && !equality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, shoot.Spec.CredentialsBindingName) {
+		if _, err := r.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName); err != nil {
 			return err
 		}
 	}
