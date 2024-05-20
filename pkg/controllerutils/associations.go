@@ -15,7 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
@@ -45,8 +45,8 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 			if ptr.Deref(shoot.Spec.SecretBindingName, "") == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
-		case *gardensecurityv1alpha1.CredentialsBinding:
-			binding := obj.(*gardensecurityv1alpha1.CredentialsBinding)
+		case *securityv1alpha1.CredentialsBinding:
+			binding := obj.(*securityv1alpha1.CredentialsBinding)
 			if ptr.Deref(shoot.Spec.CredentialsBindingName, "") == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
@@ -85,7 +85,7 @@ func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, qu
 // DetermineCredentialsBindingAssociations gets a <bindingLister> to determine the CredentialsBinding
 // resources which are associated to given Quota <obj>.
 func DetermineCredentialsBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
-	bindings := &gardensecurityv1alpha1.CredentialsBindingList{}
+	bindings := &securityv1alpha1.CredentialsBindingList{}
 	if err := c.List(ctx, bindings); err != nil {
 		return nil, err
 	}
