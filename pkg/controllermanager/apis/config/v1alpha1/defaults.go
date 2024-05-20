@@ -186,6 +186,13 @@ func SetDefaults_SecretBindingControllerConfiguration(obj *SecretBindingControll
 	}
 }
 
+// SetDefaults_CredentialsBindingControllerConfiguration sets defaults for the CredentialsBindingControllerConfiguration.
+func SetDefaults_CredentialsBindingControllerConfiguration(obj *CredentialsBindingControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+	}
+}
+
 // SetDefaults_SeedExtensionsCheckControllerConfiguration sets defaults for the SeedExtensionsCheckControllerConfiguration.
 func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -307,6 +314,9 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	}
 	if obj.SecretBinding == nil {
 		obj.SecretBinding = &SecretBindingControllerConfiguration{}
+	}
+	if obj.CredentialsBinding == nil {
+		obj.CredentialsBinding = &CredentialsBindingControllerConfiguration{}
 	}
 	if obj.Seed == nil {
 		obj.Seed = &SeedControllerConfiguration{}

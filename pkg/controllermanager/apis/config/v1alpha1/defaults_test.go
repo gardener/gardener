@@ -469,6 +469,31 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("CredentialsBindingControllerConfiguration defaulting", func() {
+		It("should default CredentialsBindingControllerConfiguration correctly", func() {
+			expected := &CredentialsBindingControllerConfiguration{
+				ConcurrentSyncs: ptr.To(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CredentialsBinding).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					CredentialsBinding: &CredentialsBindingControllerConfiguration{
+						ConcurrentSyncs: ptr.To(10),
+					},
+				},
+			}
+			expected := obj.Controllers.CredentialsBinding.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CredentialsBinding).To(Equal(expected))
+		})
+	})
+
 	Describe("SeedExtensionsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedExtensionsCheckControllerConfiguration correctly", func() {
 			expected := &SeedExtensionsCheckControllerConfiguration{
