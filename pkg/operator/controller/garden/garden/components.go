@@ -1186,7 +1186,10 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		RetentionSize:     "190GB",
 		ScrapeTimeout:     "50s", // This is intentionally smaller than the scrape interval of 1m.
 		RuntimeVersion:    r.RuntimeVersion,
-		ExternalLabels:    map[string]string{"landscape": garden.Spec.VirtualCluster.Gardener.ClusterIdentity},
+		ExternalLabels: map[string]string{
+			"landscape":    garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
+			"dashboardUrl": "dashboard." + ingressDomain,
+		},
 		VPAMaxAllowed: &corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("4"),
 			corev1.ResourceMemory: resource.MustParse("50G"),
