@@ -1,3 +1,8 @@
+---
+title: Accessing Shoot Clusters
+weight: 5
+---
+
 # Accessing Shoot Clusters
 
 After creation of a shoot cluster, end-users require a `kubeconfig` to access it. There are several options available to get to such `kubeconfig`.

@@ -1,3 +1,7 @@
+---
+weight: 7
+---
+
 # Shoot Info `ConfigMap`
 
 ## Overview
