@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -41,11 +42,12 @@ import (
 )
 
 const (
-	seedName             = "test-seed"
-	secretBindingName    = "test-secret-binding"
-	secretName           = "test-secret"
-	kubeconfigSecretName = "test.kubeconfig"
-	backupSecretName     = "test-backup-secret"
+	seedName               = "test-seed"
+	secretBindingName      = "test-secret-binding"
+	credentialsBindingName = "test-credentials-binding"
+	secretName             = "test-secret"
+	kubeconfigSecretName   = "test.kubeconfig"
+	backupSecretName       = "test-backup-secret"
 )
 
 var _ = Describe("Actuator", func() {
@@ -67,10 +69,11 @@ var _ = Describe("Actuator", func() {
 
 		ctx context.Context
 
-		managedSeed   *seedmanagementv1alpha1.ManagedSeed
-		shoot         *gardencorev1beta1.Shoot
-		secretBinding *gardencorev1beta1.SecretBinding
-		secret        *corev1.Secret
+		managedSeed        *seedmanagementv1alpha1.ManagedSeed
+		shoot              *gardencorev1beta1.Shoot
+		secretBinding      *gardencorev1beta1.SecretBinding
+		credentialsBinding *securityv1alpha1.CredentialsBinding
+		secret             *corev1.Secret
 
 		seedTemplate *gardencorev1beta1.SeedTemplate
 		gardenlet    *seedmanagementv1alpha1.GardenletConfig
@@ -144,6 +147,16 @@ var _ = Describe("Actuator", func() {
 				Namespace: namespace,
 			},
 			SecretRef: corev1.SecretReference{
+				Name:      secretName,
+				Namespace: namespace,
+			},
+		}
+		credentialsBinding = &securityv1alpha1.CredentialsBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretBindingName,
+				Namespace: namespace,
+			},
+			CredentialsRef: corev1.ObjectReference{
 				Name:      secretName,
 				Namespace: namespace,
 			},
@@ -306,6 +319,35 @@ var _ = Describe("Actuator", func() {
 			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretBindingName}, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 					*sb = *secretBinding
+					return nil
+				},
+			)
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+					*s = *secret
+					return nil
+				},
+			)
+
+			// Create backup secret
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
+					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
+				},
+			)
+			gardenClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
+					Expect(s).To(Equal(backupSecret))
+					return nil
+				},
+			)
+		}
+
+		expectCreateSeedSecretsShootWithCredsBinding = func() {
+			// Get shoot secret
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: credentialsBindingName}, gomock.AssignableToTypeOf(&securityv1alpha1.CredentialsBinding{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, cb *securityv1alpha1.CredentialsBinding, _ ...client.GetOption) error {
+					*cb = *credentialsBinding
 					return nil
 				},
 			)
@@ -513,6 +555,39 @@ var _ = Describe("Actuator", func() {
 		Context("gardenlet", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.Gardenlet = gardenlet
+			})
+
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and shoot using credentialsbindings name)", func() {
+				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBindingName)
+				shoot.Spec.SecretBindingName = nil
+				expectGetShoot()
+				expectGetSeed(false)
+				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+				expectCreateSeedSecretsShootWithCredsBinding()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
+				expectMergeWithParent()
+				expectPrepareGardenClientConnection(true)
+				expectGetGardenletChartValues(true)
+				expectApplyGardenletChart()
+
+				status, wait, err := actuator.Reconcile(ctx, log, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(And(
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+					ContainCondition(
+						OfType(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						WithStatus(gardencorev1beta1.ConditionTrue),
+						WithReason(gardencorev1beta1.EventReconciled),
+					),
+				))
+				Expect(wait).To(BeFalse())
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
