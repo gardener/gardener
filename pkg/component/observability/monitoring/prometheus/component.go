@@ -31,7 +31,6 @@ import (
 
 const (
 	dataKeyAdditionalScrapeConfigs       = "prometheus.yaml"
-	dataKeyAdditionalAlertRelabelConfigs = "configs.yaml"
 	dataKeyAdditionalAlertmanagerConfigs = "configs.yaml"
 
 	port        = 9090
@@ -245,7 +244,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.service(),
 		p.clusterRoleBinding(),
 		p.secretAdditionalScrapeConfigs(),
-		p.secretAdditionalAlertRelabelConfigs(),
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,

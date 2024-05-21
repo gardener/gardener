@@ -96,7 +96,6 @@ honor_labels: true`
 		scrapeConfig                        *monitoringv1alpha1.ScrapeConfig
 		additionalConfigMap                 *corev1.ConfigMap
 		secretAdditionalScrapeConfigs       *corev1.Secret
-		secretAdditionalAlertRelabelConfigs *corev1.Secret
 		secretAdditionalAlertmanagerConfigs *corev1.Secret
 		secretRemoteWriteBasicAuth          *corev1.Secret
 		podDisruptionBudget                 *policyv1.PodDisruptionBudget
@@ -288,11 +287,12 @@ honor_labels: true`
 						Namespace: namespace,
 						Name:      alertmanagerName,
 						Port:      intstr.FromString("metrics"),
+						AlertRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
+							Regex:        `true`,
+							Action:       "drop",
+						}},
 					}},
-				}
-				obj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: "prometheus-" + name + "-additional-alert-relabel-configs"},
-					Key:                  "configs.yaml",
 				}
 			}
 
@@ -436,23 +436,6 @@ honor_labels: true`
   honor_labels: false
 - job_name: bar
   honor_labels: true
-`)},
-		}
-		secretAdditionalAlertRelabelConfigs = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "prometheus-" + name + "-additional-alert-relabel-configs",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "prometheus",
-					"role": "monitoring",
-					"name": name,
-				},
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{"configs.yaml": []byte(`
-- source_labels: [ ignoreAlerts ]
-  regex: true
-  action: drop
 `)},
 		}
 		secretAdditionalAlertmanagerConfigs = &corev1.Secret{
@@ -804,7 +787,6 @@ location /api/v1/targets {
 						podMonitor,
 						secretAdditionalScrapeConfigs,
 						additionalConfigMap,
-						secretAdditionalAlertRelabelConfigs,
 					))
 				})
 
@@ -852,7 +834,6 @@ basic_auth:
 								podMonitor,
 								secretAdditionalScrapeConfigs,
 								additionalConfigMap,
-								secretAdditionalAlertRelabelConfigs,
 								secretAdditionalAlertmanagerConfigs,
 							))
 						})
@@ -905,7 +886,6 @@ tls_config:
 								podMonitor,
 								secretAdditionalScrapeConfigs,
 								additionalConfigMap,
-								secretAdditionalAlertRelabelConfigs,
 								secretAdditionalAlertmanagerConfigs,
 							))
 						})

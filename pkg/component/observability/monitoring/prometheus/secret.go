@@ -39,26 +39,6 @@ func (p *prometheus) secretAdditionalScrapeConfigs() *corev1.Secret {
 	}
 }
 
-func (p *prometheus) secretAdditionalAlertRelabelConfigs() *corev1.Secret {
-	if p.values.Alerting == nil {
-		return nil
-	}
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      p.name() + secretNameSuffixAdditionalAlertRelabelConfigs,
-			Namespace: p.namespace,
-			Labels:    p.getLabels(),
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{dataKeyAdditionalAlertRelabelConfigs: []byte(`
-- source_labels: [ ignoreAlerts ]
-  regex: true
-  action: drop
-`)},
-	}
-}
-
 func (p *prometheus) secretAdditionalAlertmanagerConfigs() *corev1.Secret {
 	if p.values.Alerting == nil || p.values.Alerting.AdditionalAlertmanager == nil {
 		return nil
