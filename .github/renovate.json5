@@ -168,6 +168,12 @@
       "enabled": false
     },
     {
+      // Ignore dependency updates from sigs.k8s.io/controller-runtime/tools/setup-envtest because it should be in sync with controller-runtime.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": ["sigs\\.k8s\\.io\/controller-runtime\/tools\/setup-envtest"],
+      "enabled": false
+    },
+    {
       // Ignore paths which most likely create false positives.
       "matchFileNames": [
           "chart/**",
