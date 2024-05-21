@@ -1,3 +1,8 @@
+---
+title: Controlling the Kubernetes Versions for Specific Worker Pools
+weight: 3
+---
+
 # Controlling the Kubernetes Versions for Specific Worker Pools
 
 Since Gardener `v1.36`, worker pools can have different Kubernetes versions specified than the control plane.
@@ -24,7 +29,7 @@ spec:
     - name: data2
 ```
 
-- If `.kubernetes.version` is not specified in a worker pool, then the Kubernetes version of the kubelet is inherited from the control plane (`.spec.kubernetes.version`), i.e., in the above example, the `data2` pool will use `1.26.8`.
+- If `.kubernetes.version` is not specified in a worker pool, then the Kubernetes version of the kubelet is inherited from the control plane (`.spec.kubernetes.version`), i.e., in the above example, the `data2` pool will use `1.27.4`.
 - If `.kubernetes.version` is specified in a worker pool, then it must meet the following constraints:
   - It must be at most two minor versions lower than the control plane version.
   - If it was not specified before, then no downgrade is possible (you cannot set it to `1.26.8` while `.spec.kubernetes.version` is already `1.27.4`). The "two minor version skew" is only possible if the worker pool version is set to the control plane version and then the control plane was updated gradually by two minor versions.

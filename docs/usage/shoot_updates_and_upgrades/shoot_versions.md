@@ -1,3 +1,8 @@
+---
+title: Kubernetes and Operating System Versioning
+weight: 1
+---
+
 # Shoot Kubernetes and Operating System Versioning in Gardener
 
 ## Motivation
