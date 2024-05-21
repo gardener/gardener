@@ -319,10 +319,10 @@ func (v *vpa) reconcileRecommenderPodMonitor(podMonitor *monitoringv1.PodMonitor
 		NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
 		PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
 			Port: metricsPortName,
-			RelabelConfigs: []*monitoringv1.RelabelConfig{
+			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					Action:      "replace",
-					Replacement: recommender,
+					Replacement: ptr.To(recommender),
 					TargetLabel: "job",
 				},
 				{

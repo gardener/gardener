@@ -585,7 +585,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Port:   portNameClient,
 						Scheme: "https",
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: true,
+							InsecureSkipVerify: ptr.To(true),
 							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
 								Key:                  secretsutils.DataKeyCertificate,
@@ -595,18 +595,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								Key:                  secretsutils.DataKeyPrivateKey,
 							},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 								TargetLabel:  "role",
 							},
 							{
 								Action:      "replace",
-								Replacement: e.values.NamePrefix + "etcd",
+								Replacement: ptr.To(e.values.NamePrefix + "etcd"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action: "labeldrop",
 							Regex:  `^instance$`,
 						}},
@@ -615,7 +615,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Port:   portNameBackupRestore,
 						Scheme: "https",
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: true,
+							InsecureSkipVerify: ptr.To(true),
 							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
 								Key:                  secretsutils.DataKeyCertificate,
@@ -625,7 +625,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								Key:                  secretsutils.DataKeyPrivateKey,
 							},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 								TargetLabel:  "role",
@@ -633,11 +633,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 							{
 								Action:      "replace",
-								Replacement: e.values.NamePrefix + "etcd-backup",
+								Replacement: ptr.To(e.values.NamePrefix + "etcd-backup"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
 							Action: "labeldrop",
 							Regex:  `^instance$`,
 						}}, monitoringutils.StandardMetricRelabelConfig(

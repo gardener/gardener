@@ -794,10 +794,10 @@ func getServiceMonitor() *monitoringv1.ServiceMonitor {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: "metrics",
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: "vali",
+						Replacement: ptr.To("vali"),
 						TargetLabel: "job",
 					},
 					{
@@ -805,7 +805,7 @@ func getServiceMonitor() *monitoringv1.ServiceMonitor {
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					},
 				},
-				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					SourceLabels: []monitoringv1.LabelName{"__name__"},
 					Action:       "keep",
 					Regex:        `^(vali_ingester_blocks_per_chunk_sum|vali_ingester_blocks_per_chunk_count|vali_ingester_chunk_age_seconds_sum|vali_ingester_chunk_age_seconds_count|vali_ingester_chunk_bounds_hours_sum|vali_ingester_chunk_bounds_hours_count|vali_ingester_chunk_compression_ratio_sum|vali_ingester_chunk_compression_ratio_count|vali_ingester_chunk_encode_time_seconds_sum|vali_ingester_chunk_encode_time_seconds_count|vali_ingester_chunk_entries_sum|vali_ingester_chunk_entries_count|vali_ingester_chunk_size_bytes_sum|vali_ingester_chunk_size_bytes_count|vali_ingester_chunk_utilization_sum|vali_ingester_chunk_utilization_count|vali_ingester_memory_chunks|vali_ingester_received_chunks|vali_ingester_samples_per_chunk_sum|vali_ingester_samples_per_chunk_count|vali_ingester_sent_chunks|vali_panic_total|vali_logql_querystats_duplicates_total|vali_logql_querystats_ingester_sent_lines_total|prometheus_target_scrapes_sample_out_of_order_total)$`,

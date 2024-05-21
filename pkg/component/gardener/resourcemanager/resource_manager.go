@@ -1132,7 +1132,7 @@ func (r *resourceManager) ensureServiceMonitor(ctx context.Context) error {
 			Selector: metav1.LabelSelector{MatchLabels: r.appLabel()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: metricsPortName,
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,

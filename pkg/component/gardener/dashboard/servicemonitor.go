@@ -19,7 +19,7 @@ func (g *gardenerDashboard) serviceMonitor() *monitoringv1.ServiceMonitor {
 			Selector: metav1.LabelSelector{MatchLabels: GetLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: portNameMetrics,
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action: "labelmap",
 					Regex:  `__meta_kubernetes_service_label_(.+)`,
 				}},

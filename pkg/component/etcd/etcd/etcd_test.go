@@ -545,7 +545,7 @@ var _ = Describe("Etcd", func() {
 						Port:   "client",
 						Scheme: "https",
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: true,
+							InsecureSkipVerify: ptr.To(true),
 							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
 								Key:                  secretsutils.DataKeyCertificate,
@@ -555,18 +555,18 @@ var _ = Describe("Etcd", func() {
 								Key:                  secretsutils.DataKeyPrivateKey,
 							},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 								TargetLabel:  "role",
 							},
 							{
 								Action:      "replace",
-								Replacement: "virtual-garden-etcd",
+								Replacement: ptr.To("virtual-garden-etcd"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action: "labeldrop",
 							Regex:  `^instance$`,
 						}},
@@ -575,7 +575,7 @@ var _ = Describe("Etcd", func() {
 						Port:   "backuprestore",
 						Scheme: "https",
 						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: true,
+							InsecureSkipVerify: ptr.To(true),
 							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
 								Key:                  secretsutils.DataKeyCertificate,
@@ -585,7 +585,7 @@ var _ = Describe("Etcd", func() {
 								Key:                  secretsutils.DataKeyPrivateKey,
 							},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 								TargetLabel:  "role",
@@ -593,11 +593,11 @@ var _ = Describe("Etcd", func() {
 
 							{
 								Action:      "replace",
-								Replacement: "virtual-garden-etcd-backup",
+								Replacement: ptr.To("virtual-garden-etcd-backup"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action: "labeldrop",
 								Regex:  `^instance$`,

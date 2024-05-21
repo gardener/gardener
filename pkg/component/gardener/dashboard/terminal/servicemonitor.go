@@ -8,6 +8,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -21,12 +22,12 @@ func (t *terminal) serviceMonitor() *monitoringv1.ServiceMonitor {
 			Endpoints: []monitoringv1.Endpoint{{
 				Port:      portNameMetrics,
 				Scheme:    "https",
-				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
 					Key:                  "token",
 				}},
-				MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
 					Action: "labeldrop",
 					Regex:  `url`,
 				}}, monitoringutils.StandardMetricRelabelConfig()...),

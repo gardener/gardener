@@ -786,7 +786,7 @@ func serviceMonitor(namespace string) *monitoringv1.ServiceMonitor {
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "admission-controller"}},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: "metrics",
-				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					SourceLabels: []monitoringv1.LabelName{"__name__"},
 					Action:       "keep",
 					Regex:        `^(gardener_admission_controller_.+|rest_client_.+|controller_runtime_.+|go_.+)$`,

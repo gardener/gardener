@@ -24,9 +24,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "prometheus",
+					Replacement: ptr.To("prometheus"),
 					TargetLabel: "job",
 				}},
 			},
@@ -37,9 +37,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9091"},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "cortex-frontend",
+					Replacement: ptr.To("cortex-frontend"),
 					TargetLabel: "job",
 				}},
 			},
@@ -64,9 +64,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					},
 				},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-" + garden.Label}}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "prometheus-" + garden.Label,
+					Replacement: ptr.To("prometheus-" + garden.Label),
 					TargetLabel: "job",
 				}},
 			},

@@ -24,9 +24,9 @@ var _ = Describe("ScrapeConfigs", func() {
 						Name: "prometheus",
 					},
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "prometheus",
+							Replacement: ptr.To("prometheus"),
 							TargetLabel: "job",
 						}},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -53,12 +53,12 @@ var _ = Describe("ScrapeConfigs", func() {
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "cadvisor",
+							Replacement: ptr.To("cadvisor"),
 							TargetLabel: "job",
 						}},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_usage_bytes|container_last_seen|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_oom_events_total)$`,

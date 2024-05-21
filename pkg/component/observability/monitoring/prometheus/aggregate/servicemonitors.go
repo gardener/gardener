@@ -42,12 +42,12 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 						},
 					},
 					Port: prometheus.ServicePortName,
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// This service monitor is targeting the prometheis in multiple namespaces. Without explicitly
 						// overriding the job label, prometheus-operator would choose job=prometheus-web (service name).
 						{
 							Action:      "replace",
-							Replacement: "shoot-prometheus",
+							Replacement: ptr.To("shoot-prometheus"),
 							TargetLabel: "job",
 						},
 						{

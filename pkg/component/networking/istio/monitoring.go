@@ -7,6 +7,7 @@ package istio
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
@@ -123,12 +124,12 @@ var (
 			Endpoints: []monitoringv1.Endpoint{{
 				Path: "/stats/prometheus",
 				Port: "tls-tunnel",
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 					Action:       "replace",
 					TargetLabel:  "__address__",
 					Regex:        `(.+)`,
-					Replacement:  "${1}:15020",
+					Replacement:  ptr.To("${1}:15020"),
 				}},
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 					monitoringMetricEnvoyClusterUpstreamCxActive,

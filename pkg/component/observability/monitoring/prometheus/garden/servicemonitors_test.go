@@ -26,7 +26,7 @@ var _ = Describe("ServiceMonitors", func() {
 					}},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port: "metrics",
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(alertmanager_alerts|alertmanager_alerts_received_total|alertmanager_build_info|alertmanager_cluster_health_score|alertmanager_cluster_members|alertmanager_cluster_peers_joined_total|alertmanager_config_hash|alertmanager_config_last_reload_success_timestamp_seconds|alertmanager_notifications_failed_total|alertmanager_notifications_total|alertmanager_peer_position|alertmanager_silences|process_cpu_seconds_total|process_resident_memory_bytes|process_start_time_seconds)$`,

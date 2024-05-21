@@ -365,7 +365,7 @@ func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1
 			Role:       "service",
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
-		RelabelConfigs: []*monitoringv1.RelabelConfig{
+		RelabelConfigs: []monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{
 					"__meta_kubernetes_service_label_" + labelKeyComponent,
@@ -377,20 +377,20 @@ func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1
 			{
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_" + labelKeyType},
 				Regex:        `(.+)`,
-				Replacement:  `${1}`,
+				Replacement:  ptr.To(`${1}`),
 				TargetLabel:  labelKeyType,
 			},
 			{
 				Action:      "replace",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 			},
 		},
-		MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{{
+		MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
 			SourceLabels: []monitoringv1.LabelName{"pod"},
 			Regex:        `^.+\.tf-pod.+$`,
 			Action:       "drop",
@@ -409,7 +409,7 @@ func (k *kubeStateMetrics) reconcileScrapeConfigSeed(scrapeConfig *monitoringv1a
 			Role:       "service",
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
-		RelabelConfigs: []*monitoringv1.RelabelConfig{
+		RelabelConfigs: []monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{
 					"__meta_kubernetes_service_label_component",
@@ -420,15 +420,15 @@ func (k *kubeStateMetrics) reconcileScrapeConfigSeed(scrapeConfig *monitoringv1a
 			},
 			{
 				Action:      "replace",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 			},
 		},
-		MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+		MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 			SourceLabels: []monitoringv1.LabelName{"namespace"},
 			Regex:        `shoot-.+`,
 			Action:       "drop",
@@ -447,7 +447,7 @@ func (k *kubeStateMetrics) reconcileScrapeConfigGarden(scrapeConfig *monitoringv
 			Role:       "service",
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
-		RelabelConfigs: []*monitoringv1.RelabelConfig{
+		RelabelConfigs: []monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{
 					"__meta_kubernetes_service_label_component",
@@ -458,15 +458,15 @@ func (k *kubeStateMetrics) reconcileScrapeConfigGarden(scrapeConfig *monitoringv
 			},
 			{
 				Action:      "replace",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 				TargetLabel: "job",
 			},
 			{
 				TargetLabel: "instance",
-				Replacement: "kube-state-metrics",
+				Replacement: ptr.To("kube-state-metrics"),
 			},
 		},
-		MetricRelabelConfigs: append([]*monitoringv1.RelabelConfig{
+		MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{"pod"},
 				Regex:        `^.+\.tf-pod.+$`,

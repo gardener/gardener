@@ -63,12 +63,12 @@ metric_relabel_configs:
 					StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 						Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 					}},
-					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action:      "replace",
-						Replacement: "prometheus-garden",
+						Replacement: ptr.To("prometheus-garden"),
 						TargetLabel: "job",
 					}},
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(prometheus_(.+))$`,
@@ -122,18 +122,18 @@ metric_relabel_configs:
 									`{__name__=~"metering:.+:(sum_by_namespace|sum_by_instance_type)"}`,
 								},
 							},
-							TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: true},
+							TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
 							BasicAuth: &monitoringv1.BasicAuth{
 								Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "username"},
 								Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: globalMonitoringSecret.Name}, Key: "password"},
 							},
 							StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: prometheusAggregateTargets}},
-							RelabelConfigs: []*monitoringv1.RelabelConfig{{
+							RelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action:      "replace",
-								Replacement: "prometheus-aggregate",
+								Replacement: ptr.To("prometheus-aggregate"),
 								TargetLabel: "job",
 							}},
-							MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 								SourceLabels: []monitoringv1.LabelName{"alertname"},
 								TargetLabel:  "shoot_alertname",
 							}},
