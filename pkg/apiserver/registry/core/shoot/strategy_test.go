@@ -173,7 +173,7 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
 
-			It("should not remove CredentialsBindingName field if AllowCredentialsBinding feature gate is disabled but the CredentialsBindingName field is present in the old Shoot", func() {
+			It("should not remove CredentialsBindingName field if AllowCredentialsBinding feature gate is enabled but the CredentialsBindingName field is present in the old Shoot", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.AllowCredentialsBinding, true))
 
 				bindingName := ptr.To("binding")
