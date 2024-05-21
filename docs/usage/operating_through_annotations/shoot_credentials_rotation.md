@@ -1,3 +1,7 @@
+---
+weight: 2
+---
+
 # Credentials Rotation for Shoot Clusters
 
 There are a lot of different credentials for `Shoot`s to make sure that the various components can communicate with each other and to make sure it is usable and operable.
@@ -58,7 +62,7 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 ### Kubeconfig
 
-If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true` (default), then Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](shoot_access.md#static-token-kubeconfig) for more information).
+If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true`, then Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](shoot_access.md#static-token-kubeconfig) for more information).
 
 This `Secret` is stored with the name `<shoot-name>.kubeconfig` in the project namespace in the garden cluster and has multiple data keys:
 
