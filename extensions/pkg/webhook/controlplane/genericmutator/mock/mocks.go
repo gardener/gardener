@@ -20,8 +20,7 @@ import (
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
-	v10 "k8s.io/api/core/v1"
-	v11 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	v10 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	v1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -146,20 +145,6 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerDeployment(arg0, arg1, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeAPIServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeAPIServerDeployment), arg0, arg1, arg2, arg3)
 }
 
-// EnsureKubeAPIServerService mocks base method.
-func (m *MockEnsurer) EnsureKubeAPIServerService(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v10.Service) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeAPIServerService", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// EnsureKubeAPIServerService indicates an expected call of EnsureKubeAPIServerService.
-func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerService(arg0, arg1, arg2, arg3 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeAPIServerService", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeAPIServerService), arg0, arg1, arg2, arg3)
-}
-
 // EnsureKubeControllerManagerDeployment mocks base method.
 func (m *MockEnsurer) EnsureKubeControllerManagerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
 	m.ctrl.T.Helper()
@@ -260,7 +245,7 @@ func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerDeployment(arg0
 }
 
 // EnsureMachineControllerManagerVPA mocks base method.
-func (m *MockEnsurer) EnsureMachineControllerManagerVPA(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v11.VerticalPodAutoscaler) error {
+func (m *MockEnsurer) EnsureMachineControllerManagerVPA(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v10.VerticalPodAutoscaler) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerVPA", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
