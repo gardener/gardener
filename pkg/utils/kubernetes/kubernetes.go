@@ -83,36 +83,6 @@ func SetAnnotationAndUpdate(ctx context.Context, c client.Client, obj client.Obj
 	return nil
 }
 
-func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
-	if len(nameOpt) > 1 {
-		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
-	}
-	if len(nameOpt) == 0 {
-		name = namespaceOrName
-		return
-	}
-	namespace = namespaceOrName
-	name = nameOpt[0]
-	return
-}
-
-// ObjectMeta creates a new metav1.ObjectMeta from the given parameters.
-// There are only two ways to call this function:
-//   - If only namespaceOrName is set, then a metav1.ObjectMeta with name set to namespaceOrName is returned.
-//   - If namespaceOrName and one nameOpt is given, then a metav1.ObjectMeta with namespace set to namespaceOrName
-//     and name set to nameOpt[0] is returned.
-//
-// For all other cases, this method panics.
-func ObjectMeta(namespaceOrName string, nameOpt ...string) metav1.ObjectMeta {
-	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)
-	return metav1.ObjectMeta{Namespace: namespace, Name: name}
-}
-
-// ObjectMetaFromKey returns an ObjectMeta with the namespace and name set to the values from the key.
-func ObjectMetaFromKey(key client.ObjectKey) metav1.ObjectMeta {
-	return ObjectMeta(key.Namespace, key.Name)
-}
-
 // ObjectKeyFromSecretRef returns an ObjectKey for the given SecretReference.
 func ObjectKeyFromSecretRef(ref corev1.SecretReference) client.ObjectKey {
 	return client.ObjectKey{

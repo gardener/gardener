@@ -67,20 +67,6 @@ var _ = Describe("kubernetes", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#ObjectMeta", func() {
-		It("should return an ObjectKey with namespace and name set", func() {
-			Expect(ObjectMeta(namespace, name)).To(Equal(metav1.ObjectMeta{Namespace: namespace, Name: name}))
-		})
-
-		It("should return an ObjectKey with only name set", func() {
-			Expect(ObjectMeta(name)).To(Equal(metav1.ObjectMeta{Name: name}))
-		})
-
-		It("should panic if nameOpt is longer than 1", func() {
-			Expect(func() { ObjectMeta("foo", "bar", "baz") }).To(Panic())
-		})
-	})
-
 	Describe("#ObjectKeyFromSecretRef", func() {
 		It("should return an ObjectKey with namespace and name set", func() {
 			Expect(ObjectKeyFromSecretRef(corev1.SecretReference{Namespace: namespace, Name: name})).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}))

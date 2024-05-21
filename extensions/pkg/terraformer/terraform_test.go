@@ -24,7 +24,6 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/terraformer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -320,9 +319,9 @@ var _ = Describe("terraformer", func() {
 			variablesKey = client.ObjectKey{Namespace: namespace, Name: variablesName}
 			stateKey = client.ObjectKey{Namespace: namespace, Name: stateName}
 
-			configurationObjectMeta = kubernetesutils.ObjectMeta(namespace, configurationName)
-			variablesObjectMeta = kubernetesutils.ObjectMeta(namespace, variablesName)
-			stateObjectMeta = kubernetesutils.ObjectMeta(namespace, stateName)
+			configurationObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: configurationName}
+			variablesObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: variablesName}
+			stateObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: stateName}
 
 			getConfiguration = &corev1.ConfigMap{ObjectMeta: configurationObjectMeta}
 			getVariables = &corev1.Secret{ObjectMeta: variablesObjectMeta}

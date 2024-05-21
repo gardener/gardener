@@ -490,7 +490,7 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 		// Create or update backup secret if it doesn't exist or is owned by the managed seed
 		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
 			secret := &corev1.Secret{
-				ObjectMeta: kubernetesutils.ObjectMeta(spec.Backup.SecretRef.Namespace, spec.Backup.SecretRef.Name),
+				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.SecretRef.Namespace, Name: spec.Backup.SecretRef.Name},
 			}
 			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient, secret, func() error {
 				secret.OwnerReferences = []metav1.OwnerReference{
