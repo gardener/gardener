@@ -85,6 +85,11 @@ const (
 	// owner: @ialidzhikov
 	// alpha: v1.95.0
 	VPAAndHPAForAPIServer = "VPAAndHPAForAPIServer"
+
+	// AllowCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
+	// owner: @vpnachev @dimityrmirchev
+	// alpha: v1.97.0
+	AllowCredentialsBinding featuregate.Feature = "AllowCredentialsBinding"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -123,6 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 	VPAAndHPAForAPIServer:           {Default: false, PreRelease: featuregate.Alpha},
+	AllowCredentialsBinding:         {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

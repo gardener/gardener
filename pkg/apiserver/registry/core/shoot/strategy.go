@@ -58,6 +58,10 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	if !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
 		shoot.Spec.CloudProfile = nil
 	}
+
+	if !utilfeature.DefaultFeatureGate.Enabled(features.AllowCredentialsBinding) {
+		shoot.Spec.CredentialsBindingName = nil
+	}
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -73,6 +77,10 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	if oldShoot.Spec.CloudProfile == nil && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
 		newShoot.Spec.CloudProfile = nil
+	}
+
+	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.AllowCredentialsBinding) {
+		newShoot.Spec.CredentialsBindingName = nil
 	}
 }
 
