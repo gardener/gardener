@@ -49,9 +49,7 @@ type ControllerDeploymentList struct {
 // HelmControllerDeployment configures how an extension controller is deployed using helm.
 type HelmControllerDeployment struct {
 	// RawChart is the base64-encoded, gzip'ed, tar'ed extension controller chart.
-	// +optional
 	RawChart []byte
 	// Values are the chart values.
-	// +optional
 	Values *apiextensionsv1.JSON
 }
