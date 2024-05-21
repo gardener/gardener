@@ -162,8 +162,18 @@ func (p *plutono) Deploy(ctx context.Context) error {
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
 	if dashboardConfigMap != nil {
-		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
-			metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
+		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMap.Name, Namespace: dashboardConfigMap.Namespace}}
+		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
+			for k, v := range dashboardConfigMap.Annotations {
+				metav1.SetMetaDataAnnotation(&configMap.ObjectMeta, k, v)
+			}
+
+			for k, v := range dashboardConfigMap.Labels {
+				metav1.SetMetaDataLabel(&configMap.ObjectMeta, k, v)
+			}
+
+			configMap.Data = dashboardConfigMap.Data
+			configMap.BinaryData = dashboardConfigMap.BinaryData
 			return nil
 		}); err != nil {
 			return err
