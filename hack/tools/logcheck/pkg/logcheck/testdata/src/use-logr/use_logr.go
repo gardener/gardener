@@ -18,14 +18,14 @@ import (
 type notLogr struct {
 }
 
-func (n notLogr) Enabled() bool                                             { return false }
-func (n notLogr) Info(msg string, keysAndValues ...interface{})             {}
-func (n notLogr) Error(err error, msg string, keysAndValues ...interface{}) {}
-func (n notLogr) WithValues(keysAndValues ...interface{}) logr.Logger       { return logr.Logger{} }
+func (n notLogr) Enabled() bool                                     { return false }
+func (n notLogr) Info(msg string, keysAndValues ...any)             {}
+func (n notLogr) Error(err error, msg string, keysAndValues ...any) {}
+func (n notLogr) WithValues(keysAndValues ...any) logr.Logger       { return logr.Logger{} }
 
-func Info(msg string, keysAndValues ...interface{})             {}
-func Error(err error, msg string, keysAndValues ...interface{}) {}
-func WithValues(keysAndValues ...interface{}) logr.Logger       { return logr.Logger{} }
+func Info(msg string, keysAndValues ...any)             {}
+func Error(err error, msg string, keysAndValues ...any) {}
+func WithValues(keysAndValues ...any) logr.Logger       { return logr.Logger{} }
 
 // begin test cases
 

@@ -34,7 +34,7 @@ var _ = Describe("Values", func() {
 	var (
 		obj      *object
 		objUpper *objectUpperCase
-		values   map[string]interface{}
+		values   map[string]any
 	)
 
 	BeforeEach(func() {
@@ -62,10 +62,10 @@ var _ = Describe("Values", func() {
 			Bool: ptr.To(true),
 		}
 
-		values = map[string]interface{}{
-			"objects": []interface{}{
-				map[string]interface{}{
-					"object": map[string]interface{}{
+		values = map[string]any{
+			"objects": []any{
+				map[string]any{
+					"object": map[string]any{
 						"string": "foo",
 					},
 					"int": float64(42),
@@ -85,7 +85,7 @@ var _ = Describe("Values", func() {
 		It("should convert an empty object to an empty values map", func() {
 			result, err := ToValuesMap(&object{})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{}))
+			Expect(result).To(Equal(map[string]any{}))
 		})
 
 		It("should convert nil to a nil values map", func() {
@@ -141,15 +141,15 @@ var _ = Describe("Values", func() {
 				Bool: ptr.To(true),
 			}
 
-			values = map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
-						"object": map[string]interface{}{
+			values = map[string]any{
+				"objects": []any{
+					map[string]any{
+						"object": map[string]any{
 							"string": "foo",
 						},
-						"objects": []interface{}{
-							map[string]interface{}{
-								"object": map[string]interface{}{
+						"objects": []any{
+							map[string]any{
+								"object": map[string]any{
 									"string": "bar",
 								},
 								"int": float64(50),
@@ -216,25 +216,25 @@ var _ = Describe("Values", func() {
 				Bool: ptr.To(true),
 			}
 
-			values = map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
-						"object": map[string]interface{}{
+			values = map[string]any{
+				"objects": []any{
+					map[string]any{
+						"object": map[string]any{
 							"string": "one",
-							"objects": []interface{}{
-								map[string]interface{}{
+							"objects": []any{
+								map[string]any{
 									"string": "two-l1",
-									"objects": []interface{}{
-										map[string]interface{}{
+									"objects": []any{
+										map[string]any{
 											// empty string removed
 											"int": float64(3),
 										},
 									},
 								},
-								map[string]interface{}{
+								map[string]any{
 									"string": "two-l2",
-									"objects": []interface{}{
-										map[string]interface{}{
+									"objects": []any{
+										map[string]any{
 											"int": float64(4),
 										},
 									},
@@ -267,7 +267,7 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should convert an empty values map to an empty object", func() {
-			err := FromValuesMap(map[string]interface{}{}, &result)
+			err := FromValuesMap(map[string]any{}, &result)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(&object{}))
 		})
@@ -279,12 +279,12 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should fail if the values map cannot be marshalled to JSON", func() {
-			err := FromValuesMap(map[string]interface{}{"foo": func() {}}, &result)
+			err := FromValuesMap(map[string]any{"foo": func() {}}, &result)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should fail if the values map cannot be unmarshalled back to an object", func() {
-			err := FromValuesMap(map[string]interface{}{"object": "foo"}, &result)
+			err := FromValuesMap(map[string]any{"object": "foo"}, &result)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -295,7 +295,7 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should return a new values map if the given values map is nil", func() {
-			Expect(InitValuesMap(nil)).To(Equal(map[string]interface{}{}))
+			Expect(InitValuesMap(nil)).To(Equal(map[string]any{}))
 		})
 	})
 
@@ -303,7 +303,7 @@ var _ = Describe("Values", func() {
 		It("should return the element at the specified location in the given values map", func() {
 			result, err := GetFromValuesMap(values, "objects", 0, "object")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{"string": "foo"}))
+			Expect(result).To(Equal(map[string]any{"string": "foo"}))
 		})
 
 		It("should return nil if a map key doesn't exist", func() {
@@ -351,12 +351,12 @@ var _ = Describe("Values", func() {
 
 	Describe("#SetToValuesMap", func() {
 		It("should set the element at the specified location in the given values map", func() {
-			result, err := SetToValuesMap(values, map[string]interface{}{"foo": "bar"}, "objects", 0, "object")
+			result, err := SetToValuesMap(values, map[string]any{"foo": "bar"}, "objects", 0, "object")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
-						"object": map[string]interface{}{
+			Expect(result).To(Equal(map[string]any{
+				"objects": []any{
+					map[string]any{
+						"object": map[string]any{
 							"foo": "bar",
 						},
 						"int": float64(42),
@@ -367,20 +367,20 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should create the element if a map key doesn't exist", func() {
-			result, err := SetToValuesMap(values, map[string]interface{}{"foo": "bar"}, "foo", "bar")
+			result, err := SetToValuesMap(values, map[string]any{"foo": "bar"}, "foo", "bar")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
-						"object": map[string]interface{}{
+			Expect(result).To(Equal(map[string]any{
+				"objects": []any{
+					map[string]any{
+						"object": map[string]any{
 							"string": "foo",
 						},
 						"int": float64(42),
 					},
 				},
 				"bool": true,
-				"foo": map[string]interface{}{
-					"bar": map[string]interface{}{
+				"foo": map[string]any{
+					"bar": map[string]any{
 						"foo": "bar",
 					},
 				},
@@ -388,18 +388,18 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should create the element if a slice index doesn't exist", func() {
-			result, err := SetToValuesMap(values, map[string]interface{}{"foo": "bar"}, "objects", 1, 0)
+			result, err := SetToValuesMap(values, map[string]any{"foo": "bar"}, "objects", 1, 0)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
-						"object": map[string]interface{}{
+			Expect(result).To(Equal(map[string]any{
+				"objects": []any{
+					map[string]any{
+						"object": map[string]any{
 							"string": "foo",
 						},
 						"int": float64(42),
 					},
-					[]interface{}{
-						map[string]interface{}{
+					[]any{
+						map[string]any{
 							"foo": "bar",
 						},
 					},
@@ -409,23 +409,23 @@ var _ = Describe("Values", func() {
 		})
 
 		It("should create a new values map with a nil values map", func() {
-			result, err := SetToValuesMap(nil, map[string]interface{}{"foo": "bar"}, "foo")
+			result, err := SetToValuesMap(nil, map[string]any{"foo": "bar"}, "foo")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{
-				"foo": map[string]interface{}{
+			Expect(result).To(Equal(map[string]any{
+				"foo": map[string]any{
 					"foo": "bar",
 				},
 			}))
 		})
 
 		It("should return the given values map with no keys", func() {
-			result, err := SetToValuesMap(values, map[string]interface{}{"foo": "bar"})
+			result, err := SetToValuesMap(values, map[string]any{"foo": "bar"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(values))
 		})
 
 		It("should return nil with a nil values map and no keys", func() {
-			result, err := SetToValuesMap(nil, map[string]interface{}{"foo": "bar"})
+			result, err := SetToValuesMap(nil, map[string]any{"foo": "bar"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
@@ -459,9 +459,9 @@ var _ = Describe("Values", func() {
 		It("should delete the element at the specified location in the given values map", func() {
 			result, err := DeleteFromValuesMap(values, "objects", 0, "object")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(map[string]interface{}{
-				"objects": []interface{}{
-					map[string]interface{}{
+			Expect(result).To(Equal(map[string]any{
+				"objects": []any{
+					map[string]any{
 						"int": float64(42),
 					},
 				},

@@ -23,7 +23,7 @@ type Config struct {
 	Terminal                               *Terminal              `yaml:"terminal,omitempty"`
 	OIDC                                   *OIDC                  `yaml:"oidc,omitempty"`
 	GitHub                                 *GitHub                `yaml:"gitHub,omitempty"`
-	Frontend                               map[string]interface{} `yaml:"frontend,omitempty"`
+	Frontend                               map[string]any         `yaml:"frontend,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.

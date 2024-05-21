@@ -16,7 +16,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 	ginkgo.Describe("#CentralPrometheusRules", func() {
 		ginkgo.DescribeTable("return the expected objects",
 			func(isWorkerless, wantsAlertmanager bool, expectedRuleNames []string) {
-				var matchers []interface{}
+				var matchers []any
 
 				for _, ruleName := range expectedRuleNames {
 					matchers = append(matchers, PointTo(MatchFields(IgnoreExtras, Fields{

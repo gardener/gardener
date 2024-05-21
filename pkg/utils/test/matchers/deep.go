@@ -21,11 +21,11 @@ This is to avoid mistakes where both sides of an assertion are erroneously unini
 
 type deepMatcher struct {
 	name      string
-	expected  interface{}
-	compareFn func(a1, a2 interface{}) bool
+	expected  any
+	compareFn func(a1, a2 any) bool
 }
 
-func newDeepDerivativeMatcher(expected interface{}) gomegatypes.GomegaMatcher {
+func newDeepDerivativeMatcher(expected any) gomegatypes.GomegaMatcher {
 	return &deepMatcher{
 		name:      "deep derivative equal",
 		expected:  expected,
@@ -33,7 +33,7 @@ func newDeepDerivativeMatcher(expected interface{}) gomegatypes.GomegaMatcher {
 	}
 }
 
-func newDeepEqualMatcher(expected interface{}) gomegatypes.GomegaMatcher {
+func newDeepEqualMatcher(expected any) gomegatypes.GomegaMatcher {
 	return &deepMatcher{
 		name:      "deep equal",
 		expected:  expected,
@@ -41,7 +41,7 @@ func newDeepEqualMatcher(expected interface{}) gomegatypes.GomegaMatcher {
 	}
 }
 
-func (m *deepMatcher) Match(actual interface{}) (success bool, err error) {
+func (m *deepMatcher) Match(actual any) (success bool, err error) {
 	if actual == nil && m.expected == nil {
 		return false, errors.New(deepMatcherNilError)
 	}
@@ -49,15 +49,15 @@ func (m *deepMatcher) Match(actual interface{}) (success bool, err error) {
 	return m.compareFn(m.expected, actual), nil
 }
 
-func (m *deepMatcher) FailureMessage(actual interface{}) (message string) {
+func (m *deepMatcher) FailureMessage(actual any) (message string) {
 	return m.failureMessage(actual, "to")
 }
 
-func (m *deepMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (m *deepMatcher) NegatedFailureMessage(actual any) (message string) {
 	return m.failureMessage(actual, "not to")
 }
 
-func (m *deepMatcher) failureMessage(actual interface{}, messagePrefix string) (message string) {
+func (m *deepMatcher) failureMessage(actual any, messagePrefix string) (message string) {
 	var (
 		actualYAML, actualErr     = yaml.Marshal(actual)
 		expectedYAML, expectedErr = yaml.Marshal(m.expected)

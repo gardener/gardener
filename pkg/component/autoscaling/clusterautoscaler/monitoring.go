@@ -121,7 +121,7 @@ func init() {
 func (c *clusterAutoscaler) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": c.namespace}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]any{"namespace": c.namespace}); err != nil {
 		return nil, err
 	}
 

@@ -15,7 +15,7 @@ type kubernetesErrors struct {
 	message   string
 }
 
-func (k *kubernetesErrors) Match(actual interface{}) (success bool, err error) {
+func (k *kubernetesErrors) Match(actual any) (success bool, err error) {
 	// is purely nil?
 	if actual == nil {
 		return false, nil
@@ -29,9 +29,9 @@ func (k *kubernetesErrors) Match(actual interface{}) (success bool, err error) {
 	return k.checkFunc(actualErr), nil
 }
 
-func (k *kubernetesErrors) FailureMessage(actual interface{}) (message string) {
+func (k *kubernetesErrors) FailureMessage(actual any) (message string) {
 	return format.Message(actual, fmt.Sprintf("to be %s error", k.message))
 }
-func (k *kubernetesErrors) NegatedFailureMessage(actual interface{}) (message string) {
+func (k *kubernetesErrors) NegatedFailureMessage(actual any) (message string) {
 	return format.Message(actual, fmt.Sprintf("to not be %s error", k.message))
 }

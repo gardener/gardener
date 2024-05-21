@@ -141,7 +141,7 @@ func (a *apiserverProxy) SetAdvertiseIPAddress(advertiseIPAddress string) {
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
-	if err := tplEnvoy.Execute(&envoyYAML, map[string]interface{}{
+	if err := tplEnvoy.Execute(&envoyYAML, map[string]any{
 		"advertiseIPAddress":  a.values.advertiseIPAddress,
 		"dnsLookupFamily":     a.values.DNSLookupFamily,
 		"adminPort":           adminPort,

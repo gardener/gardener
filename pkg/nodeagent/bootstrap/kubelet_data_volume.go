@@ -37,7 +37,7 @@ func init() {
 func formatKubeletDataDevice(log logr.Logger, fs afero.Afero, kubeletDataVolumeSize int64) error {
 	log.Info("Rendering script")
 	var formatKubeletDataVolumeScript bytes.Buffer
-	if err := formatKubeletDataVolumeTpl.Execute(&formatKubeletDataVolumeScript, map[string]interface{}{"kubeletDataVolumeSize": kubeletDataVolumeSize}); err != nil {
+	if err := formatKubeletDataVolumeTpl.Execute(&formatKubeletDataVolumeScript, map[string]any{"kubeletDataVolumeSize": kubeletDataVolumeSize}); err != nil {
 		return fmt.Errorf("failed rendering script: %w", err)
 	}
 

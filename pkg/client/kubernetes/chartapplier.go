@@ -99,7 +99,7 @@ func (c *chartApplier) DeleteFromEmbeddedFS(ctx context.Context, embeddedFS embe
 	return c.DeleteManifest(ctx, manifestReader, deleteManifestOpts...)
 }
 
-func (c *chartApplier) newManifestReader(embeddedFS embed.FS, chartPath, namespace, name string, values interface{}) (UnstructuredReader, error) {
+func (c *chartApplier) newManifestReader(embeddedFS embed.FS, chartPath, namespace, name string, values any) (UnstructuredReader, error) {
 	var (
 		release *chartrenderer.RenderedChart
 		err     error

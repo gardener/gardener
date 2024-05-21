@@ -32,8 +32,8 @@ type terraformStateV3 struct {
 }
 
 type outputState struct {
-	Type  string      `json:"type"`
-	Value interface{} `json:"value"`
+	Type  string `json:"type"`
+	Value any    `json:"value"`
 }
 
 type terraformStateV4 struct {

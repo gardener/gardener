@@ -16,7 +16,7 @@ import (
 
 func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 			if !ok {
 				return
@@ -24,7 +24,7 @@ func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cac
 			g.handleControllerInstallationCreateOrUpdate(controllerInstallation)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldControllerInstallation, ok := oldObj.(*gardencorev1beta1.ControllerInstallation)
 			if !ok {
 				return
@@ -51,7 +51,7 @@ func (g *graph) setupControllerInstallationWatch(_ context.Context, informer cac
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

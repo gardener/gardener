@@ -583,7 +583,7 @@ func (a *actuator) prepareGardenletChartValues(
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 	shoot *gardencorev1beta1.Shoot,
-) (map[string]interface{}, error) {
+) (map[string]any, error) {
 	// Merge gardenlet deployment with parent values
 	deployment, err := a.vp.MergeGardenletDeployment(managedSeed.Spec.Gardenlet.Deployment, shoot)
 	if err != nil {

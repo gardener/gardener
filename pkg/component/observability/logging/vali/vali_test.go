@@ -348,7 +348,7 @@ var _ = Describe("Vali", func() {
 				*sts = scaledToZeroValiStatefulset
 				return nil
 			}
-			funcPatchTo200GiStorage = func(_ context.Context, pvc *corev1.PersistentVolumeClaim, _ client.Patch, _ ...interface{}) error {
+			funcPatchTo200GiStorage = func(_ context.Context, pvc *corev1.PersistentVolumeClaim, _ client.Patch, _ ...any) error {
 				if pvc.Spec.Resources.Requests.Storage().Cmp(resource.MustParse("200Gi")) != 0 {
 					return fmt.Errorf("expect 200Gi found %v", *pvc.Spec.Resources.Requests.Storage())
 				}

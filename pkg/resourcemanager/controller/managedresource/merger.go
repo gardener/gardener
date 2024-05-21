@@ -42,7 +42,7 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	// keep metadata information of old object to avoid unnecessary update calls
 	if oldMetadataInterface, ok := oldObject.Object["metadata"]; ok {
 		// cast to map to be able to check if metadata is empty
-		if oldMetadataMap, ok := oldMetadataInterface.(map[string]interface{}); ok {
+		if oldMetadataMap, ok := oldMetadataInterface.(map[string]any); ok {
 			if len(oldMetadataMap) > 0 {
 				newObject.Object["metadata"] = oldMetadataMap
 			}
@@ -81,10 +81,10 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	newObject.SetAnnotations(ann)
 
 	// keep status of old object if it is set and not empty
-	var oldStatus map[string]interface{}
+	var oldStatus map[string]any
 	if oldStatusInterface, containsStatus := oldObject.Object["status"]; containsStatus {
 		// cast to map to be able to check if status is empty
-		if oldStatusMap, ok := oldStatusInterface.(map[string]interface{}); ok {
+		if oldStatusMap, ok := oldStatusInterface.(map[string]any); ok {
 			oldStatus = oldStatusMap
 		}
 	}

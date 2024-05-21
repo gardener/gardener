@@ -42,7 +42,7 @@ func ComputeConfigMapChecksum(data map[string]string) string {
 }
 
 // ComputeChecksum computes a SHA256 checksum for the given data.
-func ComputeChecksum(data interface{}) string {
+func ComputeChecksum(data any) string {
 	jsonString, err := json.Marshal(data)
 	if err != nil {
 		return ""

@@ -69,13 +69,13 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 
 func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 	var (
-		defaultConfig = map[string]interface{}{
+		defaultConfig = map[string]any{
 			"server-name-hash-bucket-size": "256",
 			"use-proxy-protocol":           "false",
 			"worker-processes":             "2",
 			"allow-snippet-annotations":    "true",
 		}
-		providerConfig = map[string]interface{}{}
+		providerConfig = map[string]any{}
 	)
 	if seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.ProviderConfig != nil {
 		if err := json.Unmarshal(seed.Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {

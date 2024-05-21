@@ -42,7 +42,7 @@ func checkAssignable(src, dst reflect.Value) error {
 	return nil
 }
 
-func dereference(v interface{}) interface{} {
+func dereference(v any) any {
 	dstValue := reflect.ValueOf(v)
 	Must(checkPtr(dstValue))
 
@@ -50,7 +50,7 @@ func dereference(v interface{}) interface{} {
 }
 
 // RevertableSet sets the element of dst to src and returns a function that can revert back to the original values.
-func RevertableSet(dst, src interface{}) (revert func()) {
+func RevertableSet(dst, src any) (revert func()) {
 	tmp := dereference(dst)
 	Set(dst, src)
 	return func() { Set(dst, tmp) }
@@ -59,7 +59,7 @@ func RevertableSet(dst, src interface{}) (revert func()) {
 // Set sets the pointer dst to the value of src.
 //
 // dst has to be a pointer, src has to be assignable to the element type of dst.
-func Set(dst, src interface{}) {
+func Set(dst, src any) {
 	dstValue := reflect.ValueOf(dst)
 	Must(checkPtr(dstValue))
 

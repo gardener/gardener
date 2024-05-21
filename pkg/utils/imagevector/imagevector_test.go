@@ -736,7 +736,7 @@ images:
 				}
 			)
 
-			Expect(ImageMapToValues(imageMap)).To(Equal(map[string]interface{}{
+			Expect(ImageMapToValues(imageMap)).To(Equal(map[string]any{
 				image1Key: image1Name + ":" + image1Tag,
 				image2Key: image2Repository,
 			}))

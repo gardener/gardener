@@ -20,7 +20,7 @@ func HaveFields(fields gstruct.Fields) types.GomegaMatcher {
 // Actual must be an array, slice or map.  For maps, ConsistOfFields matches against the map's values.
 // Actual's elements must be pointers.
 func ConsistOfFields(fields ...gstruct.Fields) types.GomegaMatcher {
-	var m []interface{}
+	var m []any
 	for _, f := range fields {
 		m = append(m, HaveFields(f))
 	}

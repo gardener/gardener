@@ -43,7 +43,7 @@ var _ = Describe("ValuesHelper", func() {
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig func(bool) *gardenletv1alpha1.GardenletConfiguration
 
-		gardenletChartValues func(bool, string, int32, map[string]interface{}) map[string]interface{}
+		gardenletChartValues func(bool, string, int32, map[string]any) map[string]any
 	)
 
 	BeforeEach(func() {
@@ -213,58 +213,58 @@ var _ = Describe("ValuesHelper", func() {
 			}
 		}
 
-		gardenletChartValues = func(withBootstrap bool, bk string, replicaCount int32, additionalValues map[string]interface{}) map[string]interface{} {
+		gardenletChartValues = func(withBootstrap bool, bk string, replicaCount int32, additionalValues map[string]any) map[string]any {
 			var kubeconfig string
 			if !withBootstrap {
 				kubeconfig = "garden kubeconfig"
 			}
 
-			result := map[string]interface{}{
+			result := map[string]any{
 				"replicaCount":         float64(replicaCount),
 				"revisionHistoryLimit": float64(1),
-				"image": map[string]interface{}{
+				"image": map[string]any{
 					"repository": "europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet",
 					"tag":        "v0.0.0-master+$Format:%H$",
 					"pullPolicy": "IfNotPresent",
 				},
-				"podAnnotations": map[string]interface{}{
+				"podAnnotations": map[string]any{
 					"foo": "bar",
 				},
 				"vpa":                            true,
 				"imageVectorOverwrite":           "image vector overwrite",
 				"componentImageVectorOverwrites": "component image vector overwrites",
-				"config": map[string]interface{}{
+				"config": map[string]any{
 					"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
 					"kind":       "GardenletConfiguration",
-					"gardenClientConnection": map[string]interface{}{
+					"gardenClientConnection": map[string]any{
 						"kubeconfig":         kubeconfig,
 						"acceptContentTypes": "application/json",
 						"contentType":        "application/json",
 						"qps":                float64(100),
 						"burst":              float64(130),
 					},
-					"seedClientConnection": map[string]interface{}{
+					"seedClientConnection": map[string]any{
 						"kubeconfig":         "",
 						"acceptContentTypes": "application/json",
 						"contentType":        "application/json",
 						"qps":                float64(100),
 						"burst":              float64(130),
 					},
-					"server": map[string]interface{}{
-						"healthProbes": map[string]interface{}{
+					"server": map[string]any{
+						"healthProbes": map[string]any{
 							"bindAddress": "0.0.0.0",
 							"port":        float64(2728),
 						},
-						"metrics": map[string]interface{}{
+						"metrics": map[string]any{
 							"bindAddress": "0.0.0.0",
 							"port":        float64(2729),
 						},
 					},
-					"featureGates": map[string]interface{}{
+					"featureGates": map[string]any{
 						"FooFeature": false,
 						"BarFeature": true,
 					},
-					"logging": map[string]interface{}{
+					"logging": map[string]any{
 						"enabled": true,
 					},
 					"logLevel":  "",
@@ -273,12 +273,12 @@ var _ = Describe("ValuesHelper", func() {
 			}
 
 			if withBootstrap {
-				bootstrapKubeconfig := map[string]interface{}{
+				bootstrapKubeconfig := map[string]any{
 					"name":       "gardenlet-kubeconfig-bootstrap",
 					"namespace":  v1beta1constants.GardenNamespace,
 					"kubeconfig": bk,
 				}
-				kubeconfigSecret := map[string]interface{}{
+				kubeconfigSecret := map[string]any{
 					"name":      "gardenlet-kubeconfig",
 					"namespace": v1beta1constants.GardenNamespace,
 				}

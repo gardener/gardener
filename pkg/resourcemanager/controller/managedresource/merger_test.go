@@ -192,10 +192,10 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should keep current .status if it is not empty", func() {
-			current.Object["status"] = map[string]interface{}{
+			current.Object["status"] = map[string]any{
 				"podIP": "1.1.1.1",
 			}
-			desired.Object["status"] = map[string]interface{}{
+			desired.Object["status"] = map[string]any{
 				"podIP": "2.2.2.2",
 			}
 
@@ -206,18 +206,18 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should discard .status if current .status is empty", func() {
-			desired.Object["status"] = map[string]interface{}{
+			desired.Object["status"] = map[string]any{
 				"podIP": "2.2.2.2",
 			}
 
-			current.Object["status"] = map[string]interface{}{}
+			current.Object["status"] = map[string]any{}
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false, false)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(current.Object["status"]).To(BeNil())
 		})
 
 		It("should discard .status if current .status is not set", func() {
-			desired.Object["status"] = map[string]interface{}{
+			desired.Object["status"] = map[string]any{
 				"podIP": "2.2.2.2",
 			}
 

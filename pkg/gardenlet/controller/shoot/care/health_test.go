@@ -82,7 +82,7 @@ var _ = Describe("health check", func() {
 
 	Describe("#ComputeRequiredControlPlaneDeployments", func() {
 		var (
-			workerlessDepoymentNames = []interface{}{
+			workerlessDepoymentNames = []any{
 				"gardener-resource-manager",
 				"kube-apiserver",
 				"kube-controller-manager",
@@ -90,7 +90,7 @@ var _ = Describe("health check", func() {
 			commonDeploymentNames = append(workerlessDepoymentNames, "kube-scheduler", "machine-controller-manager")
 		)
 
-		tests := func(shoot *gardencorev1beta1.Shoot, names []interface{}, isWorkerless bool) {
+		tests := func(shoot *gardencorev1beta1.Shoot, names []any, isWorkerless bool) {
 			It("should return expected deployments for shoot", func() {
 				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
 

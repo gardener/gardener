@@ -123,9 +123,9 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 			mockChartApplier := mock.NewMockChartApplier(ctrl)
 
-			mockChartApplier.EXPECT().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, "garden", "gardenlet", kubernetes.Values(map[string]interface{}{}))
+			mockChartApplier.EXPECT().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, "garden", "gardenlet", kubernetes.Values(map[string]any{}))
 
-			deployer = NewGardenletChartApplier(mockChartApplier, map[string]interface{}{})
+			deployer = NewGardenletChartApplier(mockChartApplier, map[string]any{})
 			Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred(), "Destroy Gardenlet resources succeeds")
 		})
 	})
@@ -145,20 +145,20 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			cmAndSecretNameToUniqueName map[string]string,
 			k8sGreaterEqual126 bool,
 		) {
-			gardenletValues := map[string]interface{}{
+			gardenletValues := map[string]any{
 				"enabled": true,
 			}
 
-			componentConfigValues := map[string]interface{}{}
+			componentConfigValues := map[string]any{}
 
 			if gardenClientConnectionKubeconfig != nil {
-				componentConfigValues["gardenClientConnection"] = map[string]interface{}{
+				componentConfigValues["gardenClientConnection"] = map[string]any{
 					"kubeconfig": *gardenClientConnectionKubeconfig,
 				}
 			}
 
 			if seedClientConnectionKubeconfig != nil {
-				componentConfigValues["seedClientConnection"] = map[string]interface{}{
+				componentConfigValues["seedClientConnection"] = map[string]any{
 					"kubeconfig": *seedClientConnectionKubeconfig,
 				}
 			}
@@ -166,13 +166,13 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			// bootstrap configurations are tested in one test-case
 			usesTLSBootstrapping := bootstrapKubeconfigContent != nil && bootstrapKubeconfig != nil && bootstrapKubeconfigSecret != nil
 			if usesTLSBootstrapping {
-				componentConfigValues["gardenClientConnection"] = map[string]interface{}{
-					"bootstrapKubeconfig": map[string]interface{}{
+				componentConfigValues["gardenClientConnection"] = map[string]any{
+					"bootstrapKubeconfig": map[string]any{
 						"name":       bootstrapKubeconfig.Name,
 						"namespace":  bootstrapKubeconfig.Namespace,
 						"kubeconfig": *bootstrapKubeconfigContent,
 					},
-					"kubeconfigSecret": map[string]interface{}{
+					"kubeconfigSecret": map[string]any{
 						"name":      bootstrapKubeconfigSecret.Name,
 						"namespace": bootstrapKubeconfigSecret.Namespace,
 					},

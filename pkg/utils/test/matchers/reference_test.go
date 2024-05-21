@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Reference Matcher", func() {
-	test := func(actual, expected interface{}) {
+	test := func(actual, expected any) {
 		It("should be true if objects share the same reference", func() {
 			sameRef := actual
 

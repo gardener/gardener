@@ -18,7 +18,7 @@ var _ = Describe("Controller", func() {
 		)
 
 		BeforeEach(func() {
-			obj = &unstructured.Unstructured{Object: map[string]interface{}{}}
+			obj = &unstructured.Unstructured{Object: map[string]any{}}
 			expected = obj.DeepCopy()
 		})
 
@@ -50,12 +50,12 @@ var _ = Describe("Controller", func() {
 			}
 
 			// add .spec.template to object
-			Expect(unstructured.SetNestedMap(obj.Object, map[string]interface{}{
-				"template": map[string]interface{}{},
+			Expect(unstructured.SetNestedMap(obj.Object, map[string]any{
+				"template": map[string]any{},
 			}, "spec")).To(Succeed())
 
 			expected = obj.DeepCopy()
-			Expect(unstructured.SetNestedMap(expected.Object, map[string]interface{}{
+			Expect(unstructured.SetNestedMap(expected.Object, map[string]any{
 				"inject": "me",
 			}, "spec", "template", "metadata", "labels")).To(Succeed())
 			expected.SetLabels(labels)
@@ -70,10 +70,10 @@ var _ = Describe("Controller", func() {
 			}
 
 			// add .spec.volumeClaimTemplates to object
-			Expect(unstructured.SetNestedMap(obj.Object, map[string]interface{}{
-				"volumeClaimTemplates": []interface{}{
-					map[string]interface{}{
-						"metadata": map[string]interface{}{
+			Expect(unstructured.SetNestedMap(obj.Object, map[string]any{
+				"volumeClaimTemplates": []any{
+					map[string]any{
+						"metadata": map[string]any{
 							"name": "volume-claim-name",
 						},
 					},
@@ -81,12 +81,12 @@ var _ = Describe("Controller", func() {
 			}, "spec")).To(Succeed())
 
 			expected = obj.DeepCopy()
-			Expect(unstructured.SetNestedMap(expected.Object, map[string]interface{}{
-				"volumeClaimTemplates": []interface{}{
-					map[string]interface{}{
-						"metadata": map[string]interface{}{
+			Expect(unstructured.SetNestedMap(expected.Object, map[string]any{
+				"volumeClaimTemplates": []any{
+					map[string]any{
+						"metadata": map[string]any{
 							"name": "volume-claim-name",
-							"labels": map[string]interface{}{
+							"labels": map[string]any{
 								"inject": "me",
 							},
 						},

@@ -391,7 +391,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			)
 
 			ginkgo.By(fmt.Sprintf("Deploy the logger application in shoot namespace %s", shootNamespace.Name))
-			loggerParams := map[string]interface{}{
+			loggerParams := map[string]any{
 				"LoggerName":          loggerName,
 				"HelmDeployNamespace": shootNamespace.Name,
 				"AppLabel":            loggerName,

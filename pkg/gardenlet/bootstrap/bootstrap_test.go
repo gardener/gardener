@@ -159,7 +159,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should not return an error", func() {
-			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&certificate.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
 				return approvedCSR.Name, nil
 			})()
 
@@ -198,7 +198,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR got denied", func() {
-			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&certificate.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
 				return deniedCSR.Name, nil
 			})()
 
@@ -216,7 +216,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR failed", func() {
-			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&certificate.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
 				return failedCSR.Name, nil
 			})()
 

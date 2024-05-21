@@ -17,7 +17,7 @@ import (
 
 func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			secretBinding, ok := obj.(*gardencorev1beta1.SecretBinding)
 			if !ok {
 				return
@@ -25,7 +25,7 @@ func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Inform
 			g.handleSecretBindingCreateOrUpdate(secretBinding)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldSecretBinding, ok := oldObj.(*gardencorev1beta1.SecretBinding)
 			if !ok {
 				return
@@ -41,7 +41,7 @@ func (g *graph) setupSecretBindingWatch(_ context.Context, informer cache.Inform
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

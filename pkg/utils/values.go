@@ -24,8 +24,8 @@ type Options struct {
 // ToValuesMap converts the given value v to a values map, by first marshalling it to JSON,
 // and then unmarshalling the result from JSON into a values map.
 // If v cannot be marshalled to JSON, or if the result cannot be unmarshalled into a values map, an error is returned.
-func ToValuesMap(v interface{}) (map[string]interface{}, error) {
-	var m map[string]interface{}
+func ToValuesMap(v any) (map[string]any, error) {
+	var m map[string]any
 	if err := convert(v, &m); err != nil {
 		return nil, err
 	}
@@ -35,8 +35,8 @@ func ToValuesMap(v interface{}) (map[string]interface{}, error) {
 // ToValuesMapWithOptions converts the given value v to a values map, by first marshalling it to JSON,
 // and then unmarshalling the result from JSON into a values map.
 // If v cannot be marshalled to JSON, or if the result cannot be unmarshalled into a values map, an error is returned.
-func ToValuesMapWithOptions(v interface{}, opt Options) (map[string]interface{}, error) {
-	var m map[string]interface{}
+func ToValuesMapWithOptions(v any, opt Options) (map[string]any, error) {
+	var m map[string]any
 	if err := convert(v, &m); err != nil {
 		return nil, err
 	}
@@ -53,8 +53,8 @@ func hasOptions(opt Options) bool {
 	return opt.LowerCaseKeys || opt.RemoveZeroEntries
 }
 
-// applyOptions recursively ensures that the keys in a map[string]interface{} are lower-case
-func (opt *Options) applyOptions(input map[string]interface{}) map[string]interface{} {
+// applyOptions recursively ensures that the keys in a map[string]any are lower-case
+func (opt *Options) applyOptions(input map[string]any) map[string]any {
 	if input == nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (opt *Options) applyOptions(input map[string]interface{}) map[string]interf
 		return input
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for key, value := range input {
 		if value == nil {
 			continue
@@ -79,9 +79,9 @@ func (opt *Options) applyOptions(input map[string]interface{}) map[string]interf
 			key = string(unicode.ToLower(r)) + key[n:]
 		}
 
-		if m, ok := value.(map[string]interface{}); ok {
+		if m, ok := value.(map[string]any); ok {
 			value = opt.applyOptions(m)
-		} else if m, ok := value.([]interface{}); ok {
+		} else if m, ok := value.([]any); ok {
 			value = opt.sliceToValues(m)
 		}
 
@@ -90,10 +90,10 @@ func (opt *Options) applyOptions(input map[string]interface{}) map[string]interf
 	return result
 }
 
-func (opt *Options) sliceToValues(input []interface{}) []interface{} {
-	var result = make([]interface{}, len(input))
+func (opt *Options) sliceToValues(input []any) []any {
+	var result = make([]any, len(input))
 	for index, v2 := range input {
-		if m2, ok := v2.(map[string]interface{}); ok {
+		if m2, ok := v2.(map[string]any); ok {
 			result[index] = opt.applyOptions(m2)
 			continue
 		}
@@ -105,14 +105,14 @@ func (opt *Options) sliceToValues(input []interface{}) []interface{} {
 // FromValuesMap converts the given values map values to the given value v, by first marshalling it to JSON,
 // and then unmarshalling the result from JSON into v.
 // If values cannot be marshalled to JSON, or if the result cannot be unmarshalled into v, an error is returned.
-func FromValuesMap(values map[string]interface{}, v interface{}) error {
+func FromValuesMap(values map[string]any, v any) error {
 	return convert(values, v)
 }
 
 // InitValuesMap returns the given values map if it is non-nil, or a newly allocated values map if it is nil.
-func InitValuesMap(values map[string]interface{}) map[string]interface{} {
+func InitValuesMap(values map[string]any) map[string]any {
 	if values == nil {
-		values = make(map[string]interface{})
+		values = make(map[string]any)
 	}
 	return values
 }
@@ -122,7 +122,7 @@ func InitValuesMap(values map[string]interface{}) map[string]interface{} {
 // If such an element does not exist, it returns nil.
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func GetFromValuesMap(values map[string]interface{}, keys ...interface{}) (interface{}, error) {
+func GetFromValuesMap(values map[string]any, keys ...any) (any, error) {
 	return getFromValues(fromMap(values), keys...)
 }
 
@@ -132,7 +132,7 @@ func GetFromValuesMap(values map[string]interface{}, keys ...interface{}) (inter
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // Slice indexes must refer to existing slice elements or the first element beyond the end of a slice.
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func SetToValuesMap(values map[string]interface{}, v interface{}, keys ...interface{}) (map[string]interface{}, error) {
+func SetToValuesMap(values map[string]any, v any, keys ...any) (map[string]any, error) {
 	x, err := setToValues(fromMap(values), v, keys...)
 	return toMap(x), err
 }
@@ -142,14 +142,14 @@ func SetToValuesMap(values map[string]interface{}, v interface{}, keys ...interf
 // If such an element does not exist, it returns the given values map unmodified.
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func DeleteFromValuesMap(values map[string]interface{}, keys ...interface{}) (map[string]interface{}, error) {
+func DeleteFromValuesMap(values map[string]any, keys ...any) (map[string]any, error) {
 	x, err := deleteFromValues(fromMap(values), keys...)
 	return toMap(x), err
 }
 
 // convert converts x to y by first marshalling x to JSON, and then unmarshalling the result from JSON into y.
 // If x cannot be marshalled to JSON, or if the result cannot be unmarshalled into y, an error is returned.
-func convert(x, y interface{}) error {
+func convert(x, y any) error {
 	jsonBytes, err := json.Marshal(x)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func convert(x, y interface{}) error {
 // If such an element does not exist, it returns nil.
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func getFromValues(values interface{}, keys ...interface{}) (interface{}, error) {
+func getFromValues(values any, keys ...any) (any, error) {
 	if values == nil {
 		return nil, nil
 	}
@@ -175,9 +175,9 @@ func getFromValues(values interface{}, keys ...interface{}) (interface{}, error)
 	switch keys[0].(type) {
 	case string:
 		key := keys[0].(string)
-		var m map[string]interface{}
+		var m map[string]any
 
-		if m, ok = values.(map[string]interface{}); !ok {
+		if m, ok = values.(map[string]any); !ok {
 			return nil, fmt.Errorf("cannot use key '%s' with a non-map value", key)
 		}
 		if _, ok = m[key]; !ok {
@@ -187,10 +187,10 @@ func getFromValues(values interface{}, keys ...interface{}) (interface{}, error)
 	case int:
 		var (
 			index = keys[0].(int)
-			s     []interface{}
+			s     []any
 		)
 
-		if s, ok = values.([]interface{}); !ok {
+		if s, ok = values.([]any); !ok {
 			return nil, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}
 		if index < 0 || index >= len(s) {
@@ -208,7 +208,7 @@ func getFromValues(values interface{}, keys ...interface{}) (interface{}, error)
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // Slice indexes must refer to existing slice elements or the first element beyond the end of a slice.
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func setToValues(values interface{}, v interface{}, keys ...interface{}) (interface{}, error) {
+func setToValues(values any, v any, keys ...any) (any, error) {
 	if len(keys) == 0 {
 		return values, nil
 	}
@@ -220,11 +220,11 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 		key := keys[0].(string)
 
 		if values == nil {
-			values = map[string]interface{}{}
+			values = map[string]any{}
 		}
 
-		var m map[string]interface{}
-		if m, ok = values.(map[string]interface{}); !ok {
+		var m map[string]any
+		if m, ok = values.(map[string]any); !ok {
 			return values, fmt.Errorf("cannot use key '%s' with a non-map value", key)
 		}
 		if len(keys) == 1 {
@@ -241,12 +241,12 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 		index := keys[0].(int)
 
 		if values == nil {
-			values = []interface{}{}
+			values = []any{}
 		}
 
-		var s []interface{}
+		var s []any
 
-		if s, ok = values.([]interface{}); !ok {
+		if s, ok = values.([]any); !ok {
 			return values, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}
 		if index >= 0 && index < len(s) {
@@ -284,7 +284,7 @@ func setToValues(values interface{}, v interface{}, keys ...interface{}) (interf
 // If such an element does not exist, it returns the given values unmodified.
 // All keys must be of type either string (for map keys) or int (for slice indexes).
 // If a key type doesn't match the corresponding element type (string for map, int for slice), an error is returned.
-func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, error) {
+func deleteFromValues(values any, keys ...any) (any, error) {
 	if values == nil {
 		return nil, nil
 	}
@@ -297,9 +297,9 @@ func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, err
 	switch keys[0].(type) {
 	case string:
 		key := keys[0].(string)
-		var m map[string]interface{}
+		var m map[string]any
 
-		if m, ok = values.(map[string]interface{}); !ok {
+		if m, ok = values.(map[string]any); !ok {
 			return values, fmt.Errorf("cannot use key '%s' with a non-map value", key)
 		}
 		if _, ok = m[key]; ok {
@@ -316,9 +316,9 @@ func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, err
 		return m, nil
 	case int:
 		index := keys[0].(int)
-		var s []interface{}
+		var s []any
 
-		if s, ok = values.([]interface{}); !ok {
+		if s, ok = values.([]any); !ok {
 			return values, fmt.Errorf("cannot use index '%d' with a non-slice value", index)
 		}
 		if index >= 0 && index < len(s) {
@@ -338,16 +338,16 @@ func deleteFromValues(values interface{}, keys ...interface{}) (interface{}, err
 	}
 }
 
-func fromMap(values map[string]interface{}) interface{} {
+func fromMap(values map[string]any) any {
 	if values == nil {
 		return nil
 	}
 	return values
 }
 
-func toMap(x interface{}) map[string]interface{} {
+func toMap(x any) map[string]any {
 	if x == nil {
 		return nil
 	}
-	return x.(map[string]interface{})
+	return x.(map[string]any)
 }

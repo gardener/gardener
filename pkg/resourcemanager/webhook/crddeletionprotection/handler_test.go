@@ -322,18 +322,18 @@ var _ = Describe("handler", func() {
 	})
 })
 
-func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...any) {
 	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
 	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
-func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...any) {
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(BeEquivalentTo(http.StatusForbidden), optionalDescription...)
 	Expect(response.Result.Message).To(reason, optionalDescription...)
 }
 
-func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...any) {
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(code, optionalDescription...)
 	Expect(response.Result.Message).To(err, optionalDescription...)

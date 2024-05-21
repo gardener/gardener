@@ -149,7 +149,7 @@ func separate(withNewBeginning bool) string {
 	return result
 }
 
-func indent(level int, format string, a ...interface{}) string {
+func indent(level int, format string, a ...any) string {
 	return fmt.Sprintf("| "+strings.Repeat("&nbsp;&nbsp;", level)+format+"<br />", a...)
 }
 

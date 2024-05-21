@@ -24,7 +24,7 @@ import (
 //		kubernetes.WithClientOptions(clientOptions),
 //		kubernetes.WithDisabledCachedClient(),
 //	))
-func ConsistOfConfigFuncs(fns ...interface{}) gomegatypes.GomegaMatcher {
+func ConsistOfConfigFuncs(fns ...any) gomegatypes.GomegaMatcher {
 	var matchers []gomegatypes.GomegaMatcher
 
 	for _, fn := range fns {
@@ -39,17 +39,17 @@ func ConsistOfConfigFuncs(fns ...interface{}) gomegatypes.GomegaMatcher {
 // e.g.:
 //
 //	Expect(fn).Should(MatchConfigFunc(WithClientConnectionOptions(clientConnectionConfig)))
-func MatchConfigFunc(fn interface{}) gomegatypes.GomegaMatcher {
+func MatchConfigFunc(fn any) gomegatypes.GomegaMatcher {
 	return &configFuncMatcher{expected: fn}
 }
 
 type configFuncMatcher struct {
-	expected interface{}
+	expected any
 
 	expectedConfig, actualConfig *kubernetes.Config
 }
 
-func (m *configFuncMatcher) Match(actual interface{}) (success bool, err error) {
+func (m *configFuncMatcher) Match(actual any) (success bool, err error) {
 	if m.expected == nil {
 		return false, fmt.Errorf("Refusing to compare <nil> to <nil>.\nBe explicit and use BeNil() instead.  This is to avoid mistakes where both sides of an assertion are erroneously uninitialized.") //nolint:revive
 	}
@@ -78,7 +78,7 @@ func (m *configFuncMatcher) Match(actual interface{}) (success bool, err error) 
 	return reflect.DeepEqual(m.expectedConfig, m.actualConfig), nil
 }
 
-func (m *configFuncMatcher) FailureMessage(actual interface{}) (message string) {
+func (m *configFuncMatcher) FailureMessage(actual any) (message string) {
 	if m.actualConfig == nil || m.expectedConfig == nil {
 		return format.Message(actual, "to produce an equal config to the one produced by", m.expected)
 	}
@@ -86,7 +86,7 @@ func (m *configFuncMatcher) FailureMessage(actual interface{}) (message string) 
 	return format.MessageWithDiff(fmt.Sprintf("%+v", m.actualConfig), "to produce an equal config to the one produced by", fmt.Sprintf("%+v", m.expectedConfig))
 }
 
-func (m *configFuncMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (m *configFuncMatcher) NegatedFailureMessage(actual any) (message string) {
 	if m.actualConfig == nil || m.expectedConfig == nil {
 		return format.Message(actual, "to not produce an equal config to the one produced by", m.expected)
 	}

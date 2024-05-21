@@ -56,10 +56,10 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		}
 	}
 
-	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]interface{}, error) {
+	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, _ metav1.Object, _, _ string) ([]any, error) {
 		var (
 			managedSeed = obj.(*seedmanagement.ManagedSeed)
-			cells       = []interface{}{}
+			cells       = []any{}
 		)
 
 		seedRegisteredCondition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagement.ManagedSeedSeedRegistered)

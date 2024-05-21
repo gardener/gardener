@@ -106,10 +106,10 @@ var _ = Describe("Sorter", func() {
 				objBase = []object{
 					{
 						obj: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "v1",
 								"kind":       "ConfigMap",
-								"metadata": map[string]interface{}{
+								"metadata": map[string]any{
 									"name":      "foo",
 									"namespace": "bar",
 								},
@@ -118,10 +118,10 @@ var _ = Describe("Sorter", func() {
 					},
 					{
 						obj: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "apps/v1",
 								"kind":       "Deployment",
-								"metadata": map[string]interface{}{
+								"metadata": map[string]any{
 									"name":      "nginx",
 									"namespace": "web",
 								},
@@ -152,10 +152,10 @@ var _ = Describe("Sorter", func() {
 				objBase = []object{
 					{
 						obj: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "v1",
 								"kind":       "ConfigMap",
-								"metadata": map[string]interface{}{
+								"metadata": map[string]any{
 									"name":      "foo",
 									"namespace": "bar",
 								},
@@ -164,10 +164,10 @@ var _ = Describe("Sorter", func() {
 					},
 					{
 						obj: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "v1",
 								"kind":       "ConfigMap",
-								"metadata": map[string]interface{}{
+								"metadata": map[string]any{
 									"name":      "foo1",
 									"namespace": "bar",
 								},

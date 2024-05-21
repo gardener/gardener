@@ -45,7 +45,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 	}
 
 	var config bytes.Buffer
-	if err := tplValitail.Execute(&config, map[string]interface{}{
+	if err := tplValitail.Execute(&config, map[string]any{
 		"clientURL":         "https://" + ctx.ValiIngress + "/vali/api/v1/push",
 		"pathCACert":        PathCACert,
 		"valiIngress":       ctx.ValiIngress,

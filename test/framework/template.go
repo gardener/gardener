@@ -18,7 +18,7 @@ import (
 )
 
 // RenderAndDeployTemplate renders a template from the resource template directory and deploys it to the cluster
-func (f *CommonFramework) RenderAndDeployTemplate(ctx context.Context, k8sClient kubernetes.Interface, templateName string, values interface{}) error {
+func (f *CommonFramework) RenderAndDeployTemplate(ctx context.Context, k8sClient kubernetes.Interface, templateName string, values any) error {
 	templateFilepath := filepath.Join(f.TemplatesDir, templateName)
 	if _, err := os.Stat(templateFilepath); err != nil {
 		return fmt.Errorf("could not find template in %q", templateFilepath)

@@ -464,12 +464,12 @@ func (v *vali) getValiConfigMap() *corev1.ConfigMap {
 
 func (v *vali) getTelegrafConfigMap() (*corev1.ConfigMap, error) {
 	var telegrafConfig bytes.Buffer
-	if err := telegrafConfigTemplate.Execute(&telegrafConfig, map[string]interface{}{"ListenPort": telegrafServicePort}); err != nil {
+	if err := telegrafConfigTemplate.Execute(&telegrafConfig, map[string]any{"ListenPort": telegrafServicePort}); err != nil {
 		return nil, fmt.Errorf("failed to render telegraf configuration: %w", err)
 	}
 
 	var telegrafStartScript bytes.Buffer
-	if err := telegrafStartScriptTemplate.Execute(&telegrafStartScript, map[string]interface{}{"KubeRBACProxyPort": kubeRBACProxyPort}); err != nil {
+	if err := telegrafStartScriptTemplate.Execute(&telegrafStartScript, map[string]any{"KubeRBACProxyPort": kubeRBACProxyPort}); err != nil {
 		return nil, fmt.Errorf("failed to render telegraf start script: %w", err)
 	}
 

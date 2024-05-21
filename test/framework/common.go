@@ -41,7 +41,7 @@ const (
 type SearchResponse struct {
 	Data struct {
 		Result []struct {
-			Value []interface{} `json:"value"`
+			Value []any `json:"value"`
 		} `json:"result"`
 	} `json:"data"`
 }

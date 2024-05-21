@@ -87,7 +87,7 @@ func init() {
 func (k *kubeControllerManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": k.namespace}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]any{"namespace": k.namespace}); err != nil {
 		return nil, err
 	}
 

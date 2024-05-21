@@ -132,27 +132,27 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}
 
 	ginkgo.By("Apply redis chart")
-	masterValues := map[string]interface{}{
+	masterValues := map[string]any{
 		"command": "redis-server",
 	}
 	if shoot.Spec.Provider.Type == "alicloud" {
 		// AliCloud requires a minimum of 20 GB for its PVCs
-		masterValues["persistence"] = map[string]interface{}{
+		masterValues["persistence"] = map[string]any{
 			"size": "20Gi",
 		}
 	}
 
 	// redis-slaves are not required for test success
-	values := map[string]interface{}{
-		"image": map[string]interface{}{
+	values := map[string]any{
+		"image": map[string]any{
 			"registry":   "eu.gcr.io",
 			"repository": "gardener-project/3rd/redis",
 			"tag":        "5.0.8",
 		},
-		"cluster": map[string]interface{}{
+		"cluster": map[string]any{
 			"enabled": false,
 		},
-		"rbac": map[string]interface{}{
+		"rbac": map[string]any{
 			"create": true,
 		},
 		"master": masterValues,

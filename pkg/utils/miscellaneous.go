@@ -18,17 +18,17 @@ import (
 
 // MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
 // already existing in the <a> map, the <a> value for that key will be overwritten.
-func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
-	var values = make(map[string]interface{}, len(b))
+func MergeMaps(a, b map[string]any) map[string]any {
+	var values = make(map[string]any, len(b))
 
 	for i, v := range b {
 		existing, ok := a[i]
 		values[i] = v
 
 		switch elem := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			if ok {
-				if extMap, ok := existing.(map[string]interface{}); ok {
+				if extMap, ok := existing.(map[string]any); ok {
 					values[i] = MergeMaps(extMap, elem)
 				}
 			}
@@ -119,8 +119,8 @@ func Indent(str string, spaces int) string {
 }
 
 // ShallowCopyMapStringInterface creates a shallow copy of the given map.
-func ShallowCopyMapStringInterface(values map[string]interface{}) map[string]interface{} {
-	copiedValues := make(map[string]interface{}, len(values))
+func ShallowCopyMapStringInterface(values map[string]any) map[string]any {
+	copiedValues := make(map[string]any, len(values))
 	for k, v := range values {
 		copiedValues[k] = v
 	}
@@ -136,8 +136,8 @@ func IifString(condition bool, onTrue, onFalse string) string {
 	return onFalse
 }
 
-// InterfaceMapToStringMap translates map[string]interface{} to map[string]string.
-func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
+// InterfaceMapToStringMap translates map[string]any to map[string]string.
+func InterfaceMapToStringMap(in map[string]any) map[string]string {
 	m := make(map[string]string, len(in))
 	for k, v := range in {
 		m[k] = fmt.Sprint(v)

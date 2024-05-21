@@ -31,15 +31,15 @@ type managedResourceObjectsMatcher struct {
 	mismatchExpectedToActual map[string]string
 }
 
-func (m *managedResourceObjectsMatcher) FailureMessage(actual interface{}) string {
+func (m *managedResourceObjectsMatcher) FailureMessage(actual any) string {
 	return m.createMessage(actual, "not to be")
 }
 
-func (m *managedResourceObjectsMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *managedResourceObjectsMatcher) NegatedFailureMessage(actual any) string {
 	return m.createMessage(actual, "to be")
 }
 
-func (m *managedResourceObjectsMatcher) createMessage(actual interface{}, addition string) string {
+func (m *managedResourceObjectsMatcher) createMessage(actual any, addition string) string {
 	managedResource, ok := actual.(*resourcesv1alpha1.ManagedResource)
 	if !ok {
 		return fmt.Sprintf("expected *resourcesv1alpha1.ManagedResource.  got:\n%s", format.Object(actual, 1))
@@ -68,7 +68,7 @@ func (m *managedResourceObjectsMatcher) createMessage(actual interface{}, additi
 	return message
 }
 
-func (m *managedResourceObjectsMatcher) Match(actual interface{}) (bool, error) {
+func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 	if actual == nil {
 		return false, nil
 	}

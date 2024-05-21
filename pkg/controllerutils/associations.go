@@ -19,7 +19,7 @@ import (
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
 // to given <obj> (either a CloudProfile, Seed, Secretbinding a or a ExposureClass object).
-func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader, obj interface{}) ([]string, error) {
+func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader, obj any) ([]string, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := gardenClient.List(ctx, shootList); err != nil {
 		return nil, err

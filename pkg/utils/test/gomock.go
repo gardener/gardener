@@ -21,7 +21,7 @@ type objectKeyMatcher struct {
 	key client.ObjectKey
 }
 
-func (o *objectKeyMatcher) Matches(actual interface{}) bool {
+func (o *objectKeyMatcher) Matches(actual any) bool {
 	if actual == nil {
 		return false
 	}

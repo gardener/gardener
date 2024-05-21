@@ -54,7 +54,7 @@ func ValidateInternalSecret(secret *core.InternalSecret) field.ErrorList {
 		}
 
 		// make sure that the content is well-formed json.
-		if err := json.Unmarshal(dockercfgBytes, &map[string]interface{}{}); err != nil {
+		if err := json.Unmarshal(dockercfgBytes, &map[string]any{}); err != nil {
 			allErrs = append(allErrs, field.Invalid(dataPath.Key(corev1.DockerConfigKey), "<secret contents redacted>", err.Error()))
 		}
 	case corev1.SecretTypeDockerConfigJson:
@@ -65,7 +65,7 @@ func ValidateInternalSecret(secret *core.InternalSecret) field.ErrorList {
 		}
 
 		// make sure that the content is well-formed json.
-		if err := json.Unmarshal(dockerConfigJSONBytes, &map[string]interface{}{}); err != nil {
+		if err := json.Unmarshal(dockerConfigJSONBytes, &map[string]any{}); err != nil {
 			allErrs = append(allErrs, field.Invalid(dataPath.Key(corev1.DockerConfigJsonKey), "<secret contents redacted>", err.Error()))
 		}
 	case corev1.SecretTypeBasicAuth:

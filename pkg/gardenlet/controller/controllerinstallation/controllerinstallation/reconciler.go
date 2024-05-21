@@ -154,7 +154,7 @@ func (r *Reconciler) reconcile(
 		// chart is a Helm chart tarball.
 		Chart []byte `json:"chart,omitempty"`
 		// Values is a map of values for the given chart.
-		Values map[string]interface{} `json:"values,omitempty"`
+		Values map[string]any `json:"values,omitempty"`
 	}
 
 	if err := json.Unmarshal(providerConfig.Raw, &helmDeployment); err != nil {
@@ -212,14 +212,14 @@ func (r *Reconciler) reconcile(
 	}
 
 	// Mix-in some standard values for garden and seed.
-	gardenerValues := map[string]interface{}{
-		"gardener": map[string]interface{}{
+	gardenerValues := map[string]any{
+		"gardener": map[string]any{
 			"version": r.Identity.Version,
-			"garden": map[string]interface{}{
+			"garden": map[string]any{
 				"clusterIdentity":             r.GardenClusterIdentity,
 				"genericKubeconfigSecretName": genericGardenKubeconfigSecretName,
 			},
-			"seed": map[string]interface{}{
+			"seed": map[string]any{
 				"name":            seed.Name,
 				"clusterIdentity": *seed.Status.ClusterIdentity,
 				"annotations":     seed.Annotations,
@@ -236,7 +236,7 @@ func (r *Reconciler) reconcile(
 				"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,
 				"spec":            seed.Spec,
 			},
-			"gardenlet": map[string]interface{}{
+			"gardenlet": map[string]any{
 				"featureGates": featureToEnabled,
 			},
 		},

@@ -127,7 +127,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 	}
 
-	var gardenletOfflineSince interface{} = "Unknown"
+	var gardenletOfflineSince any = "Unknown"
 	if conditionGardenletReady != nil {
 		gardenletOfflineSince = conditionGardenletReady.LastTransitionTime.UTC()
 	}

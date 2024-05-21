@@ -256,6 +256,10 @@ linters-settings:
         alias: shootdnsrewriting
       - pkg: github.com/gardener/gardener/plugin/pkg/shoot/oidc
         alias: applier
+  gofmt:
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
   custom:
     logcheck:
       path: <<LOGCHECK_PLUGIN_PATH>>/logcheck.so

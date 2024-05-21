@@ -18,31 +18,31 @@ type NoopValuesProvider struct{}
 var _ ValuesProvider = NoopValuesProvider{}
 
 // GetConfigChartValues returns the values for the config chart applied by this actuator.
-func (vp NoopValuesProvider) GetConfigChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetConfigChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]any, error) {
 	return nil, nil
 }
 
 // GetControlPlaneChartValues returns the values for the control plane chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string, bool) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string, bool) (map[string]any, error) {
 	return nil, nil
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneShootChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneShootChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]any, error) {
 	return nil, nil
 }
 
 // GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneShootCRDsChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneShootCRDsChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]any, error) {
 	return nil, nil
 }
 
 // GetStorageClassesChartValues returns the values for the storage classes chart applied by this actuator.
-func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]any, error) {
 	return nil, nil
 }
 
 // GetControlPlaneExposureChartValues returns the values for the control plane exposure chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneExposureChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneExposureChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]any, error) {
 	return nil, nil
 }

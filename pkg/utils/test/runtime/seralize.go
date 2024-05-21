@@ -32,7 +32,7 @@ func Serialize(obj client.Object, scheme *runtime.Scheme) string {
 
 	// Keep this in sync with pkg/utils/managedresources/registry.go
 	// See https://github.com/gardener/gardener/pull/8312
-	var anyObj interface{}
+	var anyObj any
 	Expect(forkedyaml.Unmarshal(serializationYAML, &anyObj)).To(Succeed())
 
 	serBytes, err := forkedyaml.Marshal(anyObj)

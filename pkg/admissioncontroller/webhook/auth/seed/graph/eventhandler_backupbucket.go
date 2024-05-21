@@ -17,7 +17,7 @@ import (
 
 func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informer) error {
 	_, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 			if !ok {
 				return
@@ -25,7 +25,7 @@ func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informe
 			g.handleBackupBucketCreateOrUpdate(backupBucket)
 		},
 
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			oldBackupBucket, ok := oldObj.(*gardencorev1beta1.BackupBucket)
 			if !ok {
 				return
@@ -43,7 +43,7 @@ func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informe
 			}
 		},
 
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}

@@ -342,11 +342,11 @@ func (a *actuator) deleteReplica(
 	return nil
 }
 
-func (a *actuator) infoEventf(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
+func (a *actuator) infoEventf(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...any) {
 	a.recorder.Eventf(managedSeedSet, corev1.EventTypeNormal, reason, fmt, args...)
 }
 
-func (a *actuator) errorEventf(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
+func (a *actuator) errorEventf(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...any) {
 	a.recorder.Eventf(managedSeedSet, corev1.EventTypeWarning, reason, fmt, args...)
 }
 

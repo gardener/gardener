@@ -88,7 +88,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(err)
 
 		// Deploy Vali ValidatingWebhookConfiguration
-		validatingWebhookParams := map[string]interface{}{
+		validatingWebhookParams := map[string]any{
 			"NamespaceLabelKey":   shootNamespaceLabelKey,
 			"NamespaceLabelValue": shootNamespaceLabelValue,
 			"CABundle": utils.EncodeBase64([]byte(`-----BEGIN CERTIFICATE-----
@@ -143,7 +143,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		)
 
 		ginkgo.By("Deploy the logger application")
-		loggerParams := map[string]interface{}{
+		loggerParams := map[string]any{
 			"LoggerName":          fullLoggerName,
 			"HelmDeployNamespace": shootFramework.ShootSeedNamespace(),
 			"AppLabel":            loggerAppLabel,

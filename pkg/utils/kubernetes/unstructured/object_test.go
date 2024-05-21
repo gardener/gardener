@@ -14,19 +14,19 @@ import (
 var _ = Describe("Object", func() {
 	Describe("#FilterMetadata", func() {
 		It("should remove the fields", func() {
-			content := map[string]interface{}{
+			content := map[string]any{
 				"foo": "",
 				"bar": "",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"foo": "",
 					"bar": "",
 				},
 			}
 
-			Expect(FilterMetadata(content, "foo", "bar")).To(Equal(map[string]interface{}{
+			Expect(FilterMetadata(content, "foo", "bar")).To(Equal(map[string]any{
 				"foo":      "",
 				"bar":      "",
-				"metadata": map[string]interface{}{},
+				"metadata": map[string]any{},
 			}))
 		})
 	})

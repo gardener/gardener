@@ -574,7 +574,7 @@ type secretMatcher struct {
 	bootstrapKubeconfigName *string
 }
 
-func (m *secretMatcher) Matches(x interface{}) bool {
+func (m *secretMatcher) Matches(x any) bool {
 	req, ok := x.(resourcemanager.Secrets)
 	if !ok {
 		return false

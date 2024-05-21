@@ -536,7 +536,7 @@ var _ = Describe("Worker", func() {
 	})
 })
 
-func clientGet(managedResource *resourcesv1alpha1.ManagedResource) interface{} {
+func clientGet(managedResource *resourcesv1alpha1.ManagedResource) any {
 	return func(_ context.Context, _ client.ObjectKey, mr *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
 		*mr = *managedResource
 		return nil

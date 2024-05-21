@@ -179,7 +179,7 @@ func MatchBackupEntry(label labels.Selector, field fields.Selector) storage.Sele
 }
 
 // SeedNameIndexFunc returns spec.seedName of given BackupEntry.
-func SeedNameIndexFunc(obj interface{}) ([]string, error) {
+func SeedNameIndexFunc(obj any) ([]string, error) {
 	backupEntry, ok := obj.(*core.BackupEntry)
 	if !ok {
 		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)
@@ -196,7 +196,7 @@ func getSeedName(backupEntry *core.BackupEntry) string {
 }
 
 // BucketNameIndexFunc returns spec.BucketName of given BackupEntry.
-func BucketNameIndexFunc(obj interface{}) ([]string, error) {
+func BucketNameIndexFunc(obj any) ([]string, error) {
 	backupEntry, ok := obj.(*core.BackupEntry)
 	if !ok {
 		return nil, fmt.Errorf("expected *core.BackupEntry but got %T", obj)

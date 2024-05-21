@@ -21,7 +21,7 @@ type SeedClient interface {
 }
 
 // ShootClientInto will set the shoot client on i if i implements ShootClient.
-func ShootClientInto(client client.Client, i interface{}) bool {
+func ShootClientInto(client client.Client, i any) bool {
 	if s, ok := i.(ShootClient); ok {
 		s.InjectShootClient(client)
 		return true
@@ -30,7 +30,7 @@ func ShootClientInto(client client.Client, i interface{}) bool {
 }
 
 // SeedClientInto will set the seed client on i if i implements SeedClient.
-func SeedClientInto(client client.Client, i interface{}) bool {
+func SeedClientInto(client client.Client, i any) bool {
 	if s, ok := i.(SeedClient); ok {
 		s.InjectSeedClient(client)
 		return true

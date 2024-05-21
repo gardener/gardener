@@ -142,8 +142,8 @@ func ComputeSHA256Hex(in []byte) string {
 	return hex.EncodeToString(SHA256(in))
 }
 
-// HashForMap creates a hash value for a map of type map[string]interface{} and returns it.
-func HashForMap(m map[string]interface{}) string {
+// HashForMap creates a hash value for a map of type map[string]any and returns it.
+func HashForMap(m map[string]any) string {
 	var hash string
 	keys := make([]string, 0, len(m))
 
@@ -165,9 +165,9 @@ func HashForMap(m map[string]interface{}) string {
 			for _, val := range v {
 				hash += ComputeSHA256Hex([]byte(val))
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			hash += HashForMap(v)
-		case []map[string]interface{}:
+		case []map[string]any:
 			for _, val := range v {
 				hash += HashForMap(val)
 			}

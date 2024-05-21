@@ -60,7 +60,7 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var script bytes.Buffer
-	if err := tpl.Execute(&script, map[string]interface{}{
+	if err := tpl.Execute(&script, map[string]any{
 		"pathPublicSSHKey":      pathPublicSSHKey,
 		"pathAuthorizedSSHKeys": pathAuthorizedSSHKeys,
 	}); err != nil {
