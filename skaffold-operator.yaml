@@ -29,6 +29,7 @@ build:
             - extensions/pkg/webhook/certificates
             - extensions/pkg/webhook/shoot
             - imagevector
+            - imagevector/images.yaml
             - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
@@ -73,13 +74,20 @@ build:
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/autoscaling/hvpa
+            - pkg/component/autoscaling/hvpa/templates/crd-autoscaling.k8s.io_hvpas.yaml
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
+            - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
+            - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
+            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
+            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/garden/system/runtime
@@ -91,16 +99,22 @@ build:
             - pkg/component/gardener/dashboard
             - pkg/component/gardener/dashboard/config
             - pkg/component/gardener/dashboard/terminal
+            - pkg/component/gardener/dashboard/terminal/assets/crd-dashboard.gardener.cloud_terminals.yaml
             - pkg/component/gardener/resourcemanager
+            - pkg/component/gardener/resourcemanager/assets/crd-resources.gardener.cloud_managedresources.yaml
             - pkg/component/gardener/resourcemanager/constants
             - pkg/component/gardener/scheduler
             - pkg/component/kubernetes/apiserver
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/apiserverexposure
+            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter.yaml
             - pkg/component/kubernetes/controllermanager
             - pkg/component/kubernetes/scheduler
             - pkg/component/networking/coredns/constants
             - pkg/component/networking/istio
+            - pkg/component/networking/istio/charts/istio/istio-crds
+            - pkg/component/networking/istio/charts/istio/istio-ingress
+            - pkg/component/networking/istio/charts/istio/istio-istiod
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns/constants
             - pkg/component/networking/vpn/authzserver
@@ -109,8 +123,26 @@ build:
             - pkg/component/observability/logging/fluentbit
             - pkg/component/observability/logging/fluentcustomresources
             - pkg/component/observability/logging/fluentoperator
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusterfilters.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusterfluentbitconfigs.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusterinputs.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clustermultilineparsers.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusteroutputs.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_clusterparsers.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_collectors.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_filters.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_fluentbitconfigs.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_fluentbits.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_multilineparsers.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_outputs.yaml
+            - pkg/component/observability/logging/fluentoperator/assets/crd-fluentbit.fluent.io_parsers.yaml
             - pkg/component/observability/logging/vali
             - pkg/component/observability/logging/vali/constants
+            - pkg/component/observability/logging/vali/templates/curator-config.yaml
+            - pkg/component/observability/logging/vali/templates/telegraf-config.tpl
+            - pkg/component/observability/logging/vali/templates/telegraf-start.sh.tpl
+            - pkg/component/observability/logging/vali/templates/vali-config.yaml
+            - pkg/component/observability/logging/vali/templates/vali-init.sh
             - pkg/component/observability/monitoring
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
@@ -119,14 +151,52 @@ build:
             - pkg/component/observability/monitoring/kubestatemetrics
             - pkg/component/observability/monitoring/prometheus
             - pkg/component/observability/monitoring/prometheus/aggregate
+            - pkg/component/observability/monitoring/prometheus/aggregate/assets/prometheusrules/metering.rules.stateful.yaml
             - pkg/component/observability/monitoring/prometheus/cache
+            - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/metering.rules.stateful.yaml
+            - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/metering.rules.yaml
+            - pkg/component/observability/monitoring/prometheus/cache/assets/prometheusrules/recording-rules.rules.yaml
+            - pkg/component/observability/monitoring/prometheus/cache/assets/scrapeconfigs/cadvisor.yaml
+            - pkg/component/observability/monitoring/prometheus/cache/assets/scrapeconfigs/kubelet.yaml
             - pkg/component/observability/monitoring/prometheus/garden
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/auditlog.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/etcd.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/garden.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/metering-meta.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/recording.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/seed.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/shoot.yaml
+            - pkg/component/observability/monitoring/prometheus/garden/assets/scrapeconfigs/cadvisor.yaml
             - pkg/component/observability/monitoring/prometheus/longterm
+            - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/recording.yaml
+            - pkg/component/observability/monitoring/prometheus/longterm/assets/prometheusrules/sla.yaml
             - pkg/component/observability/monitoring/prometheus/seed
             - pkg/component/observability/monitoring/prometheus/shoot
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
             - pkg/component/observability/monitoring/prometheusoperator
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_alertmanagerconfigs.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_alertmanagers.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_podmonitors.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_probes.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_prometheusagents.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_prometheuses.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_prometheusrules.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_scrapeconfigs.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_servicemonitors.yaml
+            - pkg/component/observability/monitoring/prometheusoperator/templates/crd-monitoring.coreos.com_thanosrulers.yaml
             - pkg/component/observability/monitoring/utils
             - pkg/component/observability/plutono
+            - pkg/component/observability/plutono/dashboards/common
+            - pkg/component/observability/plutono/dashboards/garden
+            - pkg/component/observability/plutono/dashboards/garden-shoot
+            - pkg/component/observability/plutono/dashboards/seed
+            - pkg/component/observability/plutono/dashboards/shoot
             - pkg/component/shared
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
