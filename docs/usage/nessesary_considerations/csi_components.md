@@ -1,5 +1,6 @@
 ---
-title: CSI Components
+title: Nessesary labeling for Custom CSI Components
+weight: 2
 ---
 
 # (Custom) CSI Components
@@ -24,5 +25,4 @@ Custom CSI components are typically regular `Deployment`s running in the shoot c
 
 When a shoot cluster is deleted, Gardener deletes most Kubernetes resources (`Deployment`s, `DaemonSet`s, `StatefulSet`s, etc.). Gardener will also try to delete CSI components if they are not marked with the above mentioned label.
 
-This can result in `VolumeSnapshot` resources still having finalizers that will never be cleaned up.
-Consequently, manual intervention is required to clean them up before the cluster deletion can continue.
+This can result in `VolumeSnapshot` resources leaking in the cloud providers and manual cleanup will be required.

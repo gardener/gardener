@@ -1,3 +1,8 @@
+---
+title: Cleanup of Shoot Clusters in Deletion
+weight: 3
+---
+
 # Cleanup of Shoot Clusters in Deletion
 
 When a shoot cluster is deleted then Gardener tries to gracefully remove most of the Kubernetes resources inside the cluster.

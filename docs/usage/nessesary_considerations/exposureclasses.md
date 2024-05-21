@@ -1,5 +1,6 @@
 ---
 title: ExposureClasses
+weight: 6
 ---
 
 # ExposureClasses

@@ -1,4 +1,8 @@
-# Readiness of Shoot Worker Nodes
+---
+title: Marking Node-Critical Components and csi-driver-node Pods
+weight: 1
+---
+# Marking Node-Critical Components and `csi-driver-node` Pods 
 
 ## Background
 
@@ -27,7 +31,7 @@ The annotation key's suffix can be chosen arbitrarily (in this case `cinder`) an
 The `Node` controller will verify that the used driver is properly registered in this object before removing the `node.gardener.cloud/critical-components-not-ready` taint.
 Note that the `csi-driver-node` Pod still needs to be labelled and tolerate the taint as described above to be considered in this additional check.
 
-## Marking Node-Critical Components
+## Marking Node-Critical Components and `csi-driver-node` Pods
 
 To make use of this feature, node-critical DaemonSets and Pods need to:
 
