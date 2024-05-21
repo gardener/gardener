@@ -16,7 +16,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
-// Reconciler adds the NetworkPolicy and VPAEvictionRequirements controllers to the manager.
+// Reconciler adds the controllers to the manager.
 type Reconciler struct {
 	Manager     manager.Manager
 	Controllers []Controller
