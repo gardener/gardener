@@ -227,7 +227,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying backup entry",
 			Fn:           botanist.DeployBackupEntry,
 			SkipIf:       !allowBackup,
-			Dependencies: flow.NewTaskIDs(waitUntilSourceBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(deployNamespace, waitUntilSourceBackupEntryInGardenReconciled),
+			// deployNamespace dependency needed for shoot creation
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
