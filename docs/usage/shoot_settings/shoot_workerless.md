@@ -1,3 +1,8 @@
+---
+weight: 13
+title: Workerless Shoot
+description: And the deployed components
+---
 # Workerless `Shoot`s
 
 Starting from `v1.71`, users can create a `Shoot` without any workers, known as a "workerless `Shoot`". Previously, worker nodes had to always be included even if users only needed the Kubernetes control plane. With workerless `Shoot`s, Gardener will not create any worker nodes or anything related to them.

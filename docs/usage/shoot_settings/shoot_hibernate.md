@@ -1,10 +1,7 @@
 ---
-title: Hibernate a Cluster
-level: beginner
-category: Operation
-scope: operator
-tags: ["task"]
-publishdate: 2020-11-19
+title: Shoot Hybernation
+description: What is hybernation? Manual hybernation/wake up and specifying a hybernation schedule
+weight: 2
 ---
 # Hibernate a Cluster
 
@@ -14,14 +11,6 @@ Gardener offers a clever way to automatically scale-down all resources to zero: 
 
 > To save costs, it's recommended to define a hibernation schedule before the creation of a cluster. You can hibernate your cluster or wake up your cluster manually even if there's a schedule for its hibernation.
 
-- [Hibernate a Cluster](#hibernate-a-cluster)
-  - [What Is Hibernation?](#what-is-hibernation)
-  - [What Isn’t Affected by the Hibernation?](#what-isnt-affected-by-the-hibernation)
-  - [Hibernate Your Cluster Manually](#hibernate-your-cluster-manually)
-  - [Wake Up Your Cluster Manually](#wake-up-your-cluster-manually)
-  - [Create a Schedule to Hibernate Your Cluster](#create-a-schedule-to-hibernate-your-cluster)
-
-
 ## What Is Hibernation?
 
 When a cluster is hibernated, Gardener scales down the worker nodes and the cluster's control plane to free resources at the IaaS provider. This affects:
@@ -30,7 +19,7 @@ When a cluster is hibernated, Gardener scales down the worker nodes and the clus
 * The virtual machines running your workload.
 * The resources of the control plane of your cluster.
 
-## What Isn’t Affected by the Hibernation?
+### What Isn’t Affected by the Hibernation?
 
 To scale up everything where it was before hibernation, Gardener doesn’t delete state-related information, that is, information stored in persistent volumes. The cluster state as persistent in `etcd` is also preserved.
 
@@ -38,14 +27,14 @@ To scale up everything where it was before hibernation, Gardener doesn’t delet
 
 The `.spec.hibernation.enabled` field specifies whether the cluster needs to be hibernated or not. If the field is set to `true`, the cluster's desired state is to be hibernated. If it is set to `false` or not specified at all, the cluster's desired state is to be awakened.
 
-To hibernate your cluster, you can run the following `kubectl` command:
+To hibernate your cluster, you can do it from the dashboard or run the following `kubectl` command:
 ```
 $ kubectl patch shoot -n $NAMESPACE $SHOOT_NAME -p '{"spec":{"hibernation":{"enabled": true}}}'
 ```
 
 ## Wake Up Your Cluster Manually
 
-To wake up your cluster, you can run the following `kubectl` command:
+To wake up your cluster, you can do it from the dashboard or run the following `kubectl` command:
 ```
 $ kubectl patch shoot -n $NAMESPACE $SHOOT_NAME -p '{"spec":{"hibernation":{"enabled": false}}}'
 ```

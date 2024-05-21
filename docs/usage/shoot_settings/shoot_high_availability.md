@@ -1,3 +1,7 @@
+---
+weight: 7
+description: Node and Zone Failure Tolerance and possible mitigations for Zone Outages
+---
 # Highly Available Shoot Control Plane
 
 Shoot resource offers a way to request for a highly available control plane.

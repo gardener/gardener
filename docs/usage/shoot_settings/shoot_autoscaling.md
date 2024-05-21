@@ -1,3 +1,8 @@
+---
+weight: 9
+description: The basics of Horizontal Node and Vertical Pod Auto-Scaling
+---
+
 # Auto-Scaling in Shoot Clusters
 
 There are two parts that relate to auto-scaling in Kubernetes clusters in general:
@@ -23,7 +28,7 @@ There are [general options for `cluster-autoscaler`](../api-reference/core.md#co
 ## Vertical Pod Auto-Scaling
 
 This form of auto-scaling is not enabled by default and must be explicitly enabled in the `Shoot` by setting `.spec.kubernetes.verticalPodAutoscaler.enabled=true`.
-The reason is that it was only introduced lately, and some end-users might have already deployed their own VPA into their clusters, i.e., enabling it by default would interfere with such custom deployments and lead to issues, eventually.
+The reason is that it was only introduced lately, and some end-users might have already deployed their own VPA into their clusters, i.e., enabling it by default would interfere with such custom deployments and lead to issues, eventually. Also if `ShootVPAEnabledByDefault` admissionPlugins is enabled then `.spec.kubernetes.verticalPodAutoscaler.enabled` will be set to true.
 
 Gardener is also leveraging an upstream community tool, i.e., the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
 If enabled, Gardener will deploy it as part of the control plane into the seed cluster.

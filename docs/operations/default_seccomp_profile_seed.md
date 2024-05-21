@@ -1,5 +1,5 @@
 ---
-title: Default Seccomp Profile
+title: Default Seccomp Profile for Seeds
 ---
 
 # Default Seccomp Profile and Configuration 
@@ -34,23 +34,3 @@ Please refer to the examples in this [yaml file](../../example/20-componentconfi
 Once the feature gate is enabled, the webhook will be registered and configured for the seed cluster. Newly created pods will be mutated to have their seccomp profile set to `RuntimeDefault`.
 
 > **Note:** Please note that this feature is still in Alpha, so you might see instabilities every now and then. 
-
-## Setting the Seccomp Profile to RuntimeDefault for Shoot Clusters
-
-You can enable the use of `RuntimeDefault` as the default seccomp profile for all workloads. If enabled, the kubelet will use the `RuntimeDefault` seccomp profile by default, which is defined by the container runtime, instead of using the `Unconfined` mode. More information for this feature can be found in the [Kubernetes documentation](https://kubernetes.io/docs/tutorials/security/seccomp/#enable-the-use-of-runtimedefault-as-the-default-seccomp-profile-for-all-workloads).
-
-To use seccomp profile defaulting, you must run the kubelet with the `SeccompDefault` feature gate enabled (this is the default).
-
-### How to Configure
-
-To enable this feature, the kubelet `seccompDefault` configuration parameter must be set to `true` in the shoot's spec.
-
-```yaml
-spec:
-  kubernetes:
-    version: 1.25.0
-    kubelet:
-      seccompDefault: true
-```
-
-Please refer to the examples in this [yaml file](../../example/90-shoot.yaml) for more information.

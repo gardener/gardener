@@ -1,3 +1,8 @@
+---
+weight: 3
+description: Defining the maintenance time window, enabling automatic version updates, confine reconcilations only to happen during maintenance, adding an additional maintenance operation and list of special operations during maintenance
+---
+
 # Shoot Maintenance
 
 Shoots configure a maintenance time window in which Gardener performs certain operations that may restart the control plane, roll out the nodes, result in higher network traffic, etc. A summary of what was changed in the last maintenance time window in shoot specification is kept in the shoot status `.status.lastMaintenance` field.
@@ -79,14 +84,14 @@ Last Maintenance:
 
 Please refer to the [Shoot Kubernetes and Operating System Versioning in Gardener](./shoot_versions.md) topic for more information about Kubernetes and machine image versions in Gardener.
 
-## Cluster Reconciliation
+## When are Clusters Reconciled
 
 Gardener administrators/operators can configure the gardenlet in a way that it only reconciles shoot clusters during their maintenance time windows.
 This behaviour is not controllable by end-users but might make sense for large Gardener installations.
 Concretely, your shoot will be reconciled regularly during its maintenance time window.
 Outside of the maintenance time window it will only reconcile if you change the specification or if you explicitly trigger it, see also [Trigger Shoot Operations](shoot_operations.md).
 
-## Confine Specification Changes/Updates Roll Out
+### Confine Specification Changes/Updates Roll Out
 
 Via the `.spec.maintenance.confineSpecUpdateRollout` field you can control whether you want to make Gardener roll out changes/updates to your shoot specification only during the maintenance time window.
 It is `false` by default, i.e., any change to your shoot specification triggers a reconciliation (even outside of the maintenance time window).
@@ -100,7 +105,7 @@ The reason is that Gardener cannot differentiate between create/update/reconcile
 ⚠️ As exceptions to the above rules, [manually triggered reconciliations](shoot_operations.md#immediate-reconciliation) and changes to the `.spec.hibernation.enabled` field trigger immediate rollouts.
 I.e., if you hibernate or wake-up your shoot, or you explicitly tell Gardener to reconcile your shoot, then Gardener gets active right away.
 
-## Shoot Operations
+## Additional Operation
 
 In case you would like to perform a [shoot credential rotation](shoot_operations.md#credentials-rotation-operations) or a `reconcile` operation during your maintenance time window, you can annotate the `Shoot` with
 
