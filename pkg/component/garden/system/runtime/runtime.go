@@ -74,7 +74,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		return nil, err
 	}
 
-	return registry.SerializedObjects(), nil
+	return registry.SerializedObjects()
 }
 
 // remember to update docs/development/priority-classes.md when making changes here

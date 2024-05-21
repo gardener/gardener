@@ -45,6 +45,10 @@ const (
 	// FinalizeDeletionAfter is an annotation on an object part of a ManagedResource that whose value states the
 	// duration after which a deletion should be finalized (i.e., removal of `.metadata.finalizers[]`).
 	FinalizeDeletionAfter = "resources.gardener.cloud/finalize-deletion-after"
+	// BrotliCompressionSuffix is the common suffix used for Brotli compression.
+	BrotliCompressionSuffix = ".br"
+	// CompressedDataKey is the name of a data key containing brotli-compressed YAML manifests.
+	CompressedDataKey = "data.yaml" + BrotliCompressionSuffix
 
 	// ManagedBy is a constant for a label on an object managed by a ManagedResource.
 	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
