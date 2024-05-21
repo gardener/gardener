@@ -26,6 +26,8 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -50,16 +52,18 @@ func Register(plugins *admission.Plugins) {
 // QuotaValidator contains listers and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister         gardencorev1beta1listers.ShootLister
-	cloudProfileLister  gardencorev1beta1listers.CloudProfileLister
-	secretBindingLister gardencorev1beta1listers.SecretBindingLister
-	quotaLister         gardencorev1beta1listers.QuotaLister
-	readyFunc           admission.ReadyFunc
-	time                timeutils.Ops
+	shootLister              gardencorev1beta1listers.ShootLister
+	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
+	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
+	quotaLister              gardencorev1beta1listers.QuotaLister
+	readyFunc                admission.ReadyFunc
+	time                     timeutils.Ops
 }
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&QuotaValidator{})
+	_ = admissioninitializer.WantsSecurityInformerFactory(&QuotaValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -95,6 +99,14 @@ func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInfo
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
 }
 
+// SetSecurityInformerFactory gets Lister from SharedInformerFactory.
+func (q *QuotaValidator) SetSecurityInformerFactory(f securityinformers.SharedInformerFactory) {
+	credentialsBindingInformer := f.Security().V1alpha1().CredentialsBindings()
+	q.credentialsBindingLister = credentialsBindingInformer.Lister()
+
+	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (q *QuotaValidator) ValidateInitialization() error {
 	if q.shootLister == nil {
@@ -108,6 +120,9 @@ func (q *QuotaValidator) ValidateInitialization() error {
 	}
 	if q.quotaLister == nil {
 		return errors.New("missing quota lister")
+	}
+	if q.credentialsBindingLister == nil {
+		return errors.New("missing credentials binding lister")
 	}
 	return nil
 }
@@ -170,41 +185,50 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
 	}
 
+	var quotas []corev1.ObjectReference
 	if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
+		quotas = secretBinding.Quotas
+	} else if shoot.Spec.CredentialsBindingName != nil {
+		// TODO(dimityrmirchev): This code should eventually handle references to workload identities
+		credentialsBindings, err := q.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+		quotas = credentialsBindings.Quotas
+	}
 
-		// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
-		for _, quotaRef := range secretBinding.Quotas {
-			quota, err := q.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
+	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
+	for _, quotaRef := range quotas {
+		quota, err := q.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		// Get the max clusterLifeTime
+		if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
+			if maxShootLifetime == nil {
+				maxShootLifetime = quota.Spec.ClusterLifetimeDays
+			}
+			if *maxShootLifetime > *quota.Spec.ClusterLifetimeDays {
+				maxShootLifetime = quota.Spec.ClusterLifetimeDays
+			}
+		}
+
+		if checkQuota {
+			exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
 			if err != nil {
 				return apierrors.NewInternalError(err)
 			}
-
-			// Get the max clusterLifeTime
-			if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
-				if maxShootLifetime == nil {
-					maxShootLifetime = quota.Spec.ClusterLifetimeDays
+			if exceededMetrics != nil {
+				message := ""
+				for _, metric := range *exceededMetrics {
+					message = message + metric.String() + " "
 				}
-				if *maxShootLifetime > *quota.Spec.ClusterLifetimeDays {
-					maxShootLifetime = quota.Spec.ClusterLifetimeDays
-				}
-			}
-
-			if checkQuota {
-				exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
-				if err != nil {
-					return apierrors.NewInternalError(err)
-				}
-				if exceededMetrics != nil {
-					message := ""
-					for _, metric := range *exceededMetrics {
-						message = message + metric.String() + " "
-					}
-					return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded. Unable to allocate further %s", message))
-				}
+				return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded. Unable to allocate further %s", message))
 			}
 		}
 	}
@@ -281,11 +305,6 @@ func (q *QuotaValidator) determineAllocatedResources(quota gardencorev1beta1.Quo
 }
 
 func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, shoot core.Shoot) ([]core.Shoot, error) {
-	var (
-		shootsReferQuota []core.Shoot
-		secretBindings   []gardencorev1beta1.SecretBinding
-	)
-
 	scope, err := helper.QuotaScope(quota.Spec.Scope)
 	if err != nil {
 		return nil, err
@@ -299,31 +318,62 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 	if err != nil {
 		return nil, err
 	}
+	allCredentialsBindings, err := q.credentialsBindingLister.CredentialsBindings(namespace).List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
 
+	// Group bindings by namespace and split them by kind
+	type groupedBindings struct {
+		secretBindings      map[string]struct{}
+		credentialsBindings map[string]struct{}
+	}
+	bindings := map[string]groupedBindings{}
 	for _, binding := range allSecretBindings {
 		for _, quotaRef := range binding.Quotas {
 			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
-				secretBindings = append(secretBindings, *binding)
+				if _, ok := bindings[binding.Namespace]; !ok {
+					bindings[binding.Namespace] = groupedBindings{
+						secretBindings:      map[string]struct{}{},
+						credentialsBindings: map[string]struct{}{},
+					}
+				}
+				bindings[binding.Namespace].secretBindings[binding.Name] = struct{}{}
 			}
 		}
 	}
 
-	for _, binding := range secretBindings {
-		shoots, err := q.shootLister.Shoots(binding.Namespace).List(labels.Everything())
+	for _, binding := range allCredentialsBindings {
+		for _, quotaRef := range binding.Quotas {
+			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
+				if _, ok := bindings[binding.Namespace]; !ok {
+					bindings[binding.Namespace] = groupedBindings{
+						secretBindings:      map[string]struct{}{},
+						credentialsBindings: map[string]struct{}{},
+					}
+				}
+				bindings[binding.Namespace].credentialsBindings[binding.Name] = struct{}{}
+			}
+		}
+	}
+
+	var shootsReferQuota []core.Shoot
+	for ns, b := range bindings {
+		shoots, err := q.shootLister.Shoots(ns).List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
-
 		for _, s := range shoots {
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			if ptr.Deref(s.Spec.SecretBindingName, "") == binding.Name {
+			_, refsQuotaViaSB := b.secretBindings[ptr.Deref(s.Spec.SecretBindingName, "")]
+			_, refsQuotaViaCB := b.credentialsBindings[ptr.Deref(s.Spec.CredentialsBindingName, "")]
+			if refsQuotaViaSB || refsQuotaViaCB {
 				coreShoot := &core.Shoot{}
 				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(s, coreShoot, nil); err != nil {
 					return nil, apierrors.NewInternalError(err)
 				}
-
 				shootsReferQuota = append(shootsReferQuota, *coreShoot)
 			}
 		}
