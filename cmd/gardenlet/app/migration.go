@@ -11,11 +11,15 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -26,6 +30,10 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 		return err
 	}
 
+	log.Info("Creating operating system config hash migration secret")
+	if err := createOSCHashMigrationSecret(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -106,4 +114,37 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// TODO(MichaelEischer): Remove this function after v1.101 has been released
+func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+		return err
+	}
+
+	var tasks []flow.TaskFn
+	for _, ns := range namespaceList.Items {
+		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+			continue
+		}
+		namespace := ns
+		tasks = append(tasks, func(ctx context.Context) error {
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: operatingsystemconfig.PoolHashesSecret}, &corev1.Secret{}); err == nil || !apierrors.IsNotFound(err) {
+				// nothing to do if secret already exists
+				return err
+			}
+
+			secret := operatingsystemconfig.CreateMigrationSecret(namespace.Name)
+
+			if err := seedClient.Create(ctx, secret); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+			}
+
+			return nil
+		})
+	}
+	return flow.Parallel(tasks...)(ctx)
 }

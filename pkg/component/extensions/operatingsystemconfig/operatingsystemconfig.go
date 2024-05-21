@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -244,7 +245,8 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 }
 
 type poolHash struct {
-	Pools []poolHashEntry
+	Pools    []poolHashEntry
+	Migrated *bool `yaml:"migrated,omitempty"`
 }
 
 type poolHashEntry struct {
@@ -253,14 +255,14 @@ type poolHashEntry struct {
 	Hashes         map[int]string
 }
 
-func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, error) {
+func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, error) {
 	var pools poolHash
 
 	versions := secret.Data[poolHashesSecretField]
 	if len(versions) > 0 {
 		dec := yaml.NewDecoder(bytes.NewReader(versions))
 		if err := dec.Decode(&pools); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 
@@ -269,7 +271,7 @@ func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, error) {
 		hashesByName[entry.Name] = entry
 	}
 
-	return hashesByName, nil
+	return hashesByName, ptr.Deref(pools.Migrated, false), nil
 }
 
 func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
@@ -292,7 +294,7 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecret},
 	}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, versioning, func() error {
-		hashesByName, err := decodePoolHashes(versioning)
+		hashesByName, migrated, err := decodePoolHashes(versioning)
 		if err != nil {
 			return err
 		}
@@ -306,7 +308,11 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 			workerHash, ok := hashesByName[worker.Name]
 			if !ok {
 				workerHash.Name = worker.Name
-				workerHash.CurrentVersion = LatestHashVersion
+				if migrated {
+					workerHash.CurrentVersion = 1
+				} else {
+					workerHash.CurrentVersion = LatestHashVersion
+				}
 			}
 
 			// check if hashes still match
@@ -361,7 +367,7 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 		return err
 	}
 
-	hashesByName, err := decodePoolHashes(versioning)
+	hashesByName, _, err := decodePoolHashes(versioning)
 	if err != nil {
 		return err
 	}
@@ -385,6 +391,29 @@ func (o *operatingSystemConfig) hashVersion(workerName string) (int, error) {
 		return version, nil
 	}
 	return 0, fmt.Errorf("no version available for %v", workerName)
+}
+
+// CreateMigrationSecret creates a pool-hash secret for initially deploying the
+// pool hash secret into a shoot (namespace).
+func CreateMigrationSecret(namespace string) *corev1.Secret {
+	pools := poolHash{
+		Migrated: ptr.To(true),
+	}
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	if err := enc.Encode(&pools); err != nil {
+		// this really should be impossible
+		panic(err)
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: PoolHashesSecret},
+		Type:       corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			poolHashesSecretField: buf.Bytes(),
+		},
+	}
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret

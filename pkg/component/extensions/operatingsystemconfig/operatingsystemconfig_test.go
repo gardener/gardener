@@ -510,8 +510,38 @@ var _ = Describe("OperatingSystemConfig", func() {
         1: gardener-node-agent-worker2-d9e53
         2: worker2-version2
 `))
-
 			})
+
+			It("should successfully use hash version 1 after migration", func() {
+				DeferCleanup(test.WithVars(
+					&OriginalConfigFn, originalConfigFn,
+					&LatestHashVersion, 2,
+					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
+				))
+
+				Expect(c.Create(ctx, CreateMigrationSecret(namespace))).To(Succeed())
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"persist": "true",
+				}))
+				pools := secret.Data["pools"]
+				Expect(string(pools)).To(Equal(`pools:
+    - name: worker1
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker1-77ac3
+        2: worker1-version2
+    - name: worker2
+      currentversion: 1
+      hashes:
+        1: gardener-node-agent-worker2-d9e53
+        2: worker2-version2
+`))
+			})
+
 			It("should successfully deploy all extensions resources", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
