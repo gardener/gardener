@@ -37,10 +37,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -60,20 +63,22 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	authorizer          authorizer.Authorizer
-	secretLister        kubecorev1listers.SecretLister
-	cloudProfileLister  gardencorev1beta1listers.CloudProfileLister
-	seedLister          gardencorev1beta1listers.SeedLister
-	shootLister         gardencorev1beta1listers.ShootLister
-	projectLister       gardencorev1beta1listers.ProjectLister
-	secretBindingLister gardencorev1beta1listers.SecretBindingLister
-	readyFunc           admission.ReadyFunc
+	authorizer               authorizer.Authorizer
+	secretLister             kubecorev1listers.SecretLister
+	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
+	seedLister               gardencorev1beta1listers.SeedLister
+	shootLister              gardencorev1beta1listers.ShootLister
+	projectLister            gardencorev1beta1listers.ProjectLister
+	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
+	readyFunc                admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
+	_ = admissioninitializer.WantsSecurityInformerFactory(&ValidateShoot{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -123,6 +128,14 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 	)
 }
 
+// SetSecurityInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateShoot) SetSecurityInformerFactory(f securityinformers.SharedInformerFactory) {
+	credentialsBindingInformer := f.Security().V1alpha1().CredentialsBindings()
+	v.credentialsBindingLister = credentialsBindingInformer.Lister()
+
+	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
+}
+
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
 	secretInformer := f.Core().V1().Secrets()
@@ -150,6 +163,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
+	}
+	if v.credentialsBindingLister == nil {
+		return errors.New("missing credentials binding lister")
 	}
 	return nil
 }
@@ -244,21 +260,30 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	}
 
 	var secretBinding *gardencorev1beta1.SecretBinding
-	if a.GetOperation() == admission.Create && shoot.Spec.SecretBindingName != nil {
+	if shoot.Spec.SecretBindingName != nil {
 		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
 	}
 
+	var credentialsBinding *securityv1alpha1.CredentialsBinding
+	if shoot.Spec.CredentialsBindingName != nil {
+		credentialsBinding, err = v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced credentials binding: %+v", err.Error()))
+		}
+	}
+
 	// begin of validation code
 	validationContext := &validationContext{
-		cloudProfile:  cloudProfile,
-		project:       project,
-		seed:          seed,
-		secretBinding: secretBinding,
-		shoot:         shoot,
-		oldShoot:      oldShoot,
+		cloudProfile:       cloudProfile,
+		project:            project,
+		seed:               seed,
+		secretBinding:      secretBinding,
+		credentialsBinding: credentialsBinding,
+		shoot:              shoot,
+		oldShoot:           oldShoot,
 	}
 
 	if err := validationContext.validateProjectMembership(a); err != nil {
@@ -303,12 +328,13 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 }
 
 type validationContext struct {
-	cloudProfile  *gardencorev1beta1.CloudProfile
-	project       *gardencorev1beta1.Project
-	seed          *gardencorev1beta1.Seed
-	secretBinding *gardencorev1beta1.SecretBinding
-	shoot         *core.Shoot
-	oldShoot      *core.Shoot
+	cloudProfile       *gardencorev1beta1.CloudProfile
+	project            *gardencorev1beta1.Project
+	seed               *gardencorev1beta1.Seed
+	secretBinding      *gardencorev1beta1.SecretBinding
+	credentialsBinding *securityv1alpha1.CredentialsBinding
+	shoot              *core.Shoot
+	oldShoot           *core.Shoot
 }
 
 func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
@@ -832,17 +858,21 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return allErrs
 	}
 
-	if a.GetOperation() == admission.Create && c.secretBinding != nil {
-		if !v1beta1helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
-			var secretBindingProviderType string
-			if c.secretBinding.Provider != nil {
-				secretBindingProviderType = c.secretBinding.Provider.Type
-			}
-
-			allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBindingProviderType)))
-			// exit early, all other validation errors will be misleading
-			return allErrs
+	if c.secretBinding != nil && !v1beta1helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+		var secretBindingProviderType string
+		if c.secretBinding.Provider != nil {
+			secretBindingProviderType = c.secretBinding.Provider.Type
 		}
+
+		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBindingProviderType)))
+		// exit early, all other validation errors will be misleading
+		return allErrs
+	}
+
+	if c.credentialsBinding != nil && c.credentialsBinding.Provider.Type != c.shoot.Spec.Provider.Type {
+		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced CredentialsBinding: %q", c.credentialsBinding.Provider.Type)))
+		// exit early, all other validation errors will be misleading
+		return allErrs
 	}
 
 	controlPlaneVersion, err := semver.NewVersion(c.shoot.Spec.Kubernetes.Version)
