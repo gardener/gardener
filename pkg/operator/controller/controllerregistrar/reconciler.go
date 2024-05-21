@@ -13,28 +13,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/controller/networkpolicy"
-	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
 )
 
-// Reconciler adds the NetworkPolicy and VPAEvictionRequirements controllers to the manager.
+// Reconciler adds the controllers to the manager.
 type Reconciler struct {
-	Manager                              manager.Manager
-	NetworkPolicyControllerConfiguration config.NetworkPolicyControllerConfiguration
-	VPAEvictionControllerConfiguration   config.VPAEvictionRequirementsControllerConfiguration
-
-	networkPolicyControllerAdded           bool
-	vpaEvictionRequirementsControllerAdded bool
+	Manager     manager.Manager
+	Controllers []Controller
 }
 
-// Reconcile performs the main reconciliation logic.
+// Controller contains a function for registering a controller.
+type Controller struct {
+	AddToManagerFunc func(context.Context, manager.Manager, *operatorv1alpha1.Garden) error
+	added            bool
+}
+
+// Reconcile performs the controller registration.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if r.networkPolicyControllerAdded && r.vpaEvictionRequirementsControllerAdded {
+	if r.allControllersAdded() {
 		return reconcile.Result{}, nil
 	}
 
@@ -47,34 +45,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if !r.networkPolicyControllerAdded {
-		if err := (&networkpolicy.Reconciler{
-			ConcurrentSyncs:              r.NetworkPolicyControllerConfiguration.ConcurrentSyncs,
-			AdditionalNamespaceSelectors: r.NetworkPolicyControllerConfiguration.AdditionalNamespaceSelectors,
-			RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
-				// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
-				IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
-				Nodes:      garden.Spec.RuntimeCluster.Networking.Nodes,
-				Pods:       garden.Spec.RuntimeCluster.Networking.Pods,
-				Services:   garden.Spec.RuntimeCluster.Networking.Services,
-				BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
-			},
-		}).AddToManager(ctx, r.Manager, r.Manager); err != nil {
-			return reconcile.Result{}, err
+	for i, controller := range r.Controllers {
+		if !controller.added {
+			if err := controller.AddToManagerFunc(ctx, r.Manager, garden); err != nil {
+				return reconcile.Result{}, err
+			}
+			r.Controllers[i].added = true
 		}
-
-		r.networkPolicyControllerAdded = true
 	}
-
-	if !r.vpaEvictionRequirementsControllerAdded {
-		if err := (&vpaevictionrequirements.Reconciler{
-			ConcurrentSyncs: r.VPAEvictionControllerConfiguration.ConcurrentSyncs,
-		}).AddToManager(r.Manager, r.Manager); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		r.vpaEvictionRequirementsControllerAdded = true
-	}
-
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) allControllersAdded() bool {
+	for _, controller := range r.Controllers {
+		if !controller.added {
+			return false
+		}
+	}
+	return true
 }
