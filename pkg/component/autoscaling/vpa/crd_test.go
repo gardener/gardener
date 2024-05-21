@@ -79,7 +79,9 @@ var _ = Describe("CRD", func() {
 
 		DescribeTable("CRD is added to registry",
 			func(filename string) {
-				Expect(registry.SerializedObjects()).To(HaveKeyWithValue(filename, Not(BeEmpty())))
+				serializedObjects, err := registry.SerializedObjects()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(serializedObjects).To(HaveKeyWithValue(filename, Not(BeEmpty())))
 			},
 
 			Entry("VerticalPodAutoscaler", "crd-verticalpodautoscalers.yaml"),
