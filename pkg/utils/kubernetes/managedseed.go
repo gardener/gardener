@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
@@ -34,9 +34,9 @@ func GetManagedSeedWithReader(ctx context.Context, r client.Reader, shootNamespa
 }
 
 // GetManagedSeedByName tries to read a ManagedSeed in the garden namespace. If it's not found then `nil` is returned.
-func GetManagedSeedByName(ctx context.Context, client client.Client, name string) (*seedmanagementv1alpha1.ManagedSeed, error) {
+func GetManagedSeedByName(ctx context.Context, c client.Client, name string) (*seedmanagementv1alpha1.ManagedSeed, error) {
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := client.Get(ctx, Key(constants.GardenNamespace, name), managedSeed); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: name}, managedSeed); err != nil {
 		if errors.IsNotFound(err) {
 			return nil, nil
 		}

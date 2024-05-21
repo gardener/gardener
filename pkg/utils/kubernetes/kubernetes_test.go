@@ -67,20 +67,6 @@ var _ = Describe("kubernetes", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#Key", func() {
-		It("should return an ObjectKey with namespace and name set", func() {
-			Expect(Key(namespace, name)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}))
-		})
-
-		It("should return an ObjectKey with only name set", func() {
-			Expect(Key(name)).To(Equal(client.ObjectKey{Name: name}))
-		})
-
-		It("should panic if nameOpt is longer than 1", func() {
-			Expect(func() { Key("foo", "bar", "baz") }).To(Panic())
-		})
-	})
-
 	Describe("#ObjectMeta", func() {
 		It("should return an ObjectKey with namespace and name set", func() {
 			Expect(ObjectMeta(namespace, name)).To(Equal(metav1.ObjectMeta{Namespace: namespace, Name: name}))
@@ -174,7 +160,7 @@ var _ = Describe("kubernetes", func() {
 		var (
 			namespace = "bar"
 			name      = "foo"
-			key       = Key(namespace, name)
+			key       = client.ObjectKey{Namespace: namespace, Name: name}
 			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -270,7 +256,7 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#GetLoadBalancerIngress", func() {
 		var (
-			key     = Key(namespace, name)
+			key     = client.ObjectKey{Namespace: namespace, Name: name}
 			service = &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -346,7 +332,7 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#LookupObject", func() {
 		var (
-			key       = Key(namespace, name)
+			key       = client.ObjectKey{Namespace: namespace, Name: name}
 			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,

@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/utils/access"
 )
@@ -300,7 +299,7 @@ func (f *ShootFramework) WaitForShootCondition(ctx context.Context, interval, ti
 // available replica.
 func (f *ShootFramework) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
-	if err := f.SeedClient.Client().Get(ctx, kubernetesutils.Key(f.ShootSeedNamespace(), v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+	if err := f.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

@@ -13,7 +13,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -89,7 +88,7 @@ func (m *fakeManager) Generate(ctx context.Context, config secretsutils.ConfigIn
 		}
 
 		secret = &corev1.Secret{}
-		if err := m.client.Get(ctx, kubernetesutils.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
+		if err := m.client.Get(ctx, client.ObjectKey{Namespace: objectMeta.Namespace, Name: objectMeta.Name}, secret); err != nil {
 			return nil, err
 		}
 

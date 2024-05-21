@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -81,11 +80,11 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	)
 
 	if os.Getenv("GARDENER_SHOOT_CLIENT") != "external" {
-		if err = c.Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.SecretNameGardenerInternal), gardenerSecret); err != nil && apierrors.IsNotFound(err) {
-			err = c.Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
+		if err = c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameGardenerInternal}, gardenerSecret); err != nil && apierrors.IsNotFound(err) {
+			err = c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameGardener}, gardenerSecret)
 		}
 	} else {
-		err = c.Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
+		err = c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameGardener}, gardenerSecret)
 	}
 	if err != nil {
 		return nil, nil, err

@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -75,7 +74,7 @@ var _ = Describe("Garden Care Control", func() {
 		var req reconcile.Request
 
 		BeforeEach(func() {
-			req = reconcile.Request{NamespacedName: kubernetesutils.Key(gardenName)}
+			req = reconcile.Request{NamespacedName: client.ObjectKey{Name: gardenName}}
 		})
 
 		JustBeforeEach(func() {
@@ -90,7 +89,7 @@ var _ = Describe("Garden Care Control", func() {
 
 		Context("when garden no longer exists", func() {
 			It("should stop reconciling and not requeue", func() {
-				req = reconcile.Request{NamespacedName: kubernetesutils.Key("some-other-garden")}
+				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: "some-other-garden"}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 			})
 		})

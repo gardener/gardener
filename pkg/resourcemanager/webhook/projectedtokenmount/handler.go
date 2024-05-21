@@ -50,7 +50,7 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 
 	serviceAccount := &corev1.ServiceAccount{}
 	// We use `req.Namespace` instead of `pod.Namespace` due to https://github.com/kubernetes/kubernetes/issues/88282.
-	if err := h.TargetReader.Get(ctx, kubernetesutils.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
+	if err := h.TargetReader.Get(ctx, client.ObjectKey{Namespace: req.Namespace, Name: pod.Spec.ServiceAccountName}, serviceAccount); err != nil {
 		log.Error(err, "Error getting service account", "serviceAccountName", pod.Spec.ServiceAccountName)
 		return err
 	}

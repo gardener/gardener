@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -77,7 +76,7 @@ func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context
 	}
 
 	if shoot == nil {
-		log.Info("Shoot is missing in cluster resource", "cluster", kubernetesutils.Key(obj.GetNamespace()))
+		log.Info("Shoot is missing in cluster resource", "clusterName", obj.GetNamespace())
 		return nil
 	}
 

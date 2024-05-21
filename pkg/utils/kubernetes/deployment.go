@@ -48,9 +48,9 @@ func ValidDeploymentContainerImageVersion(deploymentToCheck *appsv1.Deployment, 
 }
 
 // CurrentReplicaCountForDeployment returns the current replicaCount for the given deployment.
-func CurrentReplicaCountForDeployment(ctx context.Context, client client.Client, namespace, deploymentName string) (int32, error) {
+func CurrentReplicaCountForDeployment(ctx context.Context, c client.Client, namespace, deploymentName string) (int32, error) {
 	deployment := &appsv1.Deployment{}
-	if err := client.Get(ctx, Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: deploymentName}, deployment); err != nil && !apierrors.IsNotFound(err) {
 		return 0, err
 	}
 	if deployment.Spec.Replicas == nil {

@@ -684,7 +684,7 @@ func (r *Reconciler) reconcileBackupEntryExtension(gardenCtx context.Context, se
 
 	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
 	shootState := &gardencorev1beta1.ShootState{}
-	if err := r.GardenClient.Get(gardenCtx, kubernetesutils.Key(backupEntry.Namespace, shootName), shootState); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Namespace: backupEntry.Namespace, Name: shootName}, shootState); err != nil {
 		return err
 	}
 	return component.Restore(seedCtx, shootState)

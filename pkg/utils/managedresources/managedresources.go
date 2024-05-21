@@ -299,7 +299,7 @@ func WaitUntilHealthyAndNotProgressing(ctx context.Context, client client.Client
 	return waitUntilHealthy(ctx, client, namespace, name, true)
 }
 
-func waitUntilHealthy(ctx context.Context, client client.Client, namespace, name string, andNotProgressing bool) error {
+func waitUntilHealthy(ctx context.Context, c client.Client, namespace, name string, andNotProgressing bool) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -308,7 +308,7 @@ func waitUntilHealthy(ctx context.Context, client client.Client, namespace, name
 	}
 
 	return retry.Until(ctx, IntervalWait, func(ctx context.Context) (done bool, err error) {
-		if err := client.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 			return retry.SevereError(err)
 		}
 

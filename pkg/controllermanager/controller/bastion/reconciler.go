@@ -19,7 +19,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Bastions.
@@ -50,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	shootKey := client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Spec.ShootRef.Name}
 	log = log.WithValues("shoot", shootKey)
 
 	// fetch associated Shoot

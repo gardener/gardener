@@ -18,7 +18,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -151,7 +150,7 @@ func (c *clusterIdentity) WaitCleanup(ctx context.Context) error {
 // IsClusterIdentityEmptyOrFromOrigin checks if the cluster-identity config map does not exist or is from the same origin
 func IsClusterIdentityEmptyOrFromOrigin(ctx context.Context, c client.Client, origin string) (bool, error) {
 	clusterIdentity := &corev1.ConfigMap{}
-	if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, clusterIdentity); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

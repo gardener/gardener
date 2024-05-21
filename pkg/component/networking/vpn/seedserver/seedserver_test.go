@@ -652,37 +652,37 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 
 				actualSecretServer := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpn-seed-server"), actualSecretServer)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, actualSecretServer)).To(Succeed())
 				Expect(actualSecretServer.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretServer.Data).NotTo(BeEmpty())
 
 				actualSecretTLSAuth := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameTLSAuth), actualSecretTLSAuth)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameTLSAuth}, actualSecretTLSAuth)).To(Succeed())
 				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
 
 				actualService := &corev1.Service{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
 				Expect(actualService).To(DeepEqual(expectedService))
 
 				actualConfigMap := &corev1.ConfigMap{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedConfigMap.Namespace, expectedConfigMap.Name), actualConfigMap)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
 				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 				Expect(actualVpa).To(DeepEqual(expectedVpa))
 
 				actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 				expectedDestinationRule := destinationRule()
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
 				Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
 
 				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 				expectedPDB := expectedPodDisruptionBudgetFor(false)
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPDB.Namespace, expectedPDB.Name), actualPodDisruptionBudget)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(BeNotFoundError())
 
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, DeploymentName), &appsv1.StatefulSet{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.StatefulSet{})).To(BeNotFoundError())
 				for i := 0; i < 2; i++ {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
@@ -697,7 +697,7 @@ var _ = Describe("VpnSeedServer", func() {
 				It("should successfully deploy all resources", func() {
 					actualDeployment := &appsv1.Deployment{}
 					expectedDeployment := deployment("")
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedDeployment.Namespace, expectedDeployment.Name), actualDeployment)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDeployment.Namespace, Name: expectedDeployment.Name}, actualDeployment)).To(Succeed())
 					Expect(actualDeployment).To(DeepEqual(expectedDeployment))
 				})
 			})
@@ -706,7 +706,7 @@ var _ = Describe("VpnSeedServer", func() {
 				It("should successfully deploy all resources", func() {
 					actualDeployment := &appsv1.Deployment{}
 					expectedDeployment := deployment(values.Network.NodeCIDR)
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedDeployment.Namespace, expectedDeployment.Name), actualDeployment)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDeployment.Namespace, Name: expectedDeployment.Name}, actualDeployment)).To(Succeed())
 					Expect(actualDeployment).To(DeepEqual(expectedDeployment))
 				})
 
@@ -726,7 +726,7 @@ var _ = Describe("VpnSeedServer", func() {
 					It("should successfully deploy all resources", func() {
 						actualDeployment := &appsv1.Deployment{}
 						expectedDeployment := deployment(values.Network.NodeCIDR)
-						Expect(c.Get(ctx, kubernetesutils.Key(expectedDeployment.Namespace, expectedDeployment.Name), actualDeployment)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDeployment.Namespace, Name: expectedDeployment.Name}, actualDeployment)).To(Succeed())
 						Expect(actualDeployment).To(DeepEqual(expectedDeployment))
 					})
 				})
@@ -758,41 +758,41 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 
 				actualSecretServer := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpn-seed-server"), actualSecretServer)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, actualSecretServer)).To(Succeed())
 				Expect(actualSecretServer.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretServer.Data).NotTo(BeEmpty())
 
 				actualSecretTLSAuth := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameTLSAuth), actualSecretTLSAuth)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameTLSAuth}, actualSecretTLSAuth)).To(Succeed())
 				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
 				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
 
 				for i := 0; i < 2; i++ {
 					actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 					expectedDestinationRule := indexedDestinationRule(i)
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
 					Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
 
 					actualService := &corev1.Service{}
 					expectedService := indexedService(i)
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
 					Expect(actualService).To(DeepEqual(expectedService))
 				}
 
 				actualConfigMap := &corev1.ConfigMap{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedConfigMap.Namespace, expectedConfigMap.Name), actualConfigMap)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
 				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 				Expect(actualVpa).To(DeepEqual(expectedVpa))
 
 				actualStatefulSet := &appsv1.StatefulSet{}
 				expectedStatefulSet := statefulSet(values.Network.NodeCIDR)
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedStatefulSet.Namespace, expectedStatefulSet.Name), actualStatefulSet)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, DeploymentName), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
 			})
@@ -801,7 +801,7 @@ var _ = Describe("VpnSeedServer", func() {
 				It("should successfully deploy all resources", func() {
 					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 					expectedPDB := expectedPodDisruptionBudgetFor(false)
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedPDB.Namespace, expectedPDB.Name), actualPodDisruptionBudget)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
 					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
 				})
 			})
@@ -814,7 +814,7 @@ var _ = Describe("VpnSeedServer", func() {
 				It("should successfully deploy all resources", func() {
 					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 					expectedPDB := expectedPodDisruptionBudgetFor(true)
-					Expect(c.Get(ctx, kubernetesutils.Key(expectedPDB.Namespace, expectedPDB.Name), actualPodDisruptionBudget)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
 					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
 				})
 			})
@@ -863,16 +863,16 @@ var _ = Describe("VpnSeedServer", func() {
 		})
 
 		JustAfterEach(func() {
-			Expect(c.Get(ctx, kubernetesutils.Key(namespace, DeploymentName), &appsv1.StatefulSet{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.StatefulSet{})).To(BeNotFoundError())
 			for i := 0; i < 2; i++ {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
 			}
-			Expect(c.Get(ctx, kubernetesutils.Key(namespace, DeploymentName), &appsv1.Deployment{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedVpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, kubernetesutils.Key(istioNamespace, namespace+"-vpn"), &networkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: istioNamespace, Name: namespace + "-vpn"}, &networkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPodDisruptionBudgetFor(false)), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
 

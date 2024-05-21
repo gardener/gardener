@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -407,7 +406,7 @@ func deployNeededInstallations(
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
 
-			if err := c.Get(ctx, kubernetesutils.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
+			if err := c.Get(ctx, client.ObjectKey{Name: controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name}, controllerDeployment); err != nil {
 				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %w", err)
 			}
 		}

@@ -19,7 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources/builder"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -56,7 +55,7 @@ var _ = Describe("Resource Manager", func() {
 			).To(Succeed())
 
 			secret := &corev1.Secret{}
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -138,7 +137,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -200,7 +199,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
 
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +222,7 @@ var _ = Describe("Resource Manager", func() {
 
 			Expect(secret.Reconcile(ctx)).To(BeNotFoundError())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 
@@ -302,7 +301,7 @@ var _ = Describe("Resource Manager", func() {
 			).To(Succeed())
 
 			mr := &resourcesv1alpha1.ManagedResource{}
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, mr)).To(Succeed())
 
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -395,7 +394,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -433,7 +432,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, mr)).To(Succeed())
 
 			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -463,7 +462,7 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(BeNotFoundError())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, mr)).To(BeNotFoundError())
 		})
 	})
 })

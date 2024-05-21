@@ -26,7 +26,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -89,7 +88,7 @@ func (r *Reconciler) MapSeedToShoot(ctx context.Context, log logr.Logger, reader
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
 		}
@@ -101,7 +100,7 @@ func (r *Reconciler) MapSeedToShoot(ctx context.Context, log logr.Logger, reader
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get Shoot for ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
 		}

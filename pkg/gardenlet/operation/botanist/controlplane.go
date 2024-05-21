@@ -115,7 +115,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
-		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: deployment}, 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}

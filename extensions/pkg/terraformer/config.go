@@ -216,19 +216,19 @@ func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, 
 func (t *terraformer) NumberOfResources(ctx context.Context) (int, error) {
 	numberOfExistingResources := 0
 
-	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.stateName), &corev1.ConfigMap{}); err == nil {
+	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.namespace, Name: t.stateName}, &corev1.ConfigMap{}); err == nil {
 		numberOfExistingResources++
 	} else if !apierrors.IsNotFound(err) {
 		return -1, err
 	}
 
-	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.variablesName), &corev1.Secret{}); err == nil {
+	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.namespace, Name: t.variablesName}, &corev1.Secret{}); err == nil {
 		numberOfExistingResources++
 	} else if !apierrors.IsNotFound(err) {
 		return -1, err
 	}
 
-	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.configName), &corev1.ConfigMap{}); err == nil {
+	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.namespace, Name: t.configName}, &corev1.ConfigMap{}); err == nil {
 		numberOfExistingResources++
 	} else if !apierrors.IsNotFound(err) {
 		return -1, err
@@ -273,7 +273,7 @@ func (t *terraformer) RemoveTerraformerFinalizerFromConfig(ctx context.Context) 
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}},
 	} {
-		if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, obj.GetName()), obj); client.IgnoreNotFound(err) != nil {
+		if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.namespace, Name: obj.GetName()}, obj); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 

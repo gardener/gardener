@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Shoots and auto-deletes them if they are bound to a Quota with a configured cluster lifetime.
@@ -53,14 +52,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	if shoot.Spec.SecretBindingName != nil {
-		if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Namespace, *shoot.Spec.SecretBindingName), secretBinding); err != nil {
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, secretBinding); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
 	for _, quotaRef := range secretBinding.Quotas {
 		quota := &gardencorev1beta1.Quota{}
-		if err := r.Client.Get(ctx, kubernetesutils.Key(quotaRef.Namespace, quotaRef.Name), quota); err != nil {
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: quotaRef.Namespace, Name: quotaRef.Name}, quota); err != nil {
 			return reconcile.Result{}, err
 		}
 

@@ -83,7 +83,7 @@ func (r *Reconciler) getShootSeed(ctx context.Context, shoot *gardencorev1beta1.
 
 	// Get the seed registered by the managed seed
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(ms.Name), seed); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: ms.Name}, seed); err != nil {
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil

@@ -27,7 +27,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -66,9 +65,9 @@ var _ = Describe("Cleaner", func() {
 		c = mockclient.NewMockClient(ctrl)
 		ctx = context.Background()
 
-		cm1Key = kubernetesutils.Key("n", "foo")
-		cm2Key = kubernetesutils.Key("n", "bar")
-		nsKey = kubernetesutils.Key("baz")
+		cm1Key = client.ObjectKey{Namespace: "n", Name: "foo"}
+		cm2Key = client.ObjectKey{Namespace: "n", Name: "bar"}
+		nsKey = client.ObjectKey{Name: "baz"}
 
 		cm1 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "foo"}}
 		cm2 = corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "n", Name: "bar"}}

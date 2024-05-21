@@ -2726,7 +2726,7 @@ rules:
 					))
 
 					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameStaticToken}, secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 
@@ -2866,7 +2866,7 @@ rules:
 					deployAndRead()
 
 					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameStaticToken}, secret)).To(Succeed())
 					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
 						corev1.Volume{
 							Name: "static-token",
@@ -2913,7 +2913,7 @@ rules:
 					))
 
 					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, newSecretNameStaticToken), secret)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: newSecretNameStaticToken}, secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 

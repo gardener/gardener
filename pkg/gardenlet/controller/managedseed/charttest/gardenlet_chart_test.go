@@ -40,7 +40,6 @@ import (
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/charttest"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -505,7 +504,7 @@ func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *core
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(secret.Namespace, name),
+		client.ObjectKey{Namespace: secret.Namespace, Name: name},
 		secret,
 	)).ToNot(HaveOccurred())
 	Expect(secret.Labels).To(Equal(expectedSecret.Labels))
@@ -522,7 +521,7 @@ func validateImageVectorOverwriteConfigMap(ctx context.Context, c client.Client,
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(cm.Namespace, uniqueName),
+		client.ObjectKey{Namespace: cm.Namespace, Name: uniqueName},
 		cm,
 	)).ToNot(HaveOccurred())
 

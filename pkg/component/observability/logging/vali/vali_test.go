@@ -336,8 +336,8 @@ var _ = Describe("Vali", func() {
 			new200GiStorageQuantity = resource.MustParse("200Gi")
 			new100GiStorageQuantity = resource.MustParse("100Gi")
 			new80GiStorageQuantity  = resource.MustParse("80Gi")
-			valiPVCKey              = kubernetesutils.Key("garden", "vali-vali-0")
-			valiStatefulSetKey      = kubernetesutils.Key("garden", "vali")
+			valiPVCKey              = client.ObjectKey{Namespace: "garden", Name: "vali-vali-0"}
+			valiStatefulSetKey      = client.ObjectKey{Namespace: "garden", Name: "vali"}
 			//nolint:unparam
 			funcGetValiPVC = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
 				*pvc = *valiPVC
@@ -391,7 +391,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -402,13 +402,13 @@ var _ = Describe("Vali", func() {
 				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -417,7 +417,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -428,7 +428,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -439,13 +439,13 @@ var _ = Describe("Vali", func() {
 				// Delete the Vali PVC
 				runtimeClient.EXPECT().Delete(ctx, valiPVC),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -454,7 +454,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -465,13 +465,13 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -480,7 +480,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -491,13 +491,13 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -506,7 +506,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -517,7 +517,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -527,13 +527,13 @@ var _ = Describe("Vali", func() {
 				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -542,7 +542,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -553,7 +553,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -564,13 +564,13 @@ var _ = Describe("Vali", func() {
 				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -579,7 +579,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -590,7 +590,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -601,13 +601,13 @@ var _ = Describe("Vali", func() {
 				// Delete the Vali PVC
 				runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
 				// Delete target managed resource
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceNameTarget), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceNameTarget}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				runtimeClient.EXPECT().Delete(ctx, objectOfTypeSecret),
 				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
 				// Delete shoot access secrets
@@ -616,7 +616,7 @@ var _ = Describe("Vali", func() {
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, gomock.AssignableToTypeOf(types.NamespacedName{}), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
 			)
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
@@ -635,7 +635,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -651,7 +651,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -668,7 +668,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -687,7 +687,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
@@ -706,7 +706,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR).Return(errForbidden),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
 		})
@@ -716,7 +716,7 @@ var _ = Describe("Vali", func() {
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
-				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())

@@ -257,7 +257,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 	}
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.GardenClient.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
 		return nil, reconcile.Result{}, err
 	}
 
@@ -927,7 +927,7 @@ func (r *Reconciler) patchBastions(ctx context.Context, shoot *gardencorev1beta1
 }
 
 func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj client.Object, namespace, name string) (bool, bool, error) {
-	if err := reader.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, false, nil
 		}

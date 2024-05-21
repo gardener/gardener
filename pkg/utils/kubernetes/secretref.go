@@ -15,7 +15,7 @@ import (
 // GetSecretByReference returns the secret referenced by the given secret reference.
 func GetSecretByReference(ctx context.Context, c client.Reader, ref *corev1.SecretReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	if err := c.Get(ctx, Key(ref.Namespace, ref.Name), secret); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, secret); err != nil {
 		return nil, err
 	}
 	return secret, nil
@@ -28,7 +28,7 @@ func GetSecretMetadataByReference(ctx context.Context, c client.Reader, ref *cor
 			Kind:       "Secret",
 			APIVersion: "v1",
 		}}
-	if err := c.Get(ctx, Key(ref.Namespace, ref.Name), metadata); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, metadata); err != nil {
 		return nil, err
 	}
 	return metadata, nil

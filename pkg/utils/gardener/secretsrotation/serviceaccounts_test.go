@@ -18,7 +18,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -94,7 +93,7 @@ var _ = Describe("Service accounts", func() {
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
 
 				sa1Secret := &corev1.Secret{}
-				Expect(targetClient.Get(ctx, kubernetesutils.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret)).To(Succeed())
+				Expect(targetClient.Get(ctx, client.ObjectKey{Namespace: sa1.Namespace, Name: "sa1-token" + suffix}, sa1Secret)).To(Succeed())
 				verifyCreatedSATokenSecret(sa1Secret, sa1.Name)
 			})
 		})

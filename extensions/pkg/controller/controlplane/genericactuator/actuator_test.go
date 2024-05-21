@@ -434,7 +434,7 @@ webhooks:
 			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootAccessSecretsFunc(namespace)[0].Secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
 					obj.SetResourceVersion("0")
 				})
@@ -615,7 +615,7 @@ webhooks:
 			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, gomock.Any(), exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
 					obj.SetResourceVersion("0")
 				})

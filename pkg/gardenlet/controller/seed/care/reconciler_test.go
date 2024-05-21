@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -63,7 +62,7 @@ var _ = Describe("Seed Care Control", func() {
 		var req reconcile.Request
 
 		BeforeEach(func() {
-			req = reconcile.Request{NamespacedName: kubernetesutils.Key(seedName)}
+			req = reconcile.Request{NamespacedName: client.ObjectKey{Name: seedName}}
 
 			controllerConfig = config.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
@@ -78,7 +77,7 @@ var _ = Describe("Seed Care Control", func() {
 			It("should stop reconciling and not requeue", func() {
 				reconciler = &Reconciler{GardenClient: gardenClient, SeedClient: seedClient, Config: controllerConfig, Clock: fakeClock}
 
-				req = reconcile.Request{NamespacedName: kubernetesutils.Key("some-other-seed")}
+				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: "some-other-seed"}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 			})
 		})

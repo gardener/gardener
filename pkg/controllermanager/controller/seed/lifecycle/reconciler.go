@@ -61,7 +61,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	lease := &coordinationv1.Lease{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(r.LeaseNamespace, seed.Name), lease); client.IgnoreNotFound(err) != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: r.LeaseNamespace, Name: seed.Name}, lease); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 

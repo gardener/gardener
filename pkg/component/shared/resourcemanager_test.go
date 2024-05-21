@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	. "github.com/gardener/gardener/pkg/component/shared"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -81,7 +80,7 @@ var _ = Describe("ResourceManager", func() {
 			getAPIServerAddress = func() string { return "kube-apiserver" }
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
-			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			secrets = resourcemanager.Secrets{}
 

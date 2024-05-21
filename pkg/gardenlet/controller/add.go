@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // AddToManager adds all gardenlet controllers to the given manager.
@@ -53,7 +53,7 @@ func AddToManager(
 	}
 
 	configMap := &corev1.ConfigMap{}
-	if err := gardenCluster.GetClient().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), configMap); err != nil {
+	if err := gardenCluster.GetClient().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, configMap); err != nil {
 		return fmt.Errorf("failed getting cluster-identity ConfigMap in garden cluster: %w", err)
 	}
 	gardenClusterIdentity, ok := configMap.Data[v1beta1constants.ClusterIdentity]

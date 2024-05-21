@@ -90,7 +90,7 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, name), &corev1.ConfigMap{ObjectMeta: objectMeta}).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.ConfigMap{ObjectMeta: objectMeta}).
 					Return(apierrors.NewNotFound(configMapGroupResource, name)),
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
@@ -125,7 +125,7 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, name), &corev1.ConfigMap{ObjectMeta: objectMeta}).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.ConfigMap{ObjectMeta: objectMeta}).
 					Return(apierrors.NewNotFound(configMapGroupResource, name)),
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
@@ -194,7 +194,7 @@ var _ = Describe("terraformer", func() {
 			It("Should create the ConfigMap", func() {
 				var (
 					state      = "state"
-					stateKey   = kubernetesutils.Key(namespace, name)
+					stateKey   = client.ObjectKey{Namespace: namespace, Name: name}
 					objectMeta = metav1.ObjectMeta{
 						Namespace: namespace,
 						Name:      name,
@@ -246,7 +246,7 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, name), &corev1.Secret{ObjectMeta: objectMeta}).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{ObjectMeta: objectMeta}).
 					Return(apierrors.NewNotFound(secretGroupResource, name)),
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
@@ -281,7 +281,7 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, name), &corev1.Secret{ObjectMeta: objectMeta}).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{ObjectMeta: objectMeta}).
 					Return(apierrors.NewNotFound(secretGroupResource, name)),
 				c.EXPECT().
 					Create(gomock.Any(), expected.DeepCopy()),
@@ -316,9 +316,9 @@ var _ = Describe("terraformer", func() {
 		BeforeEach(func() {
 			tfVars = []byte("tfvars")
 
-			configurationKey = kubernetesutils.Key(namespace, configurationName)
-			variablesKey = kubernetesutils.Key(namespace, variablesName)
-			stateKey = kubernetesutils.Key(namespace, stateName)
+			configurationKey = client.ObjectKey{Namespace: namespace, Name: configurationName}
+			variablesKey = client.ObjectKey{Namespace: namespace, Name: variablesName}
+			stateKey = client.ObjectKey{Namespace: namespace, Name: stateName}
 
 			configurationObjectMeta = kubernetesutils.ObjectMeta(namespace, configurationName)
 			variablesObjectMeta = kubernetesutils.ObjectMeta(namespace, variablesName)
@@ -482,7 +482,7 @@ var _ = Describe("terraformer", func() {
 	Describe("#GetStateOutputVariables", func() {
 		var (
 			stateName = fmt.Sprintf("%s.%s.tf-state", name, purpose)
-			stateKey  = kubernetesutils.Key(namespace, stateName)
+			stateKey  = client.ObjectKey{Namespace: namespace, Name: stateName}
 		)
 
 		It("should return err when state version is not supported", func() {
@@ -614,7 +614,7 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, variablesName), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: variablesName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 						s.SetFinalizers([]string{TerraformerFinalizer})
 						return nil
@@ -623,7 +623,7 @@ var _ = Describe("terraformer", func() {
 					Patch(gomock.Any(), gomock.AssignableToTypeOf(secret.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
 
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, stateName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: stateName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
 						configMap.SetFinalizers([]string{TerraformerFinalizer})
 						return nil
@@ -632,7 +632,7 @@ var _ = Describe("terraformer", func() {
 					Patch(gomock.Any(), gomock.AssignableToTypeOf(config.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(config.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
 
 				c.EXPECT().
-					Get(gomock.Any(), kubernetesutils.Key(namespace, configName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+					Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: configName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap, _ ...client.GetOption) error {
 						configMap.SetFinalizers([]string{TerraformerFinalizer})
 						return nil

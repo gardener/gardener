@@ -113,7 +113,7 @@ var _ = Describe("managedseed", func() {
 		})
 
 		It("should return nil since the ManagedSeed is not found", func() {
-			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 			managedSeed, err := GetManagedSeedByName(ctx, c, seedName)
 			Expect(err).NotTo(HaveOccurred())
@@ -123,7 +123,7 @@ var _ = Describe("managedseed", func() {
 		It("should return an error since reading the ManagedSeed failed", func() {
 			fakeErr := errors.New("fake")
 
-			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 			managedSeed, err := GetManagedSeedByName(ctx, c, seedName)
 			Expect(err).To(MatchError(fakeErr))
@@ -133,7 +133,7 @@ var _ = Describe("managedseed", func() {
 		It("should return the ManagedSeed since reading it succeeded", func() {
 			expected := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
 
-			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 				expected.DeepCopyInto(obj)
 				return nil
 			})

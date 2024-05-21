@@ -14,9 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // SeedConfigChecker checks whether the seed networks in the specification of the provided SeedConfig are correctly
@@ -34,7 +33,7 @@ func (s *SeedConfigChecker) Start(ctx context.Context) error {
 	}
 
 	shootInfo := &corev1.ConfigMap{}
-	if err := s.SeedClient.Get(ctx, kubernetes.Key(metav1.NamespaceSystem, constants.ConfigMapNameShootInfo), shootInfo); client.IgnoreNotFound(err) != nil {
+	if err := s.SeedClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ConfigMapNameShootInfo}, shootInfo); client.IgnoreNotFound(err) != nil {
 		return err
 	} else if errors.IsNotFound(err) {
 		// Seed cluster does not seem to be managed by Gardener

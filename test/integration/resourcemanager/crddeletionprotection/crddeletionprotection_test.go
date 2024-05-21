@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -173,7 +172,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				})
 				Expect(err).NotTo(HaveOccurred(), objectID(obj))
 				crd := &apiextensionsv1.CustomResourceDefinition{}
-				Expect(testClient.Get(context.TODO(), kubernetesutils.Key(obj.GetName()), crd)).To(Succeed())
+				Expect(testClient.Get(context.TODO(), client.ObjectKey{Name: obj.GetName()}, crd)).To(Succeed())
 			}
 
 			testDeleteCollectionConfirmed(ctx, crdObjects[0])

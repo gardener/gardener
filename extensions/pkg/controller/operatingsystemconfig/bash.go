@@ -16,7 +16,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // FilesToDiskScript is a utility function which generates a bash script for writing the provided files to the disk.
@@ -76,7 +75,7 @@ func dataForFileContent(ctx context.Context, c client.Reader, namespace string, 
 	}
 
 	secret := &corev1.Secret{}
-	if err := c.Get(ctx, kubernetesutils.Key(namespace, content.SecretRef.Name), secret); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: content.SecretRef.Name}, secret); err != nil {
 		return nil, err
 	}
 

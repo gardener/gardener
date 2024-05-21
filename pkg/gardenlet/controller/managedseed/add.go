@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -184,7 +183,7 @@ func (p *seedOfManagedSeedPredicate) filterSeedOfManagedSeed(obj client.Object) 
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := p.reader.Get(p.ctx, kubernetesutils.Key(p.gardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: p.gardenNamespace, Name: seed.Name}, managedSeed); err != nil {
 		return false
 	}
 
@@ -197,7 +196,7 @@ func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *s
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
 		return false
 	}
 

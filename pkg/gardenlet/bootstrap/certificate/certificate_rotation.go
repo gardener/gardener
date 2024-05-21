@@ -188,7 +188,7 @@ func waitForCertificateRotation(
 
 func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
 	kubeconfigSecret := &corev1.Secret{}
-	if err := seedClient.Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, nil, err
 	}
 

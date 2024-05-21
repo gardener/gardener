@@ -108,7 +108,7 @@ func (a *actuator) Reconcile(
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.gardenAPIReader.Get(ctx, kubernetesutils.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
+	if err := a.gardenAPIReader.Get(ctx, client.ObjectKey{Namespace: ms.Namespace, Name: ms.Spec.Shoot.Name}, shoot); err != nil {
 		return status, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
@@ -205,7 +205,7 @@ func (a *actuator) Delete(
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.gardenAPIReader.Get(ctx, kubernetesutils.Key(ms.Namespace, ms.Spec.Shoot.Name), shoot); err != nil {
+	if err := a.gardenAPIReader.Get(ctx, client.ObjectKey{Namespace: ms.Namespace, Name: ms.Spec.Shoot.Name}, shoot); err != nil {
 		return status, false, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
 	}
 
@@ -342,7 +342,7 @@ func (a *actuator) deleteGardenNamespace(ctx context.Context, shootClient kubern
 
 func (a *actuator) getGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	if err := shootClient.Client().Get(ctx, kubernetesutils.Key(a.gardenNamespaceShoot), ns); err != nil {
+	if err := shootClient.Client().Get(ctx, client.ObjectKey{Name: a.gardenNamespaceShoot}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -362,7 +362,7 @@ func (a *actuator) deleteSeed(ctx context.Context, managedSeed *seedmanagementv1
 
 func (a *actuator) getSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.Seed, error) {
 	seed := &gardencorev1beta1.Seed{}
-	if err := a.gardenClient.Get(ctx, kubernetesutils.Key(managedSeed.Name), seed); err != nil {
+	if err := a.gardenClient.Get(ctx, client.ObjectKey{Name: managedSeed.Name}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -444,7 +444,7 @@ func (a *actuator) deleteGardenlet(
 
 func (a *actuator) getGardenletDeployment(ctx context.Context, shootClient kubernetes.Interface) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	if err := shootClient.Client().Get(ctx, kubernetesutils.Key(a.gardenNamespaceShoot, v1beta1constants.DeploymentNameGardenlet), deployment); err != nil {
+	if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: a.gardenNamespaceShoot, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -557,14 +557,14 @@ func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.
 	if shoot.Spec.SecretBindingName == nil {
 		return nil, fmt.Errorf("secretbinding name is nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
 	}
-	if err := a.gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, *shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
+	if err := a.gardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, shootSecretBinding); err != nil {
 		return nil, err
 	}
 	return kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)
 }
 
 func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if err := seedClient.Get(ctx, kubernetesutils.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
+	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "vpa-admission-controller"}, &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

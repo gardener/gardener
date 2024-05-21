@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -51,7 +50,7 @@ func RewriteEncryptedDataAddLabel(
 	// Check if we have to label the resources to rewrite the data.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
+	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
 		return err
 	}
 
@@ -197,7 +196,7 @@ func SnapshotETCDAfterRewritingEncryptedData(
 	// Check if we have to snapshot ETCD now that we have rewritten all encrypted data.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
+	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
 		return err
 	}
 
@@ -221,7 +220,7 @@ func SnapshotETCDAfterRewritingEncryptedData(
 func PatchAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespace, name string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := c.Get(ctx, kubernetesutils.Key(namespace, name), meta); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
 		return err
 	}
 

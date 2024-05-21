@@ -12,8 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Marshal transform RawState to []byte representation. It encodes the raw state data
@@ -24,7 +23,7 @@ func (trs *RawState) Marshal() ([]byte, error) {
 // GetRawState returns the content of terraform state config map
 func (t *terraformer) GetRawState(ctx context.Context) (*RawState, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := t.client.Get(ctx, kubernetesutils.Key(t.namespace, t.stateName), configMap); err != nil {
+	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.namespace, Name: t.stateName}, configMap); err != nil {
 		return nil, err
 	}
 	return &RawState{
@@ -98,7 +97,7 @@ func (trs *RawState) decode() (*RawState, error) {
 		trs.Data = string(trsDec)
 		trs.Encoding = NoneEncoding
 	case NoneEncoding:
-		//do nothing
+		// do nothing
 	default:
 		return nil, fmt.Errorf("unrecognised encoding %q for RawState.Data", trs.Encoding)
 	}

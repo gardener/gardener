@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -131,7 +130,7 @@ var _ = Describe("#Service", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &corev1.Service{}
-			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
 
 			Expect(actual).To(DeepEqual(expected))
 			Expect(clusterIP).To(Equal("1.1.1.1"))
@@ -147,14 +146,14 @@ var _ = Describe("#Service", func() {
 		It("deletes service", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), &corev1.Service{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, &corev1.Service{})).To(BeNotFoundError())
 		})
 
 		It("waits for deletion service", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), &corev1.Service{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, &corev1.Service{})).To(BeNotFoundError())
 		})
 	}
 
@@ -206,7 +205,7 @@ var _ = Describe("#Service", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				actual := &corev1.Service{}
-				Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
 
 				expected.Annotations = map[string]string{
 					"foo":                          "bar",
@@ -250,7 +249,7 @@ var _ = Describe("#Service", func() {
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 					actual := &corev1.Service{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
 
 					Expect(actual.Spec.ClusterIP).To(Equal(expected.Spec.ClusterIP))
 				})
@@ -265,7 +264,7 @@ var _ = Describe("#Service", func() {
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 					actual := &corev1.Service{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
 
 					Expect(actual.Spec.ClusterIP).To(Equal(clusterIP))
 				})

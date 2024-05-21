@@ -14,7 +14,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ProjectNamespacePrefix is the prefix of namespaces representing projects.
@@ -39,7 +38,7 @@ func ProjectForNamespaceFromReader(ctx context.Context, reader client.Reader, na
 // fetches the project name label. Then it will read the project with the respective name.
 func ProjectAndNamespaceFromReader(ctx context.Context, reader client.Reader, namespaceName string) (*gardencorev1beta1.Project, *corev1.Namespace, error) {
 	namespace := &corev1.Namespace{}
-	if err := reader.Get(ctx, kubernetesutils.Key(namespaceName), namespace); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); err != nil {
 		return nil, nil, err
 	}
 
@@ -49,7 +48,7 @@ func ProjectAndNamespaceFromReader(ctx context.Context, reader client.Reader, na
 	}
 
 	project := &gardencorev1beta1.Project{}
-	if err := reader.Get(ctx, kubernetesutils.Key(projectName), project); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
 		return nil, namespace, err
 	}
 

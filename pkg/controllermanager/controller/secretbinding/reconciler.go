@@ -24,7 +24,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles SecretBindings.
@@ -73,7 +72,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 			if mayReleaseSecret {
 				secret := &corev1.Secret{}
-				if err := r.Client.Get(ctx, kubernetesutils.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
+				if err := r.Client.Get(ctx, client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}, secret); err == nil {
 					// Remove shoot provider label and 'referred by a secret binding' label
 					hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
 					if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
@@ -126,7 +125,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Add the Gardener finalizer to the referenced Secret to protect it from deletion as long as the
 	// SecretBinding resource exists.
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: secretBinding.SecretRef.Namespace, Name: secretBinding.SecretRef.Name}, secret); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -155,7 +154,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if len(secretBinding.Quotas) != 0 {
 		for _, objRef := range secretBinding.Quotas {
 			quota := &gardencorev1beta1.Quota{}
-			if err := r.Client.Get(ctx, kubernetesutils.Key(objRef.Namespace, objRef.Name), quota); err != nil {
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, quota); err != nil {
 				return reconcile.Result{}, err
 			}
 
@@ -214,7 +213,7 @@ func (r *Reconciler) removeLabelFromQuotas(ctx context.Context, quotas []corev1.
 		}
 
 		quota := &gardencorev1beta1.Quota{}
-		if err := r.Client.Get(ctx, kubernetesutils.Key(q.Namespace, q.Name), quota); err != nil {
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: q.Namespace, Name: q.Name}, quota); err != nil {
 			return err
 		}
 

@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
-	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	shootKey := client.ObjectKey{Namespace: bastion.Namespace, Name: bastion.Spec.ShootRef.Name}
 	if err := r.GardenClient.Get(gardenCtx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}

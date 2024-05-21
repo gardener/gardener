@@ -17,7 +17,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // SyncClusterResourceToSeed creates or updates the `extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed
@@ -99,7 +98,7 @@ type Cluster struct {
 // GetCluster tries to read Gardener's Cluster extension resource in the given namespace.
 func GetCluster(ctx context.Context, c client.Reader, namespace string) (*Cluster, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := c.Get(ctx, kubernetesutils.Key(namespace), cluster); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Name: namespace}, cluster); err != nil {
 		return nil, err
 	}
 
@@ -194,7 +193,7 @@ func GetShootStateForCluster(
 	error,
 ) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := seedClient.Get(ctx, kubernetesutils.Key(clusterName), cluster); err != nil {
+	if err := seedClient.Get(ctx, client.ObjectKey{Name: clusterName}, cluster); err != nil {
 		return nil, nil, err
 	}
 
@@ -208,7 +207,7 @@ func GetShootStateForCluster(
 	}
 
 	shootState := &gardencorev1beta1.ShootState{}
-	if err := gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shootState); err != nil {
 		return nil, nil, err
 	}
 
@@ -218,7 +217,7 @@ func GetShootStateForCluster(
 // GetShoot tries to read Gardener's Cluster extension resource in the given namespace and return the embedded Shoot resource.
 func GetShoot(ctx context.Context, c client.Reader, namespace string) (*gardencorev1beta1.Shoot, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := c.Get(ctx, kubernetesutils.Key(namespace), cluster); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Name: namespace}, cluster); err != nil {
 		return nil, err
 	}
 

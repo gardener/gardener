@@ -36,7 +36,6 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -105,7 +104,7 @@ var _ = Describe("Shoot Care Control", func() {
 				},
 			}}
 
-			req = reconcile.Request{NamespacedName: kubernetesutils.Key(shootNamespace, shootName)}
+			req = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: shootNamespace, Name: shootName}}
 
 			gardenletConf = gardenletconfig.GardenletConfiguration{
 				Controllers: &gardenletconfig.GardenletControllerConfiguration{

@@ -144,7 +144,7 @@ func (r *Reconciler) reconcile(
 	var providerConfig *runtime.RawExtension
 	if deploymentRef := controllerInstallation.Spec.DeploymentRef; deploymentRef != nil {
 		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-		if err := r.GardenClient.Get(gardenCtx, kubernetesutils.Key(deploymentRef.Name), controllerDeployment); err != nil {
+		if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Name: deploymentRef.Name}, controllerDeployment); err != nil {
 			return reconcile.Result{}, err
 		}
 		providerConfig = &controllerDeployment.ProviderConfig

@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -155,7 +154,7 @@ var _ = Describe("Certificates", func() {
 			mockGardenInterface.EXPECT().RESTConfig().Return(certClientConfig)
 
 			// mock update of secret in seed with the rotated kubeconfig
-			mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
 			mockSeedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
@@ -265,7 +264,7 @@ users:
 			It("should return an error - kubeconfig secret does not exist", func() {
 				secretGroupResource := schema.GroupResource{Resource: "Secrets"}
 				secretNotFoundErr := apierrors.NewNotFound(secretGroupResource, gardenClientConnection.KubeconfigSecret.Name)
-				mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(secretNotFoundErr)
+				mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(secretNotFoundErr)
 
 				_, _, err := readCertificateFromKubeconfigSecret(ctx, log, mockSeedClient, gardenClientConnection)
 				Expect(err).To(MatchError(ContainSubstring("does not contain a kubeconfig and there is no fallback kubeconfig")))
@@ -273,7 +272,7 @@ users:
 
 			It("should return an error - secret does not contain a kubeconfig", func() {
 				// mock existing secret with missing garden kubeconfig
-				mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+				mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 					secret.ObjectMeta = metav1.ObjectMeta{
 						Name:      gardenClientConnection.KubeconfigSecret.Name,
 						Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
@@ -300,7 +299,7 @@ users:
 					testKubeconfig = fmt.Sprintf(baseKubeconfig, utils.EncodeBase64(cert.CertificatePEM), utils.EncodeBase64(cert.PrivateKeyPEM))
 
 					// mock first secret retrieval
-					mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+					mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 						secret.ObjectMeta = metav1.ObjectMeta{
 							Name:      gardenClientConnection.KubeconfigSecret.Name,
 							Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
@@ -313,7 +312,7 @@ users:
 				It("should not return an error", func() {
 					// mock second secret retrieval - check the validity of the certificate again
 					// in this case the secret has not changed
-					mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+					mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 						secret.ObjectMeta = metav1.ObjectMeta{
 							Name:      gardenClientConnection.KubeconfigSecret.Name,
 							Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
@@ -339,7 +338,7 @@ users:
 
 					// mock second secret retrieval - check the validity of the certificate again
 					// the secret has been updated!
-					mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+					mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 						secret.ObjectMeta = metav1.ObjectMeta{
 							Name:      gardenClientConnection.KubeconfigSecret.Name,
 							Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
@@ -361,7 +360,7 @@ users:
 
 				// mock first secret retrieval - it is annotated with the renew operation - hence, no need to mock
 				// second secret retrieval
-				mockSeedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
+				mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, secret *corev1.Secret, _ ...client.GetOption) error {
 					secret.ObjectMeta = metav1.ObjectMeta{
 						Name:        gardenClientConnection.KubeconfigSecret.Name,
 						Namespace:   gardenClientConnection.KubeconfigSecret.Namespace,

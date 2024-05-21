@@ -17,7 +17,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // validBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
@@ -36,7 +35,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		},
 	}
 
-	if err = c.Get(ctx, kubernetes.Key(secret.Namespace, secret.Name), secret); client.IgnoreNotFound(err) != nil {
+	if err = c.Get(ctx, client.ObjectKeyFromObject(secret), secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 

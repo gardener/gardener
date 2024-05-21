@@ -30,7 +30,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -206,26 +205,26 @@ var _ = Describe("#SNI", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
-			Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
 			Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
 
 			actualGateway := &istionetworkingv1beta1.Gateway{}
-			Expect(c.Get(ctx, kubernetesutils.Key(expectedGateway.Namespace, expectedGateway.Name), actualGateway)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedGateway.Namespace, Name: expectedGateway.Name}, actualGateway)).To(Succeed())
 			Expect(actualGateway).To(BeComparableTo(expectedGateway, comptest.CmpOptsForGateway()))
 
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
-			Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
 			if apiServerProxyValues != nil {
 				managedResource := &resourcesv1alpha1.ManagedResource{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Name}, managedResource)).To(Succeed())
 				expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
 				Expect(managedResource).To(DeepEqual(expectedManagedResource))
 
 				managedResourceSecret := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Spec.SecretRefs[0].Name), managedResourceSecret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Spec.SecretRefs[0].Name}, managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(1))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
@@ -260,21 +259,21 @@ var _ = Describe("#SNI", func() {
 	It("should succeed destroying", func() {
 		Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(Succeed())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedGateway.Namespace, Name: expectedGateway.Name}, &istionetworkingv1beta1.Gateway{})).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, &istionetworkingv1beta1.VirtualService{})).To(Succeed())
 		managedResource := &resourcesv1alpha1.ManagedResource{}
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Name}, managedResource)).To(Succeed())
 		managedResourceSecretName := managedResource.Spec.SecretRefs[0].Name
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, managedResourceSecretName), &corev1.Secret{})).To(Succeed())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: managedResourceSecretName}, &corev1.Secret{})).To(Succeed())
 
 		Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(BeNotFoundError())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(BeNotFoundError())
-		Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, managedResourceSecretName), &corev1.Secret{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedGateway.Namespace, Name: expectedGateway.Name}, &istionetworkingv1beta1.Gateway{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Name}, managedResource)).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: managedResourceSecretName}, &corev1.Secret{})).To(BeNotFoundError())
 	})
 
 	Describe("#Wait", func() {

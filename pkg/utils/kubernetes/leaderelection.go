@@ -16,25 +16,25 @@ import (
 )
 
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
-func ReadLeaderElectionRecord(ctx context.Context, client client.Client, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
+func ReadLeaderElectionRecord(ctx context.Context, c client.Client, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
 	switch lock {
 	case "endpoints":
 		endpoint := &corev1.Endpoints{}
-		if err := client.Get(ctx, Key(namespace, name), endpoint); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, endpoint); err != nil {
 			return nil, err
 		}
 		return leaderElectionRecordFromAnnotations(endpoint.Annotations)
 
 	case "configmaps":
 		configmap := &corev1.ConfigMap{}
-		if err := client.Get(ctx, Key(namespace, name), configmap); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, configmap); err != nil {
 			return nil, err
 		}
 		return leaderElectionRecordFromAnnotations(configmap.Annotations)
 
 	case resourcelock.LeasesResourceLock:
 		lease := &coordinationv1.Lease{}
-		if err := client.Get(ctx, Key(namespace, name), lease); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, lease); err != nil {
 			return nil, err
 		}
 		return resourcelock.LeaseSpecToLeaderElectionRecord(&lease.Spec), nil
