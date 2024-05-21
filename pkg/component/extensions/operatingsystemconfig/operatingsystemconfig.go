@@ -187,7 +187,7 @@ type Data struct {
 	// KeyName is the name of the secret storing the cloud-config in the shoot cluster.
 	KeyName string
 	// SecretName is the name of a secret storing the actual cloud-config user data.
-	SecretName string
+	SecretName *string
 	// Command is the command for reloading the cloud-config (in case a new version was downloaded).
 	Command *string
 	// Units is the list of systemd unit names.
@@ -266,7 +266,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					Object:     osc,
 					Content:    string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					KeyName:    oscKey,
-					SecretName: secret.Name,
+					SecretName: &secret.Name,
 					Command:    osc.Status.Command,
 					Units:      osc.Status.Units,
 					Files:      osc.Status.Files,

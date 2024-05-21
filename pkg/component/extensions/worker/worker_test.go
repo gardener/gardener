@@ -168,14 +168,14 @@ var _ = Describe("Worker", func() {
 					Init: operatingsystemconfig.Data{
 						Content:    string(worker1UserData),
 						KeyName:    worker1UserDataKeyName,
-						SecretName: worker1UserDataSecretName,
+						SecretName: &worker1UserDataSecretName,
 					},
 				},
 				worker2Name: {
 					Init: operatingsystemconfig.Data{
 						Content:    string(worker2UserData),
 						KeyName:    worker2UserDataKeyName,
-						SecretName: worker2UserDataSecretName,
+						SecretName: &worker2UserDataSecretName,
 					},
 				},
 			},

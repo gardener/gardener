@@ -171,10 +171,14 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			return nil, fmt.Errorf("missing operating system config for worker pool %v", workerPool.Name)
 		}
 
+		if oscConfig.Init.SecretName == nil {
+			return nil, fmt.Errorf("missing secret name for worker pool %v", workerPool.Name)
+		}
+
 		// TODO(rfranzke): Remove userData after v1.100 has been released.
 		userData := []byte(oscConfig.Init.Content)
 		userDataSecretRef := &corev1.SecretKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{Name: oscConfig.Init.SecretName},
+			LocalObjectReference: corev1.LocalObjectReference{Name: *oscConfig.Init.SecretName},
 			Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
 		}
 		oscKey := oscConfig.Init.KeyName
