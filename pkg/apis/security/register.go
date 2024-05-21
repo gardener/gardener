@@ -39,6 +39,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CredentialsBindingList{},
 		&WorkloadIdentity{},
 		&WorkloadIdentityList{},
+		&TokenRequest{},
 	)
 
 	return nil
