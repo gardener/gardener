@@ -37,7 +37,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					Role:       "service",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v1beta1constants.GardenNamespace}},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						SourceLabels: []monitoringv1.LabelName{
 							"__meta_kubernetes_service_name",
@@ -48,7 +48,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					},
 					{
 						Action:      "replace",
-						Replacement: "prometheus",
+						Replacement: ptr.To("prometheus"),
 						TargetLabel: "job",
 					},
 				},

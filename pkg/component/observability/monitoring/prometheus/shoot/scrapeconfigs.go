@@ -42,14 +42,14 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						`{__name__=~"metering:.+",namespace="` + namespace + `"}`,
 					},
 				},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "kube-kubelet-seed",
+					Replacement: ptr.To("kube-kubelet-seed"),
 					TargetLabel: "job",
 				}},
-				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					// we make the shoot's pods in the shoot's namespace to appear in the kube-system namespace
-					Replacement: metav1.NamespaceSystem,
+					Replacement: ptr.To(metav1.NamespaceSystem),
 					TargetLabel: "namespace",
 				}},
 			},
@@ -65,10 +65,10 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 				}},
 				SampleLimit: ptr.To(uint64(500)),
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: "annotated-seed-service-endpoints",
+						Replacement: ptr.To("annotated-seed-service-endpoints"),
 						TargetLabel: "job",
 					},
 					{
@@ -114,7 +114,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						TargetLabel:  "pod",
 					},
 				},
-				MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					SourceLabels: []monitoringv1.LabelName{"__name__"},
 					Action:       "drop",
 					Regex:        `^rest_client_request_latency_seconds.+$`,
@@ -130,10 +130,10 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: "prometheus-shoot",
+						Replacement: ptr.To("prometheus-shoot"),
 						TargetLabel: "job",
 					},
 					{
@@ -207,10 +207,10 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							Key:                  secretsutils.DataKeyCertificateBundle,
 						}}},
 					}},
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: "cadvisor",
+							Replacement: ptr.To("cadvisor"),
 							TargetLabel: "job",
 						},
 						{
@@ -219,20 +219,20 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port),
+							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 							Regex:        `(.+)`,
-							Replacement:  `/api/v1/nodes/${1}/proxy/metrics/cadvisor`,
+							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
 							TargetLabel:  "__metrics_path__",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: "shoot",
+							Replacement: ptr.To("shoot"),
 						},
 					},
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 						// get system services
 						{
 							SourceLabels: []monitoringv1.LabelName{"id"},
@@ -244,7 +244,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							SourceLabels: []monitoringv1.LabelName{"id"},
 							Action:       "replace",
 							Regex:        `^/system\.slice/(.+)\.service$`,
-							Replacement:  `$1`,
+							Replacement:  ptr.To(`$1`),
 							TargetLabel:  "container",
 						},
 						monitoringutils.StandardMetricRelabelConfig(
@@ -286,7 +286,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						{
 							SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
 							Regex:        `container_network.+;/`,
-							Replacement:  "true",
+							Replacement:  ptr.To("true"),
 							TargetLabel:  "host_network",
 						},
 						{
@@ -325,10 +325,10 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 							Key:                  secretsutils.DataKeyCertificateBundle,
 						}}},
 					}},
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: "kube-kubelet",
+							Replacement: ptr.To("kube-kubelet"),
 							TargetLabel: "job",
 						},
 						{
@@ -341,17 +341,17 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						},
 						{
 							TargetLabel: "__address__",
-							Replacement: v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port),
+							Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 							Regex:        `(.+)`,
-							Replacement:  `/api/v1/nodes/${1}/proxy/metrics`,
+							Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
 							TargetLabel:  "__metrics_path__",
 						},
 						{
 							TargetLabel: "type",
-							Replacement: "shoot",
+							Replacement: ptr.To("shoot"),
 						},
 					},
 					MetricRelabelConfigs: append(monitoringutils.StandardMetricRelabelConfig(
@@ -364,7 +364,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						"kubelet_image_pull_duration_seconds_bucket",
 						"kubelet_image_pull_duration_seconds_sum",
 						"kubelet_image_pull_duration_seconds_count",
-					), &monitoringv1.RelabelConfig{
+					), monitoringv1.RelabelConfig{
 						SourceLabels: []monitoringv1.LabelName{"namespace"},
 						Action:       "keep",
 						// Not all kubelet metrics have a namespace label. That's why we also need to match empty namespace (^$).

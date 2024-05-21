@@ -490,12 +490,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Endpoints: []monitoringv1.Endpoint{{
 					Port:      portNameMetrics,
 					Scheme:    "https",
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
 						Key:                  resourcesv1alpha1.DataKeyToken,
 					}},
-					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					}},

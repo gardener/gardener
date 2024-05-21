@@ -26,11 +26,11 @@ var _ = Describe("ServiceMonitors", func() {
 					}},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port: "metrics",
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,
 						}},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(alertmanager_config_hash|alertmanager_config_last_reload_successful|process_max_fds|process_open_fds)$`,

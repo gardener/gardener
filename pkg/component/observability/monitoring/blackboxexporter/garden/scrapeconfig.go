@@ -25,13 +25,13 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 					Targets: targets,
 					Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						SourceLabels: []monitoringv1.LabelName{"__address__"},
 						Separator:    ptr.To(";"),
 						Regex:        `(.*)`,
 						TargetLabel:  "__param_target",
-						Replacement:  `$1`,
+						Replacement:  ptr.To(`$1`),
 						Action:       "replace",
 					},
 					{
@@ -39,19 +39,19 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 						Separator:    ptr.To(";"),
 						Regex:        `(.*)`,
 						TargetLabel:  "instance",
-						Replacement:  `$1`,
+						Replacement:  ptr.To(`$1`),
 						Action:       "replace",
 					},
 					{
 						Separator:   ptr.To(";"),
 						Regex:       `(.*)`,
 						TargetLabel: "__address__",
-						Replacement: "blackbox-exporter:9115",
+						Replacement: ptr.To("blackbox-exporter:9115"),
 						Action:      "replace",
 					},
 					{
 						Action:      "replace",
-						Replacement: "blackbox-" + name,
+						Replacement: ptr.To("blackbox-" + name),
 						TargetLabel: "job",
 					},
 				},
@@ -70,12 +70,12 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		gardenerDashboardScrapeConfig = defaultScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{gardenerDashboardTarget})
 	)
 
-	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]*monitoringv1.RelabelConfig{{
+	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]monitoringv1.RelabelConfig{{
 		SourceLabels: []monitoringv1.LabelName{"__address__"},
 		Separator:    ptr.To(";"),
 		Regex:        `https://api\..*`,
 		TargetLabel:  "__param_module",
-		Replacement:  httpKubeAPIServerRootCAsModuleName,
+		Replacement:  ptr.To(httpKubeAPIServerRootCAsModuleName),
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 

@@ -25,7 +25,7 @@ func CentralServiceMonitors(wantsAlertmanager bool) []*monitoringv1.ServiceMonit
 				Selector: metav1.LabelSelector{MatchLabels: alertmanager.GetLabels("shoot")},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: alertmanager.PortNameMetrics,
-					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					}},

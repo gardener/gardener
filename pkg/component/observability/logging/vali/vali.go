@@ -849,12 +849,12 @@ func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: valiMetricsPortName,
-				RelabelConfigs: []*monitoringv1.RelabelConfig{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
 					// This service monitor is targeting the logging service. Without explicitly overriding the
 					// job label, prometheus-operator would choose job=logging (service name).
 					{
 						Action:      "replace",
-						Replacement: "vali",
+						Replacement: ptr.To("vali"),
 						TargetLabel: "job",
 					},
 					{

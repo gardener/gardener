@@ -140,10 +140,10 @@ end
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							TargetLabel: "__metrics_path__",
-							Replacement: "/api/v1/metrics/prometheus",
+							Replacement: ptr.To("/api/v1/metrics/prometheus"),
 						},
 						{
 							Action: "labelmap",
@@ -170,12 +170,12 @@ end
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics-plugin",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						// This service monitor is targeting the fluent-bit service. Without explicitly overriding the
 						// job label, prometheus-operator would choose job=fluent-bit (service name).
 						{
 							Action:      "replace",
-							Replacement: "fluent-bit-output-plugin",
+							Replacement: ptr.To("fluent-bit-output-plugin"),
 							TargetLabel: "job",
 						},
 						{

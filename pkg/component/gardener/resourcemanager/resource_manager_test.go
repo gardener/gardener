@@ -868,7 +868,7 @@ var _ = Describe("ResourceManager", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,

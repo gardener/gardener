@@ -26,7 +26,7 @@ var _ = Describe("Utils", func() {
 
 	Describe("#StandardMetricRelabelConfig", func() {
 		It("should return the expected relabel configs", func() {
-			Expect(monitoringutils.StandardMetricRelabelConfig("foo", "bar", "baz")).To(HaveExactElements(&monitoringv1.RelabelConfig{
+			Expect(monitoringutils.StandardMetricRelabelConfig("foo", "bar", "baz")).To(HaveExactElements(monitoringv1.RelabelConfig{
 				SourceLabels: []monitoringv1.LabelName{"__name__"},
 				Action:       "keep",
 				Regex:        `^(foo|bar|baz)$`,

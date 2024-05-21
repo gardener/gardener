@@ -41,10 +41,10 @@ var _ = Describe("ServiceMonitors", func() {
 							},
 						},
 						Port: "web",
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: "shoot-prometheus",
+								Replacement: ptr.To("shoot-prometheus"),
 								TargetLabel: "job",
 							},
 							{

@@ -26,7 +26,7 @@ var _ = Describe("ServiceMonitors", func() {
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"component": "node-exporter"}},
 					Endpoints: []monitoringv1.Endpoint{{
 						Port: "metrics",
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action: "labelmap",
 								Regex:  `__meta_kubernetes_service_label_(.+)`,

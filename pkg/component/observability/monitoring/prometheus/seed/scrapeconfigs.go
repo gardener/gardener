@@ -21,9 +21,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				Name: "prometheus",
 			},
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "prometheus",
+					Replacement: ptr.To("prometheus"),
 					TargetLabel: "job",
 				}},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
@@ -50,9 +50,9 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"},
 				}},
-				RelabelConfigs: []*monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
-					Replacement: "cadvisor",
+					Replacement: ptr.To("cadvisor"),
 					TargetLabel: "job",
 				}},
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(

@@ -338,7 +338,7 @@ var _ = Describe("HVPA", func() {
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "hvpa-controller"}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(hvpa_aggregate_applied_scaling_total|hvpa_aggregate_blocked_scalings_total|hvpa_spec_replicas|hvpa_status_replicas|hvpa_status_applied_hpa_current_replicas|hvpa_status_applied_hpa_desired_replicas|hvpa_status_applied_vpa_recommendation|hvpa_status_blocked_hpa_current_replicas|hvpa_status_blocked_hpa_desired_replicas|hvpa_status_blocked_vpa_recommendation)$`,

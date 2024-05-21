@@ -248,16 +248,16 @@ var _ = Describe("KubeControllerManager", func() {
 				Endpoints: []monitoringv1.Endpoint{{
 					Port:      "metrics",
 					Scheme:    "https",
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
 						Key:                  "token",
 					}},
-					RelabelConfigs: []*monitoringv1.RelabelConfig{{
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
 					}},
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(rest_client_requests_total|process_max_fds|process_open_fds)$`,

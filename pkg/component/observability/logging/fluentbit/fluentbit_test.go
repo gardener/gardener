@@ -73,17 +73,17 @@ var _ = Describe("Fluent Bit", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							TargetLabel: "__metrics_path__",
-							Replacement: "/api/v1/metrics/prometheus",
+							Replacement: ptr.To("/api/v1/metrics/prometheus"),
 						},
 						{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_pod_label_(.+)`,
 						},
 					},
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(fluentbit_input_bytes_total|fluentbit_input_records_total|fluentbit_output_proc_bytes_total|fluentbit_output_proc_records_total|fluentbit_output_errors_total|fluentbit_output_retries_total|fluentbit_output_retries_failed_total|fluentbit_filter_add_records_total|fluentbit_filter_drop_records_total)$`,
@@ -109,10 +109,10 @@ var _ = Describe("Fluent Bit", func() {
 				}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics-plugin",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: "fluent-bit-output-plugin",
+							Replacement: ptr.To("fluent-bit-output-plugin"),
 							TargetLabel: "job",
 						},
 						{
@@ -120,7 +120,7 @@ var _ = Describe("Fluent Bit", func() {
 							Regex:  `__meta_kubernetes_pod_label_(.+)`,
 						},
 					},
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(valitail_dropped_entries_total|fluentbit_vali_gardener_errors_total|fluentbit_vali_gardener_logs_without_metadata_total|fluentbit_vali_gardener_incoming_logs_total|fluentbit_vali_gardener_incoming_logs_with_endpoint_total|fluentbit_vali_gardener_forwarded_logs_total|fluentbit_vali_gardener_dropped_logs_total)$`,

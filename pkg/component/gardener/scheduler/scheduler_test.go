@@ -182,7 +182,7 @@ var _ = Describe("GardenerScheduler", func() {
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "scheduler"}},
 				Endpoints: []monitoringv1.Endpoint{{
 					Port: "metrics",
-					MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
 						Regex:        `^(rest_client_.+|controller_runtime_.+|workqueue_.+|go_.+)$`,

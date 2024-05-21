@@ -37,7 +37,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							Role:       "service",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{
 									"__meta_kubernetes_service_name",
@@ -48,7 +48,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 							{
 								Action:      "replace",
-								Replacement: "prometheus",
+								Replacement: ptr.To("prometheus"),
 								TargetLabel: "job",
 							},
 						},

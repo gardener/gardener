@@ -25,9 +25,9 @@ var _ = Describe("PrometheusRules", func() {
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "prometheus",
+							Replacement: ptr.To("prometheus"),
 							TargetLabel: "job",
 						}},
 					},
@@ -38,9 +38,9 @@ var _ = Describe("PrometheusRules", func() {
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"localhost:9091"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "cortex-frontend",
+							Replacement: ptr.To("cortex-frontend"),
 							TargetLabel: "job",
 						}},
 					},
@@ -65,9 +65,9 @@ var _ = Describe("PrometheusRules", func() {
 							},
 						},
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-garden"}}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "prometheus-garden",
+							Replacement: ptr.To("prometheus-garden"),
 							TargetLabel: "job",
 						}},
 					},

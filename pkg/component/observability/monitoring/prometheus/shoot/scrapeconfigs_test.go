@@ -44,13 +44,13 @@ var _ = Describe("ScrapeConfigs", func() {
 								`{__name__=~"metering:.+",namespace="` + namespace + `"}`,
 							},
 						},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{{
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action:      "replace",
-							Replacement: "kube-kubelet-seed",
+							Replacement: ptr.To("kube-kubelet-seed"),
 							TargetLabel: "job",
 						}},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
-							Replacement: "kube-system",
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							Replacement: ptr.To("kube-system"),
 							TargetLabel: "namespace",
 						}},
 					},
@@ -66,10 +66,10 @@ var _ = Describe("ScrapeConfigs", func() {
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 						}},
 						SampleLimit: ptr.To(uint64(500)),
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: "annotated-seed-service-endpoints",
+								Replacement: ptr.To("annotated-seed-service-endpoints"),
 								TargetLabel: "job",
 							},
 							{
@@ -115,7 +115,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								TargetLabel:  "pod",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "drop",
 							Regex:        `^rest_client_request_latency_seconds.+$`,
@@ -131,10 +131,10 @@ var _ = Describe("ScrapeConfigs", func() {
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"localhost:9090"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								Action:      "replace",
-								Replacement: "prometheus-shoot",
+								Replacement: ptr.To("prometheus-shoot"),
 								TargetLabel: "job",
 							},
 							{
@@ -146,7 +146,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								TargetLabel:  "pod",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(process_max_fds|process_open_fds|process_resident_memory_bytes|process_virtual_memory_bytes|prometheus_config_last_reload_successful|prometheus_engine_query_duration_seconds|prometheus_rule_group_duration_seconds|prometheus_rule_group_iterations_missed_total|prometheus_rule_group_iterations_total|prometheus_tsdb_blocks_loaded|prometheus_tsdb_compactions_failed_total|prometheus_tsdb_compactions_total|prometheus_tsdb_compactions_triggered_total|prometheus_tsdb_head_active_appenders|prometheus_tsdb_head_chunks|prometheus_tsdb_head_gc_duration_seconds|prometheus_tsdb_head_gc_duration_seconds_count|prometheus_tsdb_head_samples_appended_total|prometheus_tsdb_head_series|prometheus_tsdb_lowest_timestamp|prometheus_tsdb_reloads_failures_total|prometheus_tsdb_reloads_total|prometheus_tsdb_storage_blocks_bytes|prometheus_tsdb_wal_corruptions_total)$`,
@@ -195,10 +195,10 @@ var _ = Describe("ScrapeConfigs", func() {
 									Key:                  "bundle.crt",
 								}}},
 							}},
-							RelabelConfigs: []*monitoringv1.RelabelConfig{
+							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									Action:      "replace",
-									Replacement: "cadvisor",
+									Replacement: ptr.To("cadvisor"),
 									TargetLabel: "job",
 								},
 								{
@@ -207,20 +207,20 @@ var _ = Describe("ScrapeConfigs", func() {
 								},
 								{
 									TargetLabel: "__address__",
-									Replacement: v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port),
+									Replacement: ptr.To(v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									Regex:        `(.+)`,
-									Replacement:  `/api/v1/nodes/${1}/proxy/metrics/cadvisor`,
+									Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics/cadvisor`),
 									TargetLabel:  "__metrics_path__",
 								},
 								{
 									TargetLabel: "type",
-									Replacement: "shoot",
+									Replacement: ptr.To("shoot"),
 								},
 							},
-							MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									SourceLabels: []monitoringv1.LabelName{"id"},
 									Action:       "replace",
@@ -231,7 +231,7 @@ var _ = Describe("ScrapeConfigs", func() {
 									SourceLabels: []monitoringv1.LabelName{"id"},
 									Action:       "replace",
 									Regex:        `^/system\.slice/(.+)\.service$`,
-									Replacement:  `$1`,
+									Replacement:  ptr.To(`$1`),
 									TargetLabel:  "container",
 								},
 								{
@@ -262,7 +262,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								{
 									SourceLabels: []monitoringv1.LabelName{"__name__", "id"},
 									Regex:        `container_network.+;/`,
-									Replacement:  "true",
+									Replacement:  ptr.To("true"),
 									TargetLabel:  "host_network",
 								},
 								{
@@ -301,10 +301,10 @@ var _ = Describe("ScrapeConfigs", func() {
 									Key:                  "bundle.crt",
 								}}},
 							}},
-							RelabelConfigs: []*monitoringv1.RelabelConfig{
+							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									Action:      "replace",
-									Replacement: "kube-kubelet",
+									Replacement: ptr.To("kube-kubelet"),
 									TargetLabel: "job",
 								},
 								{
@@ -317,20 +317,20 @@ var _ = Describe("ScrapeConfigs", func() {
 								},
 								{
 									TargetLabel: "__address__",
-									Replacement: "kube-apiserver:443",
+									Replacement: ptr.To("kube-apiserver:443"),
 								},
 								{
 									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_node_name"},
 									Regex:        `(.+)`,
-									Replacement:  `/api/v1/nodes/${1}/proxy/metrics`,
+									Replacement:  ptr.To(`/api/v1/nodes/${1}/proxy/metrics`),
 									TargetLabel:  "__metrics_path__",
 								},
 								{
 									TargetLabel: "type",
-									Replacement: "shoot",
+									Replacement: ptr.To("shoot"),
 								},
 							},
-							MetricRelabelConfigs: []*monitoringv1.RelabelConfig{
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
 								{
 									SourceLabels: []monitoringv1.LabelName{"__name__"},
 									Action:       "keep",

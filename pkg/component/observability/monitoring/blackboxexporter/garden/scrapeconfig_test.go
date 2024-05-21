@@ -38,13 +38,13 @@ var _ = Describe("ScrapeConfig", func() {
 							Targets: []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"},
 							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__address__"},
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "__param_target",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
@@ -52,23 +52,23 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "instance",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
 								Separator:   ptr.To(";"),
 								Regex:       `(.*)`,
 								TargetLabel: "__address__",
-								Replacement: "blackbox-exporter:9115",
+								Replacement: ptr.To("blackbox-exporter:9115"),
 								Action:      "replace",
 							},
 							{
 								Action:      "replace",
-								Replacement: "blackbox-gardener-apiserver",
+								Replacement: ptr.To("blackbox-gardener-apiserver"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
@@ -88,13 +88,13 @@ var _ = Describe("ScrapeConfig", func() {
 							Targets: kubeAPIServerTargets,
 							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__address__"},
 								Separator:    ptr.To(";"),
 								Regex:        `https://api\..*`,
 								TargetLabel:  "__param_module",
-								Replacement:  "http_kube_apiserver_root_cas",
+								Replacement:  ptr.To("http_kube_apiserver_root_cas"),
 								Action:       "replace",
 							},
 							{
@@ -102,7 +102,7 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "__param_target",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
@@ -110,23 +110,23 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "instance",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
 								Separator:   ptr.To(";"),
 								Regex:       `(.*)`,
 								TargetLabel: "__address__",
-								Replacement: "blackbox-exporter:9115",
+								Replacement: ptr.To("blackbox-exporter:9115"),
 								Action:      "replace",
 							},
 							{
 								Action:      "replace",
-								Replacement: "blackbox-apiserver",
+								Replacement: ptr.To("blackbox-apiserver"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
@@ -146,13 +146,13 @@ var _ = Describe("ScrapeConfig", func() {
 							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
 							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__address__"},
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "__param_target",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
@@ -160,23 +160,23 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "instance",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
 								Separator:   ptr.To(";"),
 								Regex:       `(.*)`,
 								TargetLabel: "__address__",
-								Replacement: "blackbox-exporter:9115",
+								Replacement: ptr.To("blackbox-exporter:9115"),
 								Action:      "replace",
 							},
 							{
 								Action:      "replace",
-								Replacement: "blackbox-dashboard",
+								Replacement: ptr.To("blackbox-dashboard"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,

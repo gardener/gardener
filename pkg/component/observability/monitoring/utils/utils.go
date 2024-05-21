@@ -21,8 +21,8 @@ func ConfigObjectMeta(name, namespace, prometheusName string) metav1.ObjectMeta 
 }
 
 // StandardMetricRelabelConfig returns the standard relabel config for metrics.
-func StandardMetricRelabelConfig(allowedMetrics ...string) []*monitoringv1.RelabelConfig {
-	return []*monitoringv1.RelabelConfig{{
+func StandardMetricRelabelConfig(allowedMetrics ...string) []monitoringv1.RelabelConfig {
+	return []monitoringv1.RelabelConfig{{
 		SourceLabels: []monitoringv1.LabelName{"__name__"},
 		Action:       "keep",
 		Regex:        `^(` + strings.Join(allowedMetrics, "|") + `)$`,

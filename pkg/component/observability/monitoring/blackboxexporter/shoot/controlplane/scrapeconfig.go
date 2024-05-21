@@ -23,10 +23,10 @@ func ScrapeConfig(namespace string, kubeAPIServerTarget monitoringv1alpha1.Targe
 			StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 				Targets: []monitoringv1alpha1.Target{kubeAPIServerTarget},
 			}},
-			RelabelConfigs: []*monitoringv1.RelabelConfig{
+			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
 					TargetLabel: "type",
-					Replacement: "seed",
+					Replacement: ptr.To("seed"),
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__address__"},
@@ -40,12 +40,12 @@ func ScrapeConfig(namespace string, kubeAPIServerTarget monitoringv1alpha1.Targe
 				},
 				{
 					TargetLabel: "__address__",
-					Replacement: "blackbox-exporter:9115",
+					Replacement: ptr.To("blackbox-exporter:9115"),
 					Action:      "replace",
 				},
 				{
 					Action:      "replace",
-					Replacement: "blackbox-apiserver",
+					Replacement: ptr.To("blackbox-apiserver"),
 					TargetLabel: "job",
 				},
 			},

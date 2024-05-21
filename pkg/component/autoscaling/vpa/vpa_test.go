@@ -707,10 +707,10 @@ var _ = Describe("VPA", func() {
 				NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
 				PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
 					Port: "metrics",
-					RelabelConfigs: []*monitoringv1.RelabelConfig{
+					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
-							Replacement: "vpa-recommender",
+							Replacement: ptr.To("vpa-recommender"),
 							TargetLabel: "job",
 						},
 						{

@@ -33,7 +33,7 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 			Endpoints: []monitoringv1.Endpoint{{
 				TargetPort: ptr.To(intstr.FromInt32(kubeapiserverconstants.Port)),
 				Scheme:     "https",
-				TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: true}},
+				TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
 					Key:                  resourcesv1alpha1.DataKeyToken,

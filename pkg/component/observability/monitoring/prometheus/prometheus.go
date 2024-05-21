@@ -128,7 +128,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		spec := monitoringv1.RemoteWriteSpec{URL: p.values.RemoteWrite.URL}
 
 		if len(p.values.RemoteWrite.KeptMetrics) > 0 {
-			spec.WriteRelabelConfigs = []monitoringv1.RelabelConfig{*monitoringutils.StandardMetricRelabelConfig(p.values.RemoteWrite.KeptMetrics...)[0]}
+			spec.WriteRelabelConfigs = []monitoringv1.RelabelConfig{monitoringutils.StandardMetricRelabelConfig(p.values.RemoteWrite.KeptMetrics...)[0]}
 		}
 
 		if p.values.RemoteWrite.GlobalShootRemoteWriteSecret != nil {
