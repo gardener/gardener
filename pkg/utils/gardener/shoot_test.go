@@ -31,7 +31,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -52,7 +51,7 @@ var _ = Describe("Shoot", func() {
 			BeFalse()),
 		Entry("don't respect overwrite but garden namespace",
 			false,
-			&gardencorev1beta1.Shoot{ObjectMeta: kubernetesutils.ObjectMeta(v1beta1constants.GardenNamespace, "foo")},
+			&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "foo"}},
 			BeTrue()),
 	)
 

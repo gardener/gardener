@@ -23,7 +23,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/testmachinery/extensions/operation"
 )
@@ -122,7 +121,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		framework.ExpectNoError(err)
 	}()
 	managedResource := &resourcesv1alpha1.ManagedResource{}
-	if err = f.SeedClient.Client().Get(ctx, kubernetesutils.Key(f.ShootSeedNamespace(), managedResourceName), managedResource); err != nil {
+	if err = f.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ShootSeedNamespace(), Name: managedResourceName}, managedResource); err != nil {
 		return err
 	}
 	// overwrite Condition with type ResourcesHealthy on the managed resource to make the health check in the provider fail

@@ -46,7 +46,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
 			f.Logger.Info("Seed is not a ManagedSeed, checking seed secret")
 
@@ -81,7 +81,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := f.GardenClient.Client().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
 		return seed, nil, fmt.Errorf("failed to get Shoot %s for ManagedSeed, %s: %w", managedSeed.Spec.Shoot.Name, client.ObjectKeyFromObject(managedSeed), err)
 	}
 
@@ -103,7 +103,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 
 // GetShoot gets the test shoot
 func (f *GardenerFramework) GetShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	return f.GardenClient.Client().Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Name), shoot)
+	return f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot)
 }
 
 // GetShootProject returns the project of a shoot

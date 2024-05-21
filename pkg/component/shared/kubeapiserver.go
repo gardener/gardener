@@ -211,7 +211,7 @@ func DeployKubeAPIServer(
 	)
 
 	deployment := &appsv1.Deployment{}
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
+	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: runtimeNamespace, Name: deploymentName}, deployment); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}

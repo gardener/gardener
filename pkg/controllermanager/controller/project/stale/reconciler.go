@@ -66,7 +66,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
 	namespace := &corev1.Namespace{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(*project.Spec.Namespace), namespace); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: *project.Spec.Namespace}, namespace); err != nil {
 		return err
 	}
 

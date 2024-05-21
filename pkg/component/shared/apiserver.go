@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func computeAPIServerAuditConfig(
@@ -42,7 +41,7 @@ func computeAPIServerAuditConfig(
 		out = &apiserver.AuditConfig{
 			Webhook: webhookConfig,
 		}
-		key = kubernetesutils.Key(objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name)
+		key = client.ObjectKey{Namespace: objectMeta.Namespace, Name: config.AuditPolicy.ConfigMapRef.Name}
 	)
 
 	configMap := &corev1.ConfigMap{}
@@ -145,7 +144,7 @@ func computeAPIServerETCDEncryptionConfig(
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
 		deployment := &metav1.PartialObjectMetadata{}
 		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
+		if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: runtimeNamespace, Name: deploymentName}, deployment); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return apiserver.ETCDEncryptionConfig{}, err
 			}

@@ -30,7 +30,6 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // NewBuilder returns a new Builder.
@@ -80,7 +79,7 @@ func (b *Builder) WithCloudProfileObject(cloudProfileObject *gardencorev1beta1.C
 func (b *Builder) WithCloudProfileObjectFrom(reader client.Reader) *Builder {
 	b.cloudProfileFunc = func(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 		obj := &gardencorev1beta1.CloudProfile{}
-		return obj, reader.Get(ctx, kubernetesutils.Key(name), obj)
+		return obj, reader.Get(ctx, client.ObjectKey{Name: name}, obj)
 	}
 	return b
 }
@@ -119,12 +118,12 @@ func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
 func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 	b.shootSecretFunc = func(ctx context.Context, namespace, secretBindingName string) (*corev1.Secret, error) {
 		binding := &gardencorev1beta1.SecretBinding{}
-		if err := c.Get(ctx, kubernetesutils.Key(namespace, secretBindingName), binding); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretBindingName}, binding); err != nil {
 			return nil, err
 		}
 
 		secret := &corev1.Secret{}
-		if err := c.Get(ctx, kubernetesutils.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: binding.SecretRef.Namespace, Name: binding.SecretRef.Name}, secret); err != nil {
 			return nil, err
 		}
 

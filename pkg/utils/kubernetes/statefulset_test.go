@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -77,9 +78,9 @@ var _ = Describe("Statefulset.", func() {
 				},
 			}
 
-			c.EXPECT().Get(ctx, Key(testNamespace, testStatefulset), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
 
-			rr, err := GetContainerResourcesInStatefulSet(ctx, c, Key(testNamespace, testStatefulset))
+			rr, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
 			Expect(rr["container-1"]).To(Equal(expectedResources))
@@ -101,9 +102,9 @@ var _ = Describe("Statefulset.", func() {
 				},
 			}
 
-			c.EXPECT().Get(ctx, Key(testNamespace, testStatefulset), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *statefulSet).Return(nil)
 
-			rr, err := GetContainerResourcesInStatefulSet(ctx, c, Key(testNamespace, testStatefulset))
+			rr, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
 			Expect(rr["container-1"]).To(Equal(expectedResources))
@@ -115,9 +116,9 @@ var _ = Describe("Statefulset.", func() {
 				ctx = context.TODO()
 			)
 
-			c.EXPECT().Get(ctx, Key(testNamespace, testStatefulset), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(errors.New("error"))
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset}, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(errors.New("error"))
 
-			_, err := GetContainerResourcesInStatefulSet(ctx, c, Key(testNamespace, testStatefulset))
+			_, err := GetContainerResourcesInStatefulSet(ctx, c, client.ObjectKey{Namespace: testNamespace, Name: testStatefulset})
 			Expect(err).To(HaveOccurred())
 		})
 	})

@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -112,7 +111,7 @@ var _ = Describe("Reconciler", func() {
 			Clock:  fakeClock,
 		}
 
-		k8sGardenRuntimeClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
+		k8sGardenRuntimeClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: project.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 			*obj = *project
 			return nil
 		})
@@ -130,7 +129,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		BeforeEach(func() {
-			k8sGardenRuntimeClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			k8sGardenRuntimeClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				*obj = *namespace
 				return nil
 			}).AnyTimes()

@@ -38,7 +38,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -1485,7 +1484,7 @@ var _ = Describe("VPA", func() {
 					Expect(secret).To(Equal(shootAccessSecretUpdater))
 
 					deployment := &appsv1.Deployment{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
 					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
 					deploymentUpdater.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentUpdater))
@@ -1513,13 +1512,13 @@ var _ = Describe("VPA", func() {
 					Expect(secret).To(Equal(shootAccessSecretRecommender))
 
 					deployment = &appsv1.Deployment{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-recommender"), deployment)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
 					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil)
 					deploymentRecommender.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentRecommender))
 
 					service := &corev1.Service{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-recommender"), service)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, service)).To(Succeed())
 					serviceRecommender := serviceRecommenderFor(component.ClusterTypeShoot)
 					serviceRecommender.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceRecommender))
@@ -1541,13 +1540,13 @@ var _ = Describe("VPA", func() {
 					Expect(secret).To(Equal(shootAccessSecretAdmissionController))
 
 					service = &corev1.Service{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-webhook"), service)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
 					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
 					serviceAdmissionController.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceAdmissionController))
 
 					deployment = &appsv1.Deployment{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
 					deploymentAdmissionController := deploymentAdmissionControllerFor(false)
 					deploymentAdmissionController.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentAdmissionController))
@@ -1624,7 +1623,7 @@ var _ = Describe("VPA", func() {
 					Expect(vpa.Deploy(ctx)).To(Succeed())
 
 					service := &corev1.Service{}
-					Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-webhook"), service)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
 					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, true)
 					serviceAdmissionController.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceAdmissionController))

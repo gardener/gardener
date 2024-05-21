@@ -49,7 +49,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, log logr.Logger, 
 	shootTechnicalID, _ := backupentry.ExtractShootDetailsFromBackupEntryName(be.Name)
 
 	namespace := &corev1.Namespace{}
-	if err := a.client.Get(ctx, kubernetesutils.Key(shootTechnicalID), namespace); err != nil {
+	if err := a.client.Get(ctx, client.ObjectKey{Name: shootTechnicalID}, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
 			return nil

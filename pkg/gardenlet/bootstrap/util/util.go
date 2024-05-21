@@ -219,7 +219,7 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 	)
 
 	secret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: bootstraptokenutil.BootstrapTokenSecretName(tokenID)}, secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 

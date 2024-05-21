@@ -76,7 +76,7 @@ func RequestKubeconfigWithBootstrapClient(
 // also deletes the corresponding ClusterRoleBinding.
 func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName string) error {
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := reader.Get(ctx, kubernetesutils.Key(csrName), csr); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Name: csrName}, csr); err != nil {
 		return err
 	}
 

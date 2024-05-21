@@ -81,7 +81,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).Return(fakeErr)
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).Return(fakeErr)
 
 				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
 				Expect(lock).To(BeNil())
@@ -89,7 +89,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object has no leader election annotation", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{}))
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{}))
 
 				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
 				Expect(lock).To(BeNil())
@@ -97,7 +97,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
 					(&corev1.Endpoints{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -108,7 +108,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Endpoints{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Endpoints, _ ...client.GetOption) error {
 					(&corev1.Endpoints{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -131,7 +131,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Return(fakeErr)
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Return(fakeErr)
 
 				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
 				Expect(lock).To(BeNil())
@@ -139,7 +139,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object has no leader election annotation", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{}))
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{}))
 
 				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
 				Expect(lock).To(BeNil())
@@ -147,7 +147,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the leader election annotation cannot be unmarshalled", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
 					(&corev1.ConfigMap{ObjectMeta: objectMetaInvalid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -158,7 +158,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
 					(&corev1.ConfigMap{ObjectMeta: objectMetaValid}).DeepCopyInto(obj)
 					return nil
 				})
@@ -181,7 +181,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).Return(fakeErr)
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&coordinationv1.Lease{})).Return(fakeErr)
 
 				lock, err := ReadLeaderElectionRecord(ctx, c, lock, namespace, name)
 				Expect(lock).To(BeNil())
@@ -189,7 +189,7 @@ var _ = Describe("LeaderElection", func() {
 			})
 
 			It("should successfully return the leader election record", func() {
-				c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *coordinationv1.Lease, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *coordinationv1.Lease, _ ...client.GetOption) error {
 					(&coordinationv1.Lease{Spec: leaseSpecValid}).DeepCopyInto(obj)
 					return nil
 				})

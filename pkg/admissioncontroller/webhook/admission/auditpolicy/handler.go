@@ -32,7 +32,6 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const auditPolicyConfigMapDataKey = "policy"
@@ -127,7 +126,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := h.APIReader.Get(ctx, kubernetesutils.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
+	if err := h.APIReader.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: newAuditPolicyConfigMapName}, auditPolicyCm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced audit policy does not exist: namespace: %s, name: %s", shoot.Namespace, newAuditPolicyConfigMapName))
 		}

@@ -42,7 +42,6 @@ import (
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 )
 
@@ -166,7 +165,7 @@ var _ = Describe("handler", func() {
 					})
 
 					It("should return an error because fetching the related shoot failed", func() {
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 							AdmissionResponse: admissionv1.AdmissionResponse{
@@ -181,7 +180,7 @@ var _ = Describe("handler", func() {
 
 					DescribeTable("should forbid the request because the seed name of the related shoot does not match",
 						func(seedNameInShoot *string) {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: seedNameInShoot}}).DeepCopyInto(obj)
 								return nil
 							})
@@ -202,7 +201,7 @@ var _ = Describe("handler", func() {
 					)
 
 					It("should allow the request because seed name in spec matches", func() {
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 							(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 							return nil
 						})
@@ -211,7 +210,7 @@ var _ = Describe("handler", func() {
 					})
 
 					It("should allow the request because seed name in status matches", func() {
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 							(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: &seedName}}).DeepCopyInto(obj)
 							return nil
 						})
@@ -316,7 +315,7 @@ var _ = Describe("handler", func() {
 					})
 
 					It("should return an error because reading the Seed failed", func() {
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: seedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
 
 						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 							AdmissionResponse: admissionv1.AdmissionResponse{
@@ -330,7 +329,7 @@ var _ = Describe("handler", func() {
 					})
 
 					It("should forbid the request because the seed UID and the bucket name does not match", func() {
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: seedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 							(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: "1234"}}).DeepCopyInto(obj)
 							return nil
 						})
@@ -350,7 +349,7 @@ var _ = Describe("handler", func() {
 						uid := "some-seed-uid"
 						request.Name = uid
 
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: seedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 							(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)}}).DeepCopyInto(obj)
 							return nil
 						})
@@ -427,7 +426,7 @@ var _ = Describe("handler", func() {
 							request.Object.Raw = objData
 
 							if seedNameInBackupEntry != nil && *seedNameInBackupEntry == seedName {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(bucketName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: bucketName}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
 									(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: seedNameInBackupBucket}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -460,7 +459,7 @@ var _ = Describe("handler", func() {
 						Expect(err).NotTo(HaveOccurred())
 						request.Object.Raw = objData
 
-						mockCache.EXPECT().Get(ctx, kubernetesutils.Key(bucketName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
+						mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: bucketName}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
 							(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 							return nil
 						})
@@ -508,7 +507,7 @@ var _ = Describe("handler", func() {
 
 						It("should forbid the request because the shoot owning the source BackupEntry could not be found", func() {
 							notFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "")
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(notFoundErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(notFoundErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -523,7 +522,7 @@ var _ = Describe("handler", func() {
 
 						DescribeTable("should forbid the request because a the shoot owning the source BackupEntry is not in restore phase",
 							func(lastOperation *gardencorev1beta1.LastOperation) {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.Status.LastOperation = lastOperation
 									shoot.DeepCopyInto(obj)
 									return nil
@@ -549,11 +548,11 @@ var _ = Describe("handler", func() {
 						It("should forbid the request because a BackupEntry for the shoot does not exist", func() {
 							notFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "")
 
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).Return(notFoundErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootBackupEntryName}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).Return(notFoundErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -567,11 +566,11 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should forbid the request because the source BackupEntry does not match the BackupEntry for the shoot", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootBackupEntryName}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry, _ ...client.GetOption) error {
 								be := &gardencorev1beta1.BackupEntry{
 									Spec: gardencorev1beta1.BackupEntrySpec{
 										BucketName: "some-different-bucket",
@@ -594,11 +593,11 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should allow creation of source BackupEntry if a matching BackupEntry exists and shoot is in restore phase", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: shootBackupEntryName}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry, _ ...client.GetOption) error {
 								be := &gardencorev1beta1.BackupEntry{
 									Spec: gardencorev1beta1.BackupEntrySpec{
 										BucketName: bucketName,
@@ -720,7 +719,7 @@ var _ = Describe("handler", func() {
 
 							It("should forbid the request because seed does not belong to a managedseed", func() {
 								if request.Operation == admissionv1.Delete {
-									mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+									mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 								}
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
@@ -736,7 +735,7 @@ var _ = Describe("handler", func() {
 
 							if operation == admissionv1.Delete {
 								It("should forbid the request because an error occurred while fetching the managedseed", func() {
-									mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+									mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 									Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 										AdmissionResponse: admissionv1.AdmissionResponse{
@@ -750,7 +749,7 @@ var _ = Describe("handler", func() {
 								})
 
 								It("should forbid the request because managedseed's `.metadata.deletionTimestamp` is nil", func() {
-									mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+									mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 										(&seedmanagementv1alpha1.ManagedSeed{}).DeepCopyInto(obj)
 										return nil
 									})
@@ -776,7 +775,7 @@ var _ = Describe("handler", func() {
 									})
 
 									It("should forbid the request because managedseed's `.spec.shoot` is nil", func() {
-										mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+										mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 											(&seedmanagementv1alpha1.ManagedSeed{
 												ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: deletionTimestamp},
 												Spec:       seedmanagementv1alpha1.ManagedSeedSpec{},
@@ -796,7 +795,7 @@ var _ = Describe("handler", func() {
 									})
 
 									It("should forbid the request because reading the shoot referenced by the managedseed failed", func() {
-										mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+										mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 											(&seedmanagementv1alpha1.ManagedSeed{
 												ObjectMeta: metav1.ObjectMeta{
 													Namespace:         managedSeedNamespace,
@@ -808,7 +807,7 @@ var _ = Describe("handler", func() {
 											}).DeepCopyInto(obj)
 											return nil
 										})
-										mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+										mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 										Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 											AdmissionResponse: admissionv1.AdmissionResponse{
@@ -823,7 +822,7 @@ var _ = Describe("handler", func() {
 
 									DescribeTable("should forbid the request because the seed name of the shoot referenced by the managedseed does not match",
 										func(seedNameInShoot *string) {
-											mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+											mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 												(&seedmanagementv1alpha1.ManagedSeed{
 													ObjectMeta: metav1.ObjectMeta{
 														Namespace:         managedSeedNamespace,
@@ -835,7 +834,7 @@ var _ = Describe("handler", func() {
 												}).DeepCopyInto(obj)
 												return nil
 											})
-											mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+											mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 												(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: seedNameInShoot}}).DeepCopyInto(obj)
 												return nil
 											})
@@ -856,7 +855,7 @@ var _ = Describe("handler", func() {
 									)
 
 									It("should allow the request because the seed name of the shoot referenced by the managedseed matches", func() {
-										mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, differentSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+										mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: differentSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 											(&seedmanagementv1alpha1.ManagedSeed{
 												ObjectMeta: metav1.ObjectMeta{
 													Namespace:         managedSeedNamespace,
@@ -868,7 +867,7 @@ var _ = Describe("handler", func() {
 											}).DeepCopyInto(obj)
 											return nil
 										})
-										mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+										mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 											(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 											return nil
 										})
@@ -945,7 +944,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error because the related backupbucket was not found", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -959,7 +958,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error because the related backupbucket could not be read", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -973,7 +972,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should forbid because the related backupbucket does not belong to gardenlet's seed", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
 								(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 								return nil
 							})
@@ -990,7 +989,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should allow because the related backupbucket does belong to gardenlet's seed", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket, _ ...client.GetOption) error {
 								(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 								return nil
 							})
@@ -1006,7 +1005,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot was not found", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1020,7 +1019,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot could not be read", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1034,7 +1033,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1051,7 +1050,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should allow because the related shoot does belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1158,7 +1157,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot was not found", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1172,7 +1171,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot could not be read", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1186,7 +1185,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1203,7 +1202,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should allow because the related shoot does belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1341,7 +1340,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should forbid if the managedseed does not exist", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1355,7 +1354,7 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error if reading the managedseed fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1369,11 +1368,11 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error if reading the shoot fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1389,11 +1388,11 @@ var _ = Describe("handler", func() {
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
 							shoot.Spec.SeedName = ptr.To("some-other-seed")
 
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
@@ -1410,15 +1409,15 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should return an error if reading the seed fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1432,15 +1431,15 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should forbid if the seed does exist already", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1454,29 +1453,29 @@ var _ = Describe("handler", func() {
 						})
 
 						It("should allow if the seed does not yet exist", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
 
 						It("should allow if the seed does exist but client cert is expired", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
 								return nil
 							})
@@ -1486,15 +1485,15 @@ var _ = Describe("handler", func() {
 
 						It("should allow if the seed does exist but the managedseed is annotated with the renew-kubeconfig annotation", func() {
 							managedSeed.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig}
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
@@ -1579,7 +1578,7 @@ var _ = Describe("handler", func() {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot1.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1599,11 +1598,11 @@ var _ = Describe("handler", func() {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot1.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot1.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot2.DeepCopyInto(obj)
 								return nil
 							})
@@ -1638,11 +1637,11 @@ var _ = Describe("handler", func() {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot1.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot1.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot2.DeepCopyInto(obj)
 								return nil
 							})
@@ -1677,11 +1676,11 @@ var _ = Describe("handler", func() {
 								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot1.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot1.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot2.DeepCopyInto(obj)
 								return nil
 							})
@@ -1750,7 +1749,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot was not found", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1764,7 +1763,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot could not be read", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1778,7 +1777,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1795,7 +1794,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should allow because the related shoot does belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1867,7 +1866,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot was not found", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1881,7 +1880,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should return an error because the related shoot could not be read", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -1895,7 +1894,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -1912,7 +1911,7 @@ var _ = Describe("handler", func() {
 							})
 
 							It("should allow because the related shoot does belong to gardenlet's seed", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -2237,7 +2236,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should forbid if the managedseed does not exist", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2251,7 +2250,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should return an error if reading the managedseed fails", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2265,11 +2264,11 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should return an error if reading the shoot fails", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2285,11 +2284,11 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
 								shoot.Spec.SeedName = ptr.To("some-other-seed")
 
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.DeepCopyInto(obj)
 									return nil
 								})
@@ -2306,15 +2305,15 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should return an error if reading the seed fails", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2328,15 +2327,15 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should forbid if the seed does exist already", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 									AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2350,29 +2349,29 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							})
 
 							It("should allow if the seed does not yet exist", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 								Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 							})
 
 							It("should allow if the seed does exist but client cert is expired", func() {
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 									managedSeed.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 									shoot.DeepCopyInto(obj)
 									return nil
 								})
-								mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 									(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
 									return nil
 								})
@@ -2545,7 +2544,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should forbid if the managedseed does not exist", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2559,7 +2558,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should return an error if reading the managedseed fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2573,11 +2572,11 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should return an error if reading the shoot fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2593,11 +2592,11 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
 							shoot.Spec.SeedName = ptr.To("some-other-seed")
 
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
@@ -2614,15 +2613,15 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should return an error if reading the seed fails", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2636,15 +2635,15 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should forbid if the seed does exist already", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 								AdmissionResponse: admissionv1.AdmissionResponse{
@@ -2658,29 +2657,29 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 
 						It("should allow if the seed does not yet exist", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
 
 						It("should allow if the seed does exist but client cert is expired", func() {
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: managedSeedName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed, _ ...client.GetOption) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeedNamespace, Name: shootName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 								shoot.DeepCopyInto(obj)
 								return nil
 							})
-							mockCache.EXPECT().Get(ctx, kubernetesutils.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: managedSeedName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
 								return nil
 							})

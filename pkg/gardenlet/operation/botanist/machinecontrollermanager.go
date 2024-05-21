@@ -16,7 +16,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultMachineControllerManager returns a deployer for the machine-controller-manager.
@@ -77,7 +76,7 @@ func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 
 // ScaleMachineControllerManagerToZero scales machine-controller-manager replicas to zero.
 func (b *Botanist) ScaleMachineControllerManagerToZero(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameMachineControllerManager), 0)
+	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameMachineControllerManager}, 0)
 }
 
 func machineDeploymentWithPositiveReplicaCountExist(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {

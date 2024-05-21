@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("ClusterIdentity", func() {
@@ -117,7 +116,7 @@ var _ = Describe("ClusterIdentity", func() {
 		test := func() {
 			Expect(botanist.EnsureShootClusterIdentity(ctx)).NotTo(HaveOccurred())
 
-			Expect(gardenClient.Get(ctx, kubernetesutils.Key(shootNamespace, shootName), shoot)).To(Succeed())
+			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace, Name: shootName}, shoot)).To(Succeed())
 			Expect(shoot.Status.ClusterIdentity).NotTo(BeNil())
 			Expect(*shoot.Status.ClusterIdentity).To(Equal(expectedShootClusterIdentity))
 		}

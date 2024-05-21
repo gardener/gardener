@@ -42,7 +42,6 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -327,7 +326,7 @@ var _ = Describe("Etcd", func() {
 				}
 
 				expectGetBackupSecret = func() {
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "etcd-backup"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 						func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 							return nil
@@ -375,7 +374,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should fail when reading the backup secret fails", func() {
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "etcd-backup"}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr)
 
 				Expect(botanist.DeployEtcd(ctx)).To(MatchError(fakeErr))
 			})

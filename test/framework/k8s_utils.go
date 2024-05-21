@@ -273,12 +273,12 @@ func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interfac
 }
 
 // ScaleDeployment scales a deployment and waits until it is scaled
-func ScaleDeployment(ctx context.Context, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
+func ScaleDeployment(ctx context.Context, c client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
 	if desiredReplicas == nil {
 		return nil, nil
 	}
 
-	replicas, err := GetDeploymentReplicas(ctx, client, namespace, name)
+	replicas, err := GetDeploymentReplicas(ctx, c, namespace, name)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -290,22 +290,22 @@ func ScaleDeployment(ctx context.Context, client client.Client, desiredReplicas 
 	}
 
 	// scale the deployment
-	if err := kubernetes.ScaleDeployment(ctx, client, kubernetesutils.Key(namespace, name), *desiredReplicas); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, c, client.ObjectKey{Namespace: namespace, Name: name}, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%w'", name, err)
 	}
 
 	// wait until scaled
-	if err := WaitUntilDeploymentScaled(ctx, client, namespace, name, *desiredReplicas); err != nil {
+	if err := WaitUntilDeploymentScaled(ctx, c, namespace, name, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to wait until deployment %q is scaled: '%w'", name, err)
 	}
 	return replicas, nil
 }
 
 // WaitUntilDeploymentScaled waits until the deployment has the desired replica count in the status
-func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
+func WaitUntilDeploymentScaled(ctx context.Context, c client.Client, namespace, name string, desiredReplicas int32) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{}
-		if err := client.Get(ctx, kubernetesutils.Key(namespace, name), deployment); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
 			return retry.SevereError(err)
 		}
 		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
@@ -321,9 +321,9 @@ func WaitUntilDeploymentScaled(ctx context.Context, client client.Client, namesp
 }
 
 // GetDeploymentReplicas gets the spec.Replicas count from a deployment
-func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace, name string) (*int32, error) {
+func GetDeploymentReplicas(ctx context.Context, c client.Client, namespace, name string) (*int32, error) {
 	deployment := &appsv1.Deployment{}
-	if err := client.Get(ctx, kubernetesutils.Key(namespace, name), deployment); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
 		return nil, err
 	}
 	replicas := deployment.Spec.Replicas

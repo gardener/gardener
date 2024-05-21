@@ -31,7 +31,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Seed resources and provisions or de-provisions the seed system components.
@@ -254,13 +253,13 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, seed *garde
 // an identity, it should not be changed.
 func determineClusterIdentity(ctx context.Context, c client.Client) (string, error) {
 	clusterIdentity := &corev1.ConfigMap{}
-	if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: v1beta1constants.ClusterIdentity}, clusterIdentity); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return "", err
 		}
 
 		gardenNamespace := &corev1.Namespace{}
-		if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem), gardenNamespace); err != nil {
+		if err := c.Get(ctx, client.ObjectKey{Name: metav1.NamespaceSystem}, gardenNamespace); err != nil {
 			return "", err
 		}
 		return string(gardenNamespace.UID), nil

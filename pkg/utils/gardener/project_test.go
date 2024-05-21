@@ -18,7 +18,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -89,7 +88,7 @@ var _ = Describe("Project", func() {
 
 	Describe("#ProjectAndNamespaceFromReader", func() {
 		It("should return an error because getting the namespace failed", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fakeErr)
 
 			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
@@ -98,7 +97,7 @@ var _ = Describe("Project", func() {
 		})
 
 		It("should return the namespace but no project because labels missing", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
@@ -112,11 +111,11 @@ var _ = Describe("Project", func() {
 		It("should return an error because getting the project failed", func() {
 			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
-			c.EXPECT().Get(ctx, kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fakeErr)
 
 			projectResult, namespaceResult, err := ProjectAndNamespaceFromReader(ctx, c, namespaceName)
 			Expect(err).To(MatchError(fakeErr))
@@ -127,11 +126,11 @@ var _ = Describe("Project", func() {
 		It("should return both namespace and project", func() {
 			namespace.Labels = map[string]string{"project.gardener.cloud/name": projectName}
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: namespaceName}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace, _ ...client.GetOption) error {
 				namespace.DeepCopyInto(obj)
 				return nil
 			})
-			c.EXPECT().Get(ctx, kubernetesutils.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: projectName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project, _ ...client.GetOption) error {
 				project.DeepCopyInto(obj)
 				return nil
 			})

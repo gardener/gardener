@@ -13,13 +13,13 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) error {
@@ -93,7 +93,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	allowBootstrap := false
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := g.client.Get(ctx, kubernetesutils.Key(managedSeed.Name), seed); err != nil {
+	if err := g.client.Get(ctx, client.ObjectKey{Name: managedSeed.Name}, seed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return
 		}

@@ -23,7 +23,6 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	bastionregistry "github.com/gardener/gardener/pkg/apiserver/registry/operations/bastion"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -46,7 +45,7 @@ var _ = Describe("Bastion controller tests", func() {
 		seedName := "foo"
 
 		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
+			ObjectMeta: metav1.ObjectMeta{Namespace: objectKey.Namespace, Name: objectKey.Name},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  "test-cloudprofile",
@@ -74,7 +73,7 @@ var _ = Describe("Bastion controller tests", func() {
 			},
 		}
 		bastion = &operationsv1alpha1.Bastion{
-			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
+			ObjectMeta: metav1.ObjectMeta{Namespace: objectKey.Namespace, Name: objectKey.Name},
 			Spec: operationsv1alpha1.BastionSpec{
 				ShootRef: corev1.LocalObjectReference{
 					Name: shoot.Name,

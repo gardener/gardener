@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -92,7 +91,7 @@ var _ = Describe("Resources", func() {
 	Describe("#DeployReferencedResources", func() {
 		expectReferencedResourcesInSeed := func(expectedObjects ...client.Object) {
 			managedResource := &resourcesv1alpha1.ManagedResource{}
-			Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "referenced-resources"), managedResource)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "referenced-resources"}, managedResource)).To(Succeed())
 			Expect(managedResource.Spec.Class).To(PointTo(Equal("seed")))
 			Expect(managedResource.Spec.ForceOverwriteAnnotations).To(PointTo(BeFalse()))
 			Expect(managedResource.Spec.KeepObjects).To(PointTo(BeFalse()))

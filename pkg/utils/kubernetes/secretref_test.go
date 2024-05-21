@@ -70,7 +70,7 @@ var _ = Describe("secretref", func() {
 
 	Describe("#GetSecretByReference", func() {
 		It("should get the secret", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 				*s = *secret
 				return nil
 			})
@@ -81,7 +81,7 @@ var _ = Describe("secretref", func() {
 		})
 
 		It("should fail if getting the secret failed", func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
 
 			result, err := kubernetesutils.GetSecretByReference(ctx, c, secretRef)
 			Expect(err).To(HaveOccurred())

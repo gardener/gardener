@@ -61,7 +61,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Name is a const for the name of this component.
@@ -431,7 +430,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	defer cancel()
 
 	return wait.PollUntilContextCancel(timeoutCtx, 500*time.Millisecond, false, func(context.Context) (done bool, err error) {
-		if err := gardenClient.Get(ctx, kubernetesutils.Key(gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)), &corev1.Namespace{}); err != nil {
+		if err := gardenClient.Get(ctx, client.ObjectKey{Name: gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.Name)}, &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) || apierrors.IsForbidden(err) {
 				return false, nil
 			}

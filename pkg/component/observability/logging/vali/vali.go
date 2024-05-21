@@ -952,7 +952,7 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 	}
 
 	pvc := &corev1.PersistentVolumeClaim{}
-	if err := v.client.Get(ctx, kubernetesutils.Key(v.namespace, "vali-vali-0"), pvc); err != nil {
+	if err := v.client.Get(ctx, client.ObjectKey{Namespace: v.namespace, Name: "vali-vali-0"}, pvc); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}

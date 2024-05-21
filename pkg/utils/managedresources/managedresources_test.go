@@ -125,7 +125,7 @@ var _ = Describe("managedresources", func() {
 			Expect(managedResource.Reconcile(ctx)).To(Succeed())
 
 			actual := &resourcesv1alpha1.ManagedResource{}
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), actual)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, actual)).To(Succeed())
 			Expect(actual).To(Equal(&resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
@@ -151,7 +151,7 @@ var _ = Describe("managedresources", func() {
 			Expect(fakeClient.List(ctx, secretList, client.Limit(1))).To(Succeed())
 			Expect(secretList.Items[0].Name).To(HavePrefix(name))
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		})
 	})
 

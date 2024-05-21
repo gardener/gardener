@@ -172,7 +172,7 @@ var _ = Describe("Bootstrap", func() {
 				WithKubernetes(kubeClient).
 				Build()
 
-			seedClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			seedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{}))
 
 			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
@@ -237,7 +237,7 @@ var _ = Describe("Bootstrap", func() {
 	Describe("#DeleteBootstrapAuth", func() {
 		var (
 			csrName = "csr-name"
-			csrKey  = kubernetesutils.Key(csrName)
+			csrKey  = client.ObjectKey{Name: csrName}
 		)
 
 		It("should return an error because the CSR was not found", func() {

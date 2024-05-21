@@ -51,7 +51,7 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(vpa.Namespace, vpa.Name),
+		client.ObjectKey{Namespace: vpa.Namespace, Name: vpa.Name},
 		vpa,
 	)).ToNot(HaveOccurred())
 
@@ -82,7 +82,7 @@ func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(priorityClass.Name),
+		client.ObjectKey{Name: priorityClass.Name},
 		priorityClass,
 	)).ToNot(HaveOccurred())
 	Expect(priorityClass.GlobalDefault).To(BeFalse())
@@ -575,7 +575,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 	if hasSeedClientConnectionKubeconfig {
 		err := c.Get(
 			ctx,
-			kubernetesutils.Key(serviceAccount.Namespace, serviceAccount.Name),
+			client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name},
 			serviceAccount,
 		)
 		Expect(err).To(HaveOccurred())
@@ -588,7 +588,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(serviceAccount.Namespace, serviceAccount.Name),
+		client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name},
 		serviceAccount,
 	)).ToNot(HaveOccurred())
 	Expect(serviceAccount.Labels).To(DeepEqual(expectedServiceAccount.Labels))
@@ -904,7 +904,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	expectedComponentConfigCm := getEmptyGardenletConfigMap()
 	expectedComponentConfigCm.Labels = expectedLabels
 
-	if err := c.Get(ctx, kubernetesutils.Key(componentConfigCm.Namespace, uniqueName), componentConfigCm); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: componentConfigCm.Namespace, Name: uniqueName}, componentConfigCm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			ginkgo.Fail(err.Error())
 		}
@@ -1259,7 +1259,7 @@ func VerifyGardenletDeployment(ctx context.Context,
 
 	Expect(c.Get(
 		ctx,
-		kubernetesutils.Key(deployment.Namespace, deployment.Name),
+		client.ObjectKey{Namespace: deployment.Namespace, Name: deployment.Name},
 		deployment,
 	)).ToNot(HaveOccurred())
 

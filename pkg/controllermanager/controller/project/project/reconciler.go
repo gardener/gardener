@@ -359,7 +359,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, project *garde
 
 func (r *Reconciler) releaseNamespace(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace := &corev1.Namespace{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(namespaceName), namespace); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

@@ -39,7 +39,6 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -483,7 +482,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				mc.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
 
-				mc.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-access-gardener-node-agent"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				mc.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-node-agent"}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				mc.EXPECT().Create(ctx, &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "shoot-access-gardener-node-agent",

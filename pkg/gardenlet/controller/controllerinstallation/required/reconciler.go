@@ -21,7 +21,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles ControllerInstallations. It checks whether they are still required by using the
@@ -54,7 +53,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-	if err := r.GardenClient.Get(ctx, kubernetesutils.Key(controllerInstallation.Spec.RegistrationRef.Name), controllerRegistration); err != nil {
+	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 		return reconcile.Result{}, err
 	}
 

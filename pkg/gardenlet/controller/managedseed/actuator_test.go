@@ -35,7 +35,6 @@ import (
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockrecord "github.com/gardener/gardener/third_party/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -250,7 +249,7 @@ var _ = Describe("Actuator", func() {
 
 	var (
 		expectGetShoot = func() {
-			gardenAPIReader.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+			gardenAPIReader.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
 					*s = *shoot
 					return nil
@@ -259,7 +258,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectCreateGardenNamespace = func() {
-			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Name: v1beta1constants.GardenNamespace}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("namespace"), v1beta1constants.GardenNamespace)
 				},
@@ -282,7 +281,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetGardenNamespace = func(exists bool) {
-			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Name: v1beta1constants.GardenNamespace}, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace, _ ...client.GetOption) error {
 					if exists {
 						*ns = *gardenNamespace
@@ -295,7 +294,7 @@ var _ = Describe("Actuator", func() {
 
 		expectCheckSeedSpec = func() {
 			// Check if the shoot namespace in the seed contains a vpa-admission-controller deployment
-			seedClient.EXPECT().Get(ctx, kubernetesutils.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+			seedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "vpa-admission-controller"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *appsv1.Deployment, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(appsv1.Resource("deployment"), "vpa-admission-controller")
 				},
@@ -304,13 +303,13 @@ var _ = Describe("Actuator", func() {
 
 		expectCreateSeedSecrets = func() {
 			// Get shoot secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretBindingName), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretBindingName}, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 					*sb = *secretBinding
 					return nil
 				},
 			)
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *secret
 					return nil
@@ -318,7 +317,7 @@ var _ = Describe("Actuator", func() {
 			)
 
 			// Create backup secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
 				},
@@ -333,7 +332,7 @@ var _ = Describe("Actuator", func() {
 
 		expectDeleteSeedSecrets = func() {
 			// Delete backup secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					*s = *backupSecret
 					return nil
@@ -350,7 +349,7 @@ var _ = Describe("Actuator", func() {
 
 		expectGetSeedSecrets = func(exist bool) {
 			// Get backup secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
 					if exist {
 						*s = *backupSecret
@@ -371,7 +370,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetSeed = func(exists bool) {
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed, _ ...client.GetOption) error {
 					if exists {
 						*s = *seed
@@ -408,7 +407,7 @@ var _ = Describe("Actuator", func() {
 		expectPrepareGardenClientConnection = func(withAlreadyBootstrappedCheck bool) {
 			if withAlreadyBootstrappedCheck {
 				// Check if kubeconfig secret exists
-				shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
 					},
@@ -416,7 +415,7 @@ var _ = Describe("Actuator", func() {
 			}
 
 			// Create bootstrap token secret
-			gardenClient.EXPECT().Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "bootstrap-token-a82f8a"}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), "bootstrap-token-a82f8a")
 				},
@@ -478,7 +477,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectGetGardenletDeployment = func(exists bool) {
-			shootClient.EXPECT().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+			shootClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.DeploymentNameGardenlet}, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment, _ ...client.GetOption) error {
 					if exists {
 						*d = *gardenletDeployment

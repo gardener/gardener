@@ -28,7 +28,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -174,7 +173,7 @@ func (p *shootPredicate) getManagedSeedSetPendingReplicaReason(shoot *gardencore
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kubernetesutils.Key(shoot.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
 		return "", false
 	}
 
@@ -268,7 +267,7 @@ func (p *managedSeedPredicate) getManagedSeedSetPendingReplicaReason(managedSeed
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kubernetesutils.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
 		return "", false
 	}
 
@@ -325,7 +324,7 @@ func (p *seedPredicate) filterSeed(obj client.Object) bool {
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := p.reader.Get(p.ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
 		return false
 	}
 
@@ -335,7 +334,7 @@ func (p *seedPredicate) filterSeed(obj client.Object) bool {
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := p.reader.Get(p.ctx, kubernetesutils.Key(seed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: seed.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
 		return false
 	}
 
@@ -359,7 +358,7 @@ func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logge
 	}
 
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
 		}
@@ -372,7 +371,7 @@ func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logge
 	}
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := reader.Get(ctx, kubernetesutils.Key(managedSeed.Namespace, controllerRef.Name), managedSeedSet); err != nil {
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
 		}
