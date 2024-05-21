@@ -5,6 +5,8 @@
 package storage
 
 import (
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
@@ -22,6 +24,7 @@ type REST struct {
 // WorkloadIdentityStorage implements the storage for WorkloadIdentity.
 type WorkloadIdentityStorage struct {
 	WorkloadIdentity *REST
+	TokenRequest     *TokenRequestREST
 }
 
 // NewStorage creates a new WorkloadIdentityStorage object.
@@ -30,6 +33,7 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) WorkloadIdentityStorage {
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, time.Minute*10, time.Hour*48),
 	}
 }
 
