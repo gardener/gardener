@@ -1,6 +1,6 @@
 ---
 title: NodeLocalDNS Configuration
-weight: 14
+weight: 1
 ---
 
 # NodeLocalDNS Configuration

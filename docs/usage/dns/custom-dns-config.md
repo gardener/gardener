@@ -1,5 +1,6 @@
 ---
 title: Custom DNS Configuration
+weight: 2
 ---
 
 # Custom DNS Configuration
