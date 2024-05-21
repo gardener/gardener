@@ -1,3 +1,7 @@
+---
+weight: 9
+description: Accessing API Server through SNI and pods through `kubernetes.default.svc.cluster.local`. Introducing the Reversed VPN Tunnel
+---
 # Endpoints and Ports of a Shoot Control-Plane
 
 With the [reversed VPN](./reversed-vpn-tunnel.md) tunnel, there are no endpoints with open ports in the shoot cluster required by Gardener.
