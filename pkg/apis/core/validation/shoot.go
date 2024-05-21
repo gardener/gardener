@@ -282,7 +282,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		if spec.CredentialsBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), workerlessErrorMsg))
 		}
-	} else if !workerless {
+	} else {
 		if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must be set when credentialsBindingName is not"))
 		} else if len(ptr.Deref(spec.SecretBindingName, "")) != 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) != 0 {
