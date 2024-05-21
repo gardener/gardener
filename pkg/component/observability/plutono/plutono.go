@@ -172,7 +172,6 @@ func (p *plutono) Deploy(ctx context.Context) error {
 				metav1.SetMetaDataLabel(&configMap.ObjectMeta, k, v)
 			}
 
-			configMap.Immutable = dashboardConfigMap.Immutable
 			configMap.Data = dashboardConfigMap.Data
 			configMap.BinaryData = dashboardConfigMap.BinaryData
 			return nil
