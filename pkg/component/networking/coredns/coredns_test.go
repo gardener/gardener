@@ -680,7 +680,7 @@ status: {}
 								"visibility": "all",
 							},
 							Annotations: map[string]string{
-								"description": "CoreDNS could not be found.Cluster DNS resolution will not work.",
+								"description": "CoreDNS could not be found. Cluster DNS resolution will not work.",
 								"summary":     "CoreDNS is down",
 							},
 						},

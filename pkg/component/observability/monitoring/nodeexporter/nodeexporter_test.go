@@ -155,7 +155,7 @@ var _ = Describe("NodeExporter", func() {
 							},
 							Annotations: map[string]string{
 								"summary":     "Node ran out of disk space.",
-								"description": "Node{{$labels.node}} has run out of disk space.",
+								"description": "Node {{$labels.node}} has run out of disk space.",
 							},
 						},
 						{
@@ -170,7 +170,7 @@ var _ = Describe("NodeExporter", func() {
 							},
 							Annotations: map[string]string{
 								"summary":     "Node is under memory pressure.",
-								"description": "Node{{$labels.node}} is under memory pressure.",
+								"description": "Node {{$labels.node}} is under memory pressure.",
 							},
 						},
 						{
@@ -185,7 +185,7 @@ var _ = Describe("NodeExporter", func() {
 							},
 							Annotations: map[string]string{
 								"summary":     "Node is under disk pressure.",
-								"description": "Node{{$labels.node}} is under disk pressure.",
+								"description": "Node {{$labels.node}} is under disk pressure.",
 							},
 						},
 						{
@@ -218,7 +218,7 @@ var _ = Describe("NodeExporter", func() {
 								"visibility": "owner",
 							},
 							Annotations: map[string]string{
-								"description": "The nf_conntrack table is{{$value}}% full.",
+								"description": "The nf_conntrack table is {{$value}}% full.",
 								"summary":     "Number of tracked connections is near the limit",
 							},
 						},

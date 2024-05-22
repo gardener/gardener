@@ -70,7 +70,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 	return monitoringv1alpha1.ScrapeConfigSpec{
 		HonorLabels: ptr.To(false),
 		Scheme:      ptr.To("HTTPS"),
-		// This is needed because the kubelets' certificates are not are generated for a specific pod IP
+		// This is needed because we do not fetch the correct cluster CA bundle right now
 		TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
 		Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{Name: AccessSecretName},
