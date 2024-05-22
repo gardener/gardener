@@ -17,7 +17,7 @@ import (
 
 const serviceName = DeploymentName
 
-func (g *GardenerDiscoveryServer) service() *corev1.Service {
+func (g *gardenerDiscoveryServer) service() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,

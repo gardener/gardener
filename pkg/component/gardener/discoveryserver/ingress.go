@@ -12,7 +12,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-func (g *GardenerDiscoveryServer) ingress() *networkingv1.Ingress {
+func (g *gardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,

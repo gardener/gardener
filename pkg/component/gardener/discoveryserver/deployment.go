@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -34,7 +35,7 @@ const (
 	volumeMountPathTLS = "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls"
 )
 
-func (g *GardenerDiscoveryServer) deployment(
+func (g *gardenerDiscoveryServer) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameTLS string,
@@ -75,8 +76,8 @@ func (g *GardenerDiscoveryServer) deployment(
 							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
-								"--tls-cert-file=" + volumeMountPathTLS + "/tls.crt",
-								"--tls-private-key-file=" + volumeMountPathTLS + "/tls.key",
+								"--tls-cert-file=" + volumeMountPathTLS + "/" + secretsutils.DataKeyCertificate,
+								"--tls-private-key-file=" + volumeMountPathTLS + "/" + secretsutils.DataKeyPrivateKey,
 								"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 							},
 							Resources: corev1.ResourceRequirements{

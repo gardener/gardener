@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func (g *GardenerDiscoveryServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
+func (g *gardenerDiscoveryServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName + "-vpa",

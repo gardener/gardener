@@ -15,11 +15,11 @@ import (
 
 const serviceAccountIssuerConfigSecretName = v1beta1constants.GardenRoleShootServiceAccountIssuer
 
-func (g *GardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
+func (g *gardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)
 }
 
-func (g *GardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.Secret {
+func (g *gardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountIssuerConfigSecretName,

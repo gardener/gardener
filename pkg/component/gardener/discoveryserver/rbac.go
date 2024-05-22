@@ -20,7 +20,7 @@ const (
 	roleBindingName = "gardener.cloud:system:discovery-server"
 )
 
-func (g *GardenerDiscoveryServer) clusterRole() *rbacv1.ClusterRole {
+func (g *gardenerDiscoveryServer) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleName,
@@ -36,7 +36,7 @@ func (g *GardenerDiscoveryServer) clusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (g *GardenerDiscoveryServer) clusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (g *gardenerDiscoveryServer) clusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleBindingName,
@@ -55,7 +55,7 @@ func (g *GardenerDiscoveryServer) clusterRoleBinding(serviceAccountName string) 
 	}
 }
 
-func (g *GardenerDiscoveryServer) role() *rbacv1.Role {
+func (g *gardenerDiscoveryServer) role() *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleName,
@@ -70,7 +70,7 @@ func (g *GardenerDiscoveryServer) role() *rbacv1.Role {
 	}
 }
 
-func (g *GardenerDiscoveryServer) roleBinding(serviceAccountName string) *rbacv1.RoleBinding {
+func (g *gardenerDiscoveryServer) roleBinding(serviceAccountName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,

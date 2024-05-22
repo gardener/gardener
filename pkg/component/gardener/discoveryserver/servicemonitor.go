@@ -12,7 +12,7 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
-func (g *GardenerDiscoveryServer) serviceMonitor() *monitoringv1.ServiceMonitor {
+func (g *gardenerDiscoveryServer) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: monitoringutils.ConfigObjectMeta(DeploymentName, g.namespace, garden.Label),
 		Spec: monitoringv1.ServiceMonitorSpec{

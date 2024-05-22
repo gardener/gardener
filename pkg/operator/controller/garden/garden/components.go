@@ -1316,7 +1316,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 func (r *Reconciler) newGardenerDiscoveryServer(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
-) (*gardenerdiscoveryserver.GardenerDiscoveryServer, error) {
+) (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDiscoveryServer)
 	if err != nil {
 		return nil, err

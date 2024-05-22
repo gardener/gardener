@@ -151,7 +151,7 @@ Besides those, the `gardener-operator` is able to deploy the following optional 
  - [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set. 
  You can read more about it and its configuration in [this section](#gardener-dashboard).
  - [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) when `.spec.virtualCluster.gardener.gardenerDiscoveryServer` is set.
- Please, find the full list of avalable configurations in the [discovery server section](#gardener-discovery-server) of this document.
+ Please, find the full list of available configurations in the [discovery server section](#gardener-discovery-server) of this document.
 
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
@@ -266,12 +266,13 @@ This section highlights the most prominent fields:
   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
 
 ##### [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server)
+
 `.spec.virtualCluster.gardener.gardenerDiscoveryServer` serves a few configuration options for the discovery server.
 - `hostname`: This is the hostname that will serve the OIDC discovery documents of the shoot clusters.
-  In addition to that the value will be used for calculating the service account issuer of a shoot cluster in the format `https://<hostname>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
+  In addition to that, the value will be used for calculating the service account issuer of a shoot cluster in the format `https://<hostname>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
   This configuration applies for all seeds registered with the Garden cluster. Once set it should not be modified.
 - `tlsSecretName`: This is the name of the secret that will be used by the discovery server for serving TLS.
-  Usually this secret contains a ceritificate issued for the `hostname` configured in the previously mentioned field.
+  Usually this secret contains a certificate issued for the `hostname` configured in the previously mentioned field.
   The secret should contain two data keys `tls.key` and `tls.crt` containing the private key and the TLS certificate respectively.
   If not provided, a self-signed certificate will be generated.
 
