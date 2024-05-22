@@ -31,6 +31,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Seed resources and provisions or de-provisions the seed system components.
