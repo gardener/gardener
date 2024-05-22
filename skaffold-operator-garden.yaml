@@ -24,7 +24,7 @@ deploy:
 apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
-  name: garden-namespace
+  name: garden-config
 manifests:
   rawYaml:
     - example/00-namespace-garden.yaml

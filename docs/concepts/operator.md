@@ -734,6 +734,10 @@ kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
 
 Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
 
+### Creating Seeds and Shoots
+
+You can also create Seeds and Shoots from your local development setup. Please see [here](../deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for details.
+
 ### Deleting the `Garden`
 
 ```shell

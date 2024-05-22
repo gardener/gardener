@@ -43,9 +43,6 @@ kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
   seed-local \
   --ignore-not-found
 
-# cleanup namespaces that don't get deleted automatically
-kubectl delete ns gardener-system-seed-lease --ignore-not-found
-
 # cleanup garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
 skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden

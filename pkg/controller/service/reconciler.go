@@ -81,15 +81,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
 			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 		}
-		if err := r.Client.Get(ctx, keyVirtualGardenIstioIngressGateway, ptr.To(corev1.Service{})); err != nil {
-			if apierrors.IsNotFound(err) {
-				if nodes, err := r.getNodesInternalIPs(ctx); err != nil {
-					return reconcile.Result{}, err
-				} else {
-					ips = append(ips, nodes...)
-				}
+		// Internal IPs of the nodes are required to reach the virtual garden from inside the kind cluster.
+		// If there is a virtual-garden-istio-ingress istio-ingressgateway created by operator, the IPs should be added to its LB service (see `keyVirtualGardenIstioIngressGateway` case).
+		// If there is no such ingress, the IPs should be added to the LB service of istio-ingress istio-ingress-gateway (this case).
+		// This handling assumes that virtual-garden-istio-ingress istio-ingressgateway would be created first.
+		if err := r.Client.Get(ctx, keyVirtualGardenIstioIngressGateway, ptr.To(corev1.Service{})); apierrors.IsNotFound(err) {
+			nodes, err := r.getNodesInternalIPs(ctx)
+			if err != nil {
+				return reconcile.Result{}, err
 			}
+			ips = append(ips, nodes...)
+		} else if err != nil {
+			return reconcile.Result{}, err
 		}
+
 		// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
 		// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
 		ips = append(ips, r.HostIP)
@@ -109,11 +114,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
 			service.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 		}
-		if nodes, err := r.getNodesInternalIPs(ctx, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+		nodes, err := r.getNodesInternalIPs(ctx, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""})
+		if err != nil {
 			return reconcile.Result{}, err
-		} else {
-			ips = append(ips, nodes...)
 		}
+		ips = append(ips, nodes...)
 	}
 
 	for i, servicePort := range service.Spec.Ports {
