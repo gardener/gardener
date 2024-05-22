@@ -63,6 +63,7 @@ type CertificateSecretConfig struct {
 	PKCS      int
 
 	Validity                          *time.Duration
+	RenewAt                           *time.Duration
 	SkipPublishingCACertificate       bool
 	IncludeCACertificateInServerChain bool
 }

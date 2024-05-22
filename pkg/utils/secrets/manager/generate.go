@@ -278,11 +278,15 @@ func (m *manager) maintainLifetimeLabels(
 	}
 
 	var dataKeyCertificate string
+	var earlyRenewal time.Duration
 	switch cfg := config.(type) {
 	case *secretsutils.CertificateSecretConfig:
 		dataKeyCertificate = secretsutils.DataKeyCertificate
 		if cfg.CertType == secretsutils.CACert {
 			dataKeyCertificate = secretsutils.DataKeyCertificateCA
+		}
+		if cfg.RenewAt != nil {
+			earlyRenewal = *cfg.RenewAt
 		}
 	case *secretsutils.ControlPlaneSecretConfig:
 		if cfg.CertificateSecretConfig == nil {
@@ -300,6 +304,9 @@ func (m *manager) maintainLifetimeLabels(
 
 	desiredLabels[LabelKeyIssuedAtTime] = unixTime(certificate.NotBefore)
 	desiredLabels[LabelKeyValidUntilTime] = unixTime(certificate.NotAfter)
+	if earlyRenewal > 0 {
+		desiredLabels[LabelKeyRenewAtTime] = unixTime(certificate.NotBefore.Add(earlyRenewal))
+	}
 	return nil
 }
 

@@ -442,6 +442,59 @@ var _ = Describe("Generate", func() {
 				Expect(secretInfos.old.obj).To(Equal(secret))
 				Expect(secretInfos.bundle.obj).NotTo(PointTo(Equal(oldBundleSecret)))
 			})
+
+			DescribeTable("should rotate CA as configured",
+				func(validity, renewAt *time.Duration, unchanged, renewed time.Duration) {
+					lastCommonName := config.CommonName
+					config.Validity = validity
+					config.RenewAt = renewAt
+					fakeClock.SetTime(time.Now())
+
+					By("Generate new secret")
+					firstSecret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+					expectSecretWasCreated(ctx, fakeClient, firstSecret)
+
+					By("storing old bundle secret")
+					_, found := m.getFromStore(name)
+					Expect(found).To(BeTrue())
+
+					By("some time later: no new CA should be generated")
+					fakeClock.Step(unchanged)
+					mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: true})
+					Expect(err).NotTo(HaveOccurred())
+					m = mgr.(*manager)
+					config.CommonName = lastCommonName
+					newSecret, err := m.Generate(ctx, config, Rotate(KeepOld))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newSecret.Name).To(Equal(firstSecret.Name))
+
+					By("after expected renewal time: new CA should be generated")
+					fakeClock.Step(renewed - unchanged)
+					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: true})
+					Expect(err).NotTo(HaveOccurred())
+					m = mgr.(*manager)
+					config.CommonName = lastCommonName
+					newSecret, err = m.Generate(ctx, config, Rotate(KeepOld))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newSecret.Name).NotTo(Equal(firstSecret.Name))
+					expectSecretWasCreated(ctx, fakeClient, newSecret)
+
+					By("Find created bundle secret")
+					secretList := &corev1.SecretList{}
+					Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"managed-by":       "secrets-manager",
+						"manager-identity": "test",
+						"bundle-for":       name,
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(2))
+				},
+
+				Entry("default 80% of 100d (=80d)", ptr.To(100*24*time.Hour), nil, 79*24*time.Hour, 81*24*time.Hour),
+				Entry("default 30d-10d (=20d)", ptr.To(30*24*time.Hour), nil, 19*24*time.Hour, 21*24*time.Hour),
+				Entry("renewAt 10d", ptr.To(30*24*time.Hour), ptr.To(10*24*time.Hour), 9*24*time.Hour, 11*24*time.Hour),
+				Entry("non-effective renewAt 25d (> default 30d-10d=20d)", ptr.To(30*24*time.Hour), ptr.To(25*24*time.Hour), 19*24*time.Hour, 21*24*time.Hour),
+			)
 		})
 
 		Context("for certificate secrets", func() {
