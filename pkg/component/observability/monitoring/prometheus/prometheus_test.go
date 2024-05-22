@@ -892,7 +892,7 @@ tls_config:
 					})
 				})
 
-				When("additional alert relabel configs is provided", func() {
+				When("additional alert relabel configs are provided", func() {
 					BeforeEach(func() {
 						values.AdditionalAlertLabelReconfigs = []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"project", "name"},
