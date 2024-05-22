@@ -25,18 +25,18 @@ import (
 )
 
 const (
-	// ManagedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
-	ManagedResourceNameRuntime = "gardener-discovery-server-runtime"
-	// ManagedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
-	ManagedResourceNameVirtual = "gardener-discovery-server-virtual"
+	// managedResourceNameRuntime is the name of the ManagedResource for the runtime resources.
+	managedResourceNameRuntime = "gardener-discovery-server-runtime"
+	// managedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
+	managedResourceNameVirtual = "gardener-discovery-server-virtual"
 
 	// DeploymentName is the name of the Gardener Discovery Server deployment.
 	DeploymentName = "gardener-discovery-server"
 	role           = "discovery-server"
 
-	// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
-	// deleted.
-	TimeoutWaitForManagedResource = 5 * time.Minute
+	// timeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources
+	// to become healthy or deleted.
+	timeoutWaitForManagedResource = 5 * time.Minute
 )
 
 // Values contains configuration values for the gardener-discovery-server resources.
@@ -116,7 +116,7 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeedWithLabels(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, managedResourceLabels, runtimeResources); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(ctx, g.client, g.namespace, managedResourceNameRuntime, false, managedResourceLabels, runtimeResources); err != nil {
 		return err
 	}
 
@@ -135,29 +135,29 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, ManagedResourceNameVirtual, managedresources.LabelValueGardener, false, managedResourceLabels, virtualResources)
+	return managedresources.CreateForShootWithLabels(ctx, g.client, g.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, managedResourceLabels, virtualResources)
 }
 
 func (g *gardenerDiscoveryServer) Wait(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResource)
 	defer cancel()
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, ManagedResourceNameRuntime)
+			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, managedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, ManagedResourceNameVirtual)
+			return managedresources.WaitUntilHealthy(ctx, g.client, g.namespace, managedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }
 
 func (g *gardenerDiscoveryServer) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceNameVirtual); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -165,15 +165,15 @@ func (g *gardenerDiscoveryServer) Destroy(ctx context.Context) error {
 }
 
 func (g *gardenerDiscoveryServer) WaitCleanup(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResource)
 	defer cancel()
 
 	return flow.Parallel(
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, ManagedResourceNameRuntime)
+			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameRuntime)
 		},
 		func(ctx context.Context) error {
-			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, ManagedResourceNameVirtual)
+			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameVirtual)
 		},
 	)(timeoutCtx)
 }
