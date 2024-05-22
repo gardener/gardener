@@ -23,7 +23,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPA                               | `false` | `Alpha` | `0.31` |        |
 | HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
 | DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` |        |
+| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` | `1.95` |
+| CoreDNSQueryRewriting              | `true`  | `Beta`  | `1.96` |        |
 | IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |

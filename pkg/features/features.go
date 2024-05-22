@@ -39,8 +39,9 @@ const (
 
 	// CoreDNSQueryRewriting enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of
 	// fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern.
-	// owner: @ScheererJ @DockToFuture
+	// owner: @ScheererJ @DockToFuture @axel7born
 	// alpha: v1.55.0
+	// beta: v1.96.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
 
 	// IPv6SingleStack allows creating shoot clusters with IPv6 single-stack networking (GEP-21).
@@ -111,7 +112,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
 	VPAForETCD:                      {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:           {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:           {Default: true, PreRelease: featuregate.Beta},
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: false, PreRelease: featuregate.Alpha},
 	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
