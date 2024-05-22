@@ -903,7 +903,7 @@ tls_config:
 						}}
 					})
 
-					It("should succeesfully append the additional alert relabel config", func() {
+					It("should successfully append the additional alert relabel config", func() {
 						prometheusRule.Namespace = namespace
 						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
 						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
