@@ -109,11 +109,14 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 				Namespace: p.namespace,
 				Name:      p.values.Alerting.AlertmanagerName,
 				Port:      intstr.FromString(alertmanager.PortNameMetrics),
-				AlertRelabelConfigs: []monitoringv1.RelabelConfig{{
-					SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
-					Regex:        `true`,
-					Action:       "drop",
-				}},
+				AlertRelabelConfigs: append(
+					[]monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
+						Regex:        `true`,
+						Action:       "drop",
+					}},
+					p.values.AdditionalAlertRelabelConfigs...,
+				),
 			}},
 		}
 

@@ -107,7 +107,8 @@ type Values struct {
 	// TargetCluster contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
 	// virtual garden, or shoot cluster) or other components running in this cluster.
 	TargetCluster *TargetClusterValues
-
+	// AdditionalAlertRelabelConfigs contains additional alert relabel configurations.
+	AdditionalAlertRelabelConfigs []monitoringv1.RelabelConfig
 	// DataMigration is a struct for migrating data from existing disks.
 	// TODO(rfranzke): Remove this after v1.97 has been released.
 	DataMigration monitoring.DataMigration

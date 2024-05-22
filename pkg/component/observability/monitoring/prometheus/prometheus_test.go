@@ -891,6 +891,52 @@ tls_config:
 						})
 					})
 				})
+
+				When("additional alert relabel configs are provided", func() {
+					BeforeEach(func() {
+						values.AdditionalAlertRelabelConfigs = []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"project", "name"},
+							Regex:        "(.+);(.+)",
+							Action:       "replace",
+							Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+							TargetLabel:  "shoot_dashboard_url",
+						}}
+					})
+
+					It("should successfully append the additional alert relabel config", func() {
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						prometheus := prometheusFor(alertmanagerName, false)
+						prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs = append(
+							prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs,
+							monitoringv1.RelabelConfig{
+								SourceLabels: []monitoringv1.LabelName{"project", "name"},
+								Regex:        "(.+);(.+)",
+								Action:       "replace",
+								Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+								TargetLabel:  "shoot_dashboard_url",
+							},
+						)
+
+						Expect(managedResource).To(contain(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheus,
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+						))
+					})
+				})
 			})
 
 			When("there is more than 1 replica", func() {
