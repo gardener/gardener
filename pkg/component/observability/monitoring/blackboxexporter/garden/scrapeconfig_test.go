@@ -196,13 +196,13 @@ var _ = Describe("ScrapeConfig", func() {
 							Targets: []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"},
 							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
 						}},
-						RelabelConfigs: []*monitoringv1.RelabelConfig{
+						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
 								SourceLabels: []monitoringv1.LabelName{"__address__"},
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "__param_target",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
@@ -210,23 +210,23 @@ var _ = Describe("ScrapeConfig", func() {
 								Separator:    ptr.To(";"),
 								Regex:        `(.*)`,
 								TargetLabel:  "instance",
-								Replacement:  `$1`,
+								Replacement:  ptr.To(`$1`),
 								Action:       "replace",
 							},
 							{
 								Separator:   ptr.To(";"),
 								Regex:       `(.*)`,
 								TargetLabel: "__address__",
-								Replacement: "blackbox-exporter:9115",
+								Replacement: ptr.To("blackbox-exporter:9115"),
 								Action:      "replace",
 							},
 							{
 								Action:      "replace",
-								Replacement: "blackbox-discovery-server",
+								Replacement: ptr.To("blackbox-discovery-server"),
 								TargetLabel: "job",
 							},
 						},
-						MetricRelabelConfigs: []*monitoringv1.RelabelConfig{{
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
 							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
