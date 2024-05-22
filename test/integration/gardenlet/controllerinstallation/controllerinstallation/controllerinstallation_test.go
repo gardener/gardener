@@ -5,6 +5,7 @@
 package controllerinstallation_test
 
 import (
+	"encoding/base64"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -31,7 +33,7 @@ import (
 var _ = Describe("ControllerInstallation controller tests", func() {
 	var (
 		controllerRegistration *gardencorev1beta1.ControllerRegistration
-		controllerDeployment   *gardencorev1beta1.ControllerDeployment
+		controllerDeployment   *gardencorev1.ControllerDeployment
 		controllerInstallation *gardencorev1beta1.ControllerInstallation
 	)
 
@@ -42,17 +44,20 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 		}
-		controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+
+		// created via the following commands in the ./testdata/chart directory:
+		//   helm package . --version 0.1.0 --app-version 0.1.0 --destination /tmp/chart
+		//   cat /tmp/chart/test-0.1.0.tgz | base64 | tr -d '\n'
+		rawChart, err := base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyUz2rDMAzGc/ZT6AkcOXHb4WvP22GMwo6i0RbT/DGxWhhp3300XQcLjB22rozldxGSkW2Z77NwlHRZUif6heoquQSIiHNrh4iI44jGLhJjc5PnmZkvbIImM7N5AniR24zYRqEuwW+fNR7uj0DBr7iLvm0c7IyiEN5T1EajKjiuOx9kKD1wFFW2NTsoRUJ0abq5idq3aclVrRo6rhwlpXYfd7n2mBOfMPhfuA4VCcd03TZP/vmHv4Kv/J9lOPK/zWc4+f83GPl/45vCwXJQwS0FVbNQQUJOAZzcfVLIWxoDrdlB34O+54opsr47l+FwUOfWHVVbjg72qu9B2keqK9CroQh78E3BjYA9dlz7PSYmJib+C68BAAD//6xO2UUADAAA`)
+		Expect(err).NotTo(HaveOccurred())
+
+		controllerDeployment = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "deploy-",
 				Labels:       map[string]string{testID: testRunID},
 			},
-			Type: "helm",
-			ProviderConfig: runtime.RawExtension{
-				// created via the following commands in the ./testdata/chart directory:
-				//   helm package . --version 0.1.0 --app-version 0.1.0 --destination /tmp/chart
-				//   cat /tmp/chart/test-0.1.0.tgz | base64 | tr -d '\n'
-				Raw: []byte(`{"chart": "H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyUz2rDMAzGc/ZT6AkcOXHb4WvP22GMwo6i0RbT/DGxWhhp3300XQcLjB22rozldxGSkW2Z77NwlHRZUif6heoquQSIiHNrh4iI44jGLhJjc5PnmZkvbIImM7N5AniR24zYRqEuwW+fNR7uj0DBr7iLvm0c7IyiEN5T1EajKjiuOx9kKD1wFFW2NTsoRUJ0abq5idq3aclVrRo6rhwlpXYfd7n2mBOfMPhfuA4VCcd03TZP/vmHv4Kv/J9lOPK/zWc4+f83GPl/45vCwXJQwS0FVbNQQUJOAZzcfVLIWxoDrdlB34O+54opsr47l+FwUOfWHVVbjg72qu9B2keqK9CroQh78E3BjYA9dlz7PSYmJib+C68BAAD//6xO2UUADAAA"}`),
+			Helm: &gardencorev1.HelmControllerDeployment{
+				RawChart: rawChart,
 			},
 		}
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
@@ -124,7 +129,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 
 	Context("not responsible", func() {
 		BeforeEach(func() {
-			controllerDeployment.Type = "not-responsible"
+			controllerDeployment.Helm = nil
+			metav1.SetMetaDataAnnotation(&controllerDeployment.ObjectMeta, gardencorev1.MigrationControllerDeploymentType, "not-responsible")
 		})
 
 		It("should not reconcile", func() {

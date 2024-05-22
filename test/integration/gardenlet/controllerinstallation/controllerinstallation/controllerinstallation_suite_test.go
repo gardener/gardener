@@ -29,6 +29,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -196,7 +197,7 @@ var _ = BeforeSuite(func() {
 				&gardencorev1beta1.ControllerRegistration{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
-				&gardencorev1beta1.ControllerDeployment{}: {
+				&gardencorev1.ControllerDeployment{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 				&gardencorev1beta1.Seed{}: {

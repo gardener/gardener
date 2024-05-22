@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
@@ -553,13 +554,13 @@ var _ = Describe("Add", func() {
 			var (
 				deploymentName = "deployment"
 
-				controllerDeployment   *gardencorev1beta1.ControllerDeployment
+				controllerDeployment   *gardencorev1.ControllerDeployment
 				controllerRegistration *gardencorev1beta1.ControllerRegistration
 				seed1, seed2           *gardencorev1beta1.Seed
 			)
 
 			BeforeEach(func() {
-				controllerDeployment = &gardencorev1beta1.ControllerDeployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName}}
+				controllerDeployment = &gardencorev1.ControllerDeployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName}}
 				controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{GenerateName: "registration-"},
 					Spec: gardencorev1beta1.ControllerRegistrationSpec{

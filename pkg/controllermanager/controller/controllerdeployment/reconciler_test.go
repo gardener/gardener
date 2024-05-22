@@ -15,6 +15,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -29,7 +30,7 @@ var _ = Describe("Controller", func() {
 		reconciler reconcile.Reconciler
 
 		controllerDeploymentName string
-		controllerDeployment     *gardencorev1beta1.ControllerDeployment
+		controllerDeployment     *gardencorev1.ControllerDeployment
 		controllerRegistration   *gardencorev1beta1.ControllerRegistration
 	)
 
@@ -39,7 +40,7 @@ var _ = Describe("Controller", func() {
 		controllerDeploymentName = "controllerDeployment"
 		reconciler = &Reconciler{Client: fakeClient}
 
-		controllerDeployment = &gardencorev1beta1.ControllerDeployment{
+		controllerDeployment = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: controllerDeploymentName,
 			},
@@ -61,7 +62,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	It("should return nil because object is not found", func() {
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), &gardencorev1beta1.ControllerDeployment{})).To(BeNotFoundError())
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), &gardencorev1.ControllerDeployment{})).To(BeNotFoundError())
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerDeploymentName}})
 		Expect(result).To(Equal(reconcile.Result{}))

@@ -15,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	backupbucketstore "github.com/gardener/gardener/pkg/apiserver/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/apiserver/registry/core/backupentry/storage"
@@ -46,6 +47,7 @@ type StorageProvider struct {
 // NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(core.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
+	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1.SchemeGroupVersion.Version] = p.v1Storage(restOptionsGetter)
 	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1beta1.SchemeGroupVersion.Version] = p.v1beta1Storage(restOptionsGetter)
 	return apiGroupInfo
 }
@@ -53,6 +55,15 @@ func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGet
 // GroupName returns the core group name.
 func (p StorageProvider) GroupName() string {
 	return core.GroupName
+}
+
+func (p StorageProvider) v1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
+	storage := map[string]rest.Storage{}
+
+	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
+	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
+
+	return storage
 }
 
 func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {

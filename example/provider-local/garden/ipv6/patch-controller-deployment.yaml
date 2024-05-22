@@ -1,8 +1,8 @@
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: provider-local
-providerConfig:
+helm:
   values:
     controllers:
       service:

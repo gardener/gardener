@@ -37,6 +37,7 @@ build:
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
@@ -293,6 +294,7 @@ build:
             - pkg/api/indexer
             - pkg/apis/core
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
@@ -400,6 +402,7 @@ build:
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
@@ -484,11 +487,14 @@ build:
             - pkg/chartrenderer
             - pkg/client/core/clientset/versioned
             - pkg/client/core/clientset/versioned/scheme
+            - pkg/client/core/clientset/versioned/typed/core/v1
             - pkg/client/core/clientset/versioned/typed/core/v1beta1
             - pkg/client/core/informers/externalversions
             - pkg/client/core/informers/externalversions/core
+            - pkg/client/core/informers/externalversions/core/v1
             - pkg/client/core/informers/externalversions/core/v1beta1
             - pkg/client/core/informers/externalversions/internalinterfaces
+            - pkg/client/core/listers/core/v1
             - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
@@ -595,6 +601,7 @@ build:
             - pkg/api/indexer
             - pkg/apis/core
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
@@ -705,6 +712,7 @@ build:
             - pkg/api/extensions
             - pkg/apis/core
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
@@ -788,6 +796,7 @@ build:
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
+            - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper

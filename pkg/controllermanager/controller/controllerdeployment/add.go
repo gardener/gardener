@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 )
 
 const (
@@ -30,7 +30,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&gardencorev1beta1.ControllerDeployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&gardencorev1.ControllerDeployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,

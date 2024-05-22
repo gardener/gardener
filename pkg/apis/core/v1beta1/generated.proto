@@ -11,6 +11,7 @@ package github.com.gardener.gardener.pkg.apis.core.v1beta1;
 import "k8s.io/api/autoscaling/v1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/api/rbac/v1/generated.proto";
+import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/api/resource/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
@@ -941,6 +942,19 @@ message GardenerResourceData {
   // Labels are labels of the object
   // +optional
   map<string, string> labels = 4;
+}
+
+// HelmControllerDeployment configures how an extension controller is deployed using helm.
+// This is the legacy structure that used to be defined in gardenlet's ControllerInstallation controller for
+// ControllerDeployment's with type=helm.
+// While this is not a proper API type, we need to define the structure in the API package so that we can convert it
+// to the internal API version in the new representation.
+message HelmControllerDeployment {
+  // Chart is a Helm chart tarball.
+  optional bytes chart = 1;
+
+  // Values is a map of values for the given chart.
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
 }
 
 // Hibernation contains information whether the Shoot is suspended or not.

@@ -12,6 +12,7 @@ package mock
 import (
 	reflect "reflect"
 
+	v1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gomock "go.uber.org/mock/gomock"
 	discovery "k8s.io/client-go/discovery"
@@ -38,6 +39,20 @@ func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
+}
+
+// CoreV1 mocks base method.
+func (m *MockInterface) CoreV1() v1.CoreV1Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CoreV1")
+	ret0, _ := ret[0].(v1.CoreV1Interface)
+	return ret0
+}
+
+// CoreV1 indicates an expected call of CoreV1.
+func (mr *MockInterfaceMockRecorder) CoreV1() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1", reflect.TypeOf((*MockInterface)(nil).CoreV1))
 }
 
 // CoreV1beta1 mocks base method.

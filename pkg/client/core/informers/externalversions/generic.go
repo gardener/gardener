@@ -9,6 +9,7 @@ package externalversions
 import (
 	"fmt"
 
+	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -40,7 +41,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=core.gardener.cloud, Version=v1beta1
+	// Group=core.gardener.cloud, Version=v1
+	case v1.SchemeGroupVersion.WithResource("controllerdeployments"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1().ControllerDeployments().Informer()}, nil
+
+		// Group=core.gardener.cloud, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("backupbuckets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().V1beta1().BackupBuckets().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("backupentries"):

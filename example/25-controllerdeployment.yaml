@@ -1,13 +1,12 @@
 # ControllerDeployment object specifies how extension controllers are deployed.
 # See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
 ---
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: os-gardenlinux
-type: helm
-providerConfig:
-  chart: |
+helm:
+  rawChart: |
     H4sIFAAAAAAA/yk...
   values:
     foo: bar
