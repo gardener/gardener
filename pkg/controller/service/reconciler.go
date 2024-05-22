@@ -7,7 +7,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -142,7 +142,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				port.NodePort == nodePortIstioIngressGatewayZone2 {
 				var (
 					min, max    = 30000, 32767
-					newNodePort = int32(rand.Intn(max-min) + min)
+					newNodePort = int32(rand.N(max-min) + min)
 				)
 
 				log.Info("Assigning new nodePort to service which already allocates the nodePort",
