@@ -115,8 +115,7 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 						Regex:        `true`,
 						Action:       "drop",
 					}},
-					p.values.AdditionalAlertLabelReconfigs...,
-				),
+					p.values.AdditionalAlertRelabelConfigs...),
 			}},
 		}
 
