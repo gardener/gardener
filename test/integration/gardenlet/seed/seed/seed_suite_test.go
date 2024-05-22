@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -88,6 +89,7 @@ var _ = BeforeSuite(func() {
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddSeedSchemeToScheme,
 		gardencorev1beta1.AddToScheme,
+		seedmanagementv1alpha1.AddToScheme,
 	)
 	testScheme = runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())

@@ -6,6 +6,7 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -123,6 +124,7 @@ func (r *Reconciler) instantiateComponents(
 	globalMonitoringSecretSeed *corev1.Secret,
 	alertingSMTPSecret *corev1.Secret,
 	wildCardCertSecret *corev1.Secret,
+	isManagedSeed bool,
 ) (
 	c components,
 	err error,
@@ -217,7 +219,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.cachePrometheus, err = r.newCachePrometheus(log, seed)
+	c.cachePrometheus, err = r.newCachePrometheus(log, seed, isManagedSeed)
 	if err != nil {
 		return
 	}
@@ -583,7 +585,12 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 	)
 }
 
-func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (component.DeployWaiter, error) {
+func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isManagedSeed bool) (component.DeployWaiter, error) {
+	additionalScrapeConfigs, err := cacheprometheus.AdditionalScrapeConfigs(isManagedSeed)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
@@ -595,11 +602,14 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed) (co
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{
-			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(),
+			AdditionalScrapeConfigs: additionalScrapeConfigs,
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},
-		AdditionalResources: []client.Object{cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace)},
+		AdditionalResources: []client.Object{
+			cacheprometheus.NetworkPolicyToNodeExporter(r.GardenNamespace, seed.GetNodeCIDR()),
+			cacheprometheus.NetworkPolicyToKubelet(r.GardenNamespace, seed.GetNodeCIDR()),
+		},
 	})
 }
 
