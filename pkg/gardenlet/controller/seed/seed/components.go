@@ -6,6 +6,7 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -585,6 +586,11 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 }
 
 func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isManagedSeed bool) (component.DeployWaiter, error) {
+	additionalScrapeConfigs, err := cacheprometheus.AdditionalScrapeConfigs(isManagedSeed)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
+	}
+
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
@@ -596,7 +602,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isM
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
 		CentralConfigs: prometheus.CentralConfigs{
-			AdditionalScrapeConfigs: cacheprometheus.AdditionalScrapeConfigs(isManagedSeed),
+			AdditionalScrapeConfigs: additionalScrapeConfigs,
 			ServiceMonitors:         cacheprometheus.CentralServiceMonitors(),
 			PrometheusRules:         cacheprometheus.CentralPrometheusRules(),
 		},

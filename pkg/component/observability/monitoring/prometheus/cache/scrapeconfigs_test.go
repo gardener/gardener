@@ -15,7 +15,9 @@ var _ = Describe("PrometheusRules", func() {
 	Describe("#AdditionalScrapeConfigs", func() {
 		When("isManagedSeed", func() {
 			It("should return the expected objects  (with TLS verification skipped)", func() {
-				Expect(cache.AdditionalScrapeConfigs(true)).To(HaveExactElements(
+				result, err := cache.AdditionalScrapeConfigs(true)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(HaveExactElements(
 					`job_name: cadvisor
 honor_timestamps: false
 honor_labels: false
@@ -106,9 +108,12 @@ metric_relabel_configs:
 				))
 			})
 		})
+
 		When("not a ManagedSeed", func() {
 			It("should return the expected objects (with TLS verification enabled)", func() {
-				Expect(cache.AdditionalScrapeConfigs(false)).To(HaveExactElements(
+				result, err := cache.AdditionalScrapeConfigs(false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(HaveExactElements(
 					`job_name: cadvisor
 honor_timestamps: false
 honor_labels: false
