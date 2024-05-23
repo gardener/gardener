@@ -108,6 +108,11 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 		return errors.New("the shoot must have the nginx-ingress addon enabled")
 	}
 
+	ginkgo.By("Mark osc hash secret")
+	if err := t.MarkOSCSecret(ctx); err != nil {
+		return err
+	}
+
 	ginkgo.By("Create test Secret and Service Account")
 	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
 		return err
