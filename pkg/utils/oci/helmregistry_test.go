@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 )
@@ -22,6 +23,7 @@ var _ = Describe("helmregistry", func() {
 		rc  *recordingCache
 		ctx context.Context
 	)
+
 	BeforeEach(func() {
 		ctx = context.Background()
 		rc = &recordingCache{cache: newCache()}
@@ -33,8 +35,9 @@ var _ = Describe("helmregistry", func() {
 			Repository: registryAddress + "/charts/examplexxx",
 			Tag:        "0.1.0",
 		})
-		Expect(err).To(MatchError(ContainSubstring("failed to pull artifact")))
+		Expect(err).To(MatchError(ContainSubstring("failed get manifest from remote")))
 	})
+
 	It("should return error if the digest does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Repository: registryAddress + "/charts/examplexxx",
@@ -51,6 +54,7 @@ var _ = Describe("helmregistry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
 	})
+
 	It("should pull the chart by digest", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Repository: registryAddress + "/charts/example",
@@ -59,6 +63,7 @@ var _ = Describe("helmregistry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
 	})
+
 	It("should pull the chart with ref", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Ref: fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest),
@@ -79,6 +84,7 @@ var _ = Describe("helmregistry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(1))
 	})
+
 	It("should use the cache no matter if tag or digest is used", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Repository: registryAddress + "/charts/example",
@@ -146,7 +152,7 @@ var _ = Describe("buildRef", func() {
 func mustNewTag(s string) name.Tag {
 	t, err := name.NewTag(s)
 	if err != nil {
-		panic(err)
+		utilruntime.Must(err)
 	}
 	return t
 }
@@ -154,7 +160,7 @@ func mustNewTag(s string) name.Tag {
 func mustNewDigest(s string) name.Digest {
 	t, err := name.NewDigest(s)
 	if err != nil {
-		panic(err)
+		utilruntime.Must(err)
 	}
 	return t
 }

@@ -147,8 +147,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 	Context("responsible with OCI", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
-		})
-		BeforeEach(func() {
+
 			oci := &gardencorev1.OCIRepository{
 				Repository: "test",
 				Tag:        "0.1.0",
@@ -158,6 +157,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}
 			fakeRegistry.AddArtifact(oci, rawChart)
 		})
+
 		It("should deploy the chart", func() {
 			By("Ensure chart was deployed correctly")
 			values := make(map[string]any)
@@ -183,6 +183,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			))
 		})
 	})
+
 	Context("responsible", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))

@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -51,9 +52,12 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		remote.WithContext(ctx),
 	}
 
-	if key := cacheKeyFromRef(ref, remoteOpts...); key != "" {
-		blob, found := r.cache.Get(key)
-		if found {
+	key, err := cacheKeyFromRef(ref, remoteOpts...)
+	if err != nil {
+		return nil, err
+	}
+	if key != "" {
+		if blob, found := r.cache.Get(key); found {
 			return blob, nil
 		}
 	}
@@ -72,7 +76,7 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	if err != nil {
 		return nil, err
 	}
-	key := ref.Context().Digest(digest.String()).Name()
+	key = ref.Context().Digest(digest.String()).Name()
 	r.cache.Set(key, blob)
 
 	return blob, nil
@@ -96,23 +100,23 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 
 // cacheKeyFromRef returns "repo@sha256:digest". If the ref is not a digest, the remote repository is queried to
 // retrieve the digest pointed to by the ref.
-func cacheKeyFromRef(ref name.Reference, opts ...remote.Option) string {
+func cacheKeyFromRef(ref name.Reference, opts ...remote.Option) (string, error) {
 	if ref, ok := ref.(name.Digest); ok {
-		return ref.Name()
+		return ref.Name(), nil
 	}
 
 	var digest gcrv1.Hash
-	desc, err := remote.Head(ref, opts...)
-	if err == nil {
+	desc, hErr := remote.Head(ref, opts...)
+	if hErr == nil {
 		digest = desc.Digest
 	} else {
-		rd, err := remote.Get(ref, opts...)
-		if err != nil {
-			return ""
+		rd, gErr := remote.Get(ref, opts...)
+		if gErr != nil {
+			return "", fmt.Errorf("failed get manifest from remote trying to determine digest: %w", errors.Join(gErr, hErr))
 		}
 		digest = rd.Descriptor.Digest
 	}
-	return ref.Context().Digest(digest.String()).Name()
+	return ref.Context().Digest(digest.String()).Name(), nil
 }
 
 func extractHelmLayer(image gcrv1.Image) ([]byte, error) {
@@ -126,7 +130,6 @@ func extractHelmLayer(image gcrv1.Image) ([]byte, error) {
 	}
 
 	var layer gcrv1.Layer
-	found := false
 	for _, l := range layers {
 		mt, err := l.MediaType()
 		if err != nil {
@@ -134,11 +137,10 @@ func extractHelmLayer(image gcrv1.Image) ([]byte, error) {
 		}
 		if string(mt) == mediaTypeHelm {
 			layer = l
-			found = true
 			break
 		}
 	}
-	if !found {
+	if layer == nil {
 		return nil, fmt.Errorf("no helm layer found in artifact")
 	}
 	blob, err := layer.Compressed()

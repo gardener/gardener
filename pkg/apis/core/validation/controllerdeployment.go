@@ -59,6 +59,7 @@ func ValidateControllerDeploymentUpdate(new, _ *core.ControllerDeployment) field
 func validateHelmControllerDeployment(helmControllerDeployment *core.HelmControllerDeployment, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// XOR: either one or the other must be set.
 	if (len(helmControllerDeployment.RawChart) == 0) == (helmControllerDeployment.OCIRepository == nil) {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either rawChart or ociRepository"))
 	}
@@ -87,7 +88,7 @@ func validateOCIRepository(oci *core.OCIRepository, fldPath *field.Path) field.E
 			"digest":     oci.Digest,
 		} {
 			if val != "" {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child(name), val, fmt.Sprintf("cannot provide %s when ref is set", name)))
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child(name), fmt.Sprintf("cannot provide %s when ref is set", name)))
 			}
 		}
 		return allErrs

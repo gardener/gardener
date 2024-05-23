@@ -5,7 +5,7 @@
 package v1
 
 import (
-	strings "strings"
+	"strings"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,7 +69,8 @@ type OCIRepository struct {
 
 // GetURL returns the fully-qualified OCIRepository URL of the artifact.
 func (r *OCIRepository) GetURL() string {
-	ref := ""
+	var ref string
+
 	switch {
 	case r.Ref != "":
 		ref = r.Ref
@@ -79,7 +80,5 @@ func (r *OCIRepository) GetURL() string {
 	case r.Tag != "":
 		ref = r.Repository + ":" + r.Tag
 	}
-
-	ref = strings.TrimPrefix(ref, "oci://")
-	return ref
+	return strings.TrimPrefix(ref, "oci://")
 }

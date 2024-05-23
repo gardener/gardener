@@ -9,8 +9,8 @@ import "sync"
 var defaultCache = newCache()
 
 type cacher interface {
-	Get(k string) ([]byte, bool)
-	Set(k string, blob []byte)
+	Get(key string) ([]byte, bool)
+	Set(key string, blob []byte)
 }
 
 func newCache() *cache {
@@ -25,15 +25,15 @@ type cache struct {
 	items map[string][]byte
 }
 
-func (c *cache) Get(k string) ([]byte, bool) {
+func (c *cache) Get(key string) ([]byte, bool) {
 	c.mu.RLock()
-	blob, found := c.items[k]
+	blob, found := c.items[key]
 	c.mu.RUnlock()
 	return blob, found
 }
 
-func (c *cache) Set(k string, blob []byte) {
+func (c *cache) Set(key string, blob []byte) {
 	c.mu.Lock()
-	c.items[k] = blob
+	c.items[key] = blob
 	c.mu.Unlock()
 }

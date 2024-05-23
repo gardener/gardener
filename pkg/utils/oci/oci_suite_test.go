@@ -14,14 +14,14 @@ import (
 	"github.com/distribution/distribution/v3/registry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	helmRegistry "helm.sh/helm/v3/pkg/registry"
+	helmregistry "helm.sh/helm/v3/pkg/registry"
 
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func TestUtils(t *testing.T) {
+func TestOCI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OCI Suite")
+	RunSpecs(t, "Utils OCI Suite")
 }
 
 var (
@@ -39,7 +39,7 @@ var _ = BeforeSuite(func() {
 	registryAddress, err = startTestRegistry(ctx)
 	Expect(err).NotTo(HaveOccurred())
 
-	c, err := helmRegistry.NewClient()
+	c, err := helmregistry.NewClient()
 	Expect(err).NotTo(HaveOccurred())
 	rawChart, err = os.ReadFile("./testdata/example-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
@@ -57,13 +57,12 @@ func startTestRegistry(ctx context.Context) (string, error) {
 		return "", err
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	config.HTTP.Addr = registryAddress
+	config.HTTP.Addr = addr
 	config.HTTP.DrainTimeout = 3 * time.Second
 
 	// setup logger options
 	config.Log.AccessLog.Disabled = true
 	config.Log.Level = "error"
-	// logrus.SetOutput(io.Discard)
 
 	reg, err := registry.NewRegistry(ctx, config)
 	if err != nil {

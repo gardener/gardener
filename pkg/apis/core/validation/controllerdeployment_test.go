@@ -79,161 +79,157 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 		}))))
 	})
 
-	It("helm type: should not allow both rawChart and OCIRepository", func() {
-		controllerDeployment.Helm = &HelmControllerDeployment{
-			RawChart: []byte("foo"),
-			OCIRepository: &OCIRepository{
-				Ref: "foo",
-			},
-		}
-		Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Type":   Equal(field.ErrorTypeRequired),
-			"Detail": Equal("must provide either rawChart or ociRepository"),
-		}))))
-	})
-
-	Context("helm type with rawChart", func() {
+	Context("helm type", func() {
 		BeforeEach(func() {
 			controllerDeployment.Helm = &HelmControllerDeployment{
-				RawChart: []byte("foo"),
 				Values: &apiextensionsv1.JSON{
 					Raw: []byte(`{"foo":["bar","baz"]}`),
 				},
 			}
 		})
 
-		It("should allow a valid helm deployment configuration", func() {
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
-		})
-
-		It("should forbid setting type", func() {
-			controllerDeployment.Type = "helm"
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("type"),
-				"Detail": ContainSubstring("if a built-in deployment type (helm) is used"),
-			}))))
-		})
-
-		It("should forbid setting providerConfig", func() {
-			controllerDeployment.ProviderConfig = &runtime.Unknown{}
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("providerConfig"),
-				"Detail": ContainSubstring("if a built-in deployment type (helm) is used"),
-			}))))
-		})
-
-		It("should require setting rawChart", func() {
-			controllerDeployment.Helm.RawChart = nil
-
+		It("should not allow both rawChart and OCIRepository", func() {
+			controllerDeployment.Helm = &HelmControllerDeployment{
+				RawChart: []byte("foo"),
+				OCIRepository: &OCIRepository{
+					Ref: "foo",
+				},
+			}
 			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("helm"),
-				"Detail": ContainSubstring("must provide either"),
+				"Detail": Equal("must provide either rawChart or ociRepository"),
 			}))))
 		})
-	})
 
-	Context("helm type with ociRepository", func() {
-		BeforeEach(func() {
-			controllerDeployment.Helm = &HelmControllerDeployment{
-				OCIRepository: &OCIRepository{
+		Context("with rawChart", func() {
+			BeforeEach(func() {
+				controllerDeployment.Helm.RawChart = []byte("foo")
+			})
+
+			It("should allow a valid helm deployment configuration", func() {
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
+			})
+
+			It("should forbid setting type", func() {
+				controllerDeployment.Type = "helm"
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("type"),
+					"Detail": ContainSubstring("if a built-in deployment type (helm) is used"),
+				}))))
+			})
+
+			It("should forbid setting providerConfig", func() {
+				controllerDeployment.ProviderConfig = &runtime.Unknown{}
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("providerConfig"),
+					"Detail": ContainSubstring("if a built-in deployment type (helm) is used"),
+				}))))
+			})
+
+			It("should require setting rawChart", func() {
+				controllerDeployment.Helm.RawChart = nil
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("helm"),
+					"Detail": ContainSubstring("must provide either"),
+				}))))
+			})
+		})
+
+		Context("with ociRepository", func() {
+			BeforeEach(func() {
+				controllerDeployment.Helm.OCIRepository = &OCIRepository{
 					Repository: "foo",
 					Tag:        "1.0.0",
 					Digest:     "sha256:foo",
-				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"foo":["bar","baz"]}`),
-				},
-			}
+				}
+			})
+
+			It("should allow a valid helm deployment configuration", func() {
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
+			})
+
+			It("should validate required oci URL", func() {
+				controllerDeployment.Helm.OCIRepository.Repository = ""
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("helm.ociRepository.repository"),
+				}))))
+			})
+
+			It("should require either tag or digest", func() {
+				controllerDeployment.Helm.OCIRepository.Tag = ""
+				controllerDeployment.Helm.OCIRepository.Digest = ""
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("helm.ociRepository"),
+					"Detail": ContainSubstring("must provide either"),
+				}))))
+			})
+
+			It("should validate required oci URL", func() {
+				controllerDeployment.Helm.OCIRepository.Digest = "invalid"
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("helm.ociRepository.digest"),
+				}))))
+			})
+
+			It("should require setting ociRepository", func() {
+				controllerDeployment.Helm.OCIRepository = nil
+
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("helm"),
+				}))))
+			})
 		})
 
-		It("should allow a valid helm deployment configuration", func() {
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
-		})
-
-		It("should validate required oci URL", func() {
-			controllerDeployment.Helm.OCIRepository.Repository = ""
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("helm.ociRepository.repository"),
-			}))))
-		})
-
-		It("should require either tag or digest", func() {
-			controllerDeployment.Helm.OCIRepository.Tag = ""
-			controllerDeployment.Helm.OCIRepository.Digest = ""
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("helm.ociRepository"),
-				"Detail": ContainSubstring("must provide either"),
-			}))))
-		})
-
-		It("should validate required oci URL", func() {
-			controllerDeployment.Helm.OCIRepository.Digest = "invalid"
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("helm.ociRepository.digest"),
-			}))))
-		})
-
-		It("should require setting ociRepository", func() {
-			controllerDeployment.Helm.OCIRepository = nil
-
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("helm"),
-			}))))
-		})
-	})
-
-	Context("helm type with ociRepository", func() {
-		BeforeEach(func() {
-			controllerDeployment.Helm = &HelmControllerDeployment{
-				OCIRepository: &OCIRepository{
+		Context("with ociRepository.ref", func() {
+			BeforeEach(func() {
+				controllerDeployment.Helm.OCIRepository = &OCIRepository{
 					Ref: "foo:v1.0.0",
-				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"foo":["bar","baz"]}`),
-				},
-			}
-		})
+				}
+			})
 
-		It("should allow a valid helm deployment configuration", func() {
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
-		})
+			It("should allow a valid helm deployment configuration", func() {
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(BeEmpty())
+			})
 
-		It("should not allow fields other than ref", func() {
-			controllerDeployment.Helm.OCIRepository.Repository = "foo"
-			controllerDeployment.Helm.OCIRepository.Digest = "foo"
-			controllerDeployment.Helm.OCIRepository.Tag = "foo"
+			It("should not allow fields other than ref", func() {
+				controllerDeployment.Helm.OCIRepository.Repository = "foo"
+				controllerDeployment.Helm.OCIRepository.Digest = "foo"
+				controllerDeployment.Helm.OCIRepository.Tag = "foo"
 
-			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("helm.ociRepository.repository"),
-					"Detail": ContainSubstring("when ref is set"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("helm.ociRepository.tag"),
-					"Detail": ContainSubstring("when ref is set"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("helm.ociRepository.digest"),
-					"Detail": ContainSubstring("when ref is set"),
-				})),
-			))
+				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("helm.ociRepository.repository"),
+						"Detail": ContainSubstring("when ref is set"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("helm.ociRepository.tag"),
+						"Detail": ContainSubstring("when ref is set"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("helm.ociRepository.digest"),
+						"Detail": ContainSubstring("when ref is set"),
+					})),
+				))
+			})
 		})
 	})
+
 	Context("custom type", func() {
 		BeforeEach(func() {
 			controllerDeployment.Helm = nil

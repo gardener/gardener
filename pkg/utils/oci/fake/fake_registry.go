@@ -28,7 +28,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Pull implements registry.Interface
+// Pull implements oci.Interface
 func (r *Registry) Pull(_ context.Context, oci *gardencorev1.OCIRepository) ([]byte, error) {
 	data, ok := r.artifacts[artifactKey(oci)]
 	if !ok {
