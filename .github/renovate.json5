@@ -187,6 +187,12 @@
       "enabled": false
     },
     {
+      // Add PR footer with release notes for docker releases.
+      "matchDatasources": ["docker"],
+      "matchFileNames": ["imagevector/**"],
+      "prFooter": "```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```"
+    },
+    {
       // Add PR footer with release notes link for github-releases.
       "matchDatasources": ["github-releases"],
       "matchFileNames": ["imagevector/**"],
