@@ -187,13 +187,9 @@
       "enabled": false
     },
     {
-      // Add PR footer with release notes link for gardener/dashboard and gardener/terminal-controller-manager.
-      "matchDatasources": ["docker", "github-releases"],
+      // Add PR footer with release notes link for github-releases.
+      "matchDatasources": ["github-releases"],
       "matchFileNames": ["imagevector/**"],
-      "matchPackagePatterns": [
-        "gardener/dashboard",
-        "gardener/terminal-controller-manager"
-      ],
       "prFooter": "```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```"
     }
   ]
