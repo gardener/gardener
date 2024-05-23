@@ -224,7 +224,7 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 		now         = m.clock.Now().UTC()
 	)
 
-	// Renew if 80% of the validity or if the secret expires in less than 10d.
+	// Renew if 80% of the validity has been reached or if the secret expires in less than 10d.
 	return now.After(renewAt) || now.After(validUntil.Add(-10*24*time.Hour)), nil
 }
 
