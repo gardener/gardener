@@ -22,6 +22,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   - `IgnoreOldSecrets()`: This specifies that old secrets should not be considered and loaded (contrary to the default behavior). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)). Such old secrets will be deleted on `Cleanup()`.
   - `IgnoreOldSecretsAfter(time.Duration)`: This specifies that old secrets should not be considered and loaded once a given duration after rotation has passed. It can be used to clean up old secrets after automatic rotation (e.g. the Seed cluster CA is automatically rotated when its validity will soon end and the old CA will be cleaned up 24 hours after triggering the rotation).
   - `Validity(time.Duration)`: This specifies how long the secret should be valid. For certificate secret configurations, the manager will automatically deduce this information from the generated certificate.
+  - `RenewAfterValidityPercentage(int)`: This specifies the percentage of validity for renewal. The secret will be renewed based on whichever comes first: The specified percentage of validity or 10 days before end of validity. If not specified, the default percentage is `80`.
 
 - `Get(string, ...GetOption) (*corev1.Secret, bool)`
 
