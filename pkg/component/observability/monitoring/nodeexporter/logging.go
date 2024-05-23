@@ -26,16 +26,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   daemonsetName,
+				Name:   name,
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", daemonsetName, daemonsetName),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", name, name),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      daemonsetName + "-parser",
+							Parser:      name + "-parser",
 							ReserveData: ptr.To(true),
 						},
 					},
@@ -49,7 +49,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 	return []*fluentbitv1alpha2.ClusterParser{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   daemonsetName + "-parser",
+				Name:   name + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{

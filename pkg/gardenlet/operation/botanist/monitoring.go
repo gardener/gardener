@@ -323,20 +323,7 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 			b.Shoot.Components.ControlPlane.KubeScheduler,
 			b.Shoot.Components.ControlPlane.MachineControllerManager,
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
-			b.Shoot.Components.SystemComponents.BlackboxExporter,
-			b.Shoot.Components.SystemComponents.CoreDNS,
-			b.Shoot.Components.SystemComponents.KubeProxy,
-			b.Shoot.Components.SystemComponents.NodeExporter,
-			b.Shoot.Components.SystemComponents.VPNShoot,
 		)
-
-		if b.ShootUsesDNS() {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
-		}
-
-		if b.Shoot.NodeLocalDNSEnabled {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
-		}
 
 		if b.Shoot.WantsClusterAutoscaler {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -32,21 +34,21 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
-	// clusterProportionalDNSAutoscalerLabelValue is the value of a label used for the identification of the
-	// cluster proportional DNS autoscaler.
-	clusterProportionalDNSAutoscalerLabelValue = "coredns-autoscaler"
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-coredns"
 	// DeploymentName is the name of the coredns Deployment.
 	DeploymentName = "coredns"
-	// clusterProportionalAutoscalerDeploymentName is the name of the cluster proportional autoscaler deployment.
+
 	clusterProportionalAutoscalerDeploymentName = "coredns-autoscaler"
+	clusterProportionalDNSAutoscalerLabelValue  = "coredns-autoscaler"
+	managedResourceName                         = "shoot-core-coredns"
 
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
@@ -64,7 +66,6 @@ const (
 // Interface contains functions for a CoreDNS deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	SetPodAnnotations(map[string]string)
 	SetNodeNetworkCIDR(*string)
 }
@@ -119,16 +120,84 @@ type coreDNS struct {
 }
 
 func (c *coreDNS) Deploy(ctx context.Context) error {
+	scrapeConfig := c.emptyScrapeConfig()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			"coredns",
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:             "endpoints",
+				ServiceName:      serviceName,
+				EndpointPortName: portNameMetrics,
+			},
+			"coredns_build_info",
+			"coredns_cache_entries",
+			"coredns_cache_hits_total",
+			"coredns_cache_misses_total",
+			"coredns_dns_request_duration_seconds_count",
+			"coredns_dns_request_duration_seconds_bucket",
+			"coredns_dns_requests_total",
+			"coredns_dns_responses_total",
+			"coredns_forward_requests_total",
+			"coredns_forward_responses_total",
+			"coredns_kubernetes_dns_programming_duration_seconds_bucket",
+			"coredns_kubernetes_dns_programming_duration_seconds_count",
+			"coredns_kubernetes_dns_programming_duration_seconds_sum",
+			"process_max_fds",
+			"process_open_fds",
+		)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	prometheusRule := c.emptyPrometheusRule()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "coredns.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Alert: "CoreDNSDown",
+						Expr:  intstr.FromString(`absent(up{job="coredns"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("20m")),
+						Labels: map[string]string{
+							"service":    serviceName,
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "all",
+						},
+						Annotations: map[string]string{
+							"description": "CoreDNS could not be found. Cluster DNS resolution will not work.",
+							"summary":     "CoreDNS is down",
+						},
+					},
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := c.computeResourcesData()
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (c *coreDNS) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, c.client, c.namespace, ManagedResourceName)
+	if err := kubernetesutils.DeleteObjects(ctx, c.client,
+		c.emptyScrapeConfig(),
+		c.emptyPrometheusRule(),
+	); err != nil {
+		return err
+	}
+
+	return managedresources.DeleteForShoot(ctx, c.client, c.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -139,14 +208,14 @@ func (c *coreDNS) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, managedResourceName)
 }
 
 func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, managedResourceName)
 }
 
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
@@ -721,6 +790,14 @@ func (c *coreDNS) SetPodAnnotations(v map[string]string) {
 
 func (c *coreDNS) SetNodeNetworkCIDR(nodes *string) {
 	c.values.NodeNetworkCIDR = nodes
+}
+
+func (c *coreDNS) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("coredns", c.namespace, shoot.Label)}
+}
+
+func (c *coreDNS) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("coredns", c.namespace, shoot.Label)}
 }
 
 func getLabels() map[string]string {

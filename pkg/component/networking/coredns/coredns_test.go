@@ -11,8 +11,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -583,6 +586,108 @@ spec:
     updateMode: Auto
 status: {}
 `
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-coredns",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				Scheme:      ptr.To("HTTPS"),
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+					Key:                  "token",
+				}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					APIServer:  ptr.To("https://kube-apiserver"),
+					Role:       "endpoints",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("coredns"),
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
+						Action:       "keep",
+						Regex:        "kube-dns;metrics",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+						TargetLabel:  "pod",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  "node",
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To("kube-apiserver:443"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
+						Regex:        `(.+);(.+)`,
+						TargetLabel:  "__metrics_path__",
+						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(coredns_build_info|coredns_cache_entries|coredns_cache_hits_total|coredns_cache_misses_total|coredns_dns_request_duration_seconds_count|coredns_dns_request_duration_seconds_bucket|coredns_dns_requests_total|coredns_dns_responses_total|coredns_forward_requests_total|coredns_forward_responses_total|coredns_kubernetes_dns_programming_duration_seconds_bucket|coredns_kubernetes_dns_programming_duration_seconds_count|coredns_kubernetes_dns_programming_duration_seconds_sum|process_max_fds|process_open_fds)$`,
+				}},
+			},
+		}
+
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-coredns",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "coredns.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "CoreDNSDown",
+							Expr:  intstr.FromString(`absent(up{job="coredns"} == 1)`),
+							For:   ptr.To(monitoringv1.Duration("20m")),
+							Labels: map[string]string{
+								"service":    "kube-dns",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "all",
+							},
+							Annotations: map[string]string{
+								"description": "CoreDNS could not be found. Cluster DNS resolution will not work.",
+								"summary":     "CoreDNS is down",
+							},
+						},
+					},
+				}},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -700,6 +805,14 @@ status: {}
 			if !cpaEnabled {
 				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAML))
 			}
+
+			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+
+			actualPrometheusRule := &monitoringv1.PrometheusRule{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 		})
 
 		Context("w/o apiserver host, w/o pod annotations", func() {
@@ -801,16 +914,20 @@ status: {}
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			scrapeConfig.ResourceVersion = ""
+			prometheusRule.ResourceVersion = ""
+
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 		})
 	})
 

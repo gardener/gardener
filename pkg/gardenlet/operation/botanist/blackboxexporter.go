@@ -20,7 +20,7 @@ import (
 )
 
 // DefaultBlackboxExporterControlPlane returns a deployer for the blackbox-exporter.
-func (b *Botanist) DefaultBlackboxExporterControlPlane() (blackboxexporter.Interface, error) {
+func (b *Botanist) DefaultBlackboxExporterControlPlane() (component.DeployWaiter, error) {
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
@@ -55,7 +55,7 @@ func (b *Botanist) ReconcileBlackboxExporterControlPlane(ctx context.Context) er
 }
 
 // DefaultBlackboxExporterCluster returns a deployer for the blackbox-exporter.
-func (b *Botanist) DefaultBlackboxExporterCluster() (blackboxexporter.Interface, error) {
+func (b *Botanist) DefaultBlackboxExporterCluster() (component.DeployWaiter, error) {
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
@@ -72,6 +72,8 @@ func (b *Botanist) DefaultBlackboxExporterCluster() (blackboxexporter.Interface,
 			},
 			PriorityClassName: "system-cluster-critical",
 			Config:            clusterblackboxexporter.Config(),
+			ScrapeConfigs:     clusterblackboxexporter.ScrapeConfig(b.Shoot.SeedNamespace),
+			PrometheusRules:   clusterblackboxexporter.PrometheusRule(b.Shoot.SeedNamespace),
 			Replicas:          1,
 		},
 	)

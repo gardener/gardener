@@ -12,8 +12,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,6 +107,123 @@ var _ = Describe("KubeProxy", func() {
 					},
 				},
 			}
+		}
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-kube-proxy",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				Scheme:      ptr.To("HTTPS"),
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+					Key:                  "token",
+				}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					APIServer:  ptr.To("https://kube-apiserver"),
+					Role:       "endpoints",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("kube-proxy"),
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
+						Action:       "keep",
+						Regex:        "kube-proxy;metrics",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+						TargetLabel:  "pod",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  "node",
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To("kube-apiserver:443"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
+						Regex:        `(.+);(.+)`,
+						TargetLabel:  "__metrics_path__",
+						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(kubeproxy_network_programming_duration_seconds_bucket|kubeproxy_network_programming_duration_seconds_count|kubeproxy_network_programming_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_count|kubeproxy_sync_proxy_rules_duration_seconds_sum)$`,
+				}},
+			},
+		}
+
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-kube-proxy",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "kube-proxy.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Record: "kubeproxy_network_latency:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.99"},
+						},
+						{
+							Record: "kubeproxy_network_latency:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.9"},
+						},
+						{
+							Record: "kubeproxy_network_latency:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.5"},
+						},
+						{
+							Record: "kubeproxy_sync_proxy:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.99"},
+						},
+						{
+							Record: "kubeproxy_sync_proxy:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.9"},
+						},
+						{
+							Record: "kubeproxy_sync_proxy:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+							Labels: map[string]string{"quantile": "0.5"},
+						},
+					},
+				}},
+			},
 		}
 	)
 
@@ -756,6 +876,14 @@ status: {}
 				expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
 				Expect(managedResource).To(DeepEqual(expectedPoolMr))
+
+				actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+				Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+
+				actualPrometheusRule := &monitoringv1.PrometheusRule{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+				Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 			}
 		})
 
@@ -984,6 +1112,11 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			}
 
+			scrapeConfig.ResourceVersion = ""
+			prometheusRule.ResourceVersion = ""
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
+
 			Expect(component.Destroy(ctx)).To(Succeed())
 
 			for _, pool := range values.WorkerPools {
@@ -1001,6 +1134,9 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(BeNotFoundError())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 		})
 	})
 

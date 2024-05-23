@@ -6,13 +6,14 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/imagevector"
+	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
-func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
+func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

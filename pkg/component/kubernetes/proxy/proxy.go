@@ -10,14 +10,22 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -55,7 +63,6 @@ func New(
 // Interface is an interface for managing kube-proxy DaemonSets.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// DeleteStaleResources deletes no longer required ManagedResource from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all no longer required ManagedResource are cleaned up.
@@ -107,6 +114,73 @@ type WorkerPool struct {
 }
 
 func (k *kubeProxy) Deploy(ctx context.Context) error {
+	scrapeConfig := k.emptyScrapeConfig()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			"kube-proxy",
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:             "endpoints",
+				ServiceName:      serviceName,
+				EndpointPortName: portNameMetrics,
+			},
+			"kubeproxy_network_programming_duration_seconds_bucket",
+			"kubeproxy_network_programming_duration_seconds_count",
+			"kubeproxy_network_programming_duration_seconds_sum",
+			"kubeproxy_sync_proxy_rules_duration_seconds_bucket",
+			"kubeproxy_sync_proxy_rules_duration_seconds_count",
+			"kubeproxy_sync_proxy_rules_duration_seconds_sum",
+		)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	prometheusRule := k.emptyPrometheusRule()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "kube-proxy.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Record: "kubeproxy_network_latency:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.99"},
+					},
+					{
+						Record: "kubeproxy_network_latency:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.9"},
+					},
+					{
+						Record: "kubeproxy_network_latency:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.5"},
+					},
+					{
+						Record: "kubeproxy_sync_proxy:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.99"},
+					},
+					{
+						Record: "kubeproxy_sync_proxy:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.9"},
+					},
+					{
+						Record: "kubeproxy_sync_proxy:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Labels: map[string]string{"quantile": "0.5"},
+					},
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := k.computeCentralResourcesData()
 	if err != nil {
 		return err
@@ -151,6 +225,13 @@ func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[strin
 }
 
 func (k *kubeProxy) Destroy(ctx context.Context) error {
+	if err := kubernetesutils.DeleteObjects(ctx, k.client,
+		k.emptyScrapeConfig(),
+		k.emptyPrometheusRule(),
+	); err != nil {
+		return err
+	}
+
 	return k.forEachExistingManagedResource(ctx, false, labelSelectorManagedResourcesAll, func(ctx context.Context, managedResource resourcesv1alpha1.ManagedResource) error {
 		return managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResource.Name)
 	})
@@ -258,6 +339,14 @@ func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]stri
 	}
 
 	return false
+}
+
+func (k *kubeProxy) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-proxy", k.namespace, shoot.Label)}
+}
+
+func (k *kubeProxy) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-proxy", k.namespace, shoot.Label)}
 }
 
 func getManagedResourceLabels(pool *WorkerPool, useMajorMinorVersionOnly *bool) map[string]string {

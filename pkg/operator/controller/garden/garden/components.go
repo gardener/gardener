@@ -130,7 +130,7 @@ type components struct {
 	alertManager                  alertmanager.Interface
 	prometheusGarden              prometheus.Interface
 	prometheusLongTerm            prometheus.Interface
-	blackboxExporter              blackboxexporter.Interface
+	blackboxExporter              component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -1284,7 +1284,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 	})
 }
 
-func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (blackboxexporter.Interface, error) {
+func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var (
 		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
 		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")

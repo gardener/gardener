@@ -37,15 +37,11 @@ import (
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
-	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
-	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
@@ -158,24 +154,24 @@ type Extensions struct {
 // SystemComponents contains references to system components.
 type SystemComponents struct {
 	APIServerProxy      apiserverproxy.Interface
-	BlackboxExporter    blackboxexporter.Interface
+	BlackboxExporter    component.DeployWaiter
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
 	KubeProxy           kubeproxy.Interface
 	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
-	NodeLocalDNS        nodelocaldns.Interface
+	NodeLocalDNS        component.DeployWaiter
 	NodeProblemDetector component.DeployWaiter
-	NodeExporter        nodeexporter.Interface
+	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
-	VPNShoot            vpnshoot.Interface
+	VPNShoot            component.DeployWaiter
 }
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
 	Alertmanager     alertmanager.Interface
 	Prometheus       prometheus.Interface
-	BlackboxExporter blackboxexporter.Interface
+	BlackboxExporter component.DeployWaiter
 }
 
 // Logging contains references to logging deployers.

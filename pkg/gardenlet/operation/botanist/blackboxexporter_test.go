@@ -15,7 +15,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/mock"
+	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -68,14 +68,14 @@ var _ = Describe("BlackboxExporter", func() {
 
 	Describe("#ReconcileBlackboxExporterCluster", func() {
 		var (
-			blackboxExporter *mockblackboxexporter.MockInterface
+			blackboxExporter *mockcomponent.MockDeployWaiter
 
 			ctx     = context.TODO()
 			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {
-			blackboxExporter = mockblackboxexporter.NewMockInterface(ctrl)
+			blackboxExporter = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{

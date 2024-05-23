@@ -10,6 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -89,6 +91,89 @@ metadata:
   name: apiserver-proxy
   namespace: kube-system
 `
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-apiserver-proxy",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				Scheme:      ptr.To("HTTPS"),
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+					Key:                  "token",
+				}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					APIServer:  ptr.To("https://kube-apiserver"),
+					Role:       "endpoints",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("apiserver-proxy"),
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
+						Action:       "keep",
+						Regex:        "apiserver-proxy;metrics",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+						TargetLabel:  "pod",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  "node",
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To("kube-apiserver:443"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
+						Regex:        `(.+);(.+)`,
+						TargetLabel:  "__metrics_path__",
+						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(envoy_cluster_bind_errors|envoy_cluster_lb_healthy_panic|envoy_cluster_update_attempt|envoy_cluster_update_failure|envoy_cluster_upstream_cx_connect_ms_bucket|envoy_cluster_upstream_cx_length_ms_bucket|envoy_cluster_upstream_cx_none_healthy|envoy_cluster_upstream_cx_rx_bytes_total|envoy_cluster_upstream_cx_tx_bytes_total|envoy_listener_downstream_cx_destroy|envoy_listener_downstream_cx_length_ms_bucket|envoy_listener_downstream_cx_overflow|envoy_listener_downstream_cx_total|envoy_tcp_downstream_cx_no_route|envoy_tcp_downstream_cx_rx_bytes_total|envoy_tcp_downstream_cx_total|envoy_tcp_downstream_cx_tx_bytes_total)$`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"envoy_cluster_name"},
+						Regex:        `^uds_admin$`,
+						Action:       "drop",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"envoy_listener_address"},
+						Regex:        `^^0.0.0.0_16910$`,
+						Action:       "drop",
+					},
+				},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -168,6 +253,10 @@ metadata:
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(getDaemonSetYAML(hash, advertiseIPAddress)))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
+
+			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
 		}
 
 		Context("IPv4", func() {
@@ -190,11 +279,15 @@ metadata:
 
 	Describe("#Destroy", func() {
 		It("should successfully delete all the resources", func() {
+			scrapeConfig.ResourceVersion = ""
+
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 		})

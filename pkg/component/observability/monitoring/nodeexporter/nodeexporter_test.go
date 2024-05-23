@@ -9,8 +9,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +45,199 @@ var _ = Describe("NodeExporter", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-node-exporter",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				Scheme:      ptr.To("HTTPS"),
+				TLSConfig:   &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+					Key:                  "token",
+				}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					APIServer:  ptr.To("https://kube-apiserver"),
+					Role:       "endpoints",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: ptr.To("node-exporter"),
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("shoot"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
+						Action:       "keep",
+						Regex:        "node-exporter;metrics",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
+						TargetLabel:  "pod",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  "node",
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To("kube-apiserver:443"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_port_number"},
+						Regex:        `(.+);(.+)`,
+						TargetLabel:  "__metrics_path__",
+						Replacement:  ptr.To("/api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(node_boot_time_seconds|node_cpu_seconds_total|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_weighted_seconds_total|node_disk_io_time_seconds_total|node_disk_write_time_seconds_total|node_disk_writes_completed_total|node_disk_read_time_seconds_total|node_disk_reads_completed_total|node_filesystem_avail_bytes|node_filesystem_files|node_filesystem_files_free|node_filesystem_free_bytes|node_filesystem_readonly|node_filesystem_size_bytes|node_load1|node_load15|node_load5|node_memory_.+|node_nf_conntrack_.+|node_scrape_collector_duration_seconds|node_scrape_collector_success|process_max_fds|process_open_fds)$`,
+				}},
+			},
+		}
+
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-node-exporter",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "node-exporter.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "NodeExporterDown",
+							Expr:  intstr.FromString(`absent(up{job="node-exporter"} == 1)`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "warning",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"summary":     "NodeExporter, down or unreachable",
+								"description": "The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.",
+							},
+						},
+						{
+							Alert: "K8SNodeOutOfDisk",
+							Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"summary":     "Node ran out of disk space.",
+								"description": "Node {{$labels.node}} has run out of disk space.",
+							},
+						},
+						{
+							Alert: "K8SNodeMemoryPressure",
+							Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "warning",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"summary":     "Node is under memory pressure.",
+								"description": "Node {{$labels.node}} is under memory pressure.",
+							},
+						},
+						{
+							Alert: "K8SNodeDiskPressure",
+							Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "warning",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"summary":     "Node is under disk pressure.",
+								"description": "Node {{$labels.node}} is under disk pressure.",
+							},
+						},
+						{
+							Record: "instance:conntrack_entries_usage:percent",
+							Expr:   intstr.FromString(`(node_nf_conntrack_entries / node_nf_conntrack_entries_limit) * 100`),
+						},
+						{
+							Alert: "VMRootfsFull",
+							Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"description": "Root filesystem device on instance{{$labels.instance}} is almost full.",
+								"summary":     "Node's root filesystem is almost full",
+							},
+						},
+						{
+							Alert: "VMConntrackTableFull",
+							Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
+							For:   ptr.To(monitoringv1.Duration("1h")),
+							Labels: map[string]string{
+								"service":    "node-exporter",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "owner",
+							},
+							Annotations: map[string]string{
+								"description": "The nf_conntrack table is {{$value}}% full.",
+								"summary":     "Number of tracked connections is near the limit",
+							},
+						},
+						{
+							Record: "shoot:kube_node_info:count",
+							Expr:   intstr.FromString(`count(kube_node_info{type="shoot"})`),
+						},
+						// This recording rule creates a series for nodes with less than 5% free inodes on a not read only mount point.
+						// The series exists only if there are less than 5% free inodes,
+						// to keep the cardinality of these federated metrics manageable.
+						// Otherwise, we would get a series for each node in each shoot in the federating Prometheus.
+						{
+							Record: "shoot:node_filesystem_files_free:percent",
+							Expr:   intstr.FromString(`sum by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files * 100 < 5 and node_filesystem_readonly == 0)`),
+						},
+					},
+				}},
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -260,6 +456,14 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
+
+			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+
+			actualPrometheusRule := &monitoringv1.PrometheusRule{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 		})
 
 		Context("VPA disabled", func() {
@@ -286,11 +490,15 @@ status: {}
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			scrapeConfig.ResourceVersion = ""
+			prometheusRule.ResourceVersion = ""
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 		})

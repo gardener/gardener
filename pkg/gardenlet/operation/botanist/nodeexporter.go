@@ -8,12 +8,13 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/imagevector"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultNodeExporter returns a deployer for the NodeExporter.
-func (b *Botanist) DefaultNodeExporter() (nodeexporter.Interface, error) {
+func (b *Botanist) DefaultNodeExporter() (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNodeExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

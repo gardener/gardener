@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,36 +24,31 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-node-exporter"
-	// labelValue is the value of a label used for the identification of node-exporter pods.
-	labelValue = "node-exporter"
+	managedResourceName = "shoot-core-node-exporter"
+	name                = "node-exporter"
 
 	labelKeyComponent = "component"
-	serviceName       = "node-exporter"
-	daemonsetName     = "node-exporter"
-	containerName     = "node-exporter"
+	labelValue        = "node-exporter"
 
-	portNameMetrics     = "metrics"
-	portMetrics         = int32(16909)
-	volumeNameHost      = "host"
-	volumeMountPathHost = "/host"
+	portNameMetrics = "metrics"
+	portMetrics     = int32(16909)
 
+	volumeNameHost                   = "host"
+	volumeMountPathHost              = "/host"
 	volumeNameTextFileCollector      = "textfile"
 	volumeMountPathTextFileCollector = "/textfile-collector"
-	hostPathTextFileCollector        = "/var/lib/node-exporter/textfile-collector"
-)
 
-// Interface contains functions for a node-exporter deployer.
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
+	hostPathTextFileCollector = "/var/lib/node-exporter/textfile-collector"
+)
 
 // Values is a set of configuration values for the node-exporter component.
 type Values struct {
@@ -66,7 +63,7 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
-) Interface {
+) component.DeployWaiter {
 	return &nodeExporter{
 		client:    client,
 		namespace: namespace,
@@ -81,15 +78,184 @@ type nodeExporter struct {
 }
 
 func (n *nodeExporter) Deploy(ctx context.Context) error {
+	scrapeConfig := n.emptyScrapeConfig()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			name,
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:             "endpoints",
+				ServiceName:      name,
+				EndpointPortName: portNameMetrics,
+			},
+			"node_boot_time_seconds",
+			"node_cpu_seconds_total",
+			"node_disk_read_bytes_total",
+			"node_disk_written_bytes_total",
+			"node_disk_io_time_weighted_seconds_total",
+			"node_disk_io_time_seconds_total",
+			"node_disk_write_time_seconds_total",
+			"node_disk_writes_completed_total",
+			"node_disk_read_time_seconds_total",
+			"node_disk_reads_completed_total",
+			"node_filesystem_avail_bytes",
+			"node_filesystem_files",
+			"node_filesystem_files_free",
+			"node_filesystem_free_bytes",
+			"node_filesystem_readonly",
+			"node_filesystem_size_bytes",
+			"node_load1",
+			"node_load15",
+			"node_load5",
+			"node_memory_.+",
+			"node_nf_conntrack_.+",
+			"node_scrape_collector_duration_seconds",
+			"node_scrape_collector_success",
+			"process_max_fds",
+			"process_open_fds",
+		)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	prometheusRule := n.emptyPrometheusRule()
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "node-exporter.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Alert: "NodeExporterDown",
+						Expr:  intstr.FromString(`absent(up{job="` + name + `"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "warning",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"summary":     "NodeExporter, down or unreachable",
+							"description": "The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.",
+						},
+					},
+					{
+						Alert: "K8SNodeOutOfDisk",
+						Expr:  intstr.FromString(`kube_node_status_condition{condition="OutOfDisk", status="true"} == 1`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"summary":     "Node ran out of disk space.",
+							"description": "Node {{$labels.node}} has run out of disk space.",
+						},
+					},
+					{
+						Alert: "K8SNodeMemoryPressure",
+						Expr:  intstr.FromString(`kube_node_status_condition{condition="MemoryPressure", status="true"} == 1`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "warning",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"summary":     "Node is under memory pressure.",
+							"description": "Node {{$labels.node}} is under memory pressure.",
+						},
+					},
+					{
+						Alert: "K8SNodeDiskPressure",
+						Expr:  intstr.FromString(`kube_node_status_condition{condition="DiskPressure", status="true"} == 1`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "warning",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"summary":     "Node is under disk pressure.",
+							"description": "Node {{$labels.node}} is under disk pressure.",
+						},
+					},
+					{
+						Record: "instance:conntrack_entries_usage:percent",
+						Expr:   intstr.FromString(`(node_nf_conntrack_entries / node_nf_conntrack_entries_limit) * 100`),
+					},
+					{
+						Alert: "VMRootfsFull",
+						Expr:  intstr.FromString(`node_filesystem_free{mountpoint="/"} < 1024`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"description": "Root filesystem device on instance{{$labels.instance}} is almost full.",
+							"summary":     "Node's root filesystem is almost full",
+						},
+					},
+					{
+						Alert: "VMConntrackTableFull",
+						Expr:  intstr.FromString(`instance:conntrack_entries_usage:percent > 90`),
+						For:   ptr.To(monitoringv1.Duration("1h")),
+						Labels: map[string]string{
+							"service":    name,
+							"severity":   "critical",
+							"type":       "shoot",
+							"visibility": "owner",
+						},
+						Annotations: map[string]string{
+							"description": "The nf_conntrack table is {{$value}}% full.",
+							"summary":     "Number of tracked connections is near the limit",
+						},
+					},
+					{
+						Record: "shoot:kube_node_info:count",
+						Expr:   intstr.FromString(`count(kube_node_info{type="shoot"})`),
+					},
+					// This recording rule creates a series for nodes with less than 5% free inodes on a not read only mount point.
+					// The series exists only if there are less than 5% free inodes,
+					// to keep the cardinality of these federated metrics manageable.
+					// Otherwise, we would get a series for each node in each shoot in the federating Prometheus.
+					{
+						Record: "shoot:node_filesystem_files_free:percent",
+						Expr:   intstr.FromString(`sum by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files * 100 < 5 and node_filesystem_readonly == 0)`),
+					},
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := n.computeResourcesData()
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForShoot(ctx, n.client, n.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (n *nodeExporter) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceName)
+	if err := kubernetesutils.DeleteObjects(ctx, n.client,
+		n.emptyScrapeConfig(),
+		n.emptyPrometheusRule(),
+	); err != nil {
+		return err
+	}
+
+	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -100,14 +266,22 @@ func (n *nodeExporter) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, managedResourceName)
 }
 
 func (n *nodeExporter) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName)
+}
+
+func (n *nodeExporter) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(name, n.namespace, shoot.Label)}
+}
+
+func (n *nodeExporter) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(name, n.namespace, shoot.Label)}
 }
 
 func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
@@ -125,7 +299,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
+				Name:      name,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
@@ -145,7 +319,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      daemonsetName,
+				Name:      name,
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
@@ -193,7 +367,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 						},
 						Containers: []corev1.Container{
 							{
-								Name:            containerName,
+								Name:            name,
 								Image:           n.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{

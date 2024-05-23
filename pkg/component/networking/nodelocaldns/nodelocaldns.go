@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -26,14 +27,16 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-node-local-dns"
+	managedResourceName = "shoot-core-node-local-dns"
 
 	labelKey = "k8s-app"
 	// portServiceServer is the service port used for the DNS server.
@@ -45,17 +48,15 @@ const (
 	prometheusScrape    = true
 	prometheusErrorPort = 9353
 
+	containerName        = "node-cache"
+	metricsPortName      = "metrics"
+	errorMetricsPortName = "errormetrics"
+
 	domain            = gardencorev1beta1.DefaultDomain
 	serviceName       = "kube-dns-upstream"
 	livenessProbePort = 8099
 	configDataKey     = "Corefile"
 )
-
-// Interface contains functions for a node-local-dns deployer.
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
 
 // Values is a set of configuration values for the node-local-dns component.
 type Values struct {
@@ -78,7 +79,7 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
-) Interface {
+) component.DeployWaiter {
 	return &nodeLocalDNS{
 		client:    client,
 		namespace: namespace,
@@ -92,37 +93,94 @@ type nodeLocalDNS struct {
 	values    Values
 }
 
-func (c *nodeLocalDNS) Deploy(ctx context.Context) error {
-	data, err := c.computeResourcesData()
+func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
+	scrapeConfig := n.emptyScrapeConfig("")
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			"node-local-dns",
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:              "pod",
+				PodNamePrefix:     "node-local",
+				ContainerName:     containerName,
+				ContainerPortName: metricsPortName,
+			},
+			"coredns_build_info",
+			"coredns_cache_entries",
+			"coredns_cache_hits_total",
+			"coredns_cache_misses_total",
+			"coredns_dns_request_duration_seconds_count",
+			"coredns_dns_request_duration_seconds_bucket",
+			"coredns_dns_requests_total",
+			"coredns_dns_responses_total",
+			"coredns_forward_requests_total",
+			"coredns_forward_responses_total",
+			"coredns_kubernetes_dns_programming_duration_seconds_bucket",
+			"coredns_kubernetes_dns_programming_duration_seconds_count",
+			"coredns_kubernetes_dns_programming_duration_seconds_sum",
+			"process_max_fds",
+			"process_open_fds",
+		)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	scrapeConfigErrors := n.emptyScrapeConfig("-errors")
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfigErrors, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfigErrors.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfigErrors.Spec = shoot.ClusterComponentScrapeConfigSpec(
+			"node-local-dns-errors",
+			shoot.KubernetesServiceDiscoveryConfig{
+				Role:              "pod",
+				PodNamePrefix:     "node-local",
+				ContainerName:     containerName,
+				ContainerPortName: errorMetricsPortName,
+			},
+			"coredns_nodecache_setup_errors_total",
+		)
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	data, err := n.computeResourcesData()
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
-func (c *nodeLocalDNS) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, c.client, c.namespace, ManagedResourceName)
+func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
+	if err := kubernetesutils.DeleteObjects(ctx, n.client,
+		n.emptyScrapeConfig(""),
+		n.emptyScrapeConfig("-errors"),
+	); err != nil {
+		return err
+	}
+
+	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
 // or deleted.
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
-func (c *nodeLocalDNS) Wait(ctx context.Context) error {
+func (n *nodeLocalDNS) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, managedResourceName)
 }
 
-func (c *nodeLocalDNS) WaitCleanup(ctx context.Context) error {
+func (n *nodeLocalDNS) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName)
 }
 
-func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
+func (n *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -151,9 +209,9 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
     }
     reload
     loop
-    bind ` + c.bindIP() + `
-    forward . ` + c.values.ClusterDNS + ` {
-            ` + c.forceTcpToClusterDNS() + `
+    bind ` + n.bindIP() + `
+    forward . ` + n.values.ClusterDNS + ` {
+            ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     health ` + nodelocaldnsconstants.IPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
@@ -163,9 +221,9 @@ in-addr.arpa:53 {
     cache 30
     reload
     loop
-    bind ` + c.bindIP() + `
-    forward . ` + c.values.ClusterDNS + ` {
-            ` + c.forceTcpToClusterDNS() + `
+    bind ` + n.bindIP() + `
+    forward . ` + n.values.ClusterDNS + ` {
+            ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -174,9 +232,9 @@ ip6.arpa:53 {
     cache 30
     reload
     loop
-    bind ` + c.bindIP() + `
-    forward . ` + c.values.ClusterDNS + ` {
-            ` + c.forceTcpToClusterDNS() + `
+    bind ` + n.bindIP() + `
+    forward . ` + n.values.ClusterDNS + ` {
+            ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -185,9 +243,9 @@ ip6.arpa:53 {
     cache 30
     reload
     loop
-    bind ` + c.bindIP() + `
-    forward . ` + c.upstreamDNSAddress() + ` {
-            ` + c.forceTcpToUpstreamDNS() + `
+    bind ` + n.bindIP() + `
+    forward . ` + n.upstreamDNSAddress() + ` {
+            ` + n.forceTcpToUpstreamDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
     }
@@ -287,8 +345,8 @@ ip6.arpa:53 {
 						},
 						Containers: []corev1.Container{
 							{
-								Name:  "node-cache",
-								Image: c.values.Image,
+								Name:  containerName,
+								Image: n.values.Image,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("25m"),
@@ -300,7 +358,7 @@ ip6.arpa:53 {
 								},
 								Args: []string{
 									"-localip",
-									c.containerArg(),
+									n.containerArg(),
 									"-conf",
 									"/etc/Corefile",
 									"-upstreamsvc",
@@ -326,12 +384,12 @@ ip6.arpa:53 {
 									},
 									{
 										ContainerPort: int32(prometheusPort),
-										Name:          "metrics",
+										Name:          metricsPortName,
 										Protocol:      corev1.ProtocolTCP,
 									},
 									{
 										ContainerPort: int32(prometheusErrorPort),
-										Name:          "errormetrics",
+										Name:          errorMetricsPortName,
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
@@ -410,7 +468,7 @@ ip6.arpa:53 {
 
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
-	if c.values.VPAEnabled {
+	if n.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -453,37 +511,41 @@ ip6.arpa:53 {
 	)
 }
 
-func (c *nodeLocalDNS) bindIP() string {
-	if c.values.DNSServer != "" {
-		return nodelocaldnsconstants.IPVSAddress + " " + c.values.DNSServer
+func (n *nodeLocalDNS) bindIP() string {
+	if n.values.DNSServer != "" {
+		return nodelocaldnsconstants.IPVSAddress + " " + n.values.DNSServer
 	}
 	return nodelocaldnsconstants.IPVSAddress
 }
 
-func (c *nodeLocalDNS) containerArg() string {
-	if c.values.DNSServer != "" {
-		return nodelocaldnsconstants.IPVSAddress + "," + c.values.DNSServer
+func (n *nodeLocalDNS) containerArg() string {
+	if n.values.DNSServer != "" {
+		return nodelocaldnsconstants.IPVSAddress + "," + n.values.DNSServer
 	}
 	return nodelocaldnsconstants.IPVSAddress
 }
 
-func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
-	if c.values.Config == nil || c.values.Config.ForceTCPToClusterDNS == nil || *c.values.Config.ForceTCPToClusterDNS {
+func (n *nodeLocalDNS) forceTcpToClusterDNS() string {
+	if n.values.Config == nil || n.values.Config.ForceTCPToClusterDNS == nil || *n.values.Config.ForceTCPToClusterDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
-func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-	if c.values.Config == nil || c.values.Config.ForceTCPToUpstreamDNS == nil || *c.values.Config.ForceTCPToUpstreamDNS {
+func (n *nodeLocalDNS) forceTcpToUpstreamDNS() string {
+	if n.values.Config == nil || n.values.Config.ForceTCPToUpstreamDNS == nil || *n.values.Config.ForceTCPToUpstreamDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
-func (c *nodeLocalDNS) upstreamDNSAddress() string {
-	if c.values.Config != nil && ptr.Deref(c.values.Config.DisableForwardToUpstreamDNS, false) {
-		return c.values.ClusterDNS
+func (n *nodeLocalDNS) upstreamDNSAddress() string {
+	if n.values.Config != nil && ptr.Deref(n.values.Config.DisableForwardToUpstreamDNS, false) {
+		return n.values.ClusterDNS
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"
+}
+
+func (n *nodeLocalDNS) emptyScrapeConfig(suffix string) *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("node-local-dns"+suffix, n.namespace, shoot.Label)}
 }

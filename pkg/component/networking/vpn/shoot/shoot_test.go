@@ -14,6 +14,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -29,6 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -48,7 +51,7 @@ var _ = Describe("VPNShoot", func() {
 
 		c        client.Client
 		sm       secretsmanager.Interface
-		vpnShoot Interface
+		vpnShoot component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -67,6 +70,129 @@ var _ = Describe("VPNShoot", func() {
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			KubernetesVersion: semver.MustParse("1.25.0"),
+		}
+
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-tunnel-probe-apiserver-proxy",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels: ptr.To(false),
+				MetricsPath: ptr.To("/probe"),
+				Params:      map[string][]string{"module": {"http_apiserver"}},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       "pod",
+					APIServer:  ptr.To("https://kube-apiserver"),
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						TargetLabel: "type",
+						Replacement: ptr.To("seed"),
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
+						Action:       "keep",
+						Regex:        `vpn-shoot-(0|.+-.+);vpn-shoot-init`,
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
+						TargetLabel:  "__param_target",
+						Regex:        `(.+);(.+)`,
+						Replacement:  ptr.To("https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1"),
+						Action:       "replace",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__param_target"},
+						TargetLabel:  "instance",
+						Action:       "replace",
+					},
+					{
+						TargetLabel: "__address__",
+						Replacement: ptr.To("blackbox-exporter:9115"),
+						Action:      "replace",
+					},
+					{
+						Action:      "replace",
+						Replacement: ptr.To("tunnel-probe-apiserver-proxy"),
+						TargetLabel: "job",
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__name__"},
+					Action:       "keep",
+					Regex:        `^(probe_http_status_code|probe_success)$`,
+				}},
+			},
+		}
+
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-tunnel-probe-apiserver-proxy",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "vpn.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "VPNShootNoPods",
+							Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="vpn-shoot"} == 0`),
+							For:   ptr.To(monitoringv1.Duration("30m")),
+							Labels: map[string]string{
+								"service":    "vpn",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "vpn-shoot deployment in Shoot cluster has 0 available pods.VPN won't work.",
+								"summary":     "VPN Shoot deployment no pods",
+							},
+						},
+						{
+							Alert: "VPNHAShootNoPods",
+							Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="vpn-shoot"} == 0`),
+							For:   ptr.To(monitoringv1.Duration("30m")),
+							Labels: map[string]string{
+								"service":    "vpn",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods.VPN won't work.",
+								"summary":     "VPN HA Shoot statefulset no pods",
+							},
+						},
+						{
+							Alert: "VPNProbeAPIServerProxyFailed",
+							Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
+							For:   ptr.To(monitoringv1.Duration("30m")),
+							Labels: map[string]string{
+								"service":    "vpn-test",
+								"severity":   "critical",
+								"type":       "shoot",
+								"visibility": "all",
+							},
+							Annotations: map[string]string{
+								"description": "The API Server proxy functionality is not working.Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
+								"summary":     "API Server Proxy not usable",
+							},
+						},
+					},
+				}},
+			},
 		}
 	)
 
@@ -644,6 +770,14 @@ spec:
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-from-seed.yaml"])).To(Equal(networkPolicyFromSeedYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
+
+			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
+			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
+
+			actualPrometheusRule := &monitoringv1.PrometheusRule{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 		})
 
 		Context("IPv6", func() {
@@ -753,20 +887,27 @@ spec:
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			scrapeConfig.ResourceVersion = ""
+			prometheusRule.ResourceVersion = ""
+
 			vpnShoot = New(c, namespace, sm, Values{})
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
 
 			Expect(vpnShoot.Destroy(ctx)).To(Succeed())
 
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 		})
 
 		It("should successfully destroy all resources", func() {
+			scrapeConfig.ResourceVersion = ""
+			prometheusRule.ResourceVersion = ""
+
 			vpnShoot = New(c, namespace, sm, Values{
 				HighAvailabilityEnabled:              true,
 				HighAvailabilityNumberOfSeedServers:  2,
@@ -774,12 +915,13 @@ spec:
 			})
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, scrapeConfig)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
 
 			Expect(vpnShoot.Destroy(ctx)).To(Succeed())
 
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 		})

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 	"gopkg.in/yaml.v3"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -59,12 +61,6 @@ const (
 	port int32 = 9115
 )
 
-// Interface contains functions for a blackbox-exporter deployer.
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
-
 // Values is a set of configuration values for the blackbox-exporter.
 type Values struct {
 	// Image is the container image used for blackbox-exporter.
@@ -81,6 +77,8 @@ type Values struct {
 	Config blackboxexporterconfig.Config
 	// ScrapeConfigs is a list of scrape configs for the blackbox exporter.
 	ScrapeConfigs []*monitoringv1alpha1.ScrapeConfig
+	// PrometheusRules is a list of PrometheusRules for the blackbox exporter.
+	PrometheusRules []*monitoringv1.PrometheusRule
 	// PodLabels are additional labels for the pod.
 	PodLabels map[string]string
 	// PriorityClassName is the name of the priority class.
@@ -95,7 +93,7 @@ func New(
 	secretsManager secretsmanager.Interface,
 	namespace string,
 	values Values,
-) Interface {
+) component.DeployWaiter {
 	return &blackboxExporter{
 		client:         client,
 		secretsManager: secretsManager,
@@ -120,6 +118,19 @@ func (b *blackboxExporter) Deploy(ctx context.Context) error {
 	if b.values.ClusterType == component.ClusterTypeSeed {
 		return managedresources.CreateForSeedWithLabels(ctx, b.client, b.namespace, b.managedResourceName(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, data)
 	}
+
+	for _, scrapeConfig := range b.values.ScrapeConfigs {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, scrapeConfig, func() error { return nil }); err != nil {
+			return err
+		}
+	}
+
+	for _, prometheusRule := range b.values.PrometheusRules {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, prometheusRule, func() error { return nil }); err != nil {
+			return err
+		}
+	}
+
 	return managedresources.CreateForShoot(ctx, b.client, b.namespace, b.managedResourceName(), managedresources.LabelValueGardener, false, data)
 }
 
@@ -365,9 +376,17 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	for _, scrapeConfig := range b.values.ScrapeConfigs {
-		if err := registry.Add(scrapeConfig); err != nil {
-			return nil, err
+	if b.values.ClusterType == component.ClusterTypeSeed {
+		for _, scrapeConfig := range b.values.ScrapeConfigs {
+			if err := registry.Add(scrapeConfig); err != nil {
+				return nil, err
+			}
+		}
+
+		for _, prometheusRule := range b.values.PrometheusRules {
+			if err := registry.Add(prometheusRule); err != nil {
+				return nil, err
+			}
 		}
 	}
 
