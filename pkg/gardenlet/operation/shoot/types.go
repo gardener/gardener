@@ -109,7 +109,6 @@ type Components struct {
 	ControlPlane             *ControlPlane
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
-	Logging                  *Logging
 	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
@@ -123,6 +122,7 @@ type ControlPlane struct {
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
+	EventLogger              component.Deployer
 	KubeAPIServerIngress     component.Deployer
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
@@ -134,6 +134,7 @@ type ControlPlane struct {
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
+	Vali                     vali.Interface
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }
@@ -167,12 +168,6 @@ type SystemComponents struct {
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
 	VPNShoot            component.DeployWaiter
-}
-
-// Logging contains references to logging deployers.
-type Logging struct {
-	EventLogger component.Deployer
-	Vali        vali.Interface
 }
 
 // Addons contains references for the addons.

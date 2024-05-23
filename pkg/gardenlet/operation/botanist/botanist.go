@@ -110,6 +110,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.EventLogger, err = b.DefaultEventLogger()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.KubeAPIServerIngress = b.DefaultKubeAPIServerIngress()
 	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
@@ -158,6 +162,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+	o.Shoot.Components.ControlPlane.Vali, err = b.DefaultVali()
+	if err != nil {
+		return nil, err
 	}
 
 	// system components
@@ -211,16 +219,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
-
-	// Logging
-	o.Shoot.Components.Logging.EventLogger, err = b.DefaultEventLogger()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.Logging.Vali, err = b.DefaultVali()
-	if err != nil {
-		return nil, err
-	}
 
 	// Addons
 	if !o.Shoot.IsWorkerless {

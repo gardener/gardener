@@ -315,7 +315,7 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	}
 
 	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.Vali)
 	}
 
 	if !b.Shoot.IsWorkerless {

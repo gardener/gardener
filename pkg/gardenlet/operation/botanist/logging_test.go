@@ -95,7 +95,7 @@ var _ = Describe("Logging", func() {
 					SeedNamespace: seedNamespace,
 					Purpose:       "development",
 					Components: &shootpkg.Components{
-						Logging: &shootpkg.Logging{
+						ControlPlane: &shootpkg.ControlPlane{
 							EventLogger: eventLoggerDeployer,
 							Vali:        valiDeployer,
 						},
