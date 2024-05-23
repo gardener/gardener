@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -111,12 +110,13 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			"image": image,
 		}
 
-		ipFamilies := sets.New(w.cluster.Shoot.Spec.Networking.IPFamilies...)
-		if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv4) {
-			providerConfig["ipPoolNameV4"] = infrastructure.IPPoolName(w.worker.Namespace, string(gardencorev1beta1.IPFamilyIPv4))
-		}
-		if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv6) {
-			providerConfig["ipPoolNameV6"] = infrastructure.IPPoolName(w.worker.Namespace, string(gardencorev1beta1.IPFamilyIPv6))
+		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
+			key := "ipPoolNameV4"
+			if ipFamily == gardencorev1beta1.IPFamilyIPv6 {
+				key = "ipPoolNameV6"
+			}
+
+			providerConfig[key] = infrastructure.IPPoolName(w.worker.Namespace, string(ipFamily))
 		}
 
 		providerConfigBytes, err := json.Marshal(providerConfig)

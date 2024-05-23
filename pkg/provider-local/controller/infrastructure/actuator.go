@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -81,20 +80,12 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		networkPolicyAllowMachinePods,
 	}
 
-	ipFamilies := sets.New(cluster.Shoot.Spec.Networking.IPFamilies...)
-	if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv4) {
-		ipPoolV4, err := ipPool(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv4), *cluster.Shoot.Spec.Networking.Nodes)
+	for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
+		ipPoolObj, err := ipPool(infrastructure.Namespace, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
 		if err != nil {
 			return err
 		}
-		objects = append(objects, ipPoolV4)
-	}
-	if ipFamilies.Has(gardencorev1beta1.IPFamilyIPv6) {
-		ipPoolV6, err := ipPool(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv6), *cluster.Shoot.Spec.Networking.Nodes)
-		if err != nil {
-			return err
-		}
-		objects = append(objects, ipPoolV6)
+		objects = append(objects, ipPoolObj)
 	}
 
 	for _, obj := range objects {
