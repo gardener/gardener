@@ -35,26 +35,29 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		clusterRole         = k.emptyClusterRole()
-		clusterRoleBinding  = k.emptyClusterRoleBinding()
-		service             = k.emptyService()
-		deployment          = k.emptyDeployment()
-		vpa                 = k.emptyVerticalPodAutoscaler()
-		pdb                 = k.emptyPodDisruptionBudget()
-		scrapeConfigCache   = k.emptyScrapeConfigCache()
-		scrapeConfigSeed    = k.emptyScrapeConfigSeed()
-		scrapeConfigGarden  = k.emptyScrapeConfigGarden()
-		scrapeConfigShoot   = k.emptyScrapeConfigShoot()
-		prometheusRuleShoot = k.emptyPrometheusRuleShoot()
+		clusterRole                  = k.emptyClusterRole()
+		clusterRoleBinding           = k.emptyClusterRoleBinding()
+		service                      = k.emptyService()
+		deployment                   = k.emptyDeployment()
+		vpa                          = k.emptyVerticalPodAutoscaler()
+		pdb                          = k.emptyPodDisruptionBudget()
+		scrapeConfigCache            = k.emptyScrapeConfigCache()
+		scrapeConfigSeed             = k.emptyScrapeConfigSeed()
+		scrapeConfigGarden           = k.emptyScrapeConfigGarden()
+		scrapeConfigShoot            = k.emptyScrapeConfigShoot()
+		prometheusRuleShoot          = k.emptyPrometheusRuleShoot()
+		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
 			{Obj: service, Class: component.Runtime, MutateFn: func() { k.reconcileService(service) }},
 			{Obj: vpa, Class: component.Runtime, MutateFn: func() { k.reconcileVerticalPodAutoscaler(vpa, deployment) }},
+			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
 		}
 	)
 
@@ -144,9 +147,14 @@ func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole)
 			Verbs:     []string{"list", "watch"},
 		},
 		{
+			APIGroups: []string{"apiextensions.k8s.io"},
+			Resources: []string{"customresourcedefinitions"},
+			Verbs:     []string{"list", "watch"},
+		},
+		{
 			APIGroups: []string{"autoscaling.k8s.io"},
 			Resources: []string{"verticalpodautoscalers"},
-			Verbs:     []string{"get", "list", "watch"},
+			Verbs:     []string{"list", "watch"},
 		},
 	}
 
@@ -233,16 +241,20 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		}
 	)
 
+	customResourceStateConfigFile := customResourceStateConfigMountDir + "/" + customResourceStateConfigMountFile
+
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		deploymentLabels[v1beta1constants.LabelRole] = v1beta1constants.LabelMonitoring
 		podLabels = utils.MergeStringMaps(podLabels, deploymentLabels, map[string]string{
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
+
 		args = append(args,
-			"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
+			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 			"--metric-labels-allowlist=nodes=[*]",
 			"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
 			"--metric-allowlist="+strings.Join(cachePrometheusAllowedMetrics, ","),
+			"--custom-resource-state-config-file="+customResourceStateConfigFile,
 		)
 	}
 
@@ -252,10 +264,11 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		args = append(args,
-			"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
+			"--resources=daemonsets,deployments,nodes,pods,statefulsets,replicasets",
 			"--namespaces="+metav1.NamespaceSystem,
 			"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
 			"--metric-labels-allowlist=nodes=[*]",
+			"--custom-resource-state-config-file="+customResourceStateConfigFile,
 		)
 	}
 
@@ -313,8 +326,23 @@ func (k *kubeStateMetrics) reconcileDeployment(
 						corev1.ResourceMemory: resource.MustParse("32Mi"),
 					},
 				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      customResourceStateConfigMapName,
+					MountPath: customResourceStateConfigMountDir,
+					ReadOnly:  true,
+				}},
 			}},
 			PriorityClassName: k.values.PriorityClassName,
+			Volumes: []corev1.Volume{{
+				Name: customResourceStateConfigMapName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: customResourceStateConfigMapName,
+						},
+					},
+				},
+			}},
 		},
 	}
 
@@ -459,12 +487,17 @@ var cachePrometheusAllowedMetrics = []string{
 	"kube_statefulset_status_replicas_current",
 	"kube_statefulset_status_replicas_ready",
 	"kube_statefulset_status_replicas_updated",
-	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target",
-	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound",
-	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound",
-	"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed",
-	"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed",
-	"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu",
+	"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory",
+	"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu",
+	"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory",
+	"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu",
+	"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory",
+	"kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode",
 }
 
 func (k *kubeStateMetrics) emptyScrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
@@ -610,12 +643,17 @@ func (k *kubeStateMetrics) reconcileScrapeConfigShoot(scrapeConfig *monitoringv1
 		"kube_statefulset_status_replicas_current",
 		"kube_statefulset_status_replicas_ready",
 		"kube_statefulset_status_replicas_updated",
-		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target",
-		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound",
-		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound",
-		"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed",
-		"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed",
-		"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu",
+		"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory",
+		"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu",
+		"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory",
+		"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu",
+		"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory",
+		"kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode",
 	)
 }
 
@@ -735,4 +773,16 @@ func (k *kubeStateMetrics) nameSuffix() string {
 		return suffix
 	}
 	return suffix + k.values.NameSuffix
+}
+
+func (k *kubeStateMetrics) emptyCustomResourceStateConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapName, Namespace: k.namespace}}
+}
+
+func (k *kubeStateMetrics) reconcileCustomResourceStateConfigMap(cm *corev1.ConfigMap) {
+	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
+	utilruntime.Must(err)
+	cm.Data = map[string]string{
+		customResourceStateConfigMountFile: string(customResourceStateConfig),
+	}
 }
