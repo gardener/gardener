@@ -33,6 +33,23 @@ spec:
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+              # Redirect requests to the https port to make probing more painful/cost intensive
+              - match:
+                  prefix: "/"
+                  headers:
+                    - name: ":method"
+                      string_match:
+                        exact: CONNECT
+                      invert_match: true
+                redirect:
+                  https_redirect: true
+                  port_redirect: 443
+                typed_per_filter_config:
+                  # No need to bother the external authorization server with the request
+                  # as it will most likely reject it anyway.
+                  envoy.filters.http.ext_authz:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                    disabled: true
             # Redirect all other requests to the https port to make probing more painful/cost intensive
             - domains:
               - "*"
