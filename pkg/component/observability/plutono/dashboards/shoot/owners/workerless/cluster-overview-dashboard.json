@@ -851,7 +851,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"prometheus\"} == 1)",
+          "expr": "absent(up{job=\"prometheus-shoot\"} == 1)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,
