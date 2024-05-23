@@ -444,10 +444,10 @@ var _ = Describe("Generate", func() {
 			})
 
 			DescribeTable("should rotate CA as configured",
-				func(validity, renewAt *time.Duration, unchanged, renewed time.Duration) {
+				func(validity *time.Duration, renewAfterValidityPercentage *int, unchanged, renewed time.Duration) {
 					lastCommonName := config.CommonName
 					config.Validity = validity
-					config.RenewAt = renewAt
+					config.RenewAfterValidityPercentage = renewAfterValidityPercentage
 					fakeClock.SetTime(time.Now())
 
 					By("Generate new secret")
@@ -492,8 +492,8 @@ var _ = Describe("Generate", func() {
 
 				Entry("default 80% of 100d (=80d)", ptr.To(100*24*time.Hour), nil, 79*24*time.Hour, 81*24*time.Hour),
 				Entry("default 30d-10d (=20d)", ptr.To(30*24*time.Hour), nil, 19*24*time.Hour, 21*24*time.Hour),
-				Entry("renewAt 10d", ptr.To(30*24*time.Hour), ptr.To(10*24*time.Hour), 9*24*time.Hour, 11*24*time.Hour),
-				Entry("non-effective renewAt 25d (> default 30d-10d=20d)", ptr.To(30*24*time.Hour), ptr.To(25*24*time.Hour), 19*24*time.Hour, 21*24*time.Hour),
+				Entry("renewAfterValidityPercentage 33% (=10d)", ptr.To(30*24*time.Hour), ptr.To(33), 9*24*time.Hour, 11*24*time.Hour),
+				Entry("non-effective renewAfterValidityPercentage 70% (14d> default 20d-10d=10d)", ptr.To(20*24*time.Hour), ptr.To(70), 9*24*time.Hour, 11*24*time.Hour),
 			)
 		})
 

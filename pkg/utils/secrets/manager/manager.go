@@ -51,10 +51,10 @@ const (
 	// data is valid. In case the data contains a certificate it is the time part of the certificate's 'not after'
 	// field.
 	LabelKeyValidUntilTime = "valid-until-time"
-	// LabelKeyRenewAtTime is a constant for a key of a label on a certificate secret describing the time when the
-	// certificate should be renewed. This is an optional label to allow early rotation before the default
-	// renewal after 80% or 10d before end of validity.
-	LabelKeyRenewAtTime = "renew-at-time"
+	// LabelKeyRenewAfterValidityPercentage is a constant for a key of a label on a certificate secret describing the
+	// percentage of the validity when the certificate should be renewed. The effective check for renewal is after the
+	// given percentage of validity or 10d before the end of validity. If not specified the default percentage is 80.
+	LabelKeyRenewAfterValidityPercentage = "renew-after-validity-percentage"
 	// LabelKeyUseDataForName is a constant for a key of a label on a Secret describing that its data should be used
 	// instead of generating a fresh secret with the same name.
 	LabelKeyUseDataForName = "secrets-manager-use-data-for-name"
@@ -181,7 +181,7 @@ func (m *manager) initialize(ctx context.Context, rotation Config) error {
 		}
 
 		if mustRenew {
-			m.logger.Info("Preparing secret for automatic renewal", "secret", secret.Name, "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime], "renewAt", secret.Labels[LabelKeyRenewAtTime])
+			m.logger.Info("Preparing secret for automatic renewal", "secret", secret.Name, "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
 			m.lastRotationInitiationTimes[name] = unixTime(m.clock.Now())
 		}
 	}
@@ -209,25 +209,23 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 		return false, err
 	}
 
-	var (
-		validity      = validUntilUnix - issuedAtUnix
-		renewAtUnix   = issuedAtUnix + validity*80/100
-		renewAt       = time.Unix(renewAtUnix, 0).UTC()
-		validUntil    = time.Unix(validUntilUnix, 0).UTC()
-		customRenewAt = renewAt
-		now           = m.clock.Now().UTC()
-	)
-
-	if secret.Labels[LabelKeyRenewAtTime] != "" {
-		customRenewAtUnix, err := strconv.ParseInt(secret.Labels[LabelKeyRenewAtTime], 10, 64)
-		if err != nil {
-			return false, err
+	renewAfterValidityPercentage := 80
+	if secret.Labels[LabelKeyRenewAfterValidityPercentage] != "" {
+		if value, err := strconv.Atoi(secret.Labels[LabelKeyRenewAfterValidityPercentage]); err == nil && value > 0 && value < 100 {
+			renewAfterValidityPercentage = value
 		}
-		customRenewAt = time.Unix(customRenewAtUnix, 0).UTC()
 	}
 
-	// Renew if 80% of the validity or renew-at-time label value has been reached or if the secret expires in less than 10d.
-	return now.After(renewAt) || now.After(customRenewAt) || now.After(validUntil.Add(-10*24*time.Hour)), nil
+	var (
+		validity    = validUntilUnix - issuedAtUnix
+		renewAtUnix = issuedAtUnix + validity*int64(renewAfterValidityPercentage)/100
+		renewAt     = time.Unix(renewAtUnix, 0).UTC()
+		validUntil  = time.Unix(validUntilUnix, 0).UTC()
+		now         = m.clock.Now().UTC()
+	)
+
+	// Renew if 80% of the validity or if the secret expires in less than 10d.
+	return now.After(renewAt) || now.After(validUntil.Add(-10*24*time.Hour)), nil
 }
 
 func (m *manager) addToStore(name string, secret *corev1.Secret, class secretClass) error {
