@@ -11,6 +11,6 @@ spec:
   targetSystem:
     type: <some-provider-name> # {aws,azure,gcp,...}
     providerConfig:
-      apiVersion: <some-provider-name>.security.gardener.cloud/v1alpha1
-      kind: Config
+      apiVersion: <some-provider-name>.provider.extensions.gardener.cloud/v1alpha1
+      kind: WorkloadIdentityConfig
       # Provider-related config

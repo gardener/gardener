@@ -19,9 +19,8 @@ import (
 // GetSubClaimPrefixAndDelimiterFunc is func providing the prefix value for the 'sub' claim
 // and the delimiter used to concatenate the various parts.
 var GetSubClaimPrefixAndDelimiterFunc = func() (string, string) {
-	d := ":"
-	p := strings.Join([]string{"gardener.cloud", "workloadidentity"}, d)
-	return p, d
+	delimiter := ":"
+	return strings.Join([]string{"gardener.cloud", "workloadidentity"}, delimiter), delimiter
 }
 
 // ValidateWorkloadIdentity validates a WorkloadIdentity.
@@ -44,7 +43,7 @@ func validateSpec(spec security.WorkloadIdentitySpec, path *field.Path) field.Er
 	return allErrs
 }
 
-// validateAudiences validates a WorkloadIdentity audiences object.
+// validateAudiences validates a WorkloadIdentity audiences list.
 func validateAudiences(audiences []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -52,9 +51,15 @@ func validateAudiences(audiences []string, fldPath *field.Path) field.ErrorList 
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one audience"))
 	}
 
+	duplicatedAudiences := map[string]bool{}
 	for idx, aud := range audiences {
 		if aud == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(idx), "must specify non-empty audience"))
+		}
+		if _, ok := duplicatedAudiences[aud]; ok {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(idx), aud))
+		} else {
+			duplicatedAudiences[aud] = true
 		}
 	}
 

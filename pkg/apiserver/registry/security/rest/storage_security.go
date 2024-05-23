@@ -38,8 +38,8 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	credentialsBindingStorage := credentialsbindingstore.NewStorage(restOptionsGetter)
 	storage["credentialsbindings"] = credentialsBindingStorage.CredentialsBinding
 
-	workloadIdentitiStorage := workloadidentitystore.NewStorage(restOptionsGetter)
-	storage["workloadidentities"] = workloadIdentitiStorage.WorkloadIdentity
+	workloadIdentityStorage := workloadidentitystore.NewStorage(restOptionsGetter)
+	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
 
 	return storage
 }

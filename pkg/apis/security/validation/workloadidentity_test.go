@@ -48,7 +48,6 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 	})
 
 	Describe("#ValidateWorkloadIdentity", func() {
-
 		It("should not return any errors", func() {
 			errorList := ValidateWorkloadIdentity(workloadIdentity)
 
@@ -180,7 +179,15 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 						"Field": Equal("spec.audiences[1]"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.audiences[1]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.audiences[2]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
 						"Field": Equal("spec.audiences[2]"),
 					})),
 				),
@@ -191,6 +198,16 @@ var _ = Describe("WorkloadIdentity Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.audiences[1]"),
+					})),
+				),
+			),
+			Entry("should forbid duplicated audience",
+				[]string{"foo", "bar", "bar"},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeDuplicate),
+						"Field":  Equal("spec.audiences[2]"),
+						"Detail": Equal(""),
 					})),
 				),
 			),

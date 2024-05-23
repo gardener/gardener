@@ -100,9 +100,7 @@ func (in *CredentialsBindingProvider) DeepCopy() *CredentialsBindingProvider {
 func (in *TargetSystem) DeepCopyInto(out *TargetSystem) {
 	*out = *in
 	if in.ProviderConfig != nil {
-		in, out := &in.ProviderConfig, &out.ProviderConfig
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		out.ProviderConfig = in.ProviderConfig.DeepCopyObject()
 	}
 	return
 }

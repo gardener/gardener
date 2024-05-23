@@ -182,7 +182,9 @@ func Convert_security_CredentialsBindingProvider_To_v1alpha1_CredentialsBindingP
 
 func autoConvert_v1alpha1_TargetSystem_To_security_TargetSystem(in *TargetSystem, out *security.TargetSystem, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.ProviderConfig, &out.ProviderConfig, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -193,7 +195,9 @@ func Convert_v1alpha1_TargetSystem_To_security_TargetSystem(in *TargetSystem, ou
 
 func autoConvert_security_TargetSystem_To_v1alpha1_TargetSystem(in *security.TargetSystem, out *TargetSystem, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.ProviderConfig, &out.ProviderConfig, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -236,7 +240,17 @@ func Convert_security_WorkloadIdentity_To_v1alpha1_WorkloadIdentity(in *security
 
 func autoConvert_v1alpha1_WorkloadIdentityList_To_security_WorkloadIdentityList(in *WorkloadIdentityList, out *security.WorkloadIdentityList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]security.WorkloadIdentity)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]security.WorkloadIdentity, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_WorkloadIdentity_To_security_WorkloadIdentity(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -247,7 +261,17 @@ func Convert_v1alpha1_WorkloadIdentityList_To_security_WorkloadIdentityList(in *
 
 func autoConvert_security_WorkloadIdentityList_To_v1alpha1_WorkloadIdentityList(in *security.WorkloadIdentityList, out *WorkloadIdentityList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]WorkloadIdentity)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]WorkloadIdentity, len(*in))
+		for i := range *in {
+			if err := Convert_security_WorkloadIdentity_To_v1alpha1_WorkloadIdentity(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 

@@ -38,7 +38,7 @@ type TargetSystem struct {
 	// Type is the type of the target system.
 	Type string
 	// ProviderConfig is the configuration passed to extension resource.
-	ProviderConfig *runtime.RawExtension
+	ProviderConfig runtime.Object
 }
 
 // WorkloadIdentityStatus contain the latest observed status of the WorkloadIdentity.

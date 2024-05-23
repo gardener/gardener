@@ -13,5 +13,5 @@ import (
 
 func TestWorkloadIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "WorkloadIdentityStrategy Suite")
+	RunSpecs(t, "Registry Security WorkloadIdentity Suite")
 }

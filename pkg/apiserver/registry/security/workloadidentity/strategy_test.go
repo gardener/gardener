@@ -34,15 +34,14 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 	})
 
 	Describe("#PrepareForCreate", func() {
-
-		It("Should set UID", func() {
+		It("should set UID", func() {
 			Expect(wi.GetUID()).To(BeEmpty())
 			s.PrepareForCreate(ctx, wi)
 
 			Expect(wi.GetUID()).ToNot(BeEmpty())
 		})
 
-		It("Should set name without generateName", func() {
+		It("should set name without generateName", func() {
 			Expect(wi.GetName()).To(BeEmpty())
 			Expect(wi.GetGenerateName()).To(BeEmpty())
 
@@ -52,7 +51,7 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 			Expect(wi.GetName()).ToNot(BeEmpty())
 		})
 
-		It("Should set name with generateName as prefix", func() {
+		It("should set name with generateName as prefix", func() {
 			genName := "prefix-"
 			wi.GenerateName = genName
 			Expect(wi.GetName()).To(BeEmpty())
@@ -66,7 +65,7 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 			Expect(name).To(HavePrefix(genName))
 		})
 
-		It("Should not overwrite already set name", func() {
+		It("should not overwrite already set name", func() {
 			name := "name"
 			wi.Name = name
 			Expect(wi.GetName()).To(Equal(name))
@@ -75,7 +74,7 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 			Expect(wi.GetName()).To(Equal(name))
 		})
 
-		It("Should set status.sub value", func() {
+		It("should set status.sub value", func() {
 			wi.Name = "name"
 			uid := "52c48341-ce0f-4400-a902-e665ba443c78"
 			wi.UID = types.UID(uid)
@@ -85,7 +84,7 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 			Expect(wi.Status.Sub).To(Equal("gardener.cloud:workloadidentity:garden:name:" + uid))
 		})
 
-		It("Should not overwrite already set status.sub value", func() {
+		It("should not overwrite already set status.sub value", func() {
 			wi.Name = "name"
 			uid := "52c48341-ce0f-4400-a902-e665ba443c78"
 			wi.UID = types.UID(uid)
