@@ -24,7 +24,7 @@ spec:
   machineImages:
   - name: local
     versions:
-    - version: 0.0.0
+    - version: 1.0.0
       cri:
       - name: containerd
   providerConfig:
@@ -33,5 +33,5 @@ spec:
     machineImages:
     - name: local
       versions:
-      - version: 0.0.0
-        image: local-skaffold/gardener-extension-provider-local-node:v0.0.0
+      - version: 1.0.0
+        image: local-skaffold/gardener-extension-provider-local-node:v1.0.0
