@@ -321,7 +321,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	if !b.Shoot.IsWorkerless {
 		monitoringComponents = append(monitoringComponents,
 			b.Shoot.Components.ControlPlane.KubeScheduler,
-			b.Shoot.Components.ControlPlane.MachineControllerManager,
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
 		)
 	}

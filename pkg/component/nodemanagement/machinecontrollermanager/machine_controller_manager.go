@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -54,7 +57,6 @@ const (
 // Interface contains functions for a machine-controller-manager deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
 	SetNamespaceUID(types.UID)
 }
@@ -102,6 +104,8 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		deployment          = m.emptyDeployment()
 		podDisruptionBudget = m.emptyPodDisruptionBudget()
 		vpa                 = m.emptyVPA()
+		prometheusRule      = m.emptyPrometheusRule()
+		serviceMonitor      = m.emptyServiceMonitor()
 
 		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -285,6 +289,115 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "machine-controller-manager.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert: "MachineControllerManagerDown",
+					Expr:  intstr.FromString(`absent(up{job="machine-controller-manager"} == 1)`),
+					For:   ptr.To(monitoringv1.Duration("15m")),
+					Labels: map[string]string{
+						"service":    v1beta1constants.DeploymentNameMachineControllerManager,
+						"severity":   "critical",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"summary":     "Machine controller manager is down.",
+						"description": "There are no running machine controller manager instances. No shoot nodes can be created/maintained.",
+					},
+				}},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, serviceMonitor, func() error {
+		metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", shoot.Label)
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: portNameMetrics,
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					// Machine Deployment related metrics
+					"mcm_machine_deployment_items_total",
+					"mcm_machine_deployment_info",
+					"mcm_machine_deployment_info_spec_paused",
+					"mcm_machine_deployment_info_spec_replicas",
+					"mcm_machine_deployment_info_spec_min_ready_seconds",
+					"mcm_machine_deployment_info_spec_rolling_update_max_surge",
+					"mcm_machine_deployment_info_spec_rolling_update_max_unavailable",
+					"mcm_machine_deployment_info_spec_revision_history_limit",
+					"mcm_machine_deployment_info_spec_progress_deadline_seconds",
+					"mcm_machine_deployment_info_spec_rollback_to_revision",
+					"mcm_machine_deployment_status_condition",
+					"mcm_machine_deployment_status_available_replicas",
+					"mcm_machine_deployment_status_unavailable_replicas",
+					"mcm_machine_deployment_status_ready_replicas",
+					"mcm_machine_deployment_status_updated_replicas",
+					"mcm_machine_deployment_status_collision_count",
+					"mcm_machine_deployment_status_replicas",
+					"mcm_machine_deployment_failed_machines",
+					// Machine Set related metrics
+					"mcm_machine_set_items_total",
+					"mcm_machine_set_info",
+					"mcm_machine_set_failed_machines",
+					"mcm_machine_set_info_spec_replicas",
+					"mcm_machine_set_info_spec_min_ready_seconds",
+					"mcm_machine_set_status_condition",
+					"mcm_machine_set_status_available_replicas",
+					"mcm_machine_set_status_fully_labelled_replicas",
+					"mcm_machine_set_status_replicas",
+					"mcm_machine_set_status_ready_replicas",
+					// Machine related metrics
+					"mcm_machine_stale_machines_total",
+					"mcm_machine_items_total",
+					"mcm_machine_current_status_phase",
+					"mcm_machine_info",
+					"mcm_machine_status_condition",
+					// Cloud API related metrics
+					"mcm_cloud_api_requests_total",
+					"mcm_cloud_api_requests_failed_total",
+					"mcm_cloud_api_api_request_duration_seconds_bucket",
+					"mcm_cloud_api_api_request_duration_seconds_sum",
+					"mcm_cloud_api_api_request_duration_seconds_count",
+					"mcm_cloud_api_driver_request_duration_seconds_sum",
+					"mcm_cloud_api_driver_request_duration_seconds_count",
+					"mcm_cloud_api_driver_request_duration_seconds_bucket",
+					"mcm_cloud_api_driver_request_failed_total",
+					// misc metrics
+					"mcm_misc_scrape_failure_total",
+					"mcm_machine_controller_frozen",
+					"process_max_fds",
+					"process_open_fds",
+					// workqueue related metrics
+					"mcm_workqueue_adds_total",
+					"mcm_workqueue_depth",
+					"mcm_workqueue_queue_duration_seconds_bucket",
+					"mcm_workqueue_queue_duration_seconds_sum",
+					"mcm_workqueue_queue_duration_seconds_count",
+					"mcm_workqueue_work_duration_seconds_bucket",
+					"mcm_workqueue_work_duration_seconds_sum",
+					"mcm_workqueue_work_duration_seconds_count",
+					"mcm_workqueue_unfinished_work_seconds",
+					"mcm_workqueue_longest_running_processor_seconds",
+					"mcm_workqueue_retries_total",
+				),
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := m.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
 	if err != nil {
 		return err
@@ -297,6 +410,8 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
 		m.emptyManagedResource(),
 		m.emptyManagedResourceSecret(),
+		m.emptyServiceMonitor(),
+		m.emptyPrometheusRule(),
 		m.emptyVPA(),
 		m.emptyPodDisruptionBudget(),
 		m.emptyDeployment(),
@@ -468,6 +583,14 @@ func (m *machineControllerManager) emptyPodDisruptionBudget() *policyv1.PodDisru
 
 func (m *machineControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: VPAName, Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameMachineControllerManager, m.namespace, shoot.Label)}
+}
+
+func (m *machineControllerManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameMachineControllerManager, m.namespace, shoot.Label)}
 }
 
 func (m *machineControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
