@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` | `1.95` |
 | CoreDNSQueryRewriting              | `true`  | `Beta`  | `1.96` |        |
 | IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` |        |
+| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` | `1.95` |
+| MutableShootSpecNetworkingNodes    | `true`  | `Beta`  | `1.96` |        |
 | ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
