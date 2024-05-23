@@ -211,9 +211,11 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 
 	renewAfterValidityPercentage := 80
 	if secret.Labels[LabelKeyRenewAfterValidityPercentage] != "" {
-		if value, err := strconv.Atoi(secret.Labels[LabelKeyRenewAfterValidityPercentage]); err == nil && value > 0 && value < 100 {
-			renewAfterValidityPercentage = value
+		value, err := strconv.Atoi(secret.Labels[LabelKeyRenewAfterValidityPercentage])
+		if err != nil {
+			return false, err
 		}
+		renewAfterValidityPercentage = value
 	}
 
 	var (

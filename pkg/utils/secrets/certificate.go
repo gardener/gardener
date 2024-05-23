@@ -62,11 +62,7 @@ type CertificateSecretConfig struct {
 	SigningCA *Certificate
 	PKCS      int
 
-	Validity *time.Duration
-	// RenewAfterValidityPercentage sets the percentage of the validity when the certificate should be renewed.
-	// The effective check for renewal is after the given percentage of validity or 10d before the end of validity.
-	// If not specified the default percentage is 80.
-	RenewAfterValidityPercentage      *int
+	Validity                          *time.Duration
 	SkipPublishingCACertificate       bool
 	IncludeCACertificateInServerChain bool
 }
