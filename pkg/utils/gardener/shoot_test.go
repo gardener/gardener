@@ -295,7 +295,7 @@ var _ = Describe("Shoot", func() {
 				HaveKeyWithValue("worker.gardener.cloud/system-components", "true"),
 				HaveKeyWithValue("worker.gardener.cloud/pool", "worker"),
 				HaveKeyWithValue("worker.garden.sapcloud.io/group", "worker"),
-				HaveKeyWithValue("worker.gardener.cloud/operating-system-config", "osc-key"),
+				HaveKeyWithValue("worker.gardener.cloud/gardener-node-agent-secret-name", "osc-key"),
 			))
 		})
 

@@ -249,7 +249,7 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	map[string][]byte,
 	error,
 ) {
-	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.KeyName, worker.Name)
+	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker.Name)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
 	}

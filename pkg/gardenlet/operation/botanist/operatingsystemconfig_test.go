@@ -209,11 +209,11 @@ var _ = Describe("operatingsystemconfig", func() {
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
 					Original: operatingsystemconfig.Data{
-						KeyName: worker1Key,
-						Content: worker1OriginalContent,
-						Command: &worker1OriginalCommand,
-						Units:   worker1OriginalUnits,
-						Files:   worker1OriginalFiles,
+						GardenerNodeAgentSecretName: worker1Key,
+						Content:                     worker1OriginalContent,
+						Command:                     &worker1OriginalCommand,
+						Units:                       worker1OriginalUnits,
+						Files:                       worker1OriginalFiles,
 						Object: &extensionsv1alpha1.OperatingSystemConfig{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: worker1Name + "-original",
@@ -227,11 +227,11 @@ var _ = Describe("operatingsystemconfig", func() {
 				},
 				worker2Name: {
 					Original: operatingsystemconfig.Data{
-						KeyName: worker2Key,
-						Content: worker2OriginalContent,
-						Command: &worker2OriginalCommand,
-						Units:   worker2OriginalUnits,
-						Files:   worker2OriginalFiles,
+						GardenerNodeAgentSecretName: worker2Key,
+						Content:                     worker2OriginalContent,
+						Command:                     &worker2OriginalCommand,
+						Units:                       worker2OriginalUnits,
+						Files:                       worker2OriginalFiles,
 						Object: &extensionsv1alpha1.OperatingSystemConfig{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: worker2Name + "-original",

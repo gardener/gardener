@@ -289,8 +289,8 @@ var _ = Describe("Worker", func() {
 			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{"checksum/cloud-config-data": "outdated"},
 				Labels: map[string]string{
-					"worker.gardener.cloud/kubernetes-version":      "1.24.0",
-					"worker.gardener.cloud/operating-system-config": "gardener-node-agent--c63c0",
+					"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 				},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
@@ -305,8 +305,8 @@ var _ = Describe("Worker", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{"checksum/cloud-config-data": "outdated"},
 					Labels: map[string]string{
-						"worker.gardener.cloud/kubernetes-version":      "1.24.0",
-						"worker.gardener.cloud/operating-system-config": "gardener-node-agent--c63c0",
+						"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 					},
 				},
 				Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: "deployment.machine.sapcloud.io/prefer-no-schedule", Effect: corev1.TaintEffectPreferNoSchedule}}},
@@ -322,8 +322,8 @@ var _ = Describe("Worker", func() {
 			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 				Labels: map[string]string{
-					"worker.gardener.cloud/kubernetes-version":      "1.24.0",
-					"worker.gardener.cloud/operating-system-config": "gardener-node-agent--c63c0",
+					"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 				},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
@@ -338,15 +338,15 @@ var _ = Describe("Worker", func() {
 				"pool1": {{ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate1"},
 					Labels: map[string]string{
-						"worker.gardener.cloud/kubernetes-version":      "1.26.0",
-						"worker.gardener.cloud/operating-system-config": "gardener-node-agent--c63c0",
+						"worker.gardener.cloud/kubernetes-version":              "1.26.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 					},
 				}}},
 				"pool2": {{ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{"checksum/cloud-config-data": "uptodate2"},
 					Labels: map[string]string{
-						"worker.gardener.cloud/kubernetes-version":      "1.25.0",
-						"worker.gardener.cloud/operating-system-config": "gardener-node-agent--5dcdf",
+						"worker.gardener.cloud/kubernetes-version":              "1.25.0",
+						"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--5dcdf",
 					},
 				}}},
 			},
@@ -362,7 +362,7 @@ var _ = Describe("Worker", func() {
 			},
 			BeNil(),
 		),
-		Entry("detect outdated nodes without osc label",
+		Entry("detect outdated nodes without gardener node agent secret name label",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			map[string][]corev1.Node{
 				"pool1": {{ObjectMeta: metav1.ObjectMeta{
@@ -467,9 +467,9 @@ var _ = Describe("Worker", func() {
 					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"worker.gardener.cloud/pool":                    "pool1",
-								"worker.gardener.cloud/kubernetes-version":      "1.24.0",
-								"worker.gardener.cloud/operating-system-config": "gardener-node-agent-pool1-c63c0",
+								"worker.gardener.cloud/pool":                            "pool1",
+								"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+								"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent-pool1-c63c0",
 							},
 							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},
@@ -533,9 +533,9 @@ var _ = Describe("Worker", func() {
 					*list = corev1.NodeList{Items: []corev1.Node{{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"worker.gardener.cloud/pool":                    "pool1",
-								"worker.gardener.cloud/kubernetes-version":      "1.26.0",
-								"worker.gardener.cloud/operating-system-config": "gardener-node-agent-pool1-5dcdf",
+								"worker.gardener.cloud/pool":                            "pool1",
+								"worker.gardener.cloud/kubernetes-version":              "1.26.0",
+								"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent-pool1-5dcdf",
 							},
 							Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 						},

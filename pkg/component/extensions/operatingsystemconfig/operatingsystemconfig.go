@@ -184,8 +184,8 @@ type Data struct {
 	// Content is the actual cloud-config user data.
 	// TODO(rfranzke): Remove this Content field after v1.100 is released.
 	Content string
-	// KeyName is the name of the secret storing the cloud-config in the shoot cluster.
-	KeyName string
+	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
+	GardenerNodeAgentSecretName string
 	// SecretName is the name of a secret storing the actual cloud-config user data.
 	SecretName *string
 	// Command is the command for reloading the cloud-config (in case a new version was downloaded).
@@ -263,13 +263,13 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				oscKey := Key(worker.Name, kubernetesVersion, worker.CRI)
 
 				data := Data{
-					Object:     osc,
-					Content:    string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
-					KeyName:    oscKey,
-					SecretName: &secret.Name,
-					Command:    osc.Status.Command,
-					Units:      osc.Status.Units,
-					Files:      osc.Status.Files,
+					Object:                      osc,
+					Content:                     string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+					GardenerNodeAgentSecretName: oscKey,
+					SecretName:                  &secret.Name,
+					Command:                     osc.Status.Command,
+					Units:                       osc.Status.Units,
+					Files:                       osc.Status.Files,
 				}
 
 				o.lock.Lock()

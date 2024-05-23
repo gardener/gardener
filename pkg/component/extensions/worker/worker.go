@@ -181,7 +181,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			LocalObjectReference: corev1.LocalObjectReference{Name: *oscConfig.Init.SecretName},
 			Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
 		}
-		oscKey := oscConfig.Init.KeyName
+		gardenerNodeAgentSecretName := oscConfig.Init.GardenerNodeAgentSecretName
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
 		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
@@ -232,7 +232,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, oscKey),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, gardenerNodeAgentSecretName),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{
