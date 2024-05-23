@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot
+package shootafterworker
 
 import (
 	"context"
@@ -23,7 +23,7 @@ const (
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
-	DefaultAddOptions = AddOptions{}
+	DefaultAddOptions = AddOptions{Controller: controller.Options{MaxConcurrentReconciles: 5}}
 )
 
 // AddOptions are options to apply when adding the extension controller to the manager.
@@ -40,7 +40,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 	return extension.Add(ctx, mgr, extension.AddArgs{
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
-		Name:              ApplicationName,
+		Name:              applicationName,
 		FinalizerSuffix:   Type,
 		Resync:            60 * time.Minute,
 		Predicates:        extension.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),

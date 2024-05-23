@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot
+package shootafterworker
 
 import (
 	"context"
@@ -25,11 +25,8 @@ import (
 )
 
 const (
-	// ApplicationName is the name of the application.
-	ApplicationName string = "local-ext-shoot-after-worker"
-	// ManagedResourceNamesShoot is the name used to describe the managed shoot resources.
-	ManagedResourceNamesShoot string = ApplicationName
-	finalizer                 string = "extensions.gardener.cloud/local-ext-shoot-after-worker"
+	applicationName           = "local-ext-shoot-after-worker"
+	managedResourceNamesShoot = applicationName
 )
 
 type actuator struct {
@@ -62,7 +59,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 		ctx,
 		a.client,
 		namespace,
-		ManagedResourceNamesShoot,
+		managedResourceNamesShoot,
 		map[string]string{},
 		secretNameWithPrefix,
 		"",
@@ -82,7 +79,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 	if extensionscontroller.IsHibernationEnabled(cluster) {
 		return nil
 	}
-	return managedresources.WaitUntilHealthy(ctx, a.client, namespace, ManagedResourceNamesShoot)
+	return managedresources.WaitUntilHealthy(ctx, a.client, namespace, managedResourceNamesShoot)
 }
 
 // Delete the extension resource.
@@ -93,11 +90,11 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, ex *extensionsv1al
 	timeoutShootCtx, cancelShootCtx := context.WithTimeout(ctx, twoMinutes)
 	defer cancelShootCtx()
 
-	if err := managedresources.DeleteForShoot(ctx, a.client, namespace, ManagedResourceNamesShoot); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, a.client, namespace, managedResourceNamesShoot); err != nil {
 		return err
 	}
 
-	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, ManagedResourceNamesShoot)
+	return managedresources.WaitUntilDeleted(timeoutShootCtx, a.client, namespace, managedResourceNamesShoot)
 }
 
 // ForceDelete force deletes the extension resource.
@@ -108,7 +105,7 @@ func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, ex *extensi
 // Migrate the extension resource.
 func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
-	if err := managedresources.SetKeepObjects(ctx, a.client, ex.GetNamespace(), ManagedResourceNamesShoot, true); err != nil {
+	if err := managedresources.SetKeepObjects(ctx, a.client, ex.GetNamespace(), managedResourceNamesShoot, true); err != nil {
 		return err
 	}
 
@@ -123,12 +120,12 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv
 func getShootResources() (map[string][]byte, error) {
 	shootRegistry := managedresources.NewRegistry(kubernetesclient.ShootScheme, kubernetesclient.ShootCodec, kubernetesclient.ShootSerializer)
 	labels := map[string]string{
-		"app.kubernetes.io/name": ApplicationName,
+		"app.kubernetes.io/name": applicationName,
 	}
 	return shootRegistry.AddAllAndSerialize(
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ApplicationName,
+				Name:      applicationName,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    labels,
 			},
@@ -143,7 +140,7 @@ func getShootResources() (map[string][]byte, error) {
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name:  ApplicationName,
+							Name:  applicationName,
 							Image: "europe-docker.pkg.dev/gardener-project/releases/3rd/alpine:3.19.1",
 							Command: []string{
 								"/bin/sh",
