@@ -10,6 +10,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -624,9 +625,9 @@ var _ = Describe("Conversion", func() {
 				BeforeEach(func() {
 					in.Helm = &core.HelmControllerDeployment{
 						OCIRepository: &core.OCIRepository{
-							Repository: "url",
-							Tag:        "1.0.0",
-							Digest:     "sha256:foo",
+							Repository: ptr.To("url"),
+							Tag:        ptr.To("1.0.0"),
+							Digest:     ptr.To("sha256:foo"),
 						},
 						Values: &apiextensionsv1.JSON{
 							Raw: []byte(`{"foo":["bar","baz"]}`),

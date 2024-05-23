@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -149,8 +150,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
 
 			oci := &gardencorev1.OCIRepository{
-				Repository: "test",
-				Tag:        "0.1.0",
+				Repository: ptr.To("test"),
+				Tag:        ptr.To("0.1.0"),
 			}
 			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
 				OCIRepository: oci,

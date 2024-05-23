@@ -5189,6 +5189,7 @@ OCIRepository
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>OCIRepository defines where to pull the chart.</p>
 </td>
 </tr>
@@ -8344,6 +8345,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Ref is the full artifact Ref and takes precedence over all other fields.</p>
 </td>
 </tr>
@@ -8355,6 +8357,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Repository is a reference to an OCI artifact repository.</p>
 </td>
 </tr>
@@ -8366,6 +8369,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Tag is the image tag to pull.</p>
 </td>
 </tr>
@@ -8377,6 +8381,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Digest of the image to pull, takes precedence over tag.</p>
 </td>
 </tr>

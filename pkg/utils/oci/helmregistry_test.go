@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 )
@@ -32,24 +33,24 @@ var _ = Describe("helmregistry", func() {
 
 	It("should return error if the repository does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/examplexxx",
-			Tag:        "0.1.0",
+			Repository: ptr.To(registryAddress + "/charts/examplexxx"),
+			Tag:        ptr.To("0.1.0"),
 		})
 		Expect(err).To(MatchError(ContainSubstring("failed get manifest from remote")))
 	})
 
 	It("should return error if the digest does not exist", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/examplexxx",
-			Digest:     "sha256:7a855a6d69033dd3240d9648e8bd46a67a528059158e098c7794ac9227735b4a",
+			Repository: ptr.To(registryAddress + "/charts/examplexxx"),
+			Digest:     ptr.To("sha256:7a855a6d69033dd3240d9648e8bd46a67a528059158e098c7794ac9227735b4a"),
 		})
 		Expect(err).To(MatchError(ContainSubstring("failed to pull artifact")))
 	})
 
 	It("should pull the chart by tag", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/example",
-			Tag:        "0.1.0",
+			Repository: ptr.To(registryAddress + "/charts/example"),
+			Tag:        ptr.To("0.1.0"),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -57,8 +58,8 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart by digest", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/example",
-			Digest:     exampleChartDigest,
+			Repository: ptr.To(registryAddress + "/charts/example"),
+			Digest:     ptr.To(exampleChartDigest),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -66,7 +67,7 @@ var _ = Describe("helmregistry", func() {
 
 	It("should pull the chart with ref", func() {
 		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Ref: fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest),
+			Ref: ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
@@ -74,7 +75,7 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache", func() {
 		oci := &gardencorev1.OCIRepository{
-			Ref: fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest),
+			Ref: ptr.To(fmt.Sprintf("%s/charts/example:0.1.0@%s", registryAddress, exampleChartDigest)),
 		}
 		_, err := hr.Pull(ctx, oci)
 		Expect(err).NotTo(HaveOccurred())
@@ -87,15 +88,15 @@ var _ = Describe("helmregistry", func() {
 
 	It("should use the cache no matter if tag or digest is used", func() {
 		_, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/example",
-			Digest:     exampleChartDigest,
+			Repository: ptr.To(registryAddress + "/charts/example"),
+			Digest:     ptr.To(exampleChartDigest),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(0))
 
 		_, err = hr.Pull(ctx, &gardencorev1.OCIRepository{
-			Repository: registryAddress + "/charts/example",
-			Tag:        "0.1.0",
+			Repository: ptr.To(registryAddress + "/charts/example"),
+			Tag:        ptr.To("0.1.0"),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(1))
@@ -127,23 +128,23 @@ var _ = Describe("buildRef", func() {
 			Expect(buildRef(oci)).To(Equal(want))
 		},
 		Entry("ref without digest",
-			&gardencorev1.OCIRepository{Ref: "example.com/foo:1.0.0"},
+			&gardencorev1.OCIRepository{Ref: ptr.To("example.com/foo:1.0.0")},
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("ref with tag and digest",
-			&gardencorev1.OCIRepository{Ref: "example.com/foo:1.0.0@" + digest},
+			&gardencorev1.OCIRepository{Ref: ptr.To("example.com/foo:1.0.0@" + digest)},
 			mustNewDigest("example.com/foo:1.0.0@"+digest),
 		),
 		Entry("repository with tag",
-			&gardencorev1.OCIRepository{Repository: "example.com/foo", Tag: "1.0.0"},
+			&gardencorev1.OCIRepository{Repository: ptr.To("example.com/foo"), Tag: ptr.To("1.0.0")},
 			mustNewTag("example.com/foo:1.0.0"),
 		),
 		Entry("repository with tag and digest",
-			&gardencorev1.OCIRepository{Repository: "oci://example.com/foo", Tag: "1.0.0", Digest: digest},
+			&gardencorev1.OCIRepository{Repository: ptr.To("oci://example.com/foo"), Tag: ptr.To("1.0.0"), Digest: ptr.To(digest)},
 			mustNewDigest("example.com/foo@"+digest),
 		),
 		Entry("replace registry and configure insecure in local setup",
-			&gardencorev1.OCIRepository{Ref: "localhost:5001/foo:1.0.0"},
+			&gardencorev1.OCIRepository{Ref: ptr.To("localhost:5001/foo:1.0.0")},
 			name.MustParseReference("garden.local.gardener.cloud:5001/foo:1.0.0", name.Insecure),
 		),
 	)

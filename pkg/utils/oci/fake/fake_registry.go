@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sync"
 
+	"k8s.io/utils/ptr"
+
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -45,8 +47,8 @@ func (r *Registry) AddArtifact(oci *gardencorev1.OCIRepository, data []byte) {
 }
 
 func artifactKey(oci *gardencorev1.OCIRepository) string {
-	if oci.Ref != "" {
-		return oci.Ref
+	if oci.Ref != nil {
+		return *oci.Ref
 	}
-	return fmt.Sprintf("%s:%s@%s", oci.Repository, oci.Tag, oci.Digest)
+	return fmt.Sprintf("%s:%s@%s", ptr.Deref(oci.Repository, ""), ptr.Deref(oci.Tag, ""), ptr.Deref(oci.Digest, ""))
 }

@@ -54,17 +54,17 @@ type HelmControllerDeployment struct {
 type OCIRepository struct {
 	// Ref is the full artifact Ref and takes precedence over all other fields.
 	// +optional
-	Ref string `json:"ref,omitempty" protobuf:"bytes,1,name=ref"`
+	Ref *string `json:"ref,omitempty" protobuf:"bytes,1,name=ref"`
 	// Repository is a reference to an OCI artifact repository.
 	// +optional
-	Repository string `json:"repository,omitempty" protobuf:"bytes,2,name=repository"`
+	Repository *string `json:"repository,omitempty" protobuf:"bytes,2,name=repository"`
 	// Tag is the image tag to pull.
 	// +optional
-	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
+	Tag *string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
 	// Digest of the image to pull, takes precedence over tag.
 	// The value should be in the format 'sha256:<HASH>'.
 	// +optional
-	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
+	Digest *string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
 }
 
 // GetURL returns the fully-qualified OCIRepository URL of the artifact.
@@ -72,13 +72,13 @@ func (r *OCIRepository) GetURL() string {
 	var ref string
 
 	switch {
-	case r.Ref != "":
-		ref = r.Ref
-	case r.Digest != "":
+	case r.Ref != nil:
+		ref = *r.Ref
+	case r.Digest != nil:
 		// when digest is set we ignore the tag
-		ref = r.Repository + "@" + r.Digest
-	case r.Tag != "":
-		ref = r.Repository + ":" + r.Tag
+		ref = *r.Repository + "@" + *r.Digest
+	case r.Tag != nil:
+		ref = *r.Repository + ":" + *r.Tag
 	}
 	return strings.TrimPrefix(ref, "oci://")
 }

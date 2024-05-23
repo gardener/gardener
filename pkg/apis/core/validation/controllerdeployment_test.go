@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -92,7 +93,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			controllerDeployment.Helm = &HelmControllerDeployment{
 				RawChart: []byte("foo"),
 				OCIRepository: &OCIRepository{
-					Ref: "foo",
+					Ref: ptr.To("foo"),
 				},
 			}
 			Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -144,9 +145,9 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 		Context("with ociRepository", func() {
 			BeforeEach(func() {
 				controllerDeployment.Helm.OCIRepository = &OCIRepository{
-					Repository: "foo",
-					Tag:        "1.0.0",
-					Digest:     "sha256:foo",
+					Repository: ptr.To("foo"),
+					Tag:        ptr.To("1.0.0"),
+					Digest:     ptr.To("sha256:foo"),
 				}
 			})
 
@@ -155,7 +156,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should validate required oci URL", func() {
-				controllerDeployment.Helm.OCIRepository.Repository = ""
+				controllerDeployment.Helm.OCIRepository.Repository = nil
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -164,8 +165,8 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should require either tag or digest", func() {
-				controllerDeployment.Helm.OCIRepository.Tag = ""
-				controllerDeployment.Helm.OCIRepository.Digest = ""
+				controllerDeployment.Helm.OCIRepository.Tag = nil
+				controllerDeployment.Helm.OCIRepository.Digest = nil
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -175,7 +176,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should validate required oci URL", func() {
-				controllerDeployment.Helm.OCIRepository.Digest = "invalid"
+				controllerDeployment.Helm.OCIRepository.Digest = ptr.To("invalid")
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -196,7 +197,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 		Context("with ociRepository.ref", func() {
 			BeforeEach(func() {
 				controllerDeployment.Helm.OCIRepository = &OCIRepository{
-					Ref: "foo:v1.0.0",
+					Ref: ptr.To("foo:v1.0.0"),
 				}
 			})
 
@@ -205,9 +206,9 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 			})
 
 			It("should not allow fields other than ref", func() {
-				controllerDeployment.Helm.OCIRepository.Repository = "foo"
-				controllerDeployment.Helm.OCIRepository.Digest = "foo"
-				controllerDeployment.Helm.OCIRepository.Tag = "foo"
+				controllerDeployment.Helm.OCIRepository.Repository = ptr.To("foo")
+				controllerDeployment.Helm.OCIRepository.Digest = ptr.To("foo")
+				controllerDeployment.Helm.OCIRepository.Tag = ptr.To("foo")
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

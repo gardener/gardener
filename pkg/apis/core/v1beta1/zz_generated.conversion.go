@@ -4626,10 +4626,10 @@ func Convert_core_NodeLocalDNS_To_v1beta1_NodeLocalDNS(in *core.NodeLocalDNS, ou
 }
 
 func autoConvert_v1beta1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out *core.OCIRepository, s conversion.Scope) error {
-	out.Ref = in.Ref
-	out.Repository = in.Repository
-	out.Tag = in.Tag
-	out.Digest = in.Digest
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	out.Repository = (*string)(unsafe.Pointer(in.Repository))
+	out.Tag = (*string)(unsafe.Pointer(in.Tag))
+	out.Digest = (*string)(unsafe.Pointer(in.Digest))
 	return nil
 }
 
@@ -4639,10 +4639,10 @@ func Convert_v1beta1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out 
 }
 
 func autoConvert_core_OCIRepository_To_v1beta1_OCIRepository(in *core.OCIRepository, out *OCIRepository, s conversion.Scope) error {
-	out.Ref = in.Ref
-	out.Repository = in.Repository
-	out.Tag = in.Tag
-	out.Digest = in.Digest
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	out.Repository = (*string)(unsafe.Pointer(in.Repository))
+	out.Tag = (*string)(unsafe.Pointer(in.Tag))
+	out.Digest = (*string)(unsafe.Pointer(in.Digest))
 	return nil
 }
 

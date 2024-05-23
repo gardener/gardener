@@ -149,10 +149,10 @@ func Convert_core_HelmControllerDeployment_To_v1_HelmControllerDeployment(in *co
 }
 
 func autoConvert_v1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out *core.OCIRepository, s conversion.Scope) error {
-	out.Ref = in.Ref
-	out.Repository = in.Repository
-	out.Tag = in.Tag
-	out.Digest = in.Digest
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	out.Repository = (*string)(unsafe.Pointer(in.Repository))
+	out.Tag = (*string)(unsafe.Pointer(in.Tag))
+	out.Digest = (*string)(unsafe.Pointer(in.Digest))
 	return nil
 }
 
@@ -162,10 +162,10 @@ func Convert_v1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out *core
 }
 
 func autoConvert_core_OCIRepository_To_v1_OCIRepository(in *core.OCIRepository, out *OCIRepository, s conversion.Scope) error {
-	out.Ref = in.Ref
-	out.Repository = in.Repository
-	out.Tag = in.Tag
-	out.Digest = in.Digest
+	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	out.Repository = (*string)(unsafe.Pointer(in.Repository))
+	out.Tag = (*string)(unsafe.Pointer(in.Tag))
+	out.Digest = (*string)(unsafe.Pointer(in.Digest))
 	return nil
 }
 

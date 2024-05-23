@@ -10,6 +10,7 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 )
@@ -76,31 +77,31 @@ func validateOCIRepository(oci *core.OCIRepository, fldPath *field.Path) field.E
 		return allErrs
 	}
 
-	if oci.Ref == "" && oci.Repository == "" {
+	if ptr.Deref(oci.Ref, "") == "" && ptr.Deref(oci.Repository, "") == "" {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either ref or repository"))
 	}
 
-	if oci.Ref != "" {
+	if oci.Ref != nil {
 		// all other fields must be empty if ref is set.
-		for name, val := range map[string]string{
+		for name, val := range map[string]*string{
 			"repository": oci.Repository,
 			"tag":        oci.Tag,
 			"digest":     oci.Digest,
 		} {
-			if val != "" {
+			if ptr.Deref(val, "") != "" {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child(name), fmt.Sprintf("cannot provide %s when ref is set", name)))
 			}
 		}
 		return allErrs
 	}
 
-	if oci.Repository == "" {
+	if ptr.Deref(oci.Repository, "") == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("repository"), ""))
 	}
-	if oci.Tag == "" && oci.Digest == "" {
+	if ptr.Deref(oci.Tag, "") == "" && ptr.Deref(oci.Digest, "") == "" {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either tag or digest"))
 	}
-	if oci.Digest != "" && !strings.HasPrefix(oci.Digest, "sha256:") {
+	if oci.Digest != nil && !strings.HasPrefix(*oci.Digest, "sha256:") {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("digest"), oci.Digest, "must start with 'sha256:'"))
 	}
 
