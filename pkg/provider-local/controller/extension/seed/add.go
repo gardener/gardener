@@ -23,7 +23,7 @@ const (
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
-	DefaultAddOptions = AddOptions{}
+	DefaultAddOptions = AddOptions{Controller: controller.Options{MaxConcurrentReconciles: 5}}
 )
 
 // AddOptions are options to apply when adding the extension controller to the manager.
