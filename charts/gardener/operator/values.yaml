@@ -14,6 +14,7 @@ resources:
 # podLabels: # YAML formated labels used for pod template
 additionalVolumes: []
 additionalVolumeMounts: []
+hostAliases: []
 env: []
 # imageVectorOverwrite: |
 #  Please find documentation in docs/deployment/image_vector.md

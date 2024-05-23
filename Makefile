@@ -385,7 +385,7 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 
 operator-seed-%: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/example/operator/virtual-garden/kubeconfig
 
-operator-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+operator-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
 	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
 	$(SKAFFOLD) run -m provider-local -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
