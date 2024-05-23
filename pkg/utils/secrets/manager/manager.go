@@ -51,6 +51,10 @@ const (
 	// data is valid. In case the data contains a certificate it is the time part of the certificate's 'not after'
 	// field.
 	LabelKeyValidUntilTime = "valid-until-time"
+	// LabelKeyRenewAfterValidityPercentage is a constant for a key of a label on a certificate secret describing the
+	// percentage of the validity when the certificate should be renewed. The effective check for renewal is after the
+	// given percentage of validity or 10d before the end of validity. If not specified the default percentage is 80.
+	LabelKeyRenewAfterValidityPercentage = "renew-after-validity-percentage"
 	// LabelKeyUseDataForName is a constant for a key of a label on a Secret describing that its data should be used
 	// instead of generating a fresh secret with the same name.
 	LabelKeyUseDataForName = "secrets-manager-use-data-for-name"
@@ -205,9 +209,18 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 		return false, err
 	}
 
+	renewAfterValidityPercentage := 80
+	if secret.Labels[LabelKeyRenewAfterValidityPercentage] != "" {
+		value, err := strconv.Atoi(secret.Labels[LabelKeyRenewAfterValidityPercentage])
+		if err != nil {
+			return false, err
+		}
+		renewAfterValidityPercentage = value
+	}
+
 	var (
 		validity    = validUntilUnix - issuedAtUnix
-		renewAtUnix = issuedAtUnix + validity*80/100
+		renewAtUnix = issuedAtUnix + validity*int64(renewAfterValidityPercentage)/100
 		renewAt     = time.Unix(renewAtUnix, 0).UTC()
 		validUntil  = time.Unix(validUntilUnix, 0).UTC()
 		now         = m.clock.Now().UTC()

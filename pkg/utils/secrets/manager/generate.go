@@ -60,7 +60,7 @@ func (m *manager) Generate(ctx context.Context, config secretsutils.ConfigInterf
 		}
 	}
 
-	if err := m.maintainLifetimeLabels(config, secret, desiredLabels, options.Validity); err != nil {
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels, options.Validity, options.RenewAfterValidityPercentage); err != nil {
 		return nil, fmt.Errorf("failed maintaining lifetime labels on secret %s for config %s: %w", client.ObjectKeyFromObject(secret), config.GetName(), err)
 	}
 
@@ -246,12 +246,16 @@ func (m *manager) maintainLifetimeLabels(
 	secret *corev1.Secret,
 	desiredLabels map[string]string,
 	validity time.Duration,
+	renewAfterValidityPercentage int,
 ) error {
 	issuedAt := secret.Labels[LabelKeyIssuedAtTime]
 	if issuedAt == "" {
 		issuedAt = unixTime(m.clock.Now())
 	}
 	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
+	if renewAfterValidityPercentage > 0 {
+		desiredLabels[LabelKeyRenewAfterValidityPercentage] = fmt.Sprintf("%d", renewAfterValidityPercentage)
+	}
 
 	if validity > 0 {
 		desiredLabels[LabelKeyValidUntilTime] = unixTime(m.clock.Now().Add(validity))
@@ -351,6 +355,10 @@ type GenerateOptions struct {
 	IgnoreOldSecretsAfter *time.Duration
 	// Validity specifies for how long the secret should be valid.
 	Validity time.Duration
+	// RenewAfterValidityPercentage sets the percentage of the validity when the certificate should be renewed.
+	// The effective check for renewal is after the given percentage of validity or 10d before the end of validity.
+	// Zero value means the default percentage is used (80%).
+	RenewAfterValidityPercentage int
 	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
 	// computing the secret name for CA secrets.
 	IgnoreConfigChecksumForCASecretName bool
@@ -502,6 +510,15 @@ func IgnoreOldSecretsAfter(d time.Duration) GenerateOption {
 func Validity(v time.Duration) GenerateOption {
 	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
 		options.Validity = v
+		return nil
+	}
+}
+
+// RenewAfterValidityPercentage returns a function which sets the 'RenewAfterValidityPercentage' field to the provided
+// value.
+func RenewAfterValidityPercentage(v int) GenerateOption {
+	return func(_ Interface, _ secretsutils.ConfigInterface, options *GenerateOptions) error {
+		options.RenewAfterValidityPercentage = v
 		return nil
 	}
 }
