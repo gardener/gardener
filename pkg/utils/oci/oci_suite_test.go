@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test/port"
 )
 
 func TestOCI(t *testing.T) {
@@ -52,11 +52,11 @@ func startTestRegistry(ctx context.Context) (string, error) {
 	config := &configuration.Configuration{}
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 
-	port, err := utils.FindFreePort()
+	port, host, err := port.SuggestPort("")
 	if err != nil {
 		return "", err
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := fmt.Sprintf("%s:%d", host, port)
 	config.HTTP.Addr = addr
 	config.HTTP.DrainTimeout = 3 * time.Second
 

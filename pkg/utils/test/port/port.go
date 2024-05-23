@@ -17,7 +17,7 @@
 //
 // Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
 
-package envtest
+package port
 
 import (
 	"fmt"
@@ -77,11 +77,11 @@ func suggest(listenHost string) (port int, resolvedHost string, err error) {
 	return
 }
 
-// suggestPort suggests an address a process can listen on. It returns
+// SuggestPort suggests an address a process can listen on. It returns
 // a tuple consisting of a free port and the hostname resolved to its IP.
 // It makes sure that new port allocated does not conflict with old ports
 // allocated within 1 minute.
-func suggestPort(listenHost string) (port int, resolvedHost string, err error) {
+func SuggestPort(listenHost string) (port int, resolvedHost string, err error) {
 	for i := 0; i < portConflictRetry; i++ {
 		port, resolvedHost, err = suggest(listenHost)
 		if err != nil {
