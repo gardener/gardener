@@ -166,21 +166,22 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		// TODO(rfranzke): Remove this after v1.100 has been released.
-		var (
-			userData          []byte
-			userDataSecretRef *corev1.SecretKeySelector
-		)
-		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Init.Content)
-
-			if val.Init.SecretName != nil {
-				userDataSecretRef = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: *val.Init.SecretName},
-					Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
-				}
-			}
+		oscConfig, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]
+		if !ok {
+			return nil, fmt.Errorf("missing operating system config for worker pool %v", workerPool.Name)
 		}
+
+		if oscConfig.Init.SecretName == nil {
+			return nil, fmt.Errorf("missing secret name for worker pool %v", workerPool.Name)
+		}
+
+		// TODO(rfranzke): Remove userData after v1.100 has been released.
+		userData := []byte(oscConfig.Init.Content)
+		userDataSecretRef := &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: *oscConfig.Init.SecretName},
+			Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
+		}
+		gardenerNodeAgentSecretName := oscConfig.Init.GardenerNodeAgentSecretName
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
 		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
@@ -231,7 +232,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
 			Annotations:    workerPool.Annotations,
-			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled),
+			Labels:         gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, gardenerNodeAgentSecretName),
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{

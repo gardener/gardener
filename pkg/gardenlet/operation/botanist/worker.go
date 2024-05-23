@@ -127,12 +127,12 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 		}
 
 		var (
-			secretOSCKey   = secretMeta.Name
-			secretChecksum = secretMeta.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
+			gardenerNodeAgentSecretName = secretMeta.Name
+			secretChecksum              = secretMeta.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
 		)
 
 		for _, node := range workerPoolToNodes[worker.Name] {
-			nodeWillBeDeleted, err := nodeToBeDeleted(node, secretOSCKey)
+			nodeWillBeDeleted, err := nodeToBeDeleted(node, gardenerNodeAgentSecretName)
 			if err != nil {
 				result = multierror.Append(result, fmt.Errorf("failed checking whether node %q will be deleted: %w", node.Name, err))
 				continue
@@ -155,11 +155,17 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 	return result
 }
 
-func nodeToBeDeleted(node corev1.Node, secretOSCKey string) (bool, error) {
+func nodeToBeDeleted(node corev1.Node, gardenerNodeAgentSecretName string) (bool, error) {
 	if nodeTaintedForNoSchedule(node) {
 		return true, nil
 	}
-	return nodeOSCKeyDifferentFromSecretOSCKey(node, secretOSCKey)
+
+	if val, ok := node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
+		return val != gardenerNodeAgentSecretName, nil
+	}
+
+	// TODO(MichaelEischer): Remove this after Gardener v1.101 has been released.
+	return nodeUsesOutdatedGardenerNodeAgentSecret(node, gardenerNodeAgentSecretName)
 }
 
 func nodeTaintedForNoSchedule(node corev1.Node) bool {
@@ -176,7 +182,7 @@ func nodeTaintedForNoSchedule(node corev1.Node) bool {
 	return false
 }
 
-func nodeOSCKeyDifferentFromSecretOSCKey(node corev1.Node, secretOSCKey string) (bool, error) {
+func nodeUsesOutdatedGardenerNodeAgentSecret(node corev1.Node, gardenerNodeAgentSecretName string) (bool, error) {
 	kubernetesVersion, err := semver.NewVersion(node.Labels[v1beta1constants.LabelWorkerKubernetesVersion])
 	if err != nil {
 		return false, fmt.Errorf("failed parsing Kubernetes version to semver for node %q: %w", node.Name, err)
@@ -187,7 +193,7 @@ func nodeOSCKeyDifferentFromSecretOSCKey(node corev1.Node, secretOSCKey string) 
 		criConfig = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName(v)}
 	}
 
-	return operatingsystemconfig.Key(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != secretOSCKey, nil
+	return operatingsystemconfig.Key(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
 }
 
 // exposed for testing

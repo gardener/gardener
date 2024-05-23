@@ -73,6 +73,7 @@ var _ = Describe("Worker", func() {
 		worker1MachineImageVersion            = "worker1machineimagev1"
 		worker1MCMSettings                    = &gardencorev1beta1.MachineControllerManagerSettings{}
 		worker1UserData                       = []byte("bootstrap-me")
+		worker1UserDataKeyName                = "user-data-key-name-w1"
 		worker1UserDataSecretName             = "user-data-secret-name-w1"
 		worker1VolumeName                     = "worker1volumename"
 		worker1VolumeType                     = "worker1volumetype"
@@ -99,6 +100,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageName          = "worker2machineimage"
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
+		worker2UserDataKeyName           = "user-data-key-name-w2"
 		worker2UserDataSecretName        = "user-data-secret-name-w2"
 		worker2Arch                      = ptr.To("arm64")
 
@@ -164,14 +166,16 @@ var _ = Describe("Worker", func() {
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
 					Init: operatingsystemconfig.Data{
-						Content:    string(worker1UserData),
-						SecretName: &worker1UserDataSecretName,
+						Content:                     string(worker1UserData),
+						GardenerNodeAgentSecretName: worker1UserDataKeyName,
+						SecretName:                  &worker1UserDataSecretName,
 					},
 				},
 				worker2Name: {
 					Init: operatingsystemconfig.Data{
-						Content:    string(worker2UserData),
-						SecretName: &worker2UserDataSecretName,
+						Content:                     string(worker2UserData),
+						GardenerNodeAgentSecretName: worker2UserDataKeyName,
+						SecretName:                  &worker2UserDataSecretName,
 					},
 				},
 			},
@@ -272,11 +276,12 @@ var _ = Describe("Worker", func() {
 					MaxUnavailable: worker1MaxUnavailable,
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
-						"node.kubernetes.io/role":         "node",
-						"kubernetes.io/arch":              *worker1Arch,
-						"worker.gardener.cloud/pool":      worker1Name,
-						"worker.garden.sapcloud.io/group": worker1Name,
-						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
+						"node.kubernetes.io/role":                                                   "node",
+						"kubernetes.io/arch":                                                        *worker1Arch,
+						"worker.gardener.cloud/pool":                                                worker1Name,
+						"worker.garden.sapcloud.io/group":                                           worker1Name,
+						"worker.gardener.cloud/cri-name":                                            string(worker1CRIName),
+						"worker.gardener.cloud/gardener-node-agent-secret-name":                     worker1UserDataKeyName,
 						"containerruntime.worker.gardener.cloud/" + worker1CRIContainerRuntime1Type: "true",
 						"networking.gardener.cloud/node-local-dns-enabled":                          "false",
 					}),
@@ -318,12 +323,13 @@ var _ = Describe("Worker", func() {
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
 					Labels: map[string]string{
-						"node.kubernetes.io/role":                          "node",
-						"kubernetes.io/arch":                               *worker2Arch,
-						"worker.gardener.cloud/system-components":          "true",
-						"worker.gardener.cloud/pool":                       worker2Name,
-						"worker.garden.sapcloud.io/group":                  worker2Name,
-						"networking.gardener.cloud/node-local-dns-enabled": "false",
+						"node.kubernetes.io/role":                               "node",
+						"kubernetes.io/arch":                                    *worker2Arch,
+						"worker.gardener.cloud/system-components":               "true",
+						"worker.gardener.cloud/pool":                            worker2Name,
+						"worker.garden.sapcloud.io/group":                       worker2Name,
+						"worker.gardener.cloud/gardener-node-agent-secret-name": worker2UserDataKeyName,
+						"networking.gardener.cloud/node-local-dns-enabled":      "false",
 					},
 					MachineType: worker2MachineType,
 					MachineImage: extensionsv1alpha1.MachineImage{

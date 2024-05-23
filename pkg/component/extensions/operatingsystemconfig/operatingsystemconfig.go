@@ -183,6 +183,8 @@ type Data struct {
 	// Content is the actual cloud-config user data.
 	// TODO(rfranzke): Remove this Content field after v1.100 is released.
 	Content string
+	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
+	GardenerNodeAgentSecretName string
 	// SecretName is the name of a secret storing the actual cloud-config user data.
 	SecretName *string
 	// Command is the command for reloading the cloud-config (in case a new version was downloaded).
@@ -253,13 +255,20 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					return err
 				}
 
+				kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+				if err != nil {
+					return err
+				}
+				oscKey := Key(worker.Name, kubernetesVersion, worker.CRI)
+
 				data := Data{
-					Object:     osc,
-					Content:    string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
-					SecretName: &secret.Name,
-					Command:    osc.Status.Command,
-					Units:      osc.Status.Units,
-					Files:      osc.Status.Files,
+					Object:                      osc,
+					Content:                     string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+					GardenerNodeAgentSecretName: oscKey,
+					SecretName:                  &secret.Name,
+					Command:                     osc.Status.Command,
+					Units:                       osc.Status.Units,
+					Files:                       osc.Status.Files,
 				}
 
 				o.lock.Lock()
@@ -619,7 +628,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:           d.clusterDomain,
 		CRIName:                 d.criName,
 		Images:                  d.images,
-		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled),
+		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
 		KubeletCABundle:         d.kubeletCABundle,
 		KubeletConfigParameters: d.kubeletConfigParameters,
 		KubeletCLIFlags:         d.kubeletCLIFlags,
