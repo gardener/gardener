@@ -58,7 +58,7 @@ var _ = Describe("Monitoring", func() {
 					SeedNamespace: seedNamespace,
 					Purpose:       gardencorev1beta1.ShootPurposeProduction,
 					Components: &shootpkg.Components{
-						Monitoring: &shootpkg.Monitoring{
+						ControlPlane: &shootpkg.ControlPlane{
 							Alertmanager: alertManager,
 						},
 					},

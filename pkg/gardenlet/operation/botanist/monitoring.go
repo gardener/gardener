@@ -64,7 +64,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 // DeployAlertManager reconciles the shoot alert manager.
 func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 	if !b.Shoot.WantsAlertmanager || !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Alertmanager.Destroy(ctx)
+		return b.Shoot.Components.ControlPlane.Alertmanager.Destroy(ctx)
 	}
 
 	ingressAuthSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
@@ -72,10 +72,10 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
-	b.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
-	b.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
-	return b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
+	return b.Shoot.Components.ControlPlane.Alertmanager.Deploy(ctx)
 }
 
 // DefaultPrometheus creates a new prometheus deployer.
@@ -172,7 +172,7 @@ func (b *Botanist) MigratePrometheus(ctx context.Context) error {
 // DeployPrometheus reconciles the shoot Prometheus.
 func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx)
+		return b.Shoot.Components.ControlPlane.Prometheus.Destroy(ctx)
 	}
 
 	if err := gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
@@ -184,15 +184,15 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
-	b.Shoot.Components.Monitoring.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
-	b.Shoot.Components.Monitoring.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
-	b.Shoot.Components.Monitoring.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
+	b.Shoot.Components.ControlPlane.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.ControlPlane.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.ControlPlane.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
 
 	caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-	b.Shoot.Components.Monitoring.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
+	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
 	// TODO(rfranzke): Remove this block after v1.100 got released.
 	{
@@ -200,11 +200,11 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalScrapeConfigs(rawScrapeConfigs)
-		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalResources(prometheusRule)
+		b.Shoot.Components.ControlPlane.Prometheus.SetAdditionalScrapeConfigs(rawScrapeConfigs)
+		b.Shoot.Components.ControlPlane.Prometheus.SetAdditionalResources(prometheusRule)
 	}
 
-	if err := b.Shoot.Components.Monitoring.Prometheus.Deploy(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx); err != nil {
 		return err
 	}
 
@@ -228,7 +228,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 
 // DestroyPrometheus destroys the shoot Prometheus.
 func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
-	if err := b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.Prometheus.Destroy(ctx); err != nil {
 		return err
 	}
 

@@ -110,7 +110,6 @@ type Components struct {
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
 	Logging                  *Logging
-	Monitoring               *Monitoring
 	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
@@ -118,6 +117,8 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
+	Alertmanager             alertmanager.Interface
+	BlackboxExporter         component.DeployWaiter
 	ClusterAutoscaler        clusterautoscaler.Interface
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
@@ -131,6 +132,7 @@ type ControlPlane struct {
 	KubeStateMetrics         kubestatemetrics.Interface
 	MachineControllerManager machinecontrollermanager.Interface
 	Plutono                  plutono.Interface
+	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
@@ -165,13 +167,6 @@ type SystemComponents struct {
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
 	VPNShoot            component.DeployWaiter
-}
-
-// Monitoring contains references to monitoring deployers.
-type Monitoring struct {
-	Alertmanager     alertmanager.Interface
-	Prometheus       prometheus.Interface
-	BlackboxExporter component.DeployWaiter
 }
 
 // Logging contains references to logging deployers.
