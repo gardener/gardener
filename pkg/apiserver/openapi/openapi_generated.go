@@ -9639,7 +9639,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadIdentity is resource that allows Gardener API server to issue JSON Web Tokens. It is designed to be used by components running in the Gardener environment, seed or runtime cluster, that make use of identity federation based on OIDC protocol.",
+				Description: "WorkloadIdentity is resource that allows workloads to be presented before external systems by giving them identities managed by the Gardener API server. The identity of such workload is represented by JSON Web Token issued by the Gardener API server. Workload identities are designed to be used by components running in the Gardener environment, seed or runtime cluster, that make use of identity federation inspired by the OIDC protocol.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -9746,7 +9746,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref common.Reference
 				Properties: map[string]spec.Schema{
 					"audiences": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Audiences specify the list of OIDC audiences that will be set in the 'aud' claim.",
+							Description: "Audiences specify the list of recipients that the JWT is intended for. The values of this field will be set in the 'aud' claim.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9784,7 +9784,7 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"sub": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Sub contains the computed value for the 'sub' OIDC claim.",
+							Description: "Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

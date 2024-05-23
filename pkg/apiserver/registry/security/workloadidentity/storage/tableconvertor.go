@@ -28,8 +28,9 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Provider", Type: "string", Description: "Provider is the provider type of the WorkloadIdentity."},
-			{Name: "Audiences", Type: "string", Format: "name", Description: "Audiences is list with the audiences of the issued JWT token."},
+			{Name: "Sub", Type: "string", Format: "name", Description: "Sub is the value of the sub claim of the issued JWT token."},
+			{Name: "Type", Type: "string", Description: "Type is the provider type of the WorkloadIdentity."},
+			{Name: "Audiences", Type: "string", Format: "name", Description: "Audiences is list with the audiences of the issued JWT token.", Priority: 1},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -60,6 +61,7 @@ func (c *convertor) ConvertToTable(_ context.Context, o runtime.Object, _ runtim
 		)
 
 		cells = append(cells, obj.Name)
+		cells = append(cells, obj.Status.Sub)
 		cells = append(cells, obj.Spec.TargetSystem.Type)
 
 		cells = append(cells, strings.Join(obj.Spec.Audiences, ","))

@@ -108,9 +108,11 @@ This field is immutable.</p>
 <h3 id="security.gardener.cloud/v1alpha1.WorkloadIdentity">WorkloadIdentity
 </h3>
 <p>
-<p>WorkloadIdentity is resource that allows Gardener API server to issue JSON Web Tokens.
-It is designed to be used by components running in the Gardener environment, seed or runtime cluster,
-that make use of identity federation based on OIDC protocol.</p>
+<p>WorkloadIdentity is resource that allows workloads to be presented before external systems
+by giving them identities managed by the Gardener API server.
+The identity of such workload is represented by JSON Web Token issued by the Gardener API server.
+Workload identities are designed to be used by components running in the Gardener environment,
+seed or runtime cluster, that make use of identity federation inspired by the OIDC protocol.</p>
 </p>
 <table>
 <thead>
@@ -175,7 +177,8 @@ WorkloadIdentitySpec
 </em>
 </td>
 <td>
-<p>Audiences specify the list of OIDC audiences that will be set in the &lsquo;aud&rsquo; claim.</p>
+<p>Audiences specify the list of recipients that the JWT is intended for.
+The values of this field will be set in the &lsquo;aud&rsquo; claim.</p>
 </td>
 </tr>
 <tr>
@@ -306,7 +309,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </em>
 </td>
 <td>
-<p>Audiences specify the list of OIDC audiences that will be set in the &lsquo;aud&rsquo; claim.</p>
+<p>Audiences specify the list of recipients that the JWT is intended for.
+The values of this field will be set in the &lsquo;aud&rsquo; claim.</p>
 </td>
 </tr>
 <tr>
@@ -349,7 +353,7 @@ string
 </em>
 </td>
 <td>
-<p>Sub contains the computed value for the &lsquo;sub&rsquo; OIDC claim.</p>
+<p>Sub contains the computed value of the subject that is going to be set in JWTs &lsquo;sub&rsquo; claim.</p>
 </td>
 </tr>
 </tbody>
