@@ -147,19 +147,13 @@ func IPPoolName(shootNamespace, ipFamily string) string {
 }
 
 func ipPool(shootNamespace, ipFamily, nodeCIDR string) (client.Object, error) {
-	// we don't specify the blockSize configuration so that it is defaulted correctly based on the IP family
 	return kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
 kind: IPPool
 metadata:
   name: ` + IPPoolName(shootNamespace, ipFamily) + `
 spec:
-  allowedUses:
-  - Workload
-  - Tunnel
   cidr: ` + nodeCIDR + `
   ipipMode: Always
   natOutgoing: true
-  nodeSelector: all()
-  vxlanMode: Never
 `)).Read()
 }
