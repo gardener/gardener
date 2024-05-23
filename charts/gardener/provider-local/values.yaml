@@ -1,4 +1,4 @@
-image: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-local:latest
+image: local-skaffold/gardener-extension-provider-local:latest
 imagePullPolicy: IfNotPresent
 
 replicaCount: 1

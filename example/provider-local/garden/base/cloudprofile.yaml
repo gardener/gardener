@@ -34,4 +34,4 @@ spec:
     - name: local
       versions:
       - version: 0.0.0
-        image: provider-local-node:v0.0.0
+        image: local-skaffold/gardener-extension-provider-local-node:v0.0.0
