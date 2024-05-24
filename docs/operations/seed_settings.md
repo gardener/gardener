@@ -92,13 +92,25 @@ run for its operation.) Furthermore, load balancing may become imbalanced if mul
 
 Operators need to take these implications into account when considering switching external traffic policy to `Local`.
 
+### Proxy Protocol
+
+Traditionally, the client IP address can be used for security filtering measures, e.g. IP allow listing. However, for this to have any usefulness the client IP address needs to be correctly transferred to the filtering entity.
+
+Load balancers can either act transparently and simply pass the client IP on or they terminate one connection and forward data on a new connection. The latter (intransparant) approach requires a separate way to propagate the client IP address. Common approaches are an HTTP header for TLS terminating load balancers or [(HA) proxy protocol](https://www.haproxy.org/download/3.0/doc/proxy-protocol.txt).
+
+For level 3 load balancers, [(HA) proxy protocol](https://www.haproxy.org/download/3.0/doc/proxy-protocol.txt) is the default way to preserve client IP addresses. As it prepends a small proxy protocol header before the actual workload data, the receiving server needs to be aware of it and handle it properly. This means that activating proxy protocol needs to happen on both load balancer and receiving server at/around the same time as otherwise the receiving server will incorrectly interpret data as workload/proxy protocol header.
+
+For disruption-free migration to proxy protocol, set `.spec.settings.loadBalancerServices.proxyProtocol.allow` to `true`. The migration path should be to enable the option and shortly thereafter also enable proxy protocol on the load balancer with infrastructure-specific means, e.g. a corresponding load balancer annotation.
+
+When switching back from use of proxy protocol to no use of it, use the inverse order, i.e. disable proxy protocol first on the load balancer before disabling `.spec.settings.loadBalancerServices.proxyProtocol.allow`.
+
 ### Zone-Specific Settings
 
 In case a seed cluster is configured to use multiple zones via `.spec.provider.zones`, it may be necessary to configure the load balancers in individual zones in different way, e.g., by utilizing
 different annotations. One reason may be to reduce cross-zonal traffic and have zone-specific load balancers in place. Zone-specific load balancers may then be bound to zone-specific subnets or
 availability zones in the cloud infrastructure.
 
-Besides the load balancer annotations, it is also possible to set the [external traffic policy](#external-traffic-policy) for each zone-specific load balancer individually.
+Besides the load balancer annotations, it is also possible to set [proxy protocol termination](#proxy-protocol) and the [external traffic policy](#external-traffic-policy) for each zone-specific load balancer individually.
 
 ## Vertical Pod Autoscaler
 
