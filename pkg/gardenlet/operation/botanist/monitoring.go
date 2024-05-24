@@ -308,7 +308,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 		b.Shoot.Components.ControlPlane.EtcdMain,
 		b.Shoot.Components.ControlPlane.EtcdEvents,
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
-		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 	}
 

@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -76,7 +77,6 @@ const (
 // Interface contains functions for a kube-controller-manager deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// SetReplicaCount sets the replica count for the kube-controller-manager.
 	SetReplicaCount(replicas int32)
 	// SetRuntimeConfig sets the runtime config for the kube-controller-manager.
@@ -239,6 +239,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		shootAccessSecret   = k.newShootAccessSecret()
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
+		serviceMonitor      = k.emptyServiceMonitor()
+		prometheusRule      = k.emptyPrometheusRule()
 
 		port           int32 = 10257
 		probeURIScheme       = corev1.URISchemeHTTPS
@@ -480,36 +482,66 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// controller-manager deployed for garden cluster
-	if k.values.NamePrefix != "" {
-		serviceMonitor := k.emptyServiceMonitor()
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), serviceMonitor, func() error {
-			serviceMonitor.Labels = monitoringutils.Labels(garden.Label)
-			serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port:      portNameMetrics,
-					Scheme:    "https",
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: garden.AccessSecretName},
-						Key:                  resourcesv1alpha1.DataKeyToken,
-					}},
-					RelabelConfigs: []monitoringv1.RelabelConfig{{
-						Action: "labelmap",
-						Regex:  `__meta_kubernetes_service_label_(.+)`,
-					}},
-					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-						"rest_client_requests_total",
-						"process_max_fds",
-						"process_open_fds",
-					),
-				}},
-			}
-			return nil
-		}); err != nil {
-			return err
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), prometheusRule, func() error {
+		labels := map[string]string{
+			"service":    v1beta1constants.DeploymentNameKubeControllerManager,
+			"severity":   "critical",
+			"visibility": "all",
 		}
+
+		if k.values.NamePrefix != "" {
+			labels["topology"] = "garden"
+		} else {
+			labels["type"] = "seed"
+		}
+
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", k.prometheusLabel())
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "kube-controller-manager.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert:  "KubeControllerManagerDown",
+					Expr:   intstr.FromString(`absent(up{job="` + service.Name + `"} == 1)`),
+					For:    ptr.To(monitoringv1.Duration("15m")),
+					Labels: labels,
+					Annotations: map[string]string{
+						"summary":     "Kube Controller Manager is down.",
+						"description": "Deployments and replication controllers are not making progress.",
+					},
+				}},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), serviceMonitor, func() error {
+		serviceMonitor.Labels = monitoringutils.Labels(k.prometheusLabel())
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port:      portNameMetrics,
+				Scheme:    "https",
+				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: k.prometheusAccessSecretName()},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"rest_client_requests_total",
+					"process_max_fds",
+					"process_open_fds",
+				),
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
@@ -526,6 +558,7 @@ func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 		k.emptyDeployment(),
 		k.newShootAccessSecret().Secret,
 		k.emptyServiceMonitor(),
+		k.emptyPrometheusRule(),
 	)
 }
 
@@ -568,8 +601,26 @@ func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
 }
 
+func (k *kubeControllerManager) prometheusAccessSecretName() string {
+	if k.values.NamePrefix != "" {
+		return garden.AccessSecretName
+	}
+	return shoot.AccessSecretName
+}
+
+func (k *kubeControllerManager) prometheusLabel() string {
+	if k.values.NamePrefix != "" {
+		return garden.Label
+	}
+	return shoot.Label
+}
+
 func (k *kubeControllerManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(k.values.NamePrefix+v1beta1constants.DeploymentNameKubeControllerManager, k.namespace, garden.Label)}
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(k.values.NamePrefix+v1beta1constants.DeploymentNameKubeControllerManager, k.namespace, k.prometheusLabel())}
+}
+
+func (k *kubeControllerManager) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(k.values.NamePrefix+v1beta1constants.DeploymentNameKubeControllerManager, k.namespace, k.prometheusLabel())}
 }
 
 func getLabels() map[string]string {
