@@ -304,10 +304,7 @@ spec:
 
 func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	// Fetch component-specific monitoring configuration
-	monitoringComponents := []component.MonitoringComponent{
-		b.Shoot.Components.ControlPlane.EtcdMain,
-		b.Shoot.Components.ControlPlane.EtcdEvents,
-	}
+	monitoringComponents := []component.MonitoringComponent{}
 
 	return monitoringComponents
 }

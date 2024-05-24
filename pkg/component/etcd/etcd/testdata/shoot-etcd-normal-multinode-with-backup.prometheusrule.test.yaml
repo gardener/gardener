@@ -1,5 +1,5 @@
 rule_files:
-- kube-etcd3-main.rules.yaml
+- shoot-etcd-main.prometheusrule.yaml
 
 evaluation_interval: 30s
 
@@ -7,39 +7,39 @@ tests:
 - interval: 30s
   input_series:
   # KubeEtcdMainDown
-  # KubeEtcdBackupRestoreMainDown
+  # KubeEtcdMainBackupRestoreDown
   - series: 'up{job="kube-etcd3-main"}'
-    values: '0+0x30 1+0x40'
+    values: '1+0x70'
   # KubeEtcd3MainNoLeader
   - series: 'etcd_server_has_leader{job="kube-etcd3-main"}'
     values: '0+0x30'
-  # KubeEtcd3HighNumberOfFailedProposals
+  # KubeEtcd3MainHighNumberOfFailedProposals
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3-main", pod="etcd"}'
     values: '0+1x6 6+0x115'
-  # KubeEtcd3DbSizeLimitApproaching
-  # KubeEtcd3DbSizeLimitCrossed
+  # KubeEtcd3MainDbSizeLimitApproaching
+  # KubeEtcd3MainDbSizeLimitCrossed
   - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"}'
     values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
-  # KubeEtcdDeltaBackupFailed
+  # KubeEtcdMainDeltaBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-main",kind="Incr", pod="etcd", role="test"}'
     values: '0+0x62'
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-main",kind="Incr", pod="etcd", role="test"}'
     values: '1+0x62'
   - series: 'etcd_server_is_leader{job="kube-etcd3-main", pod="etcd", role="test"}'
-    values: '1+0x62'
-  # KubeEtcdFullBackupFailed
+    values: '1+0x70'
+  # KubeEtcdMainFullBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-main",kind="Full", pod="etcd", role="test"}'
     values: '0+0x2912'
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore-main",kind="Full", pod="etcd", role="test"}'
     values: '1+0x2912'
   - series: 'etcd_server_is_leader{job="kube-etcd3-main", pod="etcd", role="test"}'
     values: '1+0x2912'
-  # KubeEtcdRestorationFailed
+  # KubeEtcdMainRestorationFailed
   - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-main",succeeded="false"}'
     values: '0+0x7 1 2 2'
-  # KubeEtcdBackupRestoreMainDown
+  # KubeEtcdMainBackupRestoreDown
   - series: 'up{job="kube-etcd3-backup-restore-main"}'
-    values: '0+0x60 1+0x10'
+    values: '0+0x70'
   - series: 'etcdbr_snapshotter_failure{job="kube-etcd3-backup-restore-main"}'
     values: '1+1x30 1+0x40'
   alert_rule_test:
@@ -52,7 +52,7 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down, the cluster is unreachable.
+        description: Etcd3 cluster main is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 main is down, the cluster is unreachable.
         summary: Etcd3 main cluster down.
   - eval_time: 15m
     alertname: KubeEtcd3MainNoLeader
@@ -63,10 +63,10 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: Etcd3 main has no leader.
+        description: Etcd3 cluster main has no leader. Possible network partition in the etcd cluster.
         summary: Etcd3 main has no leader.
   - eval_time: 1h
-    alertname: KubeEtcd3HighNumberOfFailedProposals
+    alertname: KubeEtcd3MainHighNumberOfFailedProposals
     exp_alerts:
     - exp_labels:
         service: etcd
@@ -79,7 +79,7 @@ tests:
         description: Etcd3 main pod etcd has seen 6 proposal failures within the last hour.
         summary: High number of failed etcd proposals
   - eval_time: 5m
-    alertname: KubeEtcd3DbSizeLimitApproaching
+    alertname: KubeEtcd3MainDbSizeLimitApproaching
     exp_alerts:
     - exp_labels:
         job: kube-etcd3-main
@@ -91,7 +91,7 @@ tests:
         description: Etcd3 main DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
         summary: Etcd3 main DB size is approaching its current practical limit.
   - eval_time: 10m
-    alertname: KubeEtcd3DbSizeLimitCrossed
+    alertname: KubeEtcd3MainDbSizeLimitCrossed
     exp_alerts:
     - exp_labels:
         job: kube-etcd3-main
@@ -103,7 +103,7 @@ tests:
         description: Etcd3 main DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
         summary: Etcd3 main DB size has crossed its current practical limit.
   - eval_time: 31m
-    alertname: KubeEtcdDeltaBackupFailed
+    alertname: KubeEtcdMainDeltaBackupFailed
     exp_alerts:
     - exp_labels:
         pod: etcd
@@ -116,7 +116,7 @@ tests:
         description: No delta snapshot for the past 30 minutes have been taken by backup-restore leader.
         summary: Etcd delta snapshot failure.
   - eval_time: 1456m
-    alertname: KubeEtcdFullBackupFailed
+    alertname: KubeEtcdMainFullBackupFailed
     exp_alerts:
     - exp_labels:
         pod: etcd
@@ -129,7 +129,7 @@ tests:
         description: No full snapshot for at least last 24 hours have been taken by backup-restore leader.
         summary: Etcd full snapshot failure.
   - eval_time: 5m
-    alertname: KubeEtcdRestorationFailed
+    alertname: KubeEtcdMainRestorationFailed
     exp_alerts:
     - exp_labels:
         job: kube-etcd3-backup-restore-main
@@ -141,20 +141,8 @@ tests:
       exp_annotations:
         description: Etcd data restoration was triggered, but has failed.
         summary: Etcd data restoration failure.
-  - eval_time: 16m
-    alertname: KubeEtcdBackupRestoreMainDown
-    exp_alerts:
-    - exp_labels:
-        job: kube-etcd3-backup-restore-main
-        service: etcd
-        severity: critical
-        type: seed
-        visibility: operator
-      exp_annotations:
-        description: Etcd backup restore main process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
-        summary: Etcd backup restore main process down or snapshotter failed with error
   - eval_time: 30m
-    alertname: KubeEtcdBackupRestoreMainDown
+    alertname: KubeEtcdMainBackupRestoreDown
     exp_alerts:
     - exp_labels:
         service: etcd
@@ -164,6 +152,3 @@ tests:
       exp_annotations:
         description: Etcd backup restore main process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
         summary: Etcd backup restore main process down or snapshotter failed with error
-  - eval_time: 35m
-    alertname: KubeEtcdBackupRestoreMainDown
-    exp_alerts:

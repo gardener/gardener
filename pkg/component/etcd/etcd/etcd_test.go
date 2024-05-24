@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -18,6 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -28,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
@@ -40,6 +43,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -528,88 +532,294 @@ var _ = Describe("Etcd", func() {
 			},
 		}
 
-		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "garden-virtual-garden-etcd-" + testRole,
-				Namespace: testNamespace,
-				Labels:    map[string]string{"prometheus": "garden"},
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"name":     "etcd",
-					"instance": "virtual-garden-" + etcdName,
-				}},
-				Endpoints: []monitoringv1.Endpoint{
-					{
-						Port:   "client",
-						Scheme: "https",
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
-							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
-								Key:                  secretsutils.DataKeyCertificate,
-							}},
-							KeySecret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
-								Key:                  secretsutils.DataKeyPrivateKey,
-							},
-						}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{
-							{
-								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
-								TargetLabel:  "role",
-							},
-							{
-								Action:      "replace",
-								Replacement: ptr.To("virtual-garden-etcd"),
-								TargetLabel: "job",
-							},
-						},
-						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-							Action: "labeldrop",
-							Regex:  `^instance$`,
-						}},
-					},
-					{
-						Port:   "backuprestore",
-						Scheme: "https",
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
-							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
-								Key:                  secretsutils.DataKeyCertificate,
-							}},
-							KeySecret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "etcd-client"},
-								Key:                  secretsutils.DataKeyPrivateKey,
-							},
-						}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{
-							{
-								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
-								TargetLabel:  "role",
-							},
+		serviceMonitorJobNames = func(prometheusName string) (string, string) {
+			if prometheusName == "garden" {
+				return "virtual-garden-etcd", "virtual-garden-etcd-backup"
+			}
+			return "kube-etcd3-" + testRole, "kube-etcd3-backup-restore-" + testRole
+		}
 
-							{
-								Action:      "replace",
-								Replacement: ptr.To("virtual-garden-etcd-backup"),
-								TargetLabel: "job",
+		serviceMonitor = func(prometheusName, clientSecretName string) *monitoringv1.ServiceMonitor {
+			jobNameEtcd, jobNameBackupRestore := serviceMonitorJobNames(prometheusName)
+
+			return &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      prometheusName + "-" + etcdName,
+					Namespace: testNamespace,
+					Labels:    map[string]string{"prometheus": prometheusName},
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+						"name":     "etcd",
+						"instance": etcdName,
+					}},
+					Endpoints: []monitoringv1.Endpoint{
+						{
+							Port:   "client",
+							Scheme: "https",
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+								InsecureSkipVerify: ptr.To(true),
+								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+									Key:                  secretsutils.DataKeyCertificate,
+								}},
+								KeySecret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+									Key:                  secretsutils.DataKeyPrivateKey,
+								},
+							}},
+							RelabelConfigs: []monitoringv1.RelabelConfig{
+								{
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									TargetLabel:  "role",
+								},
+								{
+									Action:      "replace",
+									Replacement: ptr.To(jobNameEtcd),
+									TargetLabel: "job",
+								},
 							},
-						},
-						MetricRelabelConfigs: []monitoringv1.RelabelConfig{
-							{
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 								Action: "labeldrop",
 								Regex:  `^instance$`,
+							}},
+						},
+						{
+							Port:   "backuprestore",
+							Scheme: "https",
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+								InsecureSkipVerify: ptr.To(true),
+								Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+									Key:                  secretsutils.DataKeyCertificate,
+								}},
+								KeySecret: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{Name: clientSecretName},
+									Key:                  secretsutils.DataKeyPrivateKey,
+								},
+							}},
+							RelabelConfigs: []monitoringv1.RelabelConfig{
+								{
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									TargetLabel:  "role",
+								},
+
+								{
+									Action:      "replace",
+									Replacement: ptr.To(jobNameBackupRestore),
+									TargetLabel: "job",
+								},
 							},
-							{
-								SourceLabels: []monitoringv1.LabelName{"__name__"},
-								Action:       "keep",
-								Regex:        `^(etcdbr_defragmentation_duration_seconds_.+|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_.+|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_.+|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_.+|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$`,
+							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+								{
+									Action: "labeldrop",
+									Regex:  `^instance$`,
+								},
+								{
+									SourceLabels: []monitoringv1.LabelName{"__name__"},
+									Action:       "keep",
+									Regex:        `^(etcdbr_defragmentation_duration_seconds_bucket|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_bucket|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_bucket|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_bucket|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|etcdbr_snapshotter_failure|etcdbr_cluster_size|etcdbr_is_learner|etcdbr_is_learner_count_total|etcdbr_add_learner_duration_seconds_bucket|etcdbr_add_learner_duration_seconds_sum|etcdbr_member_remove_duration_seconds_bucket|etcdbr_member_remove_duration_seconds_sum|etcdbr_member_promote_duration_seconds_bucket|etcdbr_member_promote_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$`,
+								},
 							},
 						},
 					},
 				},
+			}
+		}
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-etcd-druid",
+				Namespace: testNamespace,
+				Labels:    map[string]string{"prometheus": "shoot"},
 			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorTimestamps: ptr.To(false),
+				MetricsPath:     ptr.To("/federate"),
+				Params:          map[string][]string{"match[]": {`{job="etcd-druid",etcd_namespace="` + testNamespace + `"}`}},
+				StaticConfigs:   []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"}}},
+			},
+		}
+		prometheusRule = func(prometheusName string, class Class, replicas int32, backupEnabled bool) *monitoringv1.PrometheusRule {
+			jobNameEtcd, jobNameBackupRestore := serviceMonitorJobNames(prometheusName)
+
+			alertFor1, severity1, alertFor2 := "15m", "critical", "15m"
+			if class == ClassImportant {
+				alertFor1, severity1, alertFor2 = "5m", "blocker", "10m"
+			}
+
+			obj := &monitoringv1.PrometheusRule{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-" + etcdName,
+					Namespace: testNamespace,
+					Labels:    map[string]string{"prometheus": "shoot"},
+				},
+				Spec: monitoringv1.PrometheusRuleSpec{
+					Groups: []monitoringv1.RuleGroup{{
+						Name: jobNameEtcd + ".rules",
+						Rules: []monitoringv1.Rule{
+							{
+								Alert: "KubeEtcd" + testROLE + "Down",
+								Expr:  intstr.FromString(`sum(up{job="` + jobNameEtcd + `"}) < ` + strconv.Itoa(int(replicas/2)+1)),
+								For:   ptr.To(monitoringv1.Duration(alertFor1)),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   severity1,
+									"type":       "seed",
+									"visibility": "operator",
+								},
+								Annotations: map[string]string{
+									"summary":     "Etcd3 " + testRole + " cluster down.",
+									"description": "Etcd3 cluster " + testRole + " is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 " + testRole + " is down, the cluster is unreachable.",
+								},
+							},
+							// etcd leader alerts
+							{
+								Alert: "KubeEtcd3" + testROLE + "NoLeader",
+								Expr:  intstr.FromString(`sum(etcd_server_has_leader{job="` + jobNameEtcd + `"}) < count(etcd_server_has_leader{job="` + jobNameEtcd + `"})`),
+								For:   ptr.To(monitoringv1.Duration(alertFor2)),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   "critical",
+									"type":       "seed",
+									"visibility": "operator",
+								},
+								Annotations: map[string]string{
+									"summary":     "Etcd3 " + testRole + " has no leader.",
+									"description": "Etcd3 cluster " + testRole + " has no leader. Possible network partition in the etcd cluster.",
+								},
+							},
+							{
+								Alert: "KubeEtcd3" + testROLE + "HighNumberOfFailedProposals",
+								Expr:  intstr.FromString(`increase(etcd_server_proposals_failed_total{job="` + jobNameEtcd + `"}[1h]) > 5`),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   "warning",
+									"type":       "seed",
+									"visibility": "operator",
+								},
+								Annotations: map[string]string{
+									"summary":     "High number of failed etcd proposals",
+									"description": "Etcd3 " + testRole + " pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.",
+								},
+							},
+							{
+								Alert: "KubeEtcd3" + testROLE + "HighMemoryConsumption",
+								Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + testRole + `-0",container="etcd"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd", targetName="etcd-` + testRole + `", resource="memory"}) > .5`),
+								For:   ptr.To(monitoringv1.Duration("15m")),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   "warning",
+									"type":       "seed",
+									"visibility": "operator",
+								},
+								Annotations: map[string]string{
+									"summary":     "Etcd3 " + testRole + " is consuming too much memory",
+									"description": "Etcd3 " + testRole + " is consuming over 50% of the max allowed value specified by VPA.",
+								},
+							},
+							{
+								Alert: "KubeEtcd3" + testROLE + "DbSizeLimitApproaching",
+								Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + jobNameEtcd + `"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="` + jobNameEtcd + `"} <= bool 8589935000) == 2`),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   "warning",
+									"type":       "seed",
+									"visibility": "all",
+								},
+								Annotations: map[string]string{
+									"summary":     "Etcd3 " + testRole + " DB size is approaching its current practical limit.",
+									"description": "Etcd3 " + testRole + " DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.",
+								},
+							},
+							{
+								Alert: "KubeEtcd3" + testROLE + "DbSizeLimitCrossed",
+								Expr:  intstr.FromString(`etcd_mvcc_db_total_size_in_bytes{job="` + jobNameEtcd + `"} > 8589935000`),
+								Labels: map[string]string{
+									"service":    "etcd",
+									"severity":   "critical",
+									"type":       "seed",
+									"visibility": "all",
+								},
+								Annotations: map[string]string{
+									"summary":     "Etcd3 " + testRole + " DB size has crossed its current practical limit.",
+									"description": "Etcd3 " + testRole + " DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.",
+								},
+							},
+							{
+								Record: "shoot:apiserver_storage_objects:sum_by_resource",
+								Expr:   intstr.FromString(`max(apiserver_storage_objects) by (resource)`),
+							},
+						},
+					}},
+				},
+			}
+
+			if backupEnabled {
+				obj.Spec.Groups[0].Rules = append(obj.Spec.Groups[0].Rules,
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + testROLE + "DeltaBackupFailed",
+						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + jobNameBackupRestore + `",kind="Incr"} > bool 900) * etcdbr_snapshot_required{job="` + jobNameBackupRestore + `",kind="Incr"}) * on (pod, role) etcd_server_is_leader{job="` + jobNameEtcd + `"} > 0`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd delta snapshot failure.",
+							"description": "No delta snapshot for the past 30 minutes have been taken by backup-restore leader.",
+						},
+					},
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + testROLE + "FullBackupFailed",
+						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + jobNameBackupRestore + `",kind="Full"} > bool 86400) * etcdbr_snapshot_required{job="` + jobNameBackupRestore + `",kind="Full"}) * on (pod, role) etcd_server_is_leader{job="` + jobNameEtcd + `"} > 0`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd full snapshot failure.",
+							"description": "No full snapshot for at least last 24 hours have been taken by backup-restore leader.",
+						},
+					},
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + testROLE + "RestorationFailed",
+						Expr:  intstr.FromString(`rate(etcdbr_restoration_duration_seconds_count{job="` + jobNameBackupRestore + `",succeeded="false"}[2m]) > 0`),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd data restoration failure.",
+							"description": "Etcd data restoration was triggered, but has failed.",
+						},
+					},
+					// etcd backup failure alert
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + testROLE + "BackupRestoreDown",
+						Expr:  intstr.FromString(`(sum(up{job="` + jobNameEtcd + `"}) - sum(up{job="` + jobNameBackupRestore + `"}) > 0) or (rate(etcdbr_snapshotter_failure{job="` + jobNameBackupRestore + `"}[5m]) > 0)`),
+						For:   ptr.To(monitoringv1.Duration("10m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd backup restore " + testRole + " process down or snapshotter failed with error",
+							"description": "Etcd backup restore " + testRole + " process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.",
+						},
+					},
+				)
+			}
+
+			return obj
 		}
 	)
 
@@ -768,6 +978,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+				}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -833,6 +1055,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: hvpaName}, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, updateModeMaintenanceWindow)))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, existingReplicas, false)))
 				}),
 			)
 
@@ -905,6 +1139,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, updateModeMaintenanceWindow)))
 				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, existingReplicas, false)))
+				}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -964,6 +1210,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+				}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1021,6 +1279,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: hvpaName}, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 				}),
 			)
 
@@ -1111,6 +1381,18 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(scrapeConfig))
+				}),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+				}),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1197,6 +1479,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPA))
 					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+					}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1256,6 +1550,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateMode)))
 					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+					}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1305,6 +1611,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: hvpaName}, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, true)))
 					}),
 				)
 
@@ -1364,6 +1682,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateModeMaintenanceWindow)))
 					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, true)))
+					}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1416,6 +1746,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPA))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, false)))
 					}),
 				)
 			}
@@ -1556,18 +1898,18 @@ var _ = Describe("Etcd", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Create new etcd CA
-				_, err = sm.Generate(ctx,
-					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
+				_, err = sm.Generate(ctx, &secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
 				Expect(err).ToNot(HaveOccurred())
 
 				// Create new peer CA
-				_, err = sm.Generate(ctx,
-					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
+				_, err = sm.Generate(ctx, &secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			Context("when peer url secrets are present in etcd CR", func() {
 				It("should not remove peer URL secrets", func() {
+					var clientSecretName string
+
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&druidv1alpha1.Etcd{
@@ -1603,11 +1945,24 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
+							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(expectedVPA))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(scrapeConfig))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 						}),
 					)
 
@@ -1617,6 +1972,8 @@ var _ = Describe("Etcd", func() {
 
 			Context("when peer url secrets are not present in etcd CR", func() {
 				It("should add peer url secrets", func() {
+					var clientSecretName string
+
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&druidv1alpha1.Etcd{
@@ -1641,11 +1998,24 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
+							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(expectedVPA))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(scrapeConfig))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 						}),
 					)
 
@@ -1704,6 +2074,18 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: hvpaName}, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(hvpaFor(class, 1, updateMode)))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(scrapeConfig))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 					}),
 				)
 
@@ -1774,13 +2156,27 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: testNamespace}}),
 					c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: testNamespace}}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "garden-virtual-garden-etcd-main"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "garden-virtual-garden-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(serviceMonitor))
+						Expect(obj).To(DeepEqual(serviceMonitor("garden", "etcd-client")))
 					}),
 				)
 
 				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+		})
+
+		Describe("Prometheus rules", func() {
+			It("should successfully run the rule tests", func() {
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassNormal, 1, false), "testdata/shoot-etcd-normal-singlenode-without-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassNormal, 1, true), "testdata/shoot-etcd-normal-singlenode-with-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassNormal, 3, false), "testdata/shoot-etcd-normal-multinode-without-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassNormal, 3, true), "testdata/shoot-etcd-normal-multinode-with-backup.prometheusrule.test.yaml")
+
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassImportant, 1, false), "testdata/shoot-etcd-important-singlenode-without-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassImportant, 1, true), "testdata/shoot-etcd-important-singlenode-with-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassImportant, 3, false), "testdata/shoot-etcd-important-multinode-without-backup.prometheusrule.test.yaml")
+				componenttest.PrometheusRule(prometheusRule("shoot", ClassImportant, 3, true), "testdata/shoot-etcd-important-multinode-with-backup.prometheusrule.test.yaml")
 			})
 		})
 	})
@@ -1825,7 +2221,9 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, etcdRes),
 			)
 			Expect(etcd.Destroy(ctx)).To(Succeed())
@@ -1861,7 +2259,36 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
+			)
+
+			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the scrape config deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
+			gomock.InOrder(
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
+			)
+
+			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the prometheus rule deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
+			gomock.InOrder(
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
 			)
 
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
@@ -1874,7 +2301,9 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "garden"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, etcdRes).Return(fakeErr),
 			)
 
