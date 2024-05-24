@@ -291,6 +291,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
 		},
 		true,
+		seed.GetLoadBalancerServiceProxyProtocolTermination(),
 		true,
 		seed.GetInfo().Spec.Provider.Zones,
 		seed.IsDualStack(),
@@ -313,6 +314,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 				nil,
 				&zone,
 				seed.IsDualStack(),
+				seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone),
 			); err != nil {
 				return nil, nil, "", err
 			}
@@ -333,6 +335,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 			handler.SNI.Ingress.ServiceExternalIP,
 			nil,
 			seed.IsDualStack(),
+			seed.GetLoadBalancerServiceProxyProtocolTermination(),
 		); err != nil {
 			return nil, nil, "", err
 		}
@@ -352,6 +355,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 					nil,
 					&zone,
 					seed.IsDualStack(),
+					seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone),
 				); err != nil {
 					return nil, nil, "", err
 				}
@@ -395,6 +399,10 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 							zone = &newZone
 						}
 					}
+					proxyProtocolTermination := seed.GetLoadBalancerServiceProxyProtocolTermination()
+					if zone != nil {
+						proxyProtocolTermination = seed.GetZonalLoadBalancerServiceProxyProtocolTermination(*zone)
+					}
 					if err := sharedcomponent.AddIstioIngressGateway(
 						ctx,
 						r.SeedClientSet.Client(),
@@ -406,6 +414,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 						nil,
 						zone,
 						seed.IsDualStack(),
+						proxyProtocolTermination,
 					); err != nil {
 						return nil, nil, "", err
 					}
