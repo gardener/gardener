@@ -4,7 +4,7 @@
 
 ![monitoring](./images/monitoring.png)
 
-### Prometheus
+### Cache Prometheus
 
 Deployed in the `garden` namespace. Important scrape targets:
 
@@ -12,9 +12,9 @@ Deployed in the `garden` namespace. Important scrape targets:
 - node-exporter
 - kube-state-metrics
 
-**Purpose**: Acts as a cache for other Prometheus instances. The metrics are kept for a short amount of time (~2 hours) due to the high cardinality. For example if another Prometheus needs access to cadvisor metrics it will query this Prometheus instead of the cadvisor. This also reduces load on the kubelets and API Server.
+**Purpose**: Act as a reverse proxy that supports server-side filtering, which is not supported by Prometheus exporters but by federation. Metrics in this Prometheus are kept for a short amount of time (~1 day) since other Prometheus instances are expected to federate from it and move metrics over. For example, the [shoot Prometheus](#shoot-prometheus) queries this Prometheus to retrieve metrics corresponding to the shoot's control plane. This way, we achieve isolation so that shoot owners are only able to query metrics for their shoots. Please note Prometheus does not support isolation features. Another example is if another Prometheus needs access to cadvisor metrics, which does not support server-side filtering, so it will query this Prometheus instead of the cadvisor. This strategy also reduces load on the kubelets and API Server.
 
-Some of the high cardinality metrics are aggregated with recording rules. These _pre-aggregated_ metrics are scraped by the [Aggregate Prometheus](#aggregate-prometheus).
+Note some of these Prometheus' metrics have high cardinality (e.g., metrics related to all shoots managed by the seed). Some of these are aggregated with recording rules. These _pre-aggregated_ metrics are scraped by the [aggregate Prometheus](#aggregate-prometheus).
 
 This Prometheus is not used for alerting.
 
@@ -22,10 +22,10 @@ This Prometheus is not used for alerting.
 
 Deployed in the `garden` namespace. Important scrape targets:
 
-- other prometheus instances
+- other Prometheus instances
 - logging components
 
-**Purpose**: Store pre-aggregated data from [prometheus](#prometheus) and [shoot prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster.
+**Purpose**: Store pre-aggregated data from the [cache Prometheus](#cache-prometheus) and [shoot Prometheus](#shoot-prometheus). An ingress exposes this Prometheus allowing it to be scraped from another cluster. Such pre-aggregated data is also used for alerting.
 
 ### Seed Prometheus
 
@@ -40,7 +40,10 @@ prometheus.io/name=<name>
 - cadvisor metrics from pods in the garden and extension namespaces
 
 The job name label will be applied to all metrics from that service.
+
 **Purpose**: Entrypoint for operators when debugging issues with extensions or other garden components.
+
+This Prometheus is not used for alerting.
 
 ### Shoot Prometheus
 
@@ -52,9 +55,9 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 
 **Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive alerts based on these metrics. For alerting internals refer to [this](alerting.md) document.
 
-## Collect all Shoot Prometheus with remote write
+## Collect all shoot Prometheus with remote write
 
-An optional collection of all Shoot Prometheus metrics to a central prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:
+An optional collection of all shoot Prometheus metrics to a central Prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:
 ```
 monitoring:
   shoot:
