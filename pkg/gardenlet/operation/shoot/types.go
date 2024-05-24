@@ -39,7 +39,6 @@ import (
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
@@ -127,7 +126,7 @@ type ControlPlane struct {
 	KubeAPIServer            kubeapiserver.Interface
 	KubeScheduler            component.DeployWaiter
 	KubeControllerManager    kubecontrollermanager.Interface
-	KubeStateMetrics         kubestatemetrics.Interface
+	KubeStateMetrics         component.DeployWaiter
 	MachineControllerManager machinecontrollermanager.Interface
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface

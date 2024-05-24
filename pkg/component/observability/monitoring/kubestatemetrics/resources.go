@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -38,15 +39,17 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		clusterRole        = k.emptyClusterRole()
-		clusterRoleBinding = k.emptyClusterRoleBinding()
-		service            = k.emptyService()
-		deployment         = k.emptyDeployment()
-		vpa                = k.emptyVerticalPodAutoscaler()
-		pdb                = k.emptyPodDisruptionBudget()
-		scrapeConfigCache  = k.emptyScrapeConfigCache()
-		scrapeConfigSeed   = k.emptyScrapeConfigSeed()
-		scrapeConfigGarden = k.emptyScrapeConfigGarden()
+		clusterRole         = k.emptyClusterRole()
+		clusterRoleBinding  = k.emptyClusterRoleBinding()
+		service             = k.emptyService()
+		deployment          = k.emptyDeployment()
+		vpa                 = k.emptyVerticalPodAutoscaler()
+		pdb                 = k.emptyPodDisruptionBudget()
+		scrapeConfigCache   = k.emptyScrapeConfigCache()
+		scrapeConfigSeed    = k.emptyScrapeConfigSeed()
+		scrapeConfigGarden  = k.emptyScrapeConfigGarden()
+		scrapeConfigShoot   = k.emptyScrapeConfigShoot()
+		prometheusRuleShoot = k.emptyPrometheusRuleShoot()
 
 		configs = component.ResourceConfigs{
 			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
@@ -75,7 +78,12 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 				k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}})
 			}},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, nil, genericTokenKubeconfigSecretName, shootAccessSecret) }},
+			component.ResourceConfig{Obj: prometheusRuleShoot, Class: component.Runtime, MutateFn: func() { k.reconcilePrometheusRuleShoot(prometheusRuleShoot) }},
 		)
+
+		if !k.values.IsWorkerless {
+			configs = append(configs, component.ResourceConfig{Obj: scrapeConfigShoot, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigShoot(scrapeConfigShoot) }})
+		}
 	}
 
 	return configs
@@ -354,14 +362,11 @@ func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *pol
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
 }
 
-func (k *kubeStateMetrics) emptyScrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
-}
-
-func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
-	scrapeConfig.Labels = monitoringutils.Labels(cache.Label)
-	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+func (k *kubeStateMetrics) standardScrapeConfigSpec(allowedMetrics ...string) monitoringv1alpha1.ScrapeConfigSpec {
+	return monitoringv1alpha1.ScrapeConfigSpec{
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+			// Service is used, because we only care about metric from one kube-state-metrics instance and not multiple
+			// in HA setup.
 			Role:       "service",
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
@@ -394,8 +399,71 @@ func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1
 			SourceLabels: []monitoringv1.LabelName{"pod"},
 			Regex:        `^.+\.tf-pod.+$`,
 			Action:       "drop",
-		}}, monitoringutils.StandardMetricRelabelConfig(cachePrometheusAllowedMetrics...)...),
+		}}, monitoringutils.StandardMetricRelabelConfig(allowedMetrics...)...),
 	}
+}
+
+var cachePrometheusAllowedMetrics = []string{
+	"kube_daemonset_metadata_generation",
+	"kube_daemonset_status_current_number_scheduled",
+	"kube_daemonset_status_desired_number_scheduled",
+	"kube_daemonset_status_number_available",
+	"kube_daemonset_status_number_unavailable",
+	"kube_daemonset_status_updated_number_scheduled",
+	"kube_deployment_metadata_generation",
+	"kube_deployment_spec_replicas",
+	"kube_deployment_status_observed_generation",
+	"kube_deployment_status_replicas",
+	"kube_deployment_status_replicas_available",
+	"kube_deployment_status_replicas_unavailable",
+	"kube_deployment_status_replicas_updated",
+	"kube_horizontalpodautoscaler_spec_max_replicas",
+	"kube_horizontalpodautoscaler_spec_min_replicas",
+	"kube_horizontalpodautoscaler_status_current_replicas",
+	"kube_horizontalpodautoscaler_status_desired_replicas",
+	"kube_horizontalpodautoscaler_status_condition",
+	"kube_namespace_annotations",
+	"kube_node_info",
+	"kube_node_labels",
+	"kube_node_spec_taint",
+	"kube_node_spec_unschedulable",
+	"kube_node_status_allocatable",
+	"kube_node_status_capacity",
+	"kube_node_status_condition",
+	"kube_persistentvolumeclaim_resource_requests_storage_bytes",
+	"kube_pod_container_info",
+	"kube_pod_container_resource_limits",
+	"kube_pod_container_resource_requests",
+	"kube_pod_container_status_restarts_total",
+	"kube_pod_info",
+	"kube_pod_labels",
+	"kube_pod_owner",
+	"kube_pod_spec_volumes_persistentvolumeclaims_info",
+	"kube_pod_status_phase",
+	"kube_pod_status_ready",
+	"kube_replicaset_owner",
+	"kube_statefulset_metadata_generation",
+	"kube_statefulset_replicas",
+	"kube_statefulset_status_observed_generation",
+	"kube_statefulset_status_replicas",
+	"kube_statefulset_status_replicas_current",
+	"kube_statefulset_status_replicas_ready",
+	"kube_statefulset_status_replicas_updated",
+	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target",
+	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound",
+	"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound",
+	"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed",
+	"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed",
+	"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
+}
+
+func (k *kubeStateMetrics) emptyScrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
+}
+
+func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+	scrapeConfig.Labels = monitoringutils.Labels(cache.Label)
+	scrapeConfig.Spec = k.standardScrapeConfigSpec(cachePrometheusAllowedMetrics...)
 }
 
 func (k *kubeStateMetrics) emptyScrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
@@ -481,6 +549,161 @@ func (k *kubeStateMetrics) reconcileScrapeConfigGarden(scrapeConfig *monitoringv
 			"kube_pod_container_status_restarts_total",
 			"kube_pod_status_phase",
 		)...),
+	}
+}
+
+func (k *kubeStateMetrics) emptyScrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, shoot.Label)}
+}
+
+func (k *kubeStateMetrics) reconcileScrapeConfigShoot(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+	scrapeConfig.Labels = monitoringutils.Labels(shoot.Label)
+	scrapeConfig.Spec = k.standardScrapeConfigSpec(
+		"kube_daemonset_metadata_generation",
+		"kube_daemonset_status_current_number_scheduled",
+		"kube_daemonset_status_desired_number_scheduled",
+		"kube_daemonset_status_number_available",
+		"kube_daemonset_status_number_unavailable",
+		"kube_daemonset_status_updated_number_scheduled",
+		"kube_deployment_metadata_generation",
+		"kube_deployment_spec_replicas",
+		"kube_deployment_status_observed_generation",
+		"kube_deployment_status_replicas",
+		"kube_deployment_status_replicas_available",
+		"kube_deployment_status_replicas_unavailable",
+		"kube_deployment_status_replicas_updated",
+		"kube_node_info",
+		"kube_node_labels",
+		"kube_node_spec_taint",
+		"kube_node_spec_unschedulable",
+		"kube_node_status_allocatable",
+		"kube_node_status_capacity",
+		"kube_node_status_condition",
+		"kube_pod_container_info",
+		"kube_pod_container_resource_limits",
+		"kube_pod_container_resource_requests",
+		"kube_pod_container_status_restarts_total",
+		"kube_pod_info",
+		"kube_pod_labels",
+		"kube_pod_status_phase",
+		"kube_pod_status_ready",
+		"kube_replicaset_owner",
+		"kube_replicaset_metadata_generation",
+		"kube_replicaset_spec_replicas",
+		"kube_replicaset_status_observed_generation",
+		"kube_replicaset_status_replicas",
+		"kube_replicaset_status_ready_replicas",
+		"kube_statefulset_metadata_generation",
+		"kube_statefulset_replicas",
+		"kube_statefulset_status_observed_generation",
+		"kube_statefulset_status_replicas",
+		"kube_statefulset_status_replicas_current",
+		"kube_statefulset_status_replicas_ready",
+		"kube_statefulset_status_replicas_updated",
+		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target",
+		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound",
+		"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound",
+		"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed",
+		"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed",
+		"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
+	)
+}
+
+func (k *kubeStateMetrics) emptyPrometheusRuleShoot() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, shoot.Label)}
+}
+
+func (k *kubeStateMetrics) reconcilePrometheusRuleShoot(prometheusRule *monitoringv1.PrometheusRule) {
+	rules := []monitoringv1.Rule{{
+		Alert: "KubeStateMetricsSeedDown",
+		Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
+		For:   ptr.To(monitoringv1.Duration("15m")),
+		Labels: map[string]string{
+			"service":    "kube-state-metrics-seed",
+			"severity":   "critical",
+			"type":       "seed",
+			"visibility": "operator",
+		},
+		Annotations: map[string]string{
+			"summary":     "There are no kube-state-metrics metrics for the control plane",
+			"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+		},
+	}}
+
+	if !k.values.IsWorkerless {
+		rules = append(rules,
+			monitoringv1.Rule{
+				Alert: "KubeStateMetricsShootDown",
+				Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
+				For:   ptr.To(monitoringv1.Duration("15m")),
+				Labels: map[string]string{
+					"service":    "kube-state-metrics-shoot",
+					"severity":   "info",
+					"type":       "seed",
+					"visibility": "operator",
+				},
+				Annotations: map[string]string{
+					"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
+					"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
+				},
+			},
+			monitoringv1.Rule{
+				Alert: "NoWorkerNodes",
+				Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
+				For:   ptr.To(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
+				Labels: map[string]string{
+					"service":    "nodes",
+					"severity":   "blocker",
+					"visibility": "all",
+				},
+				Annotations: map[string]string{
+					"summary":     "No nodes available. Possibly all workloads down.",
+					"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
+				},
+			},
+			monitoringv1.Rule{
+				Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
+				Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
+			},
+			monitoringv1.Rule{
+				Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
+				Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
+			},
+			monitoringv1.Rule{
+				Record: "shoot:machine_types:sum",
+				Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
+			},
+			monitoringv1.Rule{
+				Record: "shoot:node_operating_system:sum",
+				Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
+			},
+			// Mitigation for extension dashboards.
+			// TODO(istvanballok): Remove in a future version. For more details, see https://github.com/gardener/gardener/pull/6224.
+			monitoringv1.Rule{
+				Record: "kube_pod_container_resource_limits_cpu_cores",
+				Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
+			},
+			monitoringv1.Rule{
+				Record: "kube_pod_container_resource_requests_cpu_cores",
+				Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
+			},
+			monitoringv1.Rule{
+				Record: "kube_pod_container_resource_limits_memory_bytes",
+				Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
+			},
+			monitoringv1.Rule{
+				Record: "kube_pod_container_resource_requests_memory_bytes",
+				Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
+			},
+		)
+	}
+
+	prometheusRule.Labels = monitoringutils.Labels(shoot.Label)
+	prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+		Groups: []monitoringv1.RuleGroup{{
+			Name:  "kube-state-metrics.rules",
+			Rules: rules,
+		}},
 	}
 }
 

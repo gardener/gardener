@@ -14,7 +14,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockkubestatemetrics "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics/mock"
+	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -61,14 +61,14 @@ var _ = Describe("KubeStateMetrics", func() {
 
 	Describe("#DeployKubeStateMetrics", func() {
 		var (
-			kubeStateMetrics *mockkubestatemetrics.MockInterface
+			kubeStateMetrics *mockcomponent.MockDeployWaiter
 
 			ctx     = context.TODO()
 			fakeErr = errors.New("fake err")
 		)
 
 		BeforeEach(func() {
-			kubeStateMetrics = mockkubestatemetrics.NewMockInterface(ctrl)
+			kubeStateMetrics = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			botanist.Shoot.Components = &shootpkg.Components{
 				ControlPlane: &shootpkg.ControlPlane{

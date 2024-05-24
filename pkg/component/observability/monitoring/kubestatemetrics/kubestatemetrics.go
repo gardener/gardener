@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	// ManagedResourceName is the name of the managed resource for seeds.
-	ManagedResourceName      = "kube-state-metrics"
-	shootManagedResourceName = "shoot-core-" + ManagedResourceName
+	managedResourceName      = "kube-state-metrics"
+	managedResourceNameShoot = "shoot-core-" + managedResourceName
 
 	containerName = "kube-state-metrics"
 
@@ -35,27 +34,19 @@ const (
 	portNameMetrics = "metrics"
 )
 
-// Interface contains functions for a kube-state-metrics deployer.
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
-
 // New creates a new instance of DeployWaiter for the kube-state-metrics.
 func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) Interface {
-	k := &kubeStateMetrics{
+) component.DeployWaiter {
+	return &kubeStateMetrics{
 		client:         client,
 		secretsManager: secretsManager,
 		namespace:      namespace,
 		values:         values,
 	}
-
-	return k
 }
 
 type kubeStateMetrics struct {
@@ -146,7 +137,7 @@ func (k *kubeStateMetrics) WaitCleanup(ctx context.Context) error {
 
 func (k *kubeStateMetrics) managedResourceName() string {
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		return ManagedResourceName
+		return managedResourceName
 	}
-	return shootManagedResourceName
+	return managedResourceNameShoot
 }

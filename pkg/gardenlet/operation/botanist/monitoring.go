@@ -307,7 +307,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 	monitoringComponents := []component.MonitoringComponent{
 		b.Shoot.Components.ControlPlane.EtcdMain,
 		b.Shoot.Components.ControlPlane.EtcdEvents,
-		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 	}
 
 	return monitoringComponents
