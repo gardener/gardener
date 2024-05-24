@@ -26,7 +26,7 @@ tests:
             exp_annotations:
               summary: >-
                 Seed Condition Failing
-              description: >
+              description: >-
                 The seed cluster seed-flapping in landscape-unit-tests
                 has a failing condition: ExtensionsReady.
 
@@ -52,7 +52,7 @@ tests:
             exp_annotations:
               summary: >-
                 Seed Condition Failing
-              description: >
+              description: >-
                 The seed cluster seed-one in landscape-unit-tests
                 has a failing condition: SystemComponentsHealthy.
           - exp_labels:
@@ -64,6 +64,6 @@ tests:
             exp_annotations:
               summary: >-
                 Seed Condition Failing
-              description: >
+              description: >-
                 The seed cluster seed-two in landscape-unit-tests
                 has a failing condition: SeedSystemComponentsHealthy.

@@ -15,7 +15,7 @@ spec:
         topology: garden
       annotations:
         summary: Some container is restarting frequently
-        description: >
+        description: >-
           Some container in namespace {{$labels.namespace}} in seed
           {{$labels.seed}} in landscape {{$externalLabels.landscape}} was
           restarted more than 5 times within the last hour.
@@ -28,7 +28,7 @@ spec:
         topology: garden
       annotations:
         summary: There is a persistent volume with a size mismatch
-        description: |
+        description: |-
           Landscape: {{$externalLabels.landscape}}
           Seed: {{$labels.seed}}
           Namespace:  {{$labels.namespace}}
@@ -87,7 +87,7 @@ spec:
         summary: >-
           {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
           approaching capacity
-        description: >
+        description: >-
           {{$labels.region}} in {{$labels.iaas}} has crossed the 98% capacity threshold.
           The alert will stop firing when the seed usage drops below 90%.
 
@@ -189,7 +189,7 @@ spec:
         summary: >-
           {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
           approaching capacity
-        description: >
+        description: >-
           {{$labels.region}} in {{$labels.iaas}} has crossed the 90% capacity threshold.
           The alert will stop firing when the seed usage drops below 85%.
 
@@ -247,7 +247,7 @@ spec:
         topology: garden
       annotations:
         summary: Seed federation failure
-        description: |
+        description: |-
           Federating from the prometheus-aggregate instance {{$labels.instance}} failed.
           Please check the error message in the `prometheus-garden` in the garden runtime cluster.
           Port-forward to `prometheus-garden-0` in the `garden` namespace and open:
@@ -262,7 +262,7 @@ spec:
         topology: garden
       annotations:
         summary: A pod is stuck in Pending state for more than 10 minutes.
-        description: >
+        description: >-
           The pod {{$labels.pod}} in namespace {{$labels.namespace}} in seed
           {{$labels.seed}} in landscape {{$externalLabels.landscape}} is
           stuck in Pending state for more than 10 minutes.
@@ -276,7 +276,7 @@ spec:
         topology: garden
       annotations:
         summary:  A node was reported not healthy for 5 scrapes in the past 30 minutes.
-        description: >
+        description: >-
           Node {{$labels.node}} in landscape
 
     - alert: SeedConditionFailing
@@ -295,6 +295,6 @@ spec:
       annotations:
         summary: >-
           Seed Condition Failing
-        description: >
+        description: >-
           The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
           has a failing condition: {{$labels.condition}}.
