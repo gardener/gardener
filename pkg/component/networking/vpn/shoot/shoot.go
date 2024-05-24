@@ -205,7 +205,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 							"visibility": "operator",
 						},
 						Annotations: map[string]string{
-							"description": "vpn-shoot deployment in Shoot cluster has 0 available pods.VPN won't work.",
+							"description": "vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.",
 							"summary":     "VPN Shoot deployment no pods",
 						},
 					},
@@ -220,7 +220,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 							"visibility": "operator",
 						},
 						Annotations: map[string]string{
-							"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods.VPN won't work.",
+							"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.",
 							"summary":     "VPN HA Shoot statefulset no pods",
 						},
 					},
@@ -235,7 +235,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 							"visibility": "all",
 						},
 						Annotations: map[string]string{
-							"description": "The API Server proxy functionality is not working.Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
+							"description": "The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
 							"summary":     "API Server Proxy not usable",
 						},
 					},

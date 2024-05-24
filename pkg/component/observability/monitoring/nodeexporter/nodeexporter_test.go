@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -139,7 +140,7 @@ var _ = Describe("NodeExporter", func() {
 								"visibility": "owner",
 							},
 							Annotations: map[string]string{
-								"summary":     "NodeExporter, down or unreachable",
+								"summary":     "NodeExporter down or unreachable",
 								"description": "The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.",
 							},
 						},
@@ -203,7 +204,7 @@ var _ = Describe("NodeExporter", func() {
 								"visibility": "owner",
 							},
 							Annotations: map[string]string{
-								"description": "Root filesystem device on instance{{$labels.instance}} is almost full.",
+								"description": "Root filesystem device on instance {{$labels.instance}} is almost full.",
 								"summary":     "Node's root filesystem is almost full",
 							},
 						},
@@ -464,6 +465,8 @@ status: {}
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
 			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+			componenttest.PrometheusRule(prometheusRule, "testdata/shoot-node-exporter.prometheusrule.test.yaml")
 		})
 
 		Context("VPA disabled", func() {

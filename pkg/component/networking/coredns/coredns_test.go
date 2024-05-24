@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/coredns"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -813,6 +814,8 @@ status: {}
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
 			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+			componenttest.PrometheusRule(prometheusRule, "testdata/shoot-coredns.prometheusrule.test.yaml")
 		})
 
 		Context("w/o apiserver host, w/o pod annotations", func() {

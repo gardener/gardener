@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -156,7 +157,7 @@ var _ = Describe("VPNShoot", func() {
 								"visibility": "operator",
 							},
 							Annotations: map[string]string{
-								"description": "vpn-shoot deployment in Shoot cluster has 0 available pods.VPN won't work.",
+								"description": "vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.",
 								"summary":     "VPN Shoot deployment no pods",
 							},
 						},
@@ -171,7 +172,7 @@ var _ = Describe("VPNShoot", func() {
 								"visibility": "operator",
 							},
 							Annotations: map[string]string{
-								"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods.VPN won't work.",
+								"description": "vpn-shoot statefulset in HA Shoot cluster has 0 available pods. VPN won't work.",
 								"summary":     "VPN HA Shoot statefulset no pods",
 							},
 						},
@@ -186,7 +187,7 @@ var _ = Describe("VPNShoot", func() {
 								"visibility": "all",
 							},
 							Annotations: map[string]string{
-								"description": "The API Server proxy functionality is not working.Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
+								"description": "The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.",
 								"summary":     "API Server Proxy not usable",
 							},
 						},
@@ -778,6 +779,8 @@ spec:
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
 			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+			componenttest.PrometheusRule(actualPrometheusRule, "testdata/shoot-tunnel-probe-apiserver-proxy.prometheusrule.test.yaml")
 		})
 
 		Context("IPv6", func() {
