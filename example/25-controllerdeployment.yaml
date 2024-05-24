@@ -6,7 +6,7 @@ kind: ControllerDeployment
 metadata:
   name: os-gardenlinux
 helm:
-  rawChart: |
-    H4sIFAAAAAAA/yk...
+  ociRepository:
+    ref: registry.example.com/foo:1.0.0@sha256:abc
   values:
     foo: bar

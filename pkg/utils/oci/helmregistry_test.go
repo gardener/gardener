@@ -152,16 +152,12 @@ var _ = Describe("buildRef", func() {
 
 func mustNewTag(s string) name.Tag {
 	t, err := name.NewTag(s)
-	if err != nil {
-		utilruntime.Must(err)
-	}
+	utilruntime.Must(err)
 	return t
 }
 
 func mustNewDigest(s string) name.Digest {
 	t, err := name.NewDigest(s)
-	if err != nil {
-		utilruntime.Must(err)
-	}
+	utilruntime.Must(err)
 	return t
 }

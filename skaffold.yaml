@@ -811,7 +811,7 @@ build:
                   repository: ${repository}
                   tag: ${digest}
           EOF
-    - image: gardener-extension-provider-local/charts/extension
+    - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         dependencies:
           paths:
@@ -819,7 +819,7 @@ build:
         buildCommand: |
           ./hack/push-helm.sh
       requires:
-        - image: gardener-extension-provider-local
+        - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
 resourceSelector:
   allow:
