@@ -238,22 +238,6 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 func (b *Botanist) getPrometheusRuleAndRawScrapeConfigs(ctx context.Context) (prometheusRule *monitoringv1.PrometheusRule, rawScrapeConfigs []string, err error) {
 	var rawAlertingRules []string
 
-	for _, component := range b.getMonitoringComponents() {
-		componentsScrapeConfigs, err := component.ScrapeConfigs()
-		if err != nil {
-			return prometheusRule, rawScrapeConfigs, err
-		}
-		rawScrapeConfigs = append(rawScrapeConfigs, componentsScrapeConfigs...)
-
-		componentsAlertingRules, err := component.AlertingRules()
-		if err != nil {
-			return prometheusRule, rawScrapeConfigs, err
-		}
-		for _, rule := range componentsAlertingRules {
-			rawAlertingRules = append(rawAlertingRules, rule)
-		}
-	}
-
 	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
@@ -300,13 +284,6 @@ spec:
 	}
 
 	return
-}
-
-func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
-	// Fetch component-specific monitoring configuration
-	monitoringComponents := []component.MonitoringComponent{}
-
-	return monitoringComponents
 }
 
 // TODO(rfranzke): Remove this function after v1.100 has been released.

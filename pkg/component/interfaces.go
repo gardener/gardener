@@ -37,12 +37,18 @@ type MigrateWaiter interface {
 	WaitMigrate(ctx context.Context) error
 }
 
-// MonitoringComponent exposes configuration for Prometheus as well as the AlertManager.
-type MonitoringComponent interface {
-	// ScrapeConfigs returns the scrape configurations for Prometheus.
-	ScrapeConfigs() ([]string, error)
-	// AlertingRules returns the alerting rules configs for AlertManager (mapping file name to rule config).
-	AlertingRules() (map[string]string, error)
+// DeployWaiter controls and waits for life-cycle operations of a component.
+type DeployWaiter interface {
+	Deployer
+	Waiter
+}
+
+// DeployMigrateWaiter controls and waits for the life-cycle and control-plane migration operations of a component.
+type DeployMigrateWaiter interface {
+	Deployer
+	Migrator
+	MigrateWaiter
+	Waiter
 }
 
 // IstioConfigInterface contains functions for retrieving data from the istio configuration.
@@ -57,25 +63,5 @@ type IstioConfigInterface interface {
 	Labels() map[string]string
 }
 
-type (
-	// AggregateMonitoringConfiguration is a function alias for returning configuration for the aggregate monitoring.
-	AggregateMonitoringConfiguration func() (AggregateMonitoringConfig, error)
-	// CentralMonitoringConfiguration is a function alias for returning configuration for the central monitoring.
-	CentralMonitoringConfiguration func() (CentralMonitoringConfig, error)
-	// CentralLoggingConfiguration is a function alias for returning configuration for the central logging.
-	CentralLoggingConfiguration func() (CentralLoggingConfig, error)
-)
-
-// DeployWaiter controls and waits for life-cycle operations of a component.
-type DeployWaiter interface {
-	Deployer
-	Waiter
-}
-
-// DeployMigrateWaiter controls and waits for the life-cycle and control-plane migration operations of a component.
-type DeployMigrateWaiter interface {
-	Deployer
-	Migrator
-	MigrateWaiter
-	Waiter
-}
+// CentralLoggingConfiguration is a function alias for returning configuration for the central logging.
+type CentralLoggingConfiguration func() (CentralLoggingConfig, error)
