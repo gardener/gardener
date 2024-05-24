@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -87,12 +90,6 @@ profiles:
 {{- end }}`
 )
 
-// Interface contains functions for a kube-scheduler deployer.
-type Interface interface {
-	component.DeployWaiter
-	component.MonitoringComponent
-}
-
 // New creates a new instance of DeployWaiter for the kube-scheduler.
 func New(
 	client client.Client,
@@ -103,7 +100,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
-) Interface {
+) component.DeployWaiter {
 	return &kubeScheduler{
 		client:         client,
 		namespace:      namespace,
@@ -169,6 +166,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		shootAccessSecret   = k.newShootAccessSecret()
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
+		serviceMonitor      = k.emptyServiceMonitor()
+		prometheusRule      = k.emptyPrometheusRule()
 
 		vpaUpdateMode          = vpaautoscalingv1.UpdateModeAuto
 		controlledValues       = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -381,6 +380,114 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "kube-scheduler.rules",
+				Rules: []monitoringv1.Rule{
+					{
+						Alert: "KubeSchedulerDown",
+						Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    v1beta1constants.DeploymentNameKubeScheduler,
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "all",
+						},
+						Annotations: map[string]string{
+							"summary":     "Kube Scheduler is down.",
+							"description": "New pods are not being assigned to nodes.",
+						},
+					},
+					// Scheduling duration
+					{
+						Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.99"},
+					},
+					{
+						Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.9"},
+					},
+					{
+						Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.5"},
+					},
+					{
+						Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.99"},
+					},
+					{
+						Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.9"},
+					},
+					{
+						Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.5"},
+					},
+					{
+						Record: "cluster:scheduler_binding_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.99"},
+					},
+					{
+						Record: "cluster:scheduler_binding_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.9"},
+					},
+					{
+						Record: "cluster:scheduler_binding_duration_seconds:quantile",
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+						Labels: map[string]string{"quantile": "0.5"},
+					},
+				},
+			}},
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, serviceMonitor, func() error {
+		metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", shoot.Label)
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port:      portNameMetrics,
+				Scheme:    "https",
+				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: shoot.AccessSecretName},
+					Key:                  resourcesv1alpha1.DataKeyToken,
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"scheduler_binding_duration_seconds_bucket",
+					"scheduler_e2e_scheduling_duration_seconds_bucket",
+					"scheduler_scheduling_algorithm_duration_seconds_bucket",
+					"rest_client_requests_total",
+					"process_max_fds",
+					"process_open_fds",
+				),
+			}},
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
@@ -405,6 +512,14 @@ func (k *kubeScheduler) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget
 
 func (k *kubeScheduler) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: k.namespace}}
+}
+
+func (k *kubeScheduler) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameKubeScheduler, k.namespace, shoot.Label)}
+}
+
+func (k *kubeScheduler) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameKubeScheduler, k.namespace, shoot.Label)}
 }
 
 func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {

@@ -34,7 +34,6 @@ import (
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	kubernetesdashboard "github.com/gardener/gardener/pkg/component/kubernetes/dashboard"
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
-	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -126,7 +125,7 @@ type ControlPlane struct {
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
 	KubeAPIServer            kubeapiserver.Interface
-	KubeScheduler            kubescheduler.Interface
+	KubeScheduler            component.DeployWaiter
 	KubeControllerManager    kubecontrollermanager.Interface
 	KubeStateMetrics         kubestatemetrics.Interface
 	MachineControllerManager machinecontrollermanager.Interface
