@@ -3,5 +3,9 @@ kind: ControllerDeployment
 metadata:
   name: provider-local
 helm:
+  # During upgrade tests the old ControllerDeployment still specifies a `rawChart`, so we need
+  # to explicitly unset the field, otherwise the validation fails.
+  # TODO(maboehm): Remove empty field after next gardener release.
+  rawChart: ""
   ociRepository:
-    ref: gardener-extension-provider-local/charts/extension:v0.0.0
+    ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
