@@ -61,6 +61,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/component/vpnshoot"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -87,6 +88,18 @@ func defaultIstio(
 		labels  = shared.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
 	)
 
+	ports := []corev1.ServicePort{
+		{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
+		{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
+	}
+
+	proxyProtocolEnabled := !features.DefaultFeatureGate.Enabled(features.DisableAPIServerProxyPort)
+	if proxyProtocolEnabled {
+		ports = append(ports, corev1.ServicePort{
+			Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443),
+		})
+	}
+
 	istioDeployer, err := shared.NewIstio(
 		ctx,
 		seedClient,
@@ -100,12 +113,8 @@ func defaultIstio(
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		conf.SNI.Ingress.ServiceExternalIP,
-		[]corev1.ServicePort{
-			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443)},
-			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
-			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
-		},
-		true,
+		ports,
+		proxyProtocolEnabled,
 		true,
 		seedObj.Spec.Provider.Zones,
 		seed.IsDualStack(),

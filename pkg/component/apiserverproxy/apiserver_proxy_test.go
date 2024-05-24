@@ -472,6 +472,12 @@ data:
               "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
               stat_prefix: kube_apiserver
               cluster: kube_apiserver
+              tunneling_config:
+                hostname: "api.internal.local.:443"
+                headers_to_add:
+                - header:
+                    key: Reversed-VPN
+                    value: "outbound|443||kube-apiserver.some-namespace.svc.cluster.local"
               access_log:
               - name: envoy.access_loggers.stdout
                 typed_config:
@@ -544,17 +550,7 @@ data:
                 address:
                   socket_address:
                     address: api.internal.local.
-                    port_value: 8443
-        transport_socket:
-          name: envoy.transport_sockets.upstream_proxy_protocol
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
-            config:
-              version: V2
-            transport_socket:
-              name: envoy.transport_sockets.raw_buffer
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+                    port_value: 8132
         upstream_connection_options:
           tcp_keepalive:
             keepalive_time: 7200

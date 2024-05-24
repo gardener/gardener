@@ -151,6 +151,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, managedResourceName, false, registry.SerializedObjects()); err != nil {
 			return err
 		}
+	} else {
+		if err := s.client.Delete(ctx, s.emptyEnvoyFilter()); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, func() error {

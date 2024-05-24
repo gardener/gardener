@@ -243,26 +243,15 @@ var _ = Describe("#SNI", func() {
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
+			actualEnvoyFilter := &istionetworkingv1alpha3.EnvoyFilter{
+				ObjectMeta: *expectedEnvoyFilterObjectMeta.DeepCopy(),
+			}
 			if apiServerProxyValues != nil {
-				managedResource := &resourcesv1alpha1.ManagedResource{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Name), managedResource)).To(Succeed())
-				expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}}
-				utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
-				Expect(managedResource).To(DeepEqual(expectedManagedResource))
-
-				managedResourceSecret := &corev1.Secret{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedManagedResource.Namespace, expectedManagedResource.Spec.SecretRefs[0].Name), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["envoyfilter__istio-foo__test-namespace.yaml"], nil, &istionetworkingv1alpha3.EnvoyFilter{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
-				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualEnvoyFilter), actualEnvoyFilter)).To(Succeed())
 				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
+			} else {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualEnvoyFilter), actualEnvoyFilter)).To(BeNotFoundError(), "should delete EnvoyFilter for apiserver-proxy")
 			}
 		}
 
@@ -275,6 +264,13 @@ var _ = Describe("#SNI", func() {
 		Context("when APIServer Proxy is not configured", func() {
 			BeforeEach(func() {
 				apiServerProxyValues = nil
+
+				// create EnvoyFilter to ensure that Deploy deletes it
+				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{
+					ObjectMeta: *expectedEnvoyFilterObjectMeta.DeepCopy(),
+				}
+				envoyFilter.ResourceVersion = ""
+				Expect(c.Create(ctx, envoyFilter)).To(Succeed())
 			})
 
 			It("should succeed deploying", func() {
