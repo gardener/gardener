@@ -310,7 +310,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.ControlPlane.KubeStateMetrics,
-		b.Shoot.Components.ControlPlane.ResourceManager,
 	}
 
 	if !b.Shoot.IsWorkerless {

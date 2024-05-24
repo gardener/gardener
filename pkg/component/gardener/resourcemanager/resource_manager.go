@@ -51,6 +51,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
@@ -201,7 +202,6 @@ var (
 // Interface contains functions for a gardener-resource-manager deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// GetReplicas gets the Replicas field in the Values.
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
@@ -357,6 +357,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		func(ctx context.Context) error { return r.ensureDeployment(ctx, configMap) },
 		r.ensurePodDisruptionBudget,
 		r.ensureVPA,
+		r.ensureServiceMonitor,
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -364,7 +365,6 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 		fns = append(fns, r.ensureValidatingWebhookConfiguration)
-		fns = append(fns, r.ensureServiceMonitor)
 	}
 
 	return flow.Sequential(fns...)(ctx)
@@ -1123,29 +1123,26 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudg
 	}
 }
 
+func (r *resourceManager) getPrometheusLabel() string {
+	if r.values.TargetDiffersFromSourceCluster {
+		return shoot.Label
+	}
+	return seed.Label
+}
+
 func (r *resourceManager) ensureServiceMonitor(ctx context.Context) error {
 	serviceMonitor := r.emptyServiceMonitor()
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceMonitor, func() error {
-		serviceMonitor.Labels = monitoringutils.Labels(seed.Label)
+		serviceMonitor.Labels = monitoringutils.Labels(r.getPrometheusLabel())
 		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: r.appLabel()},
 			Endpoints: []monitoringv1.Endpoint{{
 				Port: metricsPortName,
-				RelabelConfigs: []monitoringv1.RelabelConfig{
-					{
-						Action: "labelmap",
-						Regex:  `__meta_kubernetes_service_label_(.+)`,
-					},
-					{
-						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
-						TargetLabel:  "pod",
-					},
-					{
-						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
-						TargetLabel:  "namespace",
-					},
-				},
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				}},
 			}},
 		}
 
@@ -1156,7 +1153,7 @@ func (r *resourceManager) ensureServiceMonitor(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(r.values.NamePrefix+"gardener-resource-manager", r.namespace, seed.Label)}
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(r.values.NamePrefix+"gardener-resource-manager", r.namespace, r.getPrometheusLabel())}
 }
 
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
