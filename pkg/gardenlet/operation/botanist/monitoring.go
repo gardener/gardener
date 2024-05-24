@@ -32,7 +32,6 @@ import (
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -312,10 +311,6 @@ func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 		b.Shoot.Components.ControlPlane.ResourceManager,
-	}
-
-	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.Vali)
 	}
 
 	if !b.Shoot.IsWorkerless {

@@ -63,7 +63,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
@@ -1144,7 +1143,7 @@ func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) 
 	)
 }
 
-func (r *Reconciler) newVali() (vali.Interface, error) {
+func (r *Reconciler) newVali() (component.Deployer, error) {
 	return sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,

@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -134,7 +133,7 @@ type ControlPlane struct {
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
-	Vali                     vali.Interface
+	Vali                     component.Deployer
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }
