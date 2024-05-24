@@ -175,11 +175,11 @@ func (d *DataMigration) PrepareExistingPVTakeOver(ctx context.Context, log logr.
 	}
 
 	for i, pv := range pvs {
-		if err := d.removeClaimRefFromPVAndWaitUntilAvailable(ctx, log, pv); err != nil {
+		if err := d.waitUntilPVGotReleasedFromOldPVC(ctx, log, pv); err != nil {
 			return err
 		}
 
-		if err := d.createNewPVCAndWaitUntilPVGotBound(ctx, log, i, pv); err != nil {
+		if err := d.createNewPVCAndRemoveClaimRefFromPVAndWaitUntilPVGotBoundByNewPVC(ctx, log, i, pv); err != nil {
 			return err
 		}
 	}
@@ -275,32 +275,24 @@ func (d *DataMigration) deleteOldPVCAndWaitUntilDeleted(ctx context.Context, log
 	return nil
 }
 
-func (d *DataMigration) removeClaimRefFromPVAndWaitUntilAvailable(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
-	log.Info("Removing claimRef from PV if necessary", "persistentVolume", client.ObjectKeyFromObject(pv))
-
+func (d *DataMigration) waitUntilPVGotReleasedFromOldPVC(ctx context.Context, log logr.Logger, pv *corev1.PersistentVolume) error {
 	if pv.Spec.ClaimRef == nil {
 		log.Info("PV is already unclaimed, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
 	} else if strings.HasPrefix(pv.Spec.ClaimRef.Name, d.kind()+"-db-"+d.FullName) {
 		log.Info("PV is already claimed by new PVC, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
 	} else {
-		patch := client.MergeFrom(pv.DeepCopy())
-		pv.Spec.ClaimRef = nil
-		if err := d.Client.Patch(ctx, pv, patch); err != nil {
-			return fmt.Errorf("failed removing claimRef of PV %s: %w", client.ObjectKeyFromObject(pv), err)
-		}
-
 		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 
-		log.Info("Wait until PV is available", "persistentVolume", client.ObjectKeyFromObject(pv))
+		log.Info("Wait until PV is released", "persistentVolume", client.ObjectKeyFromObject(pv))
 		if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
 			if err := d.Client.Get(ctx, client.ObjectKeyFromObject(pv), pv); err != nil {
 				return retry.SevereError(err)
 			}
 
-			if pv.Status.Phase != corev1.VolumeAvailable {
-				log.Info("PV is not yet in 'Available' phase", "phase", pv.Status.Phase, "persistentVolume", client.ObjectKeyFromObject(pv))
-				return retry.MinorError(fmt.Errorf("phase is %s instead of %s", pv.Status.Phase, corev1.VolumeAvailable))
+			if desiredPhase := corev1.VolumeReleased; pv.Status.Phase != desiredPhase {
+				log.Info("PV is not yet in 'Released' phase", "phase", pv.Status.Phase, "persistentVolume", client.ObjectKeyFromObject(pv))
+				return retry.MinorError(fmt.Errorf("phase is %s instead of %s", pv.Status.Phase, desiredPhase))
 			}
 
 			return retry.Ok()
@@ -308,13 +300,13 @@ func (d *DataMigration) removeClaimRefFromPVAndWaitUntilAvailable(ctx context.Co
 			return err
 		}
 
-		log.Info("PV is available to get bound by new PVC", "persistentVolume", client.ObjectKeyFromObject(pv))
+		log.Info("PV is released and ready to get bound by new PVC", "persistentVolume", client.ObjectKeyFromObject(pv))
 	}
 
 	return nil
 }
 
-func (d *DataMigration) createNewPVCAndWaitUntilPVGotBound(ctx context.Context, log logr.Logger, i int, pv *corev1.PersistentVolume) error {
+func (d *DataMigration) createNewPVCAndRemoveClaimRefFromPVAndWaitUntilPVGotBoundByNewPVC(ctx context.Context, log logr.Logger, i int, pv *corev1.PersistentVolume) error {
 	newPVC := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: d.kind() + "-db-" + d.FullName + "-" + strconv.Itoa(i), Namespace: d.Namespace}}
 	log.Info("Creating new PVC to bind the PV", "persistentVolumeClaim", client.ObjectKeyFromObject(newPVC))
 
@@ -336,6 +328,21 @@ func (d *DataMigration) createNewPVCAndWaitUntilPVGotBound(ctx context.Context, 
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	log.Info("Removing old claimRef from PV if necessary", "persistentVolume", client.ObjectKeyFromObject(pv))
+
+	if pv.Spec.ClaimRef == nil {
+		log.Info("PV is already unclaimed, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
+	} else if strings.HasPrefix(pv.Spec.ClaimRef.Name, d.kind()+"-db-"+d.FullName) {
+		log.Info("PV is already claimed by new PVC, nothing to be done", "persistentVolume", client.ObjectKeyFromObject(pv))
+	} else {
+		patch := client.MergeFrom(pv.DeepCopy())
+		pv.Spec.ClaimRef = nil
+		if err := d.Client.Patch(ctx, pv, patch); err != nil {
+			return fmt.Errorf("failed removing claimRef of PV %s: %w", client.ObjectKeyFromObject(pv), err)
+		}
+		log.Info("PV is ready to get bound by new PVC", "persistentVolume", client.ObjectKeyFromObject(pv))
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
