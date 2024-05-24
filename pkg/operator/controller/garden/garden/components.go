@@ -1287,7 +1287,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var (
 		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
-		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/healthz")
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
