@@ -842,7 +842,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
+			candidates, err := seedDeterminer.applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(candidates).To(HaveLen(2))
 			Expect(candidates[0].Name).To(Equal(newSeedEnvironment2.Name))
@@ -871,7 +871,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
+			candidates, err := seedDeterminer.applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(candidates).To(HaveLen(1))
 			Expect(candidates[0].Name).To(Equal(oldSeedEnvironment1.Name))
@@ -911,7 +911,7 @@ var _ = DescribeTable("condition is false",
 			}
 		}
 
-		Expect(verifySeedReadiness(seed)).To(expected)
+		Expect((&SeedDeterminer{}).verifySeedReadiness(seed)).To(expected)
 	},
 
 	Entry("SeedGardenletReady is missing", gardencorev1beta1.SeedGardenletReady, true, true, BeFalse()),

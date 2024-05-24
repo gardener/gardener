@@ -57,31 +57,31 @@ func (sd *SeedDeterminer) Determine(
 		return nil, err
 	}
 
-	filteredSeeds, err := filterUsableSeeds(seedList.Items)
+	filteredSeeds, err := sd.filterUsableSeeds(seedList.Items)
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterSeedsMatchingLabelSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
+	filteredSeeds, err = sd.filterSeedsMatchingLabelSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterSeedsMatchingLabelSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
+	filteredSeeds, err = sd.filterSeedsMatchingLabelSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
+	filteredSeeds, err = sd.filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterSeedsForZonalShootControlPlanes(filteredSeeds, shoot)
+	filteredSeeds, err = sd.filterSeedsForZonalShootControlPlanes(filteredSeeds, shoot)
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
+	filteredSeeds, err = sd.filterCandidates(shoot, shootList, filteredSeeds)
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = applyStrategy(log, shoot, filteredSeeds, sd.Strategy, regionConfig)
+	filteredSeeds, err = sd.applyStrategy(log, shoot, filteredSeeds, sd.Strategy, regionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -116,15 +116,15 @@ func (sd *SeedDeterminer) getRegionConfigMap(ctx context.Context, log logr.Logge
 	return regionConfig, nil
 }
 
-func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
-	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && verifySeedReadiness(seed)
+func (sd *SeedDeterminer) isUsableSeed(seed *gardencorev1beta1.Seed) bool {
+	return seed.DeletionTimestamp == nil && seed.Spec.Settings.Scheduling.Visible && sd.verifySeedReadiness(seed)
 }
 
-func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var matchingSeeds []gardencorev1beta1.Seed
 
 	for _, seed := range seedList {
-		if isUsableSeed(&seed) {
+		if sd.isUsableSeed(&seed) {
 			matchingSeeds = append(matchingSeeds, seed)
 		}
 	}
@@ -135,7 +135,7 @@ func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.S
 	return matchingSeeds, nil
 }
 
-func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]gardencorev1beta1.Seed, error) {
 	if seedSelector == nil {
 		return seedList, nil
 	}
@@ -157,7 +157,7 @@ func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSel
 	return matchingSeeds, nil
 }
 
-func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var possibleProviders []string
 	if cloudProfile.Spec.SeedSelector != nil {
 		possibleProviders = cloudProfile.Spec.SeedSelector.ProviderTypes
@@ -178,7 +178,7 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 
 // filterSeedsForZonalShootControlPlanes filters seeds with at least three zones in case the shoot's failure tolerance
 // type is 'zone'.
-func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
 	if v1beta1helper.IsMultiZonalShootControlPlane(shoot) {
 		var seedsWithAtLeastThreeZones []gardencorev1beta1.Seed
 		for _, seed := range seedList {
@@ -194,17 +194,17 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 	return seedList, nil
 }
 
-func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
 	var candidates []gardencorev1beta1.Seed
 
 	switch {
 	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
 		candidates = determineCandidatesOfSameProvider(seedList, shoot)
 	case strategy == config.SameRegion:
-		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
+		candidates = sd.determineCandidatesWithSameRegionStrategy(seedList, shoot)
 	case strategy == config.MinimalDistance:
 		var err error
-		candidates, err = determineCandidatesWithMinimalDistanceStrategy(log, shoot, seedList, regionConfig)
+		candidates, err = sd.determineCandidatesWithMinimalDistanceStrategy(log, shoot, seedList, regionConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +218,7 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
@@ -227,7 +227,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 
 	for _, seed := range seedList {
 		if shoot.Spec.Networking != nil {
-			if disjointed, err := networksAreDisjointed(&seed, shoot); !disjointed {
+			if disjointed, err := sd.networksAreDisjointed(&seed, shoot); !disjointed {
 				candidateErrors[seed.Name] = err
 				continue
 			}
@@ -247,7 +247,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 	}
 
 	if candidates == nil {
-		return nil, fmt.Errorf("0/%d seed cluster candidate(s) are eligible for scheduling: %v", len(seedList), errorMapToString(candidateErrors))
+		return nil, fmt.Errorf("0/%d seed cluster candidate(s) are eligible for scheduling: %v", len(seedList), sd.errorMapToString(candidateErrors))
 	}
 	return candidates, nil
 }
@@ -294,7 +294,7 @@ func determineCandidatesOfSameProvider(seedList []gardencorev1beta1.Seed, shoot 
 }
 
 // determineCandidatesWithSameRegionStrategy get all seed clusters matching the shoot's provider and region.
-func determineCandidatesWithSameRegionStrategy(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Seed {
+func (sd *SeedDeterminer) determineCandidatesWithSameRegionStrategy(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Seed {
 	var candidates []gardencorev1beta1.Seed
 	for _, seed := range seedList {
 		if seed.Spec.Provider.Type == shoot.Spec.Provider.Type && seed.Spec.Provider.Region == shoot.Spec.Region {
@@ -304,8 +304,8 @@ func determineCandidatesWithSameRegionStrategy(seedList []gardencorev1beta1.Seed
 	return candidates
 }
 
-func determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
-	candidates, err := regionConfigMinimalDistance(log, seedList, shoot, regionConfig)
+func (sd *SeedDeterminer) determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+	candidates, err := sd.regionConfigMinimalDistance(log, seedList, shoot, regionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -313,12 +313,12 @@ func determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gard
 	// Fall back to Levenshtein minimal distance in case we didn't find any candidates.
 	if len(candidates) == 0 {
 		log.Info("No candidates found with minimal distance of region config. Falling back to Levenshtein minimal distance")
-		candidates = levenshteinMinimalDistance(seedList, shoot)
+		candidates = sd.levenshteinMinimalDistance(seedList, shoot)
 	}
 	return candidates, nil
 }
 
-func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+func (sd *SeedDeterminer) regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
 	var candidates []gardencorev1beta1.Seed
 
 	if regionConfig == nil || regionConfig.Data[shoot.Spec.Region] == "" {
@@ -358,7 +358,7 @@ func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed
 	return candidates, nil
 }
 
-func levenshteinMinimalDistance(seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Seed {
+func (sd *SeedDeterminer) levenshteinMinimalDistance(seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Seed {
 	var (
 		minDistance   = 1000
 		shootRegion   = shoot.Spec.Region
@@ -387,7 +387,7 @@ func levenshteinMinimalDistance(seeds []gardencorev1beta1.Seed, shoot *gardencor
 	return candidates
 }
 
-func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func (sd *SeedDeterminer) networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	var (
 		shootPodsNetwork     = shoot.Spec.Networking.Pods
 		shootServicesNetwork = shoot.Spec.Networking.Services
@@ -421,7 +421,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
 }
 
-func errorMapToString(errs map[string]error) string {
+func (sd *SeedDeterminer) errorMapToString(errs map[string]error) string {
 	res := "{"
 	for k, v := range errs {
 		res += fmt.Sprintf("%s => %s, ", k, v.Error())
@@ -430,7 +430,7 @@ func errorMapToString(errs map[string]error) string {
 	return res
 }
 
-func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
+func (sd *SeedDeterminer) verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
 	if seed.Status.LastOperation == nil {
 		return false
 	}
