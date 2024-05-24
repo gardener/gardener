@@ -118,6 +118,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                                  schema_pkg_apis_core_v1beta1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                            schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                              schema_pkg_apis_core_v1beta1_LastOperation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol":          schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                    schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":           schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                               schema_pkg_apis_core_v1beta1_MachineImage(ref),
@@ -4940,6 +4941,28 @@ func schema_pkg_apis_core_v1beta1_LastOperation(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"allowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services. This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon. Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses. The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure). Defaults to false.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"allowed"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Machine(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7496,11 +7519,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 							},
 						},
 					},
+					"proxyProtocol": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services. Defaults to nil, which is equivalent to not allowing ProxyProtocol.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones"},
 	}
 }
 
@@ -7543,10 +7572,18 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 							Enum:        []interface{}{"Cluster", "Cluster", "Local", "Local"},
 						},
 					},
+					"proxyProtocol": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services. Defaults to nil, which is equivalent to not allowing ProxyProtocol.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"),
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol"},
 	}
 }
 

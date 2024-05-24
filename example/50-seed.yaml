@@ -70,11 +70,15 @@ spec:
   #   annotations:
   #     foo: bar
   #   externalTrafficPolicy: Local
+  #   proxyProtocol:
+  #     allowed: true
   #   zones:
   #   - name: europe-1a
   #     annotations:
   #       foo: bar
   #     externalTrafficPolicy: Local
+  #     proxyProtocol:
+  #       allowed: true
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
     topologyAwareRouting:

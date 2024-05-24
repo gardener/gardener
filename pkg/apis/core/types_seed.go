@@ -236,6 +236,9 @@ type SeedSettingLoadBalancerServices struct {
 	// Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
 	// Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
 	Zones []SeedSettingLoadBalancerServicesZones
+	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+	ProxyProtocol *LoadBalancerServicesProxyProtocol
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -249,6 +252,19 @@ type SeedSettingLoadBalancerServicesZones struct {
 	// receive on one of the service's "externally-facing" addresses.
 	// Defaults to "Cluster".
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+	ProxyProtocol *LoadBalancerServicesProxyProtocol
+}
+
+// LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+type LoadBalancerServicesProxyProtocol struct {
+	// Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.
+	// This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.
+	// Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
+	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
+	// Defaults to false.
+	Allowed bool
 }
 
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
