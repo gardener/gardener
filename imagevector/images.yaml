@@ -53,7 +53,7 @@ images:
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: registry.k8s.io/pause
-  tag: "3.9"
+  tag: "3.10"
   labels:
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
