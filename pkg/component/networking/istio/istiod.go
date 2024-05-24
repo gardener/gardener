@@ -11,10 +11,12 @@ import (
 	"strings"
 	"time"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -22,6 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -139,7 +143,48 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	if err := registry.Add(serviceMonitorIstiod); err != nil {
+	if err := registry.Add(&monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta("istiod", v1beta1constants.IstioSystemNamespace, aggregate.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getIstiodLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: istiodServicePortNameMetrics,
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"galley_validation_failed",
+					"galley_validation_passed",
+					"pilot_conflict_inbound_listener",
+					"pilot_conflict_outbound_listener_http_over_current_tcp",
+					"pilot_conflict_outbound_listener_tcp_over_current_http",
+					"pilot_conflict_outbound_listener_tcp_over_current_tcp",
+					"pilot_k8s_cfg_events",
+					"pilot_proxy_convergence_time_bucket",
+					"pilot_services",
+					"pilot_total_xds_internal_errors",
+					"pilot_total_xds_rejects",
+					"pilot_virt_services",
+					"pilot_xds",
+					"pilot_xds_cds_reject",
+					"pilot_xds_eds_reject",
+					"pilot_xds_lds_reject",
+					"pilot_xds_push_context_errors",
+					"pilot_xds_pushes",
+					"pilot_xds_rds_reject",
+					"pilot_xds_write_timeout",
+					"go_goroutines",
+					"go_memstats_alloc_bytes",
+					"go_memstats_heap_alloc_bytes",
+					"go_memstats_heap_inuse_bytes",
+					"go_memstats_heap_sys_bytes",
+					"go_memstats_stack_inuse_bytes",
+					"istio_build",
+					"process_cpu_seconds_total",
+					"process_open_fds",
+					"process_resident_memory_bytes",
+					"process_virtual_memory_bytes",
+				),
+			}},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -201,7 +246,53 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	if err := registry.Add(serviceMonitorIstioIngress); err != nil {
+	if err := registry.Add(&monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", v1beta1constants.IstioSystemNamespace, aggregate.Label),
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector:          metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: "istio-ingressgateway"}},
+			NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
+			Endpoints: []monitoringv1.Endpoint{{
+				Path: "/stats/prometheus",
+				Port: "tls-tunnel",
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
+					Action:       "replace",
+					TargetLabel:  "__address__",
+					Regex:        `(.+)`,
+					Replacement:  ptr.To("${1}:15020"),
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"envoy_cluster_upstream_cx_active",
+					"envoy_cluster_upstream_cx_connect_fail",
+					"envoy_cluster_upstream_cx_total",
+					"envoy_cluster_upstream_cx_tx_bytes_total",
+					"envoy_server_hot_restart_epoch",
+					"istio_request_bytes_bucket",
+					"istio_request_bytes_sum",
+					"istio_request_duration_milliseconds_bucket",
+					"istio_request_duration_seconds_bucket",
+					"istio_requests_total",
+					"istio_response_bytes_bucket",
+					"istio_response_bytes_sum",
+					"istio_tcp_connections_closed_total",
+					"istio_tcp_connections_opened_total",
+					"istio_tcp_received_bytes_total",
+					"istio_tcp_sent_bytes_total",
+					"go_goroutines",
+					"go_memstats_alloc_bytes",
+					"go_memstats_heap_alloc_bytes",
+					"go_memstats_heap_inuse_bytes",
+					"go_memstats_heap_sys_bytes",
+					"go_memstats_stack_inuse_bytes",
+					"istio_build",
+					"process_cpu_seconds_total",
+					"process_open_fds",
+					"process_resident_memory_bytes",
+					"process_virtual_memory_bytes",
+				),
+			}},
+		},
+	}); err != nil {
 		return err
 	}
 
