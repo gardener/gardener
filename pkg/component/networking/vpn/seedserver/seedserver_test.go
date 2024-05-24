@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -34,6 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -72,11 +75,11 @@ var _ = Describe("VpnSeedServer", func() {
 
 	var (
 		deploymentObjectMeta = &metav1.ObjectMeta{
-			Name:      DeploymentName,
+			Name:      "vpn-seed-server",
 			Namespace: namespace,
 			Labels: map[string]string{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.LabelApp:   DeploymentName,
+				v1beta1constants.LabelApp:   "vpn-seed-server",
 			},
 			ResourceVersion: "1",
 		}
@@ -87,7 +90,7 @@ var _ = Describe("VpnSeedServer", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						v1beta1constants.GardenRole:                                     v1beta1constants.GardenRoleControlPlane,
-						v1beta1constants.LabelApp:                                       DeploymentName,
+						v1beta1constants.LabelApp:                                       "vpn-seed-server",
 						v1beta1constants.LabelNetworkPolicyToShootNetworks:              v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToDNS:                        v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -100,7 +103,7 @@ var _ = Describe("VpnSeedServer", func() {
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
 						{
-							Name:            DeploymentName,
+							Name:            "vpn-seed-server",
 							Image:           vpnImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
@@ -404,7 +407,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Replicas:             ptr.To(values.Replicas),
 					RevisionHistoryLimit: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						v1beta1constants.LabelApp: DeploymentName,
+						v1beta1constants.LabelApp: "vpn-seed-server",
 					}},
 					Strategy: appsv1.DeploymentStrategy{
 						RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -429,7 +432,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Replicas:             ptr.To[int32](3),
 					RevisionHistoryLimit: ptr.To[int32](1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						v1beta1constants.LabelApp: DeploymentName,
+						v1beta1constants.LabelApp: "vpn-seed-server",
 					}},
 					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 						Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -444,10 +447,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 		destinationRule = func() *istionetworkingv1beta1.DestinationRule {
 			return &istionetworkingv1beta1.DestinationRule{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace, ResourceVersion: "1"},
+				ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server", Namespace: namespace, ResourceVersion: "1"},
 				Spec: istioapinetworkingv1beta1.DestinationRule{
 					ExportTo: []string{"*"},
-					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
+					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", "vpn-seed-server", namespace),
 					TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 						ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
 							Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
@@ -481,7 +484,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		indexedDestinationRule = func(idx int) *istionetworkingv1beta1.DestinationRule {
 			destRule := destinationRule()
-			destRule.Name = fmt.Sprintf("%s-%d", DeploymentName, idx)
+			destRule.Name = fmt.Sprintf("%s-%d", "vpn-seed-server", idx)
 			destRule.Spec.Host = fmt.Sprintf("%s.%s.svc.cluster.local", destRule.Name, namespace)
 			return destRule
 		}
@@ -490,7 +493,7 @@ var _ = Describe("VpnSeedServer", func() {
 		expectedPodDisruptionBudgetFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
 			pdb := &policyv1.PodDisruptionBudget{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      DeploymentName,
+					Name:      "vpn-seed-server",
 					Namespace: namespace,
 					Labels: map[string]string{
 						"app": "vpn-seed-server",
@@ -531,7 +534,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Type: corev1.ServiceTypeClusterIP,
 				Ports: []corev1.ServicePort{
 					{
-						Name:       DeploymentName,
+						Name:       "vpn-seed-server",
 						Port:       1194,
 						TargetPort: intstr.FromInt32(1194),
 					},
@@ -547,9 +550,128 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				},
 				Selector: map[string]string{
-					v1beta1constants.LabelApp: DeploymentName,
+					v1beta1constants.LabelApp: "vpn-seed-server",
 				},
 			},
+		}
+
+		scrapeConfig = func(haEnabled bool) *monitoringv1alpha1.ScrapeConfig {
+			jobName, serviceNameRegexSuffix := "reversed-vpn-envoy-side-car", ""
+			allowedMetrics := []string{
+				"envoy_cluster_external_upstream_rq",
+				"envoy_cluster_external_upstream_rq_completed",
+				"envoy_cluster_external_upstream_rq_xx",
+				"envoy_cluster_lb_healthy_panic",
+				"envoy_cluster_original_dst_host_invalid",
+				"envoy_cluster_upstream_cx_active",
+				"envoy_cluster_upstream_cx_connect_attempts_exceeded",
+				"envoy_cluster_upstream_cx_connect_fail",
+				"envoy_cluster_upstream_cx_connect_timeout",
+				"envoy_cluster_upstream_cx_max_requests",
+				"envoy_cluster_upstream_cx_none_healthy",
+				"envoy_cluster_upstream_cx_overflow",
+				"envoy_cluster_upstream_cx_pool_overflow",
+				"envoy_cluster_upstream_cx_protocol_error",
+				"envoy_cluster_upstream_cx_rx_bytes_total",
+				"envoy_cluster_upstream_cx_total",
+				"envoy_cluster_upstream_cx_tx_bytes_total",
+				"envoy_cluster_upstream_rq",
+				"envoy_cluster_upstream_rq_completed",
+				"envoy_cluster_upstream_rq_max_duration_reached",
+				"envoy_cluster_upstream_rq_pending_overflow",
+				"envoy_cluster_upstream_rq_per_try_timeout",
+				"envoy_cluster_upstream_rq_retry",
+				"envoy_cluster_upstream_rq_retry_limit_exceeded",
+				"envoy_cluster_upstream_rq_retry_overflow",
+				"envoy_cluster_upstream_rq_rx_reset",
+				"envoy_cluster_upstream_rq_timeout",
+				"envoy_cluster_upstream_rq_total",
+				"envoy_cluster_upstream_rq_tx_reset",
+				"envoy_cluster_upstream_rq_xx",
+				"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt",
+				"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure",
+				"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success",
+				"envoy_dns_cache_dynamic_forward_proxy_cache_config_host_overflow",
+				"envoy_dns_cache_dynamic_forward_proxy_cache_config_num_hosts",
+				"envoy_http_downstream_cx_rx_bytes_total",
+				"envoy_http_downstream_cx_total",
+				"envoy_http_downstream_cx_tx_bytes_total",
+				"envoy_http_downstream_rq_xx",
+				"envoy_http_no_route",
+				"envoy_http_rq_total",
+				"envoy_listener_http_downstream_rq_xx",
+				"envoy_server_memory_allocated",
+				"envoy_server_memory_heap_size",
+				"envoy_server_memory_physical_size",
+				"envoy_cluster_upstream_cx_connect_ms_bucket",
+				"envoy_cluster_upstream_cx_connect_ms_sum",
+				"envoy_cluster_upstream_cx_length_ms_bucket",
+				"envoy_cluster_upstream_cx_length_ms_sum",
+				"envoy_http_downstream_cx_length_ms_bucket",
+				"envoy_http_downstream_cx_length_ms_sum",
+			}
+
+			if haEnabled {
+				jobName, serviceNameRegexSuffix = "openvpn-server-exporter", "[0-2]"
+				allowedMetrics = []string{
+					"openvpn_server_client_received_bytes_total",
+					"openvpn_server_client_sent_bytes_total",
+					"openvpn_server_route_last_reference_time_seconds",
+					"openvpn_status_update_time_seconds",
+					"openvpn_up",
+				}
+			}
+
+			scrapeConfig := &monitoringv1alpha1.ScrapeConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "shoot-vpn-seed-server",
+					Namespace:       namespace,
+					Labels:          map[string]string{"prometheus": "shoot"},
+					ResourceVersion: "1",
+				},
+				Spec: monitoringv1alpha1.ScrapeConfigSpec{
+					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+						Role:       "service",
+						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+					}},
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							Action:      "replace",
+							Replacement: ptr.To(jobName),
+							TargetLabel: "job",
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
+							Action:       "keep",
+							Regex:        "vpn-seed-server" + serviceNameRegexSuffix + `;metrics`,
+						},
+					},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
+				},
+			}
+
+			if haEnabled {
+				scrapeConfig.Spec.MetricRelabelConfigs = append(scrapeConfig.Spec.MetricRelabelConfigs,
+					monitoringv1.RelabelConfig{
+						SourceLabels: []monitoringv1.LabelName{"instance"},
+						Action:       "replace",
+						Regex:        `([^.]+).+`,
+						TargetLabel:  "service",
+					},
+					monitoringv1.RelabelConfig{
+						SourceLabels: []monitoringv1.LabelName{"real_address"},
+						Action:       "replace",
+						Regex:        `([^:]+).+`,
+						TargetLabel:  "real_ip",
+					},
+					monitoringv1.RelabelConfig{
+						Regex:  "username",
+						Action: "labeldrop",
+					},
+				)
+			}
+
+			return scrapeConfig
 		}
 
 		indexedService = func(idx int) *corev1.Service {
@@ -563,7 +685,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		expectedVpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            DeploymentName + "-vpa",
+				Name:            "vpn-seed-server" + "-vpa",
 				Namespace:       namespace,
 				ResourceVersion: "1",
 			},
@@ -571,7 +693,7 @@ var _ = Describe("VpnSeedServer", func() {
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
-					Name:       DeploymentName,
+					Name:       "vpn-seed-server",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -579,7 +701,7 @@ var _ = Describe("VpnSeedServer", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: DeploymentName,
+							ContainerName: "vpn-seed-server",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
@@ -665,6 +787,11 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
 				Expect(actualService).To(DeepEqual(expectedService))
 
+				actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+				expectedScrapeConfig := scrapeConfig(values.HighAvailabilityEnabled)
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedScrapeConfig.Namespace, Name: expectedScrapeConfig.Name}, actualScrapeConfig)).To(Succeed())
+				Expect(actualScrapeConfig).To(DeepEqual(expectedScrapeConfig))
+
 				actualConfigMap := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
@@ -682,7 +809,7 @@ var _ = Describe("VpnSeedServer", func() {
 				expectedPDB := expectedPodDisruptionBudgetFor(false)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(BeNotFoundError())
 
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.StatefulSet{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.StatefulSet{})).To(BeNotFoundError())
 				for i := 0; i < 2; i++ {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
@@ -787,12 +914,17 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 				Expect(actualVpa).To(DeepEqual(expectedVpa))
 
+				actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+				expectedScrapeConfig := scrapeConfig(values.HighAvailabilityEnabled)
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedScrapeConfig.Namespace, Name: expectedScrapeConfig.Name}, actualScrapeConfig)).To(Succeed())
+				Expect(actualScrapeConfig).To(DeepEqual(expectedScrapeConfig))
+
 				actualStatefulSet := &appsv1.StatefulSet{}
 				expectedStatefulSet := statefulSet(values.Network.NodeCIDR)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
 			})
@@ -849,6 +981,10 @@ var _ = Describe("VpnSeedServer", func() {
 			svc.ResourceVersion = ""
 			Expect(c.Create(ctx, svc)).To(Succeed())
 
+			sc := scrapeConfig(values.HighAvailabilityEnabled)
+			sc.ResourceVersion = ""
+			Expect(c.Create(ctx, sc)).To(Succeed())
+
 			vpa := expectedVpa.DeepCopy()
 			vpa.ResourceVersion = ""
 			Expect(c.Create(ctx, vpa)).To(Succeed())
@@ -863,14 +999,15 @@ var _ = Describe("VpnSeedServer", func() {
 		})
 
 		JustAfterEach(func() {
-			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.StatefulSet{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.StatefulSet{})).To(BeNotFoundError())
 			for i := 0; i < 2; i++ {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedDestinationRule(i)), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(indexedService(i)), &corev1.Service{})).To(BeNotFoundError())
 			}
-			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: DeploymentName}, &appsv1.Deployment{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig(values.HighAvailabilityEnabled)), &monitoringv1alpha1.ScrapeConfig{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedVpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: istioNamespace, Name: namespace + "-vpn"}, &networkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPodDisruptionBudgetFor(false)), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
