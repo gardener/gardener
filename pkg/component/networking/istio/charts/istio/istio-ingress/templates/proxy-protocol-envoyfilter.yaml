@@ -25,6 +25,7 @@ spec:
         - name: proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
+{{- if eq .Values.terminateLoadBalancerProxyProtocol true }}
         - name: inner_proxy_protocol
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol"
@@ -85,4 +86,5 @@ spec:
             '@type': type.googleapis.com/envoy.extensions.filters.listener.proxy_protocol.v3.ProxyProtocol
             allow_requests_without_proxy_protocol: true
         per_connection_buffer_limit_bytes: 32768
+{{ end -}}
 {{ end -}}

@@ -25,24 +25,25 @@ import (
 )
 
 type istioTestValues struct {
-	client                            client.Client
-	chartRenderer                     chartrenderer.Interface
-	istiodImageName, ingressImageName string
-	prefix                            string
-	ingressNamespace                  string
-	priorityClassName                 string
-	istiodEnabled                     bool
-	labels                            map[string]string
-	kubeAPIServerPolicyLabel          string
-	lbAnnotations                     map[string]string
-	externalTrafficPolicy             *corev1.ServiceExternalTrafficPolicyType
-	serviceExternalIP                 *string
-	servicePorts                      []corev1.ServicePort
-	proxyProtocolEnabled              bool
-	vpnEnabled                        bool
-	zones                             []string
-	dualStack                         bool
-	enforceSpreadAcrossHosts          bool
+	client                             client.Client
+	chartRenderer                      chartrenderer.Interface
+	istiodImageName, ingressImageName  string
+	prefix                             string
+	ingressNamespace                   string
+	priorityClassName                  string
+	istiodEnabled                      bool
+	labels                             map[string]string
+	kubeAPIServerPolicyLabel           string
+	lbAnnotations                      map[string]string
+	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicyType
+	serviceExternalIP                  *string
+	servicePorts                       []corev1.ServicePort
+	proxyProtocolEnabled               bool
+	terminateLoadBalancerProxyProtocol bool
+	vpnEnabled                         bool
+	zones                              []string
+	dualStack                          bool
+	enforceSpreadAcrossHosts           bool
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
@@ -69,6 +70,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.serviceExternalIP,
 		testValues.servicePorts,
 		testValues.proxyProtocolEnabled,
+		&testValues.terminateLoadBalancerProxyProtocol,
 		testValues.vpnEnabled,
 		testValues.zones,
 		testValues.dualStack,
@@ -112,22 +114,23 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 		},
 		IngressGateway: []istio.IngressGatewayValues{
 			{
-				TrustDomain:              "cluster.local",
-				Image:                    testValues.ingressImageName,
-				IstiodNamespace:          "istio-system",
-				Annotations:              testValues.lbAnnotations,
-				ExternalTrafficPolicy:    testValues.externalTrafficPolicy,
-				MinReplicas:              minReplicas,
-				MaxReplicas:              maxReplicas,
-				Ports:                    testValues.servicePorts,
-				LoadBalancerIP:           testValues.serviceExternalIP,
-				Labels:                   testValues.labels,
-				NetworkPolicyLabels:      networkPolicyLabels,
-				Namespace:                "shared-istio-test-some-istio-ingress",
-				PriorityClassName:        testValues.priorityClassName,
-				ProxyProtocolEnabled:     testValues.proxyProtocolEnabled,
-				VPNEnabled:               testValues.vpnEnabled,
-				EnforceSpreadAcrossHosts: testValues.enforceSpreadAcrossHosts,
+				TrustDomain:                        "cluster.local",
+				Image:                              testValues.ingressImageName,
+				IstiodNamespace:                    "istio-system",
+				Annotations:                        testValues.lbAnnotations,
+				ExternalTrafficPolicy:              testValues.externalTrafficPolicy,
+				MinReplicas:                        minReplicas,
+				MaxReplicas:                        maxReplicas,
+				Ports:                              testValues.servicePorts,
+				LoadBalancerIP:                     testValues.serviceExternalIP,
+				Labels:                             testValues.labels,
+				NetworkPolicyLabels:                networkPolicyLabels,
+				Namespace:                          "shared-istio-test-some-istio-ingress",
+				PriorityClassName:                  testValues.priorityClassName,
+				ProxyProtocolEnabled:               testValues.proxyProtocolEnabled,
+				TerminateLoadBalancerProxyProtocol: testValues.terminateLoadBalancerProxyProtocol,
+				VPNEnabled:                         testValues.vpnEnabled,
+				EnforceSpreadAcrossHosts:           testValues.enforceSpreadAcrossHosts,
 			},
 		},
 		NamePrefix: testValues.prefix,
@@ -164,33 +167,35 @@ func checkAdditionalIstioGateway(cl client.Client,
 	}
 
 	Expect(ingressValues[len(ingressValues)-1]).To(Equal(istio.IngressGatewayValues{
-		TrustDomain:              "cluster.local",
-		Image:                    ingressValues[0].Image,
-		IstiodNamespace:          "istio-system",
-		Annotations:              annotations,
-		ExternalTrafficPolicy:    externalTrafficPolicy,
-		MinReplicas:              minReplicas,
-		MaxReplicas:              maxReplicas,
-		Ports:                    ingressValues[0].Ports,
-		LoadBalancerIP:           serviceExternalIP,
-		Labels:                   labels,
-		NetworkPolicyLabels:      ingressValues[0].NetworkPolicyLabels,
-		Namespace:                namespace,
-		PriorityClassName:        ingressValues[0].PriorityClassName,
-		ProxyProtocolEnabled:     ingressValues[0].ProxyProtocolEnabled,
-		VPNEnabled:               true,
-		Zones:                    zones,
-		DualStack:                dualstack,
-		EnforceSpreadAcrossHosts: enforceSpreadAcrossHosts,
+		TrustDomain:                        "cluster.local",
+		Image:                              ingressValues[0].Image,
+		IstiodNamespace:                    "istio-system",
+		Annotations:                        annotations,
+		ExternalTrafficPolicy:              externalTrafficPolicy,
+		MinReplicas:                        minReplicas,
+		MaxReplicas:                        maxReplicas,
+		Ports:                              ingressValues[0].Ports,
+		LoadBalancerIP:                     serviceExternalIP,
+		Labels:                             labels,
+		NetworkPolicyLabels:                ingressValues[0].NetworkPolicyLabels,
+		Namespace:                          namespace,
+		PriorityClassName:                  ingressValues[0].PriorityClassName,
+		ProxyProtocolEnabled:               ingressValues[0].ProxyProtocolEnabled,
+		TerminateLoadBalancerProxyProtocol: ingressValues[0].TerminateLoadBalancerProxyProtocol,
+		VPNEnabled:                         true,
+		Zones:                              zones,
+		DualStack:                          dualstack,
+		EnforceSpreadAcrossHosts:           enforceSpreadAcrossHosts,
 	}))
 }
 
 var _ = Describe("Istio", func() {
 	var (
-		testValues  istioTestValues
-		zones       []string
-		vpnEnabled  bool
-		istioDeploy istio.Interface
+		testValues     istioTestValues
+		zones          []string
+		vpnEnabled     bool
+		proxyProtoclLB bool
+		istioDeploy    istio.Interface
 	)
 
 	BeforeEach(func() {
@@ -201,23 +206,24 @@ var _ = Describe("Istio", func() {
 	JustBeforeEach(func() {
 		trafficPolicy := corev1.ServiceExternalTrafficPolicyTypeLocal
 		testValues = istioTestValues{
-			client:                   fakeclient.NewClientBuilder().Build(),
-			istiodImageName:          "istiod",
-			ingressImageName:         "istio-ingress",
-			prefix:                   "shared-istio-test-",
-			ingressNamespace:         "some-istio-ingress",
-			priorityClassName:        "some-high-priority-class",
-			istiodEnabled:            true,
-			labels:                   map[string]string{"some": "labelValue"},
-			kubeAPIServerPolicyLabel: "to-all-test-kube-apiserver",
-			lbAnnotations:            map[string]string{"some": "annotationValue"},
-			externalTrafficPolicy:    &trafficPolicy,
-			serviceExternalIP:        ptr.To("1.2.3.4"),
-			servicePorts:             []corev1.ServicePort{{Port: 443}},
-			proxyProtocolEnabled:     false,
-			vpnEnabled:               vpnEnabled,
-			zones:                    zones,
-			enforceSpreadAcrossHosts: false,
+			client:                             fakeclient.NewClientBuilder().Build(),
+			istiodImageName:                    "istiod",
+			ingressImageName:                   "istio-ingress",
+			prefix:                             "shared-istio-test-",
+			ingressNamespace:                   "some-istio-ingress",
+			priorityClassName:                  "some-high-priority-class",
+			istiodEnabled:                      true,
+			labels:                             map[string]string{"some": "labelValue"},
+			kubeAPIServerPolicyLabel:           "to-all-test-kube-apiserver",
+			lbAnnotations:                      map[string]string{"some": "annotationValue"},
+			externalTrafficPolicy:              &trafficPolicy,
+			serviceExternalIP:                  ptr.To("1.2.3.4"),
+			servicePorts:                       []corev1.ServicePort{{Port: 443}},
+			proxyProtocolEnabled:               false,
+			terminateLoadBalancerProxyProtocol: proxyProtoclLB,
+			vpnEnabled:                         vpnEnabled,
+			zones:                              zones,
+			enforceSpreadAcrossHosts:           false,
 		}
 
 		istioDeploy = createIstio(testValues)
@@ -227,6 +233,16 @@ var _ = Describe("Istio", func() {
 		Context("with VPN enabled", func() {
 			BeforeEach(func() {
 				vpnEnabled = true
+			})
+
+			It("should successfully create a new Istio deployer", func() {
+				checkIstio(istioDeploy, testValues)
+			})
+		})
+
+		Context("with proxy protocol termination", func() {
+			BeforeEach(func() {
+				proxyProtoclLB = true
 			})
 
 			It("should successfully create a new Istio deployer", func() {
@@ -328,7 +344,8 @@ var _ = Describe("Istio", func() {
 				&externalTrafficPolicy,
 				serviceExternalIP,
 				zone,
-				false)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
+				false,
+				&proxyProtoclLB)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
 		})
 
 		Context("without zone", func() {
@@ -347,7 +364,8 @@ var _ = Describe("Istio", func() {
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
-					false)).To(Succeed())
+					false,
+					&proxyProtoclLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -379,7 +397,8 @@ var _ = Describe("Istio", func() {
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
-					false)).To(Succeed())
+					false,
+					&proxyProtoclLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -414,7 +433,8 @@ var _ = Describe("Istio", func() {
 						&externalTrafficPolicy,
 						serviceExternalIP,
 						zone,
-						false)).To(Succeed())
+						false,
+						&proxyProtoclLB)).To(Succeed())
 
 					checkAdditionalIstioGateway(
 						testValues.client,
@@ -447,7 +467,8 @@ var _ = Describe("Istio", func() {
 					&externalTrafficPolicy,
 					serviceExternalIP,
 					zone,
-					true)).To(Succeed())
+					true,
+					&proxyProtoclLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,

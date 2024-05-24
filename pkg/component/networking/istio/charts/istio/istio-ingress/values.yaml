@@ -29,6 +29,7 @@ enforceSpreadAcrossHosts: false
 
 # Istio Ingress Configuration Resources
 proxyProtocolEnabled: false
+terminateLoadBalancerProxyProtocol: false
 vpn:
   enabled: false
 
