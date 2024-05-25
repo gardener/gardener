@@ -99,6 +99,18 @@ func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
+// SetAuthorizationWebhook mocks base method.
+func (m *MockInterface) SetAuthorizationWebhook(arg0 *apiserver0.AuthorizationWebhook) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAuthorizationWebhook", arg0)
+}
+
+// SetAuthorizationWebhook indicates an expected call of SetAuthorizationWebhook.
+func (mr *MockInterfaceMockRecorder) SetAuthorizationWebhook(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAuthorizationWebhook", reflect.TypeOf((*MockInterface)(nil).SetAuthorizationWebhook), arg0)
+}
+
 // SetAutoscalingAPIServerResources mocks base method.
 func (m *MockInterface) SetAutoscalingAPIServerResources(arg0 v1.ResourceRequirements) {
 	m.ctrl.T.Helper()
