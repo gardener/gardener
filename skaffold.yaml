@@ -1248,6 +1248,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/client
+            - pkg/utils/kubernetes/csr
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/health/checker
             - pkg/utils/kubernetes/unstructured
