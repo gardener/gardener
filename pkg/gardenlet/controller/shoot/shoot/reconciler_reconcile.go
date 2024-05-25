@@ -129,6 +129,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		o.Shoot.Networks = networks
 	}
 
+	nodeAgentAuthorizerWebhookReady, err := botanist.NodeAgentAuthorizerWebhookReady(ctx)
+	if err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+
 	var (
 		g               = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		deployNamespace = g.Add(flow.Task{
@@ -356,6 +361,18 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server with node-agent-authorizer",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeAgentAuthorizerWebhookReady,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.HibernationEnabled || nodeAgentAuthorizerWebhookReady || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -365,7 +382,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",

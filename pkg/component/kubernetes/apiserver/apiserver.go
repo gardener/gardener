@@ -50,6 +50,8 @@ type Interface interface {
 	apiserver.Interface
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// SetAuthorizationWebhook sets the AuthorizationWebhook field in the Values of the deployer.
+	SetAuthorizationWebhook(*AuthorizationWebhook)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -537,6 +539,10 @@ func (k *kubeAPIServer) SetAutoscalingAPIServerResources(resources corev1.Resour
 
 func (k *kubeAPIServer) GetAutoscalingReplicas() *int32 {
 	return k.values.Autoscaling.Replicas
+}
+
+func (k *kubeAPIServer) SetAuthorizationWebhook(webhook *AuthorizationWebhook) {
+	k.values.AuthorizationWebhook = webhook
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {

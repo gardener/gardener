@@ -56,6 +56,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Shoot.IsWorkerless,
 		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
 		b.Shoot.OSCSyncJitterPeriod,
+		true,
 	)
 }
 

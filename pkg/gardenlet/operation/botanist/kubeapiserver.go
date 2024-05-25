@@ -9,10 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -237,6 +242,39 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 	if err != nil {
 		return err
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		// Set authorization webhook for node-agent if enabled
+		nodeAgentAuthorizerWebhookReady, err := b.NodeAgentAuthorizerWebhookReady(ctx)
+		if err != nil {
+			return err
+		}
+		if nodeAgentAuthorizerWebhookReady {
+			caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+			if !found {
+				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+			}
+
+			kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+				"authorization-webhook",
+				clientcmdv1.Cluster{
+					Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
+					CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+				},
+				clientcmdv1.AuthInfo{},
+			))
+			if err != nil {
+				return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+			}
+
+			b.Shoot.Components.ControlPlane.KubeAPIServer.SetAuthorizationWebhook(
+				&kubeapiserver.AuthorizationWebhook{
+					Kubeconfig:           kubeconfig,
+					CacheAuthorizedTTL:   ptr.To(time.Duration(0)),
+					CacheUnauthorizedTTL: ptr.To(time.Duration(0)),
+				})
+		}
 	}
 
 	if err := shared.DeployKubeAPIServer(
