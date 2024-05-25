@@ -224,6 +224,8 @@ type ResourceManagerWebhookConfiguration struct {
 	PodTopologySpreadConstraints PodTopologySpreadConstraintsWebhookConfig
 	// ProjectedTokenMount is the configuration for the projected-token-mount webhook.
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig
+	// NodeAgentAuthorizer is the configuration for the node-agent-authorizer webhook.
+	NodeAgentAuthorizer NodeAgentAuthorizerWebhookConfig
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	SeccompProfile SeccompProfileWebhookConfig
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
@@ -302,6 +304,14 @@ type ProjectedTokenMountWebhookConfig struct {
 	Enabled bool
 	// ExpirationSeconds is the number of seconds until mounted projected service account tokens expire.
 	ExpirationSeconds *int64
+}
+
+// NodeAgentAuthorizerWebhookConfig is the configuration for the node-agent-authorizer webhook.
+type NodeAgentAuthorizerWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool
+	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
+	MachineNamespace string
 }
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
