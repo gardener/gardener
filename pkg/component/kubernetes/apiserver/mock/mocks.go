@@ -44,6 +44,18 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
+// AppendAuthorizationWebhook mocks base method.
+func (m *MockInterface) AppendAuthorizationWebhook(arg0 apiserver0.AuthorizationWebhook) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AppendAuthorizationWebhook", arg0)
+}
+
+// AppendAuthorizationWebhook indicates an expected call of AppendAuthorizationWebhook.
+func (mr *MockInterfaceMockRecorder) AppendAuthorizationWebhook(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendAuthorizationWebhook", reflect.TypeOf((*MockInterface)(nil).AppendAuthorizationWebhook), arg0)
+}
+
 // Deploy mocks base method.
 func (m *MockInterface) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()

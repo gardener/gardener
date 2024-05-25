@@ -119,6 +119,14 @@ func ComponentConfig(
 	caBundle []byte,
 	additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentv1alpha1.NodeAgentConfiguration {
+	tokenSyncConfigs := additionalTokenSyncConfigs
+	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		tokenSyncConfigs = append(tokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
+			SecretName: nodeagentv1alpha1.AccessSecretName,
+			Path:       nodeagentv1alpha1.TokenFilePath,
+		})
+	}
+
 	return &nodeagentv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentv1alpha1.APIServer{
 			Server:   apiServerURL,
@@ -130,10 +138,7 @@ func ComponentConfig(
 				KubernetesVersion: kubernetesVersion,
 			},
 			Token: nodeagentv1alpha1.TokenControllerConfig{
-				SyncConfigs: append([]nodeagentv1alpha1.TokenSecretSyncConfig{{
-					SecretName: nodeagentv1alpha1.AccessSecretName,
-					Path:       nodeagentv1alpha1.TokenFilePath,
-				}}, additionalTokenSyncConfigs...),
+				SyncConfigs: tokenSyncConfigs,
 				// It is enough to sync the access tokens every 12h to the disk because they are only rotated roughly
 				// each 12h. Furthermore, they are valid for 30d, so there should be enough head time to sync an updated
 				// token.

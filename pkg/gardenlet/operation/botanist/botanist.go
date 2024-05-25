@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -211,6 +214,25 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	return b, nil
+}
+
+// NodeAgentAuthorizerWebhookReady checks if gardener-resource-manager is running, so that node-agent-authorizer webhook is accessible.
+func (b *Botanist) NodeAgentAuthorizerWebhookReady(ctx context.Context) (bool, error) {
+	// The reconcile flow deploys the kube-apiserver of the shoot before the gardener-resource-manager (it has to be
+	// this way, otherwise the Gardener components cannot start). However, GRM serves an authorization webhook for the
+	// SeedAuthorizer feature. We can only configure kube-apiserver to consult this webhook when GRM runs, obviously.
+	// This is not possible in the initial kube-apiserver deployment (due to above order).
+	// Hence, we have to deploy kube-apserver a second time - this time with the NodeAgentAuthorizer feature getting enabled.
+	// From then on, all subsequent reconciliations can always enable it and only one deployment is needed.
+	resourceManagerDeployment := &appsv1.Deployment{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: b.Shoot.SeedNamespace}, resourceManagerDeployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	return resourceManagerDeployment.Status.ReadyReplicas > 0, nil
 }
 
 // RequiredExtensionsReady checks whether all required extensions needed for a shoot operation exist and are ready.

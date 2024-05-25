@@ -18,8 +18,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Init", func() {
@@ -209,6 +211,61 @@ server: {}
 
 				// best-effort check: ensure the node init configuration is not exceeding 4KB in size
 				Expect(utf8.RuneCountInString(writeFilesToDiskScript + writeUnitsToDiskScript)).To(BeNumerically("<", 4096))
+			})
+		})
+
+		When("NodeAgentAuthorizer feature gate is enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
+				config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil)
+			})
+
+			It("should correctly configure the bootstrap configuration", func() {
+				_, files, err := Config(worker, image, config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(ContainElement(extensionsv1alpha1.File{
+					Path:        "/var/lib/gardener-node-agent/config.yaml",
+					Permissions: ptr.To[uint32](0600),
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
+  caBundle: ` + utils.EncodeBase64(caBundle) + `
+  server: ` + apiServerURL + `
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+bootstrap: {}
+clientConnection:
+  acceptContentTypes: ""
+  burst: 0
+  contentType: ""
+  kubeconfig: ""
+  qps: 0
+controllers:
+  operatingSystemConfig:
+    kubernetesVersion: ` + kubernetesVersion.String() + `
+    secretName: ` + oscSecretName + `
+  token:
+    syncPeriod: 12h0m0s
+featureGates:
+  NodeAgentAuthorizer: true
+kind: NodeAgentConfiguration
+logFormat: ""
+logLevel: ""
+server: {}
+`))}},
+				}))
+			})
+
+			It("should contain the file with <<MACHINE_NAME>> magic string", func() {
+				_, files, err := Config(worker, image, config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(files).To(ContainElement(extensionsv1alpha1.File{
+					Path:        "/var/lib/gardener-node-agent/machine-name",
+					Permissions: ptr.To[uint32](0640),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Data: "<<MACHINE_NAME>>",
+						},
+						TransmitUnencoded: ptr.To(true),
+					},
+				}))
 			})
 		})
 	})
