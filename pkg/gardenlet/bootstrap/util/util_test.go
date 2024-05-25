@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -64,13 +65,13 @@ var _ = Describe("Util", func() {
 				Organization: []string{organization},
 				CommonName:   "test-cn",
 			}
-			digest, err := DigestedName(signer.Public(), subject, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature})
+			digest, err := certificatesigningrequest.DigestedName(signer.Public(), subject, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}, "seed-csr-")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(digest, "seed-csr-")).To(BeTrue())
 		})
 
 		It("should return an error because the public key cannot be marshalled", func() {
-			_, err := DigestedName([]byte("test"), nil, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature})
+			_, err := certificatesigningrequest.DigestedName([]byte("test"), nil, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}, "seed-csr-")
 			Expect(err).To(HaveOccurred())
 		})
 	})

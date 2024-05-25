@@ -7,17 +7,12 @@ package util
 import (
 	"bytes"
 	"context"
-	"crypto/sha512"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	authenticationv1 "k8s.io/api/authentication/v1"
-	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -145,44 +140,6 @@ func CreateGardenletKubeconfigWithToken(config *rest.Config, token string) ([]by
 	return kubeconfigWithAuthInfo(config, &clientcmdapi.AuthInfo{
 		Token: token,
 	})
-}
-
-// DigestedName is a digest that should include all the relevant pieces of the CSR we care about.
-// We can't directly hash the serialized CSR because of random padding that we
-// regenerate every loop and we include usages which are not contained in the
-// CSR. This needs to be kept up to date as we add new fields to the node
-// certificates and with ensureCompatible.
-func DigestedName(publicKey any, subject *pkix.Name, usages []certificatesv1.KeyUsage) (string, error) {
-	hash := sha512.New512_256()
-
-	// Here we make sure two different inputs can't write the same stream
-	// to the hash. This delimiter is not in the base64.URLEncoding
-	// alphabet so there is no way to have spill over collisions. Without
-	// it 'CN:foo,ORG:bar' hashes to the same value as 'CN:foob,ORG:ar'
-	const delimiter = '|'
-	encode := base64.RawURLEncoding.EncodeToString
-
-	write := func(data []byte) {
-		_, _ = hash.Write([]byte(encode(data)))
-		_, _ = hash.Write([]byte{delimiter})
-	}
-
-	publicKeyData, err := x509.MarshalPKIXPublicKey(publicKey)
-	if err != nil {
-		return "", err
-	}
-	write(publicKeyData)
-
-	write([]byte(subject.CommonName))
-	for _, v := range subject.Organization {
-		write([]byte(v))
-	}
-
-	for _, v := range usages {
-		write([]byte(v))
-	}
-
-	return "seed-csr-" + encode(hash.Sum(nil)), nil
 }
 
 func kubeconfigWithAuthInfo(config *rest.Config, authInfo *clientcmdapi.AuthInfo) ([]byte, error) {

@@ -2,12 +2,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package certificate
+package certificatesigningrequest
 
 import (
 	"context"
 	"crypto"
+	"crypto/sha512"
+	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"time"
@@ -22,15 +25,12 @@ import (
 	"k8s.io/client-go/util/keyutil"
 	"k8s.io/utils/ptr"
 
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// RequestCertificate will create a certificate signing request for the Gardenlet
-// and send it to API server, then it will watch the object's
-// status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
-// certificate (pem-encoded). If there is any errors, or the watch timeouts, it
-// will return an error.
+// RequestCertificate will create a certificate signing request and send it to API server, then it will watch the object's
+// status, once approved, it will return the kube-controller-manager's issued certificate (pem-encoded). If there is any
+// errors, or the watch timeouts, it will return an error.
 func RequestCertificate(
 	ctx context.Context,
 	log logr.Logger,
@@ -39,6 +39,7 @@ func RequestCertificate(
 	dnsSANs []string,
 	ipSANs []net.IP,
 	validityDuration *metav1.Duration,
+	csrPrefix string,
 ) (
 	[]byte,
 	[]byte,
@@ -54,22 +55,58 @@ func RequestCertificate(
 		return nil, nil, "", fmt.Errorf("error generating client certificate private key: %w", err)
 	}
 
-	certData, csrName, err := requestCertificate(ctx, log, client, privateKeyData, certificateSubject, dnsSANs, ipSANs, validityDuration)
+	certData, csrName, err := requestCertificate(ctx, log, client, privateKeyData, certificateSubject, dnsSANs, ipSANs, validityDuration, csrPrefix)
 	if err != nil {
 		return nil, nil, "", err
 	}
 	return certData, privateKeyData, csrName, nil
 }
 
-// DigestedName is an alias for gardenletbootstraputil.DigestedName.
+// DigestedName is an alias for certificatesigningrequest.DigestedName.
 // Exposed for testing.
-var DigestedName = gardenletbootstraputil.DigestedName
+var DigestedName = ComputeDigestedName
 
-// requestCertificate will create a certificate signing request for the Gardenlet
-// and send it to API server, then it will watch the object's
-// status, once approved by the gardener-controller-manager, it will return the kube-controller-manager's issued
-// certificate (pem-encoded). If there is any errors, or the watch timeouts, it
-// will return an error.
+// ComputeDigestedName is a digest that should include all the relevant pieces of the CSR we care about.
+// We can't directly hash the serialized CSR because of random padding that we
+// regenerate every loop and we include usages which are not contained in the
+// CSR. This needs to be kept up to date as we add new fields to the node
+// certificates and with ensureCompatible.
+func ComputeDigestedName(publicKey any, subject *pkix.Name, usages []certificatesv1.KeyUsage, csrPrefix string) (string, error) {
+	hash := sha512.New512_256()
+
+	// Here we make sure two different inputs can't write the same stream
+	// to the hash. This delimiter is not in the base64.URLEncoding
+	// alphabet so there is no way to have spill over collisions. Without
+	// it 'CN:foo,ORG:bar' hashes to the same value as 'CN:foob,ORG:ar'
+	const delimiter = '|'
+	encode := base64.RawURLEncoding.EncodeToString
+
+	write := func(data []byte) {
+		_, _ = hash.Write([]byte(encode(data)))
+		_, _ = hash.Write([]byte{delimiter})
+	}
+
+	publicKeyData, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return "", err
+	}
+	write(publicKeyData)
+
+	write([]byte(subject.CommonName))
+	for _, v := range subject.Organization {
+		write([]byte(v))
+	}
+
+	for _, v := range usages {
+		write([]byte(v))
+	}
+
+	return csrPrefix + encode(hash.Sum(nil)), nil
+}
+
+// requestCertificate will create a certificate signing request and send it to API server, then it will watch the object's
+// status, once approved, it will return the kube-controller-manager's issued certificate (pem-encoded). If there is any
+// errors, or the watch timeouts, it will return an error.
 func requestCertificate(
 	ctx context.Context,
 	log logr.Logger,
@@ -79,6 +116,7 @@ func requestCertificate(
 	dnsSANs []string,
 	ipSANs []net.IP,
 	validityDuration *metav1.Duration,
+	csrPrefix string,
 ) (
 	certData []byte,
 	csrName string,
@@ -105,7 +143,7 @@ func requestCertificate(
 		return nil, "", fmt.Errorf("private key does not implement crypto.Signer")
 	}
 
-	name, err := DigestedName(signer.Public(), certificateSubject, usages)
+	name, err := DigestedName(signer.Public(), certificateSubject, usages, csrPrefix)
 	if err != nil {
 		return nil, "", err
 	}
