@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -106,6 +107,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			ExpirationSeconds: *cfg.Webhooks.ProjectedTokenMount.ExpirationSeconds,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", projectedtokenmount.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.NodeAgentAuthorizer.Enabled {
+		if err := (&nodeagentauthorizer.Webhook{
+			Logger: mgr.GetLogger().WithName("webhook").WithName(nodeagentauthorizer.HandlerName),
+			Config: cfg.Webhooks.NodeAgentAuthorizer,
+		}).AddToManager(mgr, sourceCluster.GetClient(), targetCluster.GetClient()); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", nodeagentauthorizer.HandlerName, err)
 		}
 	}
 
