@@ -48,8 +48,14 @@ skaffold_yaml="$(cat "$repo_root/$skaffold_file")"
 path_current_skaffold_dependencies="${out_dir}/current-$skaffold_file-deps-$binary_name.txt"
 path_actual_dependencies="${out_dir}/actual-$skaffold_file-deps-$binary_name.txt"
 
+is_custom_artifact="$(echo "$skaffold_yaml" | yq eval "select(.metadata.name == \"$skaffold_config_name\") | .build.artifacts[] | select(.image == \"local-skaffold/$binary_name\") | has(\"custom\")" -)"
+yq_dependencies_selector=".ko.dependencies"
+if [[ "$is_custom_artifact" == true ]]; then
+  yq_dependencies_selector=".custom.dependencies"
+fi
+
 echo "$skaffold_yaml" |\
-  yq eval "select(.metadata.name == \"$skaffold_config_name\") | .build.artifacts[] | select(.ko.main == \"./cmd/$binary_name\") | .ko.dependencies.paths[]?" - |\
+  yq eval "select(.metadata.name == \"$skaffold_config_name\") | .build.artifacts[] | select(.image == \"local-skaffold/$binary_name\") | $yq_dependencies_selector.paths[]?" - |\
   sort -f |\
   uniq > "$path_current_skaffold_dependencies"
 
@@ -100,7 +106,8 @@ case "$operation" in
   update)
     echo -n ">> Updating dependencies in Skaffold config '$skaffold_config_name' for '$binary_name' in '$skaffold_file'..."
 
-    yq eval -i "select(.metadata.name == \"$skaffold_config_name\") |= .build.artifacts[] |= select(.ko.main == \"./cmd/$binary_name\") |= .ko.dependencies.paths |= [$(cat "$path_actual_dependencies" | sed -e 's/^/"/' -e 's/$/"/' | tr '\n' ',' | sed 's/,$//')]" "$skaffold_file"
+    actual_dependencies="$(cat "$path_actual_dependencies" | sed -e 's/^/"/' -e 's/$/"/' | tr '\n' ',' | sed 's/,$//')"
+    yq eval -i "select(.metadata.name == \"$skaffold_config_name\") |= .build.artifacts[] |= select(.image == \"local-skaffold/$binary_name\") |= $yq_dependencies_selector.paths |= [$actual_dependencies]" "$skaffold_file"
 
     if ! diff="$(diff "$path_current_skaffold_dependencies" "$path_actual_dependencies")"; then
       echo

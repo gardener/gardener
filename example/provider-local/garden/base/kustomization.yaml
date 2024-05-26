@@ -41,3 +41,4 @@ patches:
     kind: ControllerRegistration
     name: provider-local
 - path: patch-controller-registrations.yaml
+- path: patch-imagevector-overwrite.yaml

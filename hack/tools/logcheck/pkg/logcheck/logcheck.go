@@ -100,10 +100,8 @@ func checkCallExpr(pass *analysis.Pass, callExpr *ast.CallExpr, loggerType *type
 
 	// now check, if the receiver of our call is actually a logr.Logger instance
 	// if not, we don't have to check it in detail
-	if sel, ok := pass.TypesInfo.Selections[selExpr]; ok {
-		if !types.AssignableTo(sel.Recv(), loggerType) {
-			return
-		}
+	if sel, ok := pass.TypesInfo.Selections[selExpr]; !ok || !types.AssignableTo(sel.Recv(), loggerType) {
+		return
 	}
 
 	// we found a relevant logging call, inspect its arguments

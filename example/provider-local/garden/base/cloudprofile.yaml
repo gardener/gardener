@@ -34,4 +34,4 @@ spec:
     - name: local
       versions:
       - version: 1.0.0
-        image: ghcr.io/gardener/machine-controller-manager-provider-local/node:latest
+        image: local-skaffold/gardener-extension-provider-local-node:v1.0.0

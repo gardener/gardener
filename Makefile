@@ -331,18 +331,18 @@ gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS =
 gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
 
-gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(KO)
 	$(SKAFFOLD) run
-gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(KO)
 	$(SKAFFOLD) dev
-gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(KO)
 	$(SKAFFOLD) debug
 gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
 
-gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(KO)
 	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
@@ -352,31 +352,31 @@ gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-k
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
 gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 
-gardenlet-kind2-up gardenlet-kind2-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardenlet-kind2-up gardenlet-kind2-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
 	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
-gardenlet-kind2-dev gardenlet-kind2-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardenlet-kind2-dev gardenlet-kind2-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
 	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
-gardenlet-kind2-debug gardenlet-kind2-ha-single-zone-debug: $(SKAFFOLD) $(HELM)
+gardenlet-kind2-debug gardenlet-kind2-ha-single-zone-debug: $(SKAFFOLD) $(HELM) $(KO)
 	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
 	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
-gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) delete -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,$(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME)
 
 operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
 
-operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) run
-operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) dev
-operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
+operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(SKAFFOLD) debug
-operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(KUBECTL) annotate garden --all confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete

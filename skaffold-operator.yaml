@@ -14,7 +14,7 @@ build:
           gitCommit:
             variant: AbbrevCommitSha
   artifacts:
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/operator
+    - image: local-skaffold/gardener-operator
       ko:
         dependencies:
           paths:
@@ -282,7 +282,7 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-operator
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager
+    - image: local-skaffold/gardener-resource-manager
       ko:
         dependencies:
           paths:
@@ -386,7 +386,7 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-resource-manager
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
+    - image: local-skaffold/gardener-apiserver
       ko:
         dependencies:
           paths:
@@ -589,7 +589,7 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-apiserver
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/controller-manager
+    - image: local-skaffold/gardener-controller-manager
       ko:
         dependencies:
           paths:
@@ -702,7 +702,7 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-controller-manager
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/scheduler
+    - image: local-skaffold/gardener-scheduler
       ko:
         dependencies:
           paths:
@@ -769,7 +769,7 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-scheduler
-    - image: europe-docker.pkg.dev/gardener-project/releases/gardener/admission-controller
+    - image: local-skaffold/gardener-admission-controller
       ko:
         dependencies:
           paths:
@@ -856,25 +856,25 @@ deploy:
         setValueTemplates:
           env[0].name: GARDENER_OPERATOR_LOCAL
           env[0].value: "true"
-          image.repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_operator}}'
-          image.tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_operator}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_operator}}'
+          image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_operator}}'
+          image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_operator}}@{{.IMAGE_DIGEST_local_skaffold_gardener_operator}}'
           imageVectorOverwrite: |
             images:
             - name: gardener-resource-manager
-              repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_resource_manager}}'
-              tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_resource_manager}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_resource_manager}}'
+              repository: '{{.IMAGE_REPO_local_skaffold_gardener_resource_manager}}'
+              tag: '{{.IMAGE_TAG_local_skaffold_gardener_resource_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_resource_manager}}'
             - name: gardener-apiserver
-              repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_apiserver}}'
-              tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_apiserver}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_apiserver}}'
+              repository: '{{.IMAGE_REPO_local_skaffold_gardener_apiserver}}'
+              tag: '{{.IMAGE_TAG_local_skaffold_gardener_apiserver}}@{{.IMAGE_DIGEST_local_skaffold_gardener_apiserver}}'
             - name: gardener-controller-manager
-              repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_controller_manager}}'
-              tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_controller_manager}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_controller_manager}}'
+              repository: '{{.IMAGE_REPO_local_skaffold_gardener_controller_manager}}'
+              tag: '{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}'
             - name: gardener-scheduler
-              repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_scheduler}}'
-              tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_scheduler}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_scheduler}}'
+              repository: '{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}'
+              tag: '{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}'
             - name: gardener-admission-controller
-              repository: '{{.IMAGE_REPO_europe_docker_pkg_dev_gardener_project_releases_gardener_admission_controller}}'
-              tag: '{{.IMAGE_TAG_europe_docker_pkg_dev_gardener_project_releases_gardener_admission_controller}}@{{.IMAGE_DIGEST_europe_docker_pkg_dev_gardener_project_releases_gardener_admission_controller}}'
+              repository: '{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}'
+              tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
           hostAliases[0].ip: "10.2.10.2"
           hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
           replicaCount: 2

@@ -22,6 +22,6 @@ spec:
       patchStrategicMerge:
         spec:
           containers:
-          - <(image): "*/europe-docker_pkg_dev_gardener-project_*_gardener*"
+          - <(image): "*/local-skaffold*"
           imagePullSecrets:
           - name: gardener-images
