@@ -1282,6 +1282,16 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardenlet
+    - image: local-skaffold/gardenlet/chart
+      custom:
+        dependencies:
+          paths:
+            - charts/gardener/gardenlet
+        buildCommand: |
+          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
+      requires:
+        - image: local-skaffold/gardenlet
+          alias: IMG
     - image: local-skaffold/gardener-resource-manager
       ko:
         dependencies:
