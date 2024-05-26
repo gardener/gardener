@@ -40,7 +40,7 @@ var _ = Describe("Helper", func() {
 
 		Context("#ExtractSeedSpec", func() {
 			It("should extract the seed spec when gardenlet is defined", func() {
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -63,7 +63,7 @@ var _ = Describe("Helper", func() {
 			})
 
 			It("should fail when unsupported gardenlet config is given", func() {
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &corev1.ConfigMap{},
 				}
 				_, err := ExtractSeedSpec(managedSeed)
@@ -76,14 +76,14 @@ var _ = Describe("Helper", func() {
 			})
 
 			It("should fail when gardenlet config is not defined", func() {
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{}
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{}
 
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should fail when seedConfig is not defined in gardenlet config", func() {
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),

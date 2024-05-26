@@ -299,7 +299,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	return allErrs, nil
 }
 
-func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, shoot *gardencorev1beta1.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	if gardenlet.Config != nil {

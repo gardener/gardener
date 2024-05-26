@@ -1534,7 +1534,7 @@ var _ = Describe("handler", func() {
 									ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 									Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
-										Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig1,
@@ -1547,7 +1547,7 @@ var _ = Describe("handler", func() {
 									ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 									Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot2.Name},
-										Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig2,

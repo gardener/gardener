@@ -54,7 +54,7 @@ var _ = Describe("Helper", func() {
 
 		Context("w/ gardenlet config", func() {
 			BeforeEach(func() {
-				managedSeed.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagementv1alpha1.GardenletConfig{
 					Config: runtime.RawExtension{Raw: encode(config)},
 				}
 			})
