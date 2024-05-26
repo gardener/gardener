@@ -5,6 +5,8 @@
   ],
   "labels": ["kind/enhancement"],
   "postUpdateOptions": ["gomodTidy"],
+  // Add PR footer with empty release note by default.
+  "prFooter": "**Release note**:\n```other dependency\nNONE\n```",
   "customManagers": [
     {
       // Update `_VERSION` and `_version` variables in Makefiles and scripts.
@@ -190,13 +192,13 @@
       // Add PR footer with release notes for docker releases.
       "matchDatasources": ["docker"],
       "matchFileNames": ["imagevector/**"],
-      "prFooter": "```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```"
+      "prFooter": "**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```"
     },
     {
       // Add PR footer with release notes link for github-releases.
       "matchDatasources": ["github-releases"],
       "matchFileNames": ["imagevector/**"],
-      "prFooter": "```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```"
+      "prFooter": "**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```"
     }
   ]
 }
