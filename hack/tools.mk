@@ -64,7 +64,7 @@ HELM_VERSION ?= v3.15.1
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.23.0
 # renovate: datasource=github-releases depName=ko-build/ko
-KO_VERSION ?= v0.15.3
+KO_VERSION ?= v0.15.4
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.30.1
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
