@@ -6,6 +6,8 @@
 
 package v1alpha1
 
+type GardenletExpansion interface{}
+
 type ManagedSeedExpansion interface{}
 
 type ManagedSeedSetExpansion interface{}

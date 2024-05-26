@@ -12,6 +12,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Gardenlets returns a GardenletInformer.
+	Gardenlets() GardenletInformer
 	// ManagedSeeds returns a ManagedSeedInformer.
 	ManagedSeeds() ManagedSeedInformer
 	// ManagedSeedSets returns a ManagedSeedSetInformer.
@@ -27,6 +29,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Gardenlets returns a GardenletInformer.
+func (v *version) Gardenlets() GardenletInformer {
+	return &gardenletInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ManagedSeeds returns a ManagedSeedInformer.
