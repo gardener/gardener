@@ -68,17 +68,17 @@ type OCIRepository struct {
 }
 
 // GetURL returns the fully-qualified OCIRepository URL of the artifact.
-func (r *OCIRepository) GetURL() string {
+func (o *OCIRepository) GetURL() string {
 	var ref string
 
 	switch {
-	case r.Ref != nil:
-		ref = *r.Ref
-	case r.Digest != nil:
+	case o.Ref != nil:
+		ref = *o.Ref
+	case o.Digest != nil:
 		// when digest is set we ignore the tag
-		ref = *r.Repository + "@" + *r.Digest
-	case r.Tag != nil:
-		ref = *r.Repository + ":" + *r.Tag
+		ref = *o.Repository + "@" + *o.Digest
+	case o.Tag != nil:
+		ref = *o.Repository + ":" + *o.Tag
 	}
 	return strings.TrimPrefix(ref, "oci://")
 }
