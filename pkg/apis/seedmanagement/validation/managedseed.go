@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -22,7 +23,7 @@ import (
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 )
 
-var availableManagedSeedOperations = sets.New(
+var availableManagedSeedOperations = sets.New[string](
 	v1beta1constants.GardenerOperationReconcile,
 	v1beta1constants.GardenerOperationRenewKubeconfig,
 )
@@ -32,7 +33,7 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateManagedSeedOperation(managedSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
+	allErrs = append(allErrs, validateOperation(managedSeed.Annotations[v1beta1constants.GardenerOperation], availableManagedSeedOperations, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -43,7 +44,7 @@ func ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed *seedmanagement.Ma
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeed.ObjectMeta, &oldManagedSeed.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateManagedSeedOperationUpdate(newManagedSeed.Annotations[v1beta1constants.GardenerOperation], oldManagedSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
+	allErrs = append(allErrs, validateOperationUpdate(newManagedSeed.Annotations[v1beta1constants.GardenerOperation], oldManagedSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpecUpdate(&newManagedSeed.Spec, &oldManagedSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateManagedSeed(newManagedSeed)...)
 
@@ -137,7 +138,7 @@ func validateShoot(shoot *seedmanagement.Shoot, fldPath *field.Path, inTemplate 
 	return allErrs
 }
 
-func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
@@ -145,17 +146,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 	}
 
 	if gardenlet.Config != nil {
-		configPath := fldPath.Child("config")
-
-		// Convert gardenlet config to an internal version
-		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(gardenlet.Config)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(configPath, gardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
-			return allErrs
-		}
-
-		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, ptr.Deref(gardenlet.Bootstrap, seedmanagement.BootstrapNone), ptr.Deref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
+		allErrs = append(allErrs, validateGardenletConfig(gardenlet.Config, ptr.Deref(gardenlet.Bootstrap, seedmanagement.BootstrapNone), ptr.Deref(gardenlet.MergeWithParent, false), fldPath.Child("config"), inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {
@@ -168,35 +159,57 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 	return allErrs
 }
 
-func validateGardenletUpdate(newGardenlet, oldGardenlet *seedmanagement.Gardenlet, fldPath *field.Path) field.ErrorList {
+func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if newGardenlet.Config != nil && oldGardenlet.Config != nil {
-		configPath := fldPath.Child("config")
-
-		// Convert new gardenlet config to an internal version
-		newGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(newGardenlet.Config)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(configPath, newGardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
-			return allErrs
-		}
-
-		// Convert old gardenlet config to an internal version
-		oldGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(oldGardenlet.Config)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(configPath, oldGardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
-			return allErrs
-		}
-
-		// Validate gardenlet config update
-		allErrs = append(allErrs, validateGardenletConfigurationUpdate(newGardenletConfig, oldGardenletConfig, configPath)...)
+	// Convert gardenlet config to an internal version
+	gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(config)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+		return allErrs
 	}
+
+	// Validate gardenlet config
+	allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, bootstrap, mergeWithParent, fldPath, inTemplate)...)
+
+	return allErrs
+}
+
+func validateGardenletUpdate(newGardenlet, oldGardenlet *seedmanagement.GardenletConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateGardenletConfigUpdate(newGardenlet.Config, oldGardenlet.Config, fldPath.Child("config"))...)
 
 	// Ensure bootstrap is not changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newGardenlet.Bootstrap, oldGardenlet.Bootstrap, fldPath.Child("bootstrap"))...)
 
 	// Ensure merge with parent is not changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newGardenlet.MergeWithParent, oldGardenlet.MergeWithParent, fldPath.Child("mergeWithParent"))...)
+
+	return allErrs
+}
+
+func validateGardenletConfigUpdate(newConfig, oldConfig runtime.Object, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newConfig != nil && oldConfig != nil {
+		// Convert new gardenlet config to an internal version
+		newGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(newConfig)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, newConfig, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+
+		// Convert old gardenlet config to an internal version
+		oldGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(oldConfig)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, oldConfig, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+
+		// Validate gardenlet config update
+		allErrs = append(allErrs, validateGardenletConfigurationUpdate(newGardenletConfig, oldGardenletConfig, fldPath)...)
+	}
 
 	return allErrs
 }
@@ -295,21 +308,21 @@ func validateGardenClientConnection(gcc *config.GardenClientConnection, bootstra
 	return allErrs
 }
 
-func validateManagedSeedOperation(operation string, fldPath *field.Path) field.ErrorList {
+func validateOperation(operation string, availableOperations sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if operation == "" {
 		return allErrs
 	}
 
-	if operation != "" && !availableManagedSeedOperations.Has(operation) {
-		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableManagedSeedOperations)))
+	if operation != "" && !availableOperations.Has(operation) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableOperations)))
 	}
 
 	return allErrs
 }
 
-func validateManagedSeedOperationUpdate(newOperation, oldOperation string, fldPath *field.Path) field.ErrorList {
+func validateOperationUpdate(newOperation, oldOperation string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if newOperation == "" || oldOperation == "" {

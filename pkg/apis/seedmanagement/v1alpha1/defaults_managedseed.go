@@ -61,15 +61,34 @@ func SetDefaults_Image(obj *Image) {
 	}
 }
 
-func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
+func setDefaultsGardenlet(obj *GardenletConfig, name, namespace string) {
 	// Set deployment defaults
 	if obj.Deployment == nil {
 		obj.Deployment = &GardenletDeployment{}
 	}
 
+	setDefaultsGardenletConfig(&obj.Config, name, namespace)
+
+	// Set default garden connection bootstrap
+	if obj.Bootstrap == nil {
+		gardenConnectionBootstrap := BootstrapToken
+		obj.Bootstrap = &gardenConnectionBootstrap
+	}
+
+	// Set default merge with parent
+	if obj.MergeWithParent == nil {
+		obj.MergeWithParent = ptr.To(true)
+	}
+}
+
+func setDefaultsGardenletConfig(config *runtime.RawExtension, name, namespace string) {
+	if config == nil {
+		return
+	}
+
 	// Decode gardenlet config to an external version
 	// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
-	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&obj.Config, false)
+	gardenletConfig, err := encoding.DecodeGardenletConfiguration(config, false)
 	if err != nil {
 		return
 	}
@@ -90,18 +109,7 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 
 	// Set gardenlet config back to obj.Config
 	// Encoding back to bytes is not needed, it will be done by the custom conversion code
-	obj.Config = runtime.RawExtension{Object: gardenletConfig}
-
-	// Set default garden connection bootstrap
-	if obj.Bootstrap == nil {
-		gardenConnectionBootstrap := BootstrapToken
-		obj.Bootstrap = &gardenConnectionBootstrap
-	}
-
-	// Set default merge with parent
-	if obj.MergeWithParent == nil {
-		obj.MergeWithParent = ptr.To(true)
-	}
+	*config = runtime.RawExtension{Object: gardenletConfig}
 }
 
 func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfiguration, name, namespace string) {

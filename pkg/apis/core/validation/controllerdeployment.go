@@ -31,7 +31,7 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 		isBuiltInType = true
 		deploymentType = "helm"
 
-		allErrs = append(allErrs, validateHelmControllerDeployment(controllerDeployment.Helm, field.NewPath("helm"))...)
+		allErrs = append(allErrs, ValidateHelmControllerDeployment(controllerDeployment.Helm, field.NewPath("helm"))...)
 	}
 
 	if isBuiltInType {
@@ -57,7 +57,8 @@ func ValidateControllerDeploymentUpdate(new, _ *core.ControllerDeployment) field
 	return ValidateControllerDeployment(new)
 }
 
-func validateHelmControllerDeployment(helmControllerDeployment *core.HelmControllerDeployment, fldPath *field.Path) field.ErrorList {
+// ValidateHelmControllerDeployment validates Helm controller deployment configs.
+func ValidateHelmControllerDeployment(helmControllerDeployment *core.HelmControllerDeployment, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// XOR: either one or the other must be set.
@@ -65,12 +66,13 @@ func validateHelmControllerDeployment(helmControllerDeployment *core.HelmControl
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either rawChart or ociRepository"))
 	}
 
-	allErrs = append(allErrs, validateOCIRepository(helmControllerDeployment.OCIRepository, fldPath.Child("ociRepository"))...)
+	allErrs = append(allErrs, ValidateOCIRepository(helmControllerDeployment.OCIRepository, fldPath.Child("ociRepository"))...)
 
 	return allErrs
 }
 
-func validateOCIRepository(oci *core.OCIRepository, fldPath *field.Path) field.ErrorList {
+// ValidateOCIRepository validates the OCI repository config.
+func ValidateOCIRepository(oci *core.OCIRepository, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oci == nil {
