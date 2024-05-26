@@ -30,8 +30,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 )
@@ -51,14 +54,15 @@ func (fakeAuthorizerType) Authorize(_ context.Context, a authorizer.Attributes) 
 var _ = Describe("resourcereferencemanager", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler          *ReferenceManager
-			kubeInformerFactory       kubeinformers.SharedInformerFactory
-			kubeClient                *fake.Clientset
-			gardenCoreClient          *internalclientset.Clientset
-			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-			fakeAuthorizer            fakeAuthorizerType
-			scheme                    *runtime.Scheme
-			dynamicClient             *dynamicfake.FakeDynamicClient
+			admissionHandler              *ReferenceManager
+			kubeInformerFactory           kubeinformers.SharedInformerFactory
+			kubeClient                    *fake.Clientset
+			gardenCoreClient              *internalclientset.Clientset
+			gardenCoreInformerFactory     gardencoreinformers.SharedInformerFactory
+			seedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
+			fakeAuthorizer                fakeAuthorizerType
+			scheme                        *runtime.Scheme
+			dynamicClient                 *dynamicfake.FakeDynamicClient
 
 			backupBucket gardencorev1beta1.BackupBucket
 			backupEntry  gardencorev1beta1.BackupEntry
@@ -309,6 +313,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
+			seedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetSeedManagementInformerFactory(seedManagementInformerFactory)
 
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
@@ -1716,6 +1722,58 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Name))
 			})
 		})
+
+		Context("tests for Gardenlet objects", func() {
+			var (
+				gardenlet   *seedmanagement.Gardenlet
+				managedSeed *seedmanagementv1alpha1.ManagedSeed
+			)
+
+			BeforeEach(func() {
+				gardenlet = &seedmanagement.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: "some-seed", Namespace: "some-namespace"}}
+				managedSeed = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: gardenlet.ObjectMeta}
+			})
+
+			It("should accept because there is no managed seed with the same name", func() {
+				attrs := admission.NewAttributesRecord(gardenlet, nil, seedmanagement.Kind("Gardenlet").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should forbid because there is a managed seed with the same name", func() {
+				Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(gardenlet, nil, seedmanagement.Kind("Gardenlet").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a ManagedSeed object with the same name")))
+			})
+		})
+
+		Context("tests for ManagedSeed objects", func() {
+			var (
+				managedSeed *seedmanagement.ManagedSeed
+				gardenlet   *seedmanagementv1alpha1.Gardenlet
+			)
+
+			BeforeEach(func() {
+				managedSeed = &seedmanagement.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "some-seed", Namespace: "some-namespace"}}
+				gardenlet = &seedmanagementv1alpha1.Gardenlet{ObjectMeta: managedSeed.ObjectMeta}
+			})
+
+			It("should accept because there is no gardenlet with the same name", func() {
+				attrs := admission.NewAttributesRecord(managedSeed, nil, seedmanagement.Kind("ManagedSeed").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should forbid because there is a gardenlet with the same name", func() {
+				Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().Gardenlets().Informer().GetStore().Add(gardenlet)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(managedSeed, nil, seedmanagement.Kind("ManagedSeed").WithVersion("version"), managedSeed.Namespace, managedSeed.Name, seedmanagement.Resource("managedseeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a Gardenlet object with the same name")))
+			})
+		})
 	})
 
 	Describe("#Register", func() {
@@ -1749,6 +1807,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			rm.SetCoreClientSet(internalGardenClient)
 
 			rm.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			rm.SetSeedManagementInformerFactory(seedmanagementinformers.NewSharedInformerFactory(nil, 0))
 
 			fakeAuthorizer := fakeAuthorizerType{}
 			rm.SetAuthorizer(fakeAuthorizer)
@@ -1756,9 +1815,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeInformerFactory := kubeinformers.NewSharedInformerFactory(nil, 0)
 			rm.SetKubeInformerFactory(kubeInformerFactory)
 
-			err := rm.ValidateInitialization()
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(rm.ValidateInitialization()).To(Succeed())
 		})
 	})
 })
