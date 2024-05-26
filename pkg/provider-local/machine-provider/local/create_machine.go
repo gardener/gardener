@@ -14,7 +14,6 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -49,10 +48,6 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error applying user data secret: %s", err.Error()))
 	}
 
-	if _, err := d.applyService(ctx, req); err != nil {
-		return nil, err
-	}
-
 	pod, err := d.applyPod(ctx, req, providerSpec, userDataSecret)
 	if err != nil {
 		return nil, err
@@ -62,27 +57,6 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		ProviderID: pod.Name,
 		NodeName:   pod.Name,
 	}, nil
-}
-
-func (d *localDriver) applyService(ctx context.Context, req *driver.CreateMachineRequest) (*corev1.Service, error) {
-	svc := service(req.Machine)
-	svc.Spec.Type = corev1.ServiceTypeClusterIP
-	svc.Spec.ClusterIP = corev1.ClusterIPNone
-	svc.Spec.Ports = []corev1.ServicePort{{
-		Port:       10250,
-		Protocol:   corev1.ProtocolTCP,
-		TargetPort: intstr.FromInt(10250),
-	}}
-	svc.Spec.Selector = map[string]string{
-		labelKeyProvider: apiv1alpha1.Provider,
-		labelKeyApp:      labelValueMachine,
-	}
-
-	if err := d.client.Patch(ctx, svc, client.Apply, fieldOwner, client.ForceOwnership); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("error applying service: %s", err.Error()))
-	}
-
-	return svc, nil
 }
 
 func (d *localDriver) applyPod(
@@ -111,7 +85,6 @@ func (d *localDriver) applyPod(
 		"networking.gardener.cloud/to-private-networks":                 "allowed",
 		"networking.gardener.cloud/to-public-networks":                  "allowed",
 		"networking.gardener.cloud/to-runtime-apiserver":                "allowed", // needed for ManagedSeeds such that gardenlets deployed to these Machines can talk to the seed's kube-apiserver (which is the same like the garden cluster kube-apiserver)
-		"networking.gardener.cloud/to-shoot-networks":                   "allowed",
 		"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 	}
 	pod.Spec = corev1.PodSpec{
