@@ -84,6 +84,10 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.blackboxExporter).Destroy,
 		})
 
+		destroyGardenerDiscoveryServer = g.Add(flow.Task{
+			Name: "Destroying Gardener Discovery Server",
+			Fn:   component.OpDestroyAndWait(c.gardenerDiscoveryServer).Destroy,
+		})
 		destroyTerminalControllerManager = g.Add(flow.Task{
 			Name: "Destroying Gardener Dashboard web terminal controller manager",
 			Fn:   component.OpDestroyAndWait(c.terminalControllerManager).Destroy,
@@ -123,6 +127,7 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.kubeControllerManager).Destroy,
 		})
 		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
+			destroyGardenerDiscoveryServer,
 			destroyTerminalControllerManager,
 			destroyGardenerDashboard,
 			destroyGardenerScheduler,

@@ -405,6 +405,9 @@ type Gardener struct {
 	// Dashboard contains configuration settings for the gardener-dashboard.
 	// +optional
 	Dashboard *GardenerDashboardConfig `json:"gardenerDashboard,omitempty"`
+	// DiscoveryServer contains configuration settings for the gardener-discovery-server.
+	// +optional
+	DiscoveryServer *GardenerDiscoveryServerConfig `json:"gardenerDiscoveryServer,omitempty"`
 }
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
@@ -609,6 +612,9 @@ type DashboardTerminalContainer struct {
 	// +optional
 	Description *string `json:"description,omitempty"`
 }
+
+// GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
+type GardenerDiscoveryServerConfig struct{}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {

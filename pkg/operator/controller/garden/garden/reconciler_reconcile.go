@@ -286,6 +286,16 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerScheduler).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Gardener Discovery Server",
+			Fn: func(ctx context.Context) error {
+				if garden.Spec.VirtualCluster.Gardener.DiscoveryServer == nil {
+					return component.OpDestroyAndWait(c.gardenerDiscoveryServer).Destroy(ctx)
+				}
+				return component.OpWait(c.gardenerDiscoveryServer).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady),
+		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying virtual system resources",

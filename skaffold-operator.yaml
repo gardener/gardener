@@ -101,6 +101,7 @@ build:
             - pkg/component/gardener/dashboard/config
             - pkg/component/gardener/dashboard/terminal
             - pkg/component/gardener/dashboard/terminal/assets/crd-dashboard.gardener.cloud_terminals.yaml
+            - pkg/component/gardener/discoveryserver
             - pkg/component/gardener/resourcemanager
             - pkg/component/gardener/resourcemanager/assets/crd-resources.gardener.cloud_managedresources.yaml
             - pkg/component/gardener/resourcemanager/constants

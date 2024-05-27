@@ -240,6 +240,7 @@ spec:
     #     container:
     #       image: busybox:latest
     #       description: A nice container for debugging purposes
+      gardenerDiscoveryServer: {}
     maintenance:
       timeWindow:
         begin: 220000+0100

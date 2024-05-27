@@ -52,6 +52,7 @@ import (
 	gardenercontrollermanager "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
 	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/dashboard/terminal"
+	gardenerdiscoveryserver "github.com/gardener/gardener/pkg/component/gardener/discoveryserver"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	gardenerscheduler "github.com/gardener/gardener/pkg/component/gardener/scheduler"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -115,6 +116,8 @@ type components struct {
 	gardenerAdmissionController component.DeployWaiter
 	gardenerControllerManager   component.DeployWaiter
 	gardenerScheduler           component.DeployWaiter
+
+	gardenerDiscoveryServer component.DeployWaiter
 
 	gardenerDashboard         gardenerdashboard.Interface
 	terminalControllerManager component.DeployWaiter
@@ -246,6 +249,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	if err != nil {
+		return
+	}
 
 	// observability components
 	c.gardenerMetricsExporter, err = r.newGardenerMetricsExporter(secretsManager)
@@ -371,7 +378,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		false,
 		nil,
 		true,
-		[]string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem},
+		[]string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace},
 		nil,
 	)
 }
@@ -1312,6 +1319,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 				gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias+"-"+v1beta1constants.DefaultSNIIngressServiceName, 9443): v1beta1constants.LabelNetworkPolicyAllowed,
 				gardenerutils.NetworkPolicyLabel(gardenerapiserver.DeploymentName, 8443):                                                                                v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.ServiceName, 8081):                                                                             v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
@@ -1319,4 +1327,27 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			Replicas:          1,
 		},
 	)
+}
+
+func (r *Reconciler) newGardenerDiscoveryServer(
+	secretsManager secretsmanager.Interface,
+	domain string,
+	wildcardCertSecretName *string,
+) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDiscoveryServer)
+	if err != nil {
+		return nil, err
+	}
+
+	return gardenerdiscoveryserver.New(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		gardenerdiscoveryserver.Values{
+			Image:          image.String(),
+			RuntimeVersion: r.RuntimeVersion,
+			Domain:         domain,
+			TLSSecretName:  wildcardCertSecretName,
+		},
+	), nil
 }

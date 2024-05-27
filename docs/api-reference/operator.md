@@ -1053,6 +1053,20 @@ GardenerDashboardConfig
 <p>Dashboard contains configuration settings for the gardener-dashboard.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>gardenerDiscoveryServer</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">
+GardenerDiscoveryServerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DiscoveryServer contains configuration settings for the gardener-discovery-server.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig
@@ -1402,6 +1416,15 @@ DashboardTerminal
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerDiscoveryServerConfig">GardenerDiscoveryServerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.</p>
+</p>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
 </h3>
 <p>

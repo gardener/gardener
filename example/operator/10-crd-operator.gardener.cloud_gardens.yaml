@@ -914,6 +914,10 @@ spec:
                             - container
                             type: object
                         type: object
+                      gardenerDiscoveryServer:
+                        description: DiscoveryServer contains configuration settings
+                          for the gardener-discovery-server.
+                        type: object
                       gardenerScheduler:
                         description: Scheduler contains configuration settings for
                           the gardener-scheduler.

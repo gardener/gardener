@@ -147,8 +147,12 @@ The Gardener control plane components are:
 - `gardener-controller-manager`
 - `gardener-scheduler`
 
-Besides those, the optional [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) can also get deployed when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set.
-You can read more about it and its configuration in [this section](#gardener-dashboard).
+Besides those, the `gardener-operator` is able to deploy the following optional components:
+ - [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set. 
+ You can read more about it and its configuration in [this section](#gardener-dashboard).
+ - [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) when `.spec.virtualCluster.gardener.gardenerDiscoveryServer` is set.
+ The service account issuer of shoots will be calculated in the format `https://discovery.<.spec.runtimeCluster.ingress.domains[0]>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
+ This configuration applies for all seeds registered with the Garden cluster. Once set it should not be modified.
 
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
