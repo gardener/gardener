@@ -160,7 +160,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 
 				Expect(ValidateControllerDeployment(controllerDeployment)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("helm.ociRepository.repository"),
+					"Field": Equal("helm.ociRepository"),
 				}))))
 			})
 

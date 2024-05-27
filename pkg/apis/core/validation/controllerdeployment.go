@@ -79,6 +79,7 @@ func validateOCIRepository(oci *core.OCIRepository, fldPath *field.Path) field.E
 
 	if ptr.Deref(oci.Ref, "") == "" && ptr.Deref(oci.Repository, "") == "" {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide either ref or repository"))
+		return allErrs
 	}
 
 	if oci.Ref != nil {
