@@ -1612,7 +1612,7 @@ var _ = Describe("handler", func() {
 									Allowed: false,
 									Result: &metav1.Status{
 										Code:    int32(http.StatusInternalServerError),
-										Message: "no gardenlet specified in managedseed: \"\"",
+										Message: "no gardenlet config provided in object: \"\"",
 									},
 								},
 							}))

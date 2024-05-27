@@ -857,6 +857,7 @@ func clusterRole() *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"seedmanagement.gardener.cloud"},
 				Resources: []string{
+					"gardenlets",
 					"managedseeds",
 				},
 				Verbs: []string{"get", "list", "watch"},

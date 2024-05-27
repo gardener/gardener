@@ -64,6 +64,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&operationsv1alpha1.Bastion{}, g.setupBastionWatch},
 		{&certificatesv1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
+		{&seedmanagementv1alpha1.Gardenlet{}, g.setupGardenletWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},

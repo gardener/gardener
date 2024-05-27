@@ -134,7 +134,7 @@ func (a *actuator) Reconcile(
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
 	if err != nil {
 		return status, false, err
 	}
@@ -218,7 +218,7 @@ func (a *actuator) Delete(
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
 	if err != nil {
 		return status, false, false, err
 	}
