@@ -209,6 +209,8 @@ type Data struct {
 	// Content is the actual cloud-config user data.
 	// TODO(rfranzke): Remove this Content field after v1.100 is released.
 	Content string
+	// IncludeHashInWorker state whether the WorkerPool definition must include the GardenerNodeAgentSecretName
+	IncludeHashInWorker bool
 	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
 	GardenerNodeAgentSecretName string
 	// SecretName is the name of a secret storing the actual cloud-config user data.
@@ -476,6 +478,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				data := Data{
 					Object:                      osc,
 					Content:                     string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+					IncludeHashInWorker:         hashVersion > 1,
 					GardenerNodeAgentSecretName: oscKey,
 					SecretName:                  &secret.Name,
 				}

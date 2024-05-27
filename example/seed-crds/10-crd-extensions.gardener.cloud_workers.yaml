@@ -237,6 +237,11 @@ spec:
                       required:
                       - capacity
                       type: object
+                    oscHash:
+                      description: |-
+                        OSCHash is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
+                        worker pool must be rolled.
+                      type: string
                     providerConfig:
                       description: ProviderConfig is a provider specific configuration
                         for the worker pool.

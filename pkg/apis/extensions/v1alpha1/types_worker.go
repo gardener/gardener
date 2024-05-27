@@ -125,6 +125,10 @@ type WorkerPool struct {
 	Minimum int32 `json:"minimum"`
 	// Name is the name of this worker pool.
 	Name string `json:"name"`
+	// OSCHash is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
+	// worker pool must be rolled.
+	// +optional
+	OSCHash *string `json:"oscHash,omitempty"`
 	// ProviderConfig is a provider specific configuration for the worker pool.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields

@@ -72,13 +72,15 @@ var _ = Describe("Machines", func() {
 		)
 	})
 
-	Describe("#WorkerPoolHash", func() {
+	Describe("#WorkerPoolHashV1", func() {
 		var (
 			p                           extensionsv1alpha1.WorkerPool
 			c                           *extensionscontroller.Cluster
 			hash                        string
 			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+			additionalDataV1            []string
+			additionalDataV2            []string
 		)
 
 		BeforeEach(func() {
@@ -119,15 +121,17 @@ var _ = Describe("Machines", func() {
 					},
 				},
 			}
+			additionalDataV1 = []string{"sample"}
+			additionalDataV2 = []string{"sample"}
 
 			var err error
-			hash, err = WorkerPoolHash(p, c)
+			hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c)
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -187,13 +191,21 @@ var _ = Describe("Machines", func() {
 			It("when disabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}
 			})
+
+			It("when changing additional data for V2", func() {
+				additionalDataV2 = []string{"test"}
+			})
 		})
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c)
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing additional data", func() {
+				additionalDataV1 = []string{"test"}
 			})
 
 			It("when changing machine type", func() {
@@ -243,7 +255,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
-				hash, err = WorkerPoolHash(p, c)
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
@@ -258,7 +270,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
-				hash, err = WorkerPoolHash(p, c)
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
@@ -266,6 +278,88 @@ var _ = Describe("Machines", func() {
 
 			It("when enabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}
+			})
+		})
+	})
+
+	Describe("#WorkerPoolHashV2", func() {
+		var (
+			p                extensionsv1alpha1.WorkerPool
+			hash             string
+			additionalDataV1 []string
+			additionalDataV2 []string
+		)
+
+		BeforeEach(func() {
+			oscHash := "sample-hash"
+			p = extensionsv1alpha1.WorkerPool{
+				OSCHash: &oscHash,
+			}
+			additionalDataV1 = []string{"sample"}
+			additionalDataV2 = []string{"sample"}
+
+			var err error
+			hash, err = WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("hash value should not change", func() {
+			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hash))
+			})
+
+			It("when changing annotations", func() {
+				p.Annotations = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing labels", func() {
+				p.Labels = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing taints", func() {
+				p.Taints = []corev1.Taint{{Key: "foo"}}
+			})
+
+			It("when changing name", func() {
+				p.Name = "different-name"
+			})
+
+			It("when changing zones", func() {
+				p.Zones = []string{"1"}
+			})
+
+			It("when changing the kubernetes patch version of the worker pool version", func() {
+				p.KubernetesVersion = ptr.To("1.2.4")
+			})
+
+			It("when changing additional data for V1", func() {
+				additionalDataV1 = []string{"test"}
+			})
+
+			It("when changing machine type", func() {
+				p.MachineType = "small"
+			})
+
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				p.KubernetesVersion = ptr.To("1.3.3")
+			})
+		})
+
+		Context("hash value should change", func() {
+			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing additional data", func() {
+				additionalDataV2 = []string{"test"}
+			})
+
+			It("when changing oscHash", func() {
+				p.OSCHash = ptr.To("different")
 			})
 		})
 	})

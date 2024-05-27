@@ -1711,6 +1711,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		}
 	}
 	out.MachineImage = in.MachineImage
+	if in.OSCHash != nil {
+		in, out := &in.OSCHash, &out.OSCHash
+		*out = new(string)
+		**out = **in
+	}
 	if in.ProviderConfig != nil {
 		in, out := &in.ProviderConfig, &out.ProviderConfig
 		*out = new(runtime.RawExtension)
