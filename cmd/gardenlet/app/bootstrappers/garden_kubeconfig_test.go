@@ -160,7 +160,7 @@ var _ = Describe("GardenKubeconfig", func() {
 				Context("when bootstrapKubeconfig is set", func() {
 					var (
 						bootstrapSecretName      = "bootstrap-secret-name"
-						bootstrapSecretNamespace = "boostrap-secret-namespace"
+						bootstrapSecretNamespace = "bootstrap-secret-namespace"
 					)
 
 					BeforeEach(func() {

@@ -33,7 +33,7 @@ config:
                          # If the kubeconfig is provided inline, the name and namespace fields
                          # are a reference to a secret that will store this bootstrap kubeconfig. If `kubeconfig` is given
                          # then only this kubeconfig will be considered.
-                         # If you already have a boostrap kubeconfig you can reference it with
+                         # If you already have a bootstrap kubeconfig you can reference it with
                          # secretRef.name and secretRef.namespace.
   #   name: gardenlet-kubeconfig-bootstrap
   #   namespace: garden
