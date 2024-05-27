@@ -279,3 +279,21 @@ spec:
         description: >
           Node {{$labels.node}} in landscape
 
+    - alert: SeedConditionFailing
+      expr: |
+        max by (name, condition) (
+          last_over_time((
+            garden_seed_condition <= 0
+            or
+            garden_shoot_condition{is_seed   = "true",
+                                   operation = "Reconcile"} <= 0)[5m:]))
+      for: 6m
+      labels:
+        severity: critical
+        topology: seed
+      annotations:
+        summary: >-
+          Seed Condition Failing
+        description: >
+          The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
+          has a failing condition: {{$labels.condition}}.
