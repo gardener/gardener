@@ -1,16 +1,25 @@
+# Condition states are mapped to numbers by the gardener-metrics-exporter:
+#
+# 2: Progressing
+# 1: True
+# 0: False
+# -1: Unknown
+
 rule_files:
 - seed.prometheusrule.yaml
 
+
 tests:
+
   - name: SeedConditionFailing:SmoothOutFlapping
     interval: 1m
     input_series:
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-flapping"}
-        values: 0x2 2 -1 2 0
+        values: 0 0 2 -1 2 0
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-progressing-for-long"}
-        values: 2x2 0x2 2x2 0x4
+        values: 2 2 0 0 2 2 0 0 0 0 0
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
