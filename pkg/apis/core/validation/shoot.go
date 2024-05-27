@@ -2348,7 +2348,13 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	allErrs = append(allErrs, validateShootOperationContext(operation, shoot, fldPathOp)...)
-	allErrs = append(allErrs, validateShootOperationContext(maintenanceOperation, shoot, fldPathMaintOp)...)
+	if shoot.DeletionTimestamp == nil {
+		// Only validate maintenance operation context when shoot has no deletion timestamp. If it has such a timestamp,
+		// any validation is pointless since there are no maintenance operations for shoots in deletion, so we basically
+		// don't care. Without this, we could wrongly prevent metadata changes in case the annotation is still present
+		// but the shoot is in deletion.
+		allErrs = append(allErrs, validateShootOperationContext(maintenanceOperation, shoot, fldPathMaintOp)...)
+	}
 
 	return allErrs
 }
