@@ -1,6 +1,6 @@
 images:
 - name: machine-controller-manager-provider-local
-  sourceRepository: github.com/gardener/machine-controller-manager-provider-local
+  sourceRepository: github.com/gardener/gardener
   repository: machine-controller-manager-provider-local
   tag: v0.0.0
 - name: local-path-provisioner
