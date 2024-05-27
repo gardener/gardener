@@ -42,6 +42,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 		interfaceAddresses []string
 		containerdClient   *fakeContainerdClient
 		kubeletHealthcheck *healthcheck.KubeletHealthChecker
+		ts                 *httptest.Server
 	)
 
 	BeforeEach(func() {
@@ -113,13 +114,16 @@ var _ = Describe("Healthcheck controller tests", func() {
 			Expect(testClient.Delete(ctx, node)).To(Succeed())
 			By("Cleanup fakeDBUS")
 		})
+
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			n, err := fmt.Fprintln(w, "OK")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(BeNumerically(">", 0))
+		}))
 	})
 
 	It("Containerd health should be true", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintln(w, "OK")
-		}))
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
 
 		Consistently(func() []fakedbus.SystemdAction {
@@ -129,9 +133,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 
 	It("Containerd health should be false", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintln(w, "OK")
-		}))
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
 		containerdClient.returnError = true
 		clock.Step(80 * time.Second)
@@ -152,10 +153,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 	})
 
 	It("Kubelet health should be true", func() {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintln(w, "OK")
-		}))
-
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
 		clock.Step(80 * time.Second)
 		Eventually(func() []fakedbus.SystemdAction {
@@ -164,10 +161,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 	})
 
 	It("Node InternalIP went away and came back", func() {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintln(w, "OK")
-		}))
-
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
 
 		interfaceAddresses = []string{"1.2.3.4/32"}
@@ -202,10 +195,6 @@ var _ = Describe("Healthcheck controller tests", func() {
 
 	It("Kubelet toggles between Ready and NotReady to fast and triggers a reboot", func() {
 		By("Start fake kubelet healthz endpoint")
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintln(w, "OK")
-		}))
-
 		kubeletHealthcheck.SetKubeletHealthEndpoint(ts.URL)
 
 		By("Patch Node Status add NodeAddress")
