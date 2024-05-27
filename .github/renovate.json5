@@ -54,6 +54,13 @@
       "fileMatch": ["^imagevector\/images.yaml$"],
       "matchStrings": ["\\s+sourceRepository:\\s+github.com\/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
       "datasourceTemplate": "github-releases"
+    },
+    {
+      // Detection for images with prow like tags (e.g. v20240213-749005b2).
+      "customType": "regex",
+      "fileMatch": ["^pkg\/provider-local\/imagevector/images.yaml$"],
+      "matchStrings": ["(?<depName>gcr\\.io\/k8s-staging-kind\/.*?):(?<currentValue>.*?)\\s"],
+      "datasourceTemplate": "docker"
     }
   ],
   "separateMinorPatch": true,
