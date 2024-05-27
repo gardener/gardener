@@ -15,7 +15,7 @@ spec:
         topology: garden
       annotations:
         summary: Some container is restarting frequently
-        description: >
+        description: >-
           Some container in namespace {{$labels.namespace}} in seed
           {{$labels.seed}} in landscape {{$externalLabels.landscape}} was
           restarted more than 5 times within the last hour.
@@ -28,57 +28,12 @@ spec:
         topology: garden
       annotations:
         summary: There is a persistent volume with a size mismatch
-        description: |
+        description: |-
           Landscape: {{$externalLabels.landscape}}
           Seed: {{$labels.seed}}
           Namespace:  {{$labels.namespace}}
           PersistentVolumeClaim:  {{$labels.persistentvolumeclaim}}
           Size difference: {{$value}}%
-
-    - alert: GardenletDown
-      expr: |
-        min_over_time(garden_seed_condition{condition = "GardenletReady"}[5m])
-        == 0
-      for: 10m
-      labels:
-        severity: critical
-        topology: seed
-        service: gardenlet
-      annotations:
-        summary: Gardenlet Down in landscape {{$externalLabels.landscape}}
-        description: The Gardenlet in seed {{$labels.name}} is down.
-
-    - alert: GardenletUnknown
-      expr: |
-        min_over_time(garden_seed_condition{condition = "GardenletReady"}[5m])
-        == -1
-      for: 10m
-      labels:
-        severity: critical
-        topology: seed
-        service: gardenlet
-      annotations:
-        summary: >-
-          Gardenlet Unknown Status in landscape {{$externalLabels.landscape}}
-        description: >
-          The Gardenlet in seed {{$labels.name}} has been in an in unknown state
-          for over 10 minutes.
-
-    - alert: SeedAPIServerUnavailable
-      expr: |
-        garden_shoot_condition{condition = "APIServerAvailable",
-                              operation = "Reconcile",
-                              is_seed   = "true"}
-        < 1
-      for: 2m
-      labels:
-        severity: critical
-        topology: shoot
-      annotations:
-        summary: API Server Unavailable
-        description: >
-          The seed cluster: {{$labels.project}}/{{$labels.name}} has the
-          condition APIServerAvailable < 1.
 
     - alert: ApproachingSeedCapacity
       expr: |
@@ -132,7 +87,7 @@ spec:
         summary: >-
           {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
           approaching capacity
-        description: >
+        description: >-
           {{$labels.region}} in {{$labels.iaas}} has crossed the 98% capacity threshold.
           The alert will stop firing when the seed usage drops below 90%.
 
@@ -234,7 +189,7 @@ spec:
         summary: >-
           {{$externalLabels.landscape}}: {{$labels.region}} in {{$labels.iaas}} is
           approaching capacity
-        description: >
+        description: >-
           {{$labels.region}} in {{$labels.iaas}} has crossed the 90% capacity threshold.
           The alert will stop firing when the seed usage drops below 85%.
 
@@ -292,7 +247,7 @@ spec:
         topology: garden
       annotations:
         summary: Seed federation failure
-        description: |
+        description: |-
           Federating from the prometheus-aggregate instance {{$labels.instance}} failed.
           Please check the error message in the `prometheus-garden` in the garden runtime cluster.
           Port-forward to `prometheus-garden-0` in the `garden` namespace and open:
@@ -307,7 +262,7 @@ spec:
         topology: garden
       annotations:
         summary: A pod is stuck in Pending state for more than 10 minutes.
-        description: >
+        description: >-
           The pod {{$labels.pod}} in namespace {{$labels.namespace}} in seed
           {{$labels.seed}} in landscape {{$externalLabels.landscape}} is
           stuck in Pending state for more than 10 minutes.
@@ -321,79 +276,25 @@ spec:
         topology: garden
       annotations:
         summary:  A node was reported not healthy for 5 scrapes in the past 30 minutes.
-        description: >
+        description: >-
           Node {{$labels.node}} in landscape
-          {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 minutes.
 
-    - alert: SeedControlPlaneUnhealthy
+    - alert: SeedConditionFailing
       expr: |
-        max_over_time(
-          garden_shoot_condition{condition       = "ControlPlaneHealthy",
-                                 operation       = "Reconcile",
-                                 is_seed         = "true",
-                                 is_compliant    = "True",
-                                 has_user_errors = "false"}[2m])
-        == 0
-      for: 30m
+        max by (name, condition) (
+          last_over_time((
+            garden_seed_condition <= 0
+            or
+            garden_shoot_condition{is_seed   = "true",
+                                   operation = "Reconcile"} <= 0)[5m:]))
+      for: 10m
       labels:
         severity: critical
-        topology: garden
-      annotations:
-        summary: Seed ControlPlane Components Unhealthy
-        description: >
-          The seed cluster: {{$labels.name}} has
-          condition ControlPlaneHealthy == 0 for more than 30 minutes. Some Control Plane
-          components of the seed may have an issue.
-
-          {{with printf `ALERTS{alertstate       = 'firing',
-                                project          = '%s',
-                                shoot_name       = '%s',
-                                severity         =~'critical|blocker',
-                                shoot_alertname != ''}` $labels.project $labels.name
-                 | query
-                 | sortByLabel "shoot_alertname"}}
-          {{if .}}Currently firing alerts:
-
-          {{end -}}
-          {{range . -}}
-          - {{.Labels.shoot_alertname}}
-
-          {{end -}}
-          {{end -}}
-
-    - alert: SeedSystemComponentsUnhealthy
-      expr: |
-        max_over_time(
-          garden_shoot_condition{condition       = "SystemComponentsHealthy",
-                                 operation       = "Reconcile",
-                                 is_seed         = "true",
-                                 is_compliant    = "True",
-                                 has_user_errors = "false"}[2m])
-        == 0
-      for: 30m
-      labels:
-        severity: critical
-        topology: garden
+        topology: seed
         mute_on_weekends: "true"
       annotations:
-        summary: Seed System Components Unhealthy
-        description: >
-          The seed cluster: {{$labels.name}} has
-          condition SystemComponentsHealthy == 0 for more than 30 minutes. Some
-          components required by the seed may have an issue.
-
-          {{with printf `ALERTS{alertstate       = 'firing',
-                                project          = '%s',
-                                shoot_name       = '%s',
-                                severity         =~'critical|blocker',
-                                shoot_alertname != ''}` $labels.project $labels.name
-                 | query
-                 | sortByLabel "shoot_alertname"}}
-          {{if .}}Currently firing alerts:
-
-          {{end -}}
-          {{range . -}}
-          - {{.Labels.shoot_alertname}}
-
-          {{end -}}
-          {{end -}}
+        summary: >-
+          Seed Condition Failing
+        description: >-
+          The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
+          has a failing condition: {{$labels.condition}}.
