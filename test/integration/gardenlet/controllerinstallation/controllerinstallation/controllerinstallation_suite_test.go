@@ -38,6 +38,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
@@ -67,6 +68,7 @@ var (
 	testClient    client.Client
 	testClientSet kubernetes.Interface
 	mgrClient     client.Client
+	fakeRegistry  *ocifake.Registry
 
 	seed                  *gardencorev1beta1.Seed
 	seedNamespace         *corev1.Namespace
@@ -229,8 +231,10 @@ var _ = BeforeSuite(func() {
 	// controller.
 	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
+	fakeRegistry = ocifake.NewRegistry()
 	By("Register controller")
 	Expect((&controllerinstallation.Reconciler{
+		HelmRegistry:  fakeRegistry,
 		SeedClientSet: testClientSet,
 		Config: config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{

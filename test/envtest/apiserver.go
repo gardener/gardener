@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test/port"
 )
 
 const (
@@ -223,7 +224,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 	}
 
 	if g.SecurePort == 0 {
-		g.SecurePort, _, err = suggestPort("")
+		g.SecurePort, _, err = port.SuggestPort("")
 		if err != nil {
 			return err
 		}

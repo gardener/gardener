@@ -18,7 +18,10 @@ kind: ControllerDeployment
 metadata:
   name: os-gardenlinux
 helm:
-  rawChart: H4sIFAAAAAAA/yk... # base64-encoded, gzip'ed, tar'ed extension controller chart
+  ociRepository:
+    ref: registry.example.com/os-gardenlinux/charts/os-gardenlinux:1.0.0
+  # or a base64-encoded, gzip'ed, tar'ed extension controller chart
+  # rawChart: H4sIFAAAAAAA/yk...
   values:
     foo: bar
 ---
@@ -87,9 +90,39 @@ helm:
 
 You can check out [`hack/generate-controller-registration.yaml`](../../hack/generate-controller-registration.sh) for generating a `ControllerDeployment` including a controller helm chart.
 
-If `ControllerDeployment.helm` is specified, gardenlet decodes the provided Helm chart (`.helm.rawChart`) and deploys it with the provided static configuration (`.helm.values`).
-The chart and the values can be updated at any time - Gardener will recognize it and re-trigger the deployment process.
+If `ControllerDeployment.helm` is specified, gardenlet either decodes the provided Helm chart (`.helm.rawChart`) or pulls the chart from the referenced OCI Repository (`.helm.ociRepository`).
+When referencing an OCI Repository, you have several options in how to specify where to pull the chart:
 
+```yaml
+helm:
+  ociRepository:
+    # full ref with either tag or digest, or both
+    ref: registry.example.com/foo:1.0.0@sha256:abc
+---
+helm:
+  ociRepository:
+    # repository and tag
+    repository: registry.example.com
+    tag: 1.0.0
+---
+helm:
+  ociRepository:
+    # repository and digest
+    repository: registry.example.com
+    digest: sha256:abc
+---
+helm:
+  ociRepository:
+    # when specifying both tag and digest, the tag is ignored.
+    repository: registry.example.com
+    tag: 1.0.0
+    digest: sha256:abc
+```
+
+Gardenlet caches the downloaded chart in memory. It is recommended to always specify a digest, because if it is not specified, gardenlet needs to fetch the manifest in every reconciliation to compare the digest with the local cache.
+
+No matter where the chart originates from, gardenlet deploys it with the provided static configuration (`.helm.values`).
+The chart and the values can be updated at any time - Gardener will recognize it and re-trigger the deployment process.
 In order to allow extensions to get information about the garden and the seed cluster, gardenlet mixes in certain properties into the values (root level) of every deployed Helm chart:
 
 ```yaml
@@ -232,6 +265,7 @@ The `globallyEnabled=true` option specifies that the `Extension/foo` object shal
 The `reconcileTimeout` tells Gardener how long it should wait during its shoot reconciliation flow for the `Extension/foo`'s reconciliation to finish.
 
 #### `Extension` Lifecycle
+
 The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer`, `BeforeKubeAPIServer`, and `AfterWorker`. Let's take the following configuration and explain it.
 
 ```yaml
@@ -242,8 +276,8 @@ The `lifecycle` field tells Gardener when to perform a certain action on the `Ex
       migrate: BeforeKubeAPIServer
 ```
 
- - `reconcile: AfterKubeAPIServer` means that the extension resource will be reconciled after the successful reconciliation of the `kube-apiserver` during shoot reconciliation. This is also the default behaviour if this value is not specified. During shoot hibernation, the opposite rule is applied, meaning that in this case the reconciliation of the extension will happen before the `kube-apiserver` is scaled to 0 replicas. On the other hand, if the extension needs to be reconciled before the `kube-apiserver` and scaled down after it, then the value `BeforeKubeAPIServer` should be used.
-- `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
-- `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../operations/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
+* `reconcile: AfterKubeAPIServer` means that the extension resource will be reconciled after the successful reconciliation of the `kube-apiserver` during shoot reconciliation. This is also the default behaviour if this value is not specified. During shoot hibernation, the opposite rule is applied, meaning that in this case the reconciliation of the extension will happen before the `kube-apiserver` is scaled to 0 replicas. On the other hand, if the extension needs to be reconciled before the `kube-apiserver` and scaled down after it, then the value `BeforeKubeAPIServer` should be used.
+* `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
+* `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../operations/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
 
 The lifecycle value `AfterWorker` is only available during `reconcile`. When specified, the extension resource will be reconciled after the workers are deployed. This is useful for extensions that want to deploy a workload in the shoot control plane and want to wait for the workload to run and get ready on a node. During shoot creation the extension will start its reconciliation before the first workers have joined the cluster, they will become available at some later point.

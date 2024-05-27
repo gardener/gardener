@@ -116,6 +116,88 @@ Kubernetes apiextensions/v1.JSON
 <p>Values are the chart values.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ociRepository</code></br>
+<em>
+<a href="#core.gardener.cloud/v1.OCIRepository">
+OCIRepository
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OCIRepository defines where to pull the chart.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1.OCIRepository">OCIRepository
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1.HelmControllerDeployment">HelmControllerDeployment</a>)
+</p>
+<p>
+<p>OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ref</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ref is the full artifact Ref and takes precedence over all other fields.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>repository</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Repository is a reference to an OCI artifact repository.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tag</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tag is the image tag to pull.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>digest</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Digest of the image to pull, takes precedence over tag.
+The value should be in the format &lsquo;sha256:<HASH>&rsquo;.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

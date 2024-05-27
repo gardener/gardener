@@ -12,6 +12,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
@@ -60,6 +61,43 @@ var _ = Describe("ControllerDeployment roundtrip conversion", func() {
 				Type: "helm",
 				ProviderConfig: runtime.RawExtension{
 					Raw: []byte(`{"chart":"` + base64.StdEncoding.EncodeToString(rawChart) + `","values":` + values + `}`),
+				},
+			}
+		})
+
+		It("should perform lossless roundtrip conversion", func() {
+			By("converting from v1 to v1beta1")
+			actualV1beta1 := &gardencorev1beta1.ControllerDeployment{}
+			convert(scheme, expectedV1, actualV1beta1)
+			Expect(actualV1beta1).To(DeepEqual(expectedV1beta1))
+
+			By("converting from v1beta1 to v1")
+			actualV1 := &gardencorev1.ControllerDeployment{}
+			convert(scheme, actualV1beta1, actualV1)
+			Expect(actualV1).To(DeepEqual(expectedV1))
+		})
+	})
+
+	Context("helm type with OCI", func() {
+		BeforeEach(func() {
+			values := `{"foo":{"bar":"baz"},"boom":42}`
+			valuesJSON := &apiextensionsv1.JSON{
+				Raw: []byte(values),
+			}
+
+			expectedV1 = &gardencorev1.ControllerDeployment{
+				Helm: &gardencorev1.HelmControllerDeployment{
+					Values: valuesJSON.DeepCopy(),
+					OCIRepository: &gardencorev1.OCIRepository{
+						Ref: ptr.To("foo:1.0.0"),
+					},
+				},
+			}
+
+			expectedV1beta1 = &gardencorev1beta1.ControllerDeployment{
+				Type: "helm",
+				ProviderConfig: runtime.RawExtension{
+					Raw: []byte(`{"values":` + values + `,"ociRepository":{"ref":"foo:1.0.0"}}`),
 				},
 			}
 		})
