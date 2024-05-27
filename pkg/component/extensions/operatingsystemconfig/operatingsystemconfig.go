@@ -60,7 +60,7 @@ const (
 )
 
 // LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
-var LatestHashVersion = 1
+var LatestHashVersion = 2
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
@@ -80,6 +80,8 @@ type Interface interface {
 	SetAPIServerURL(string)
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
+	// SetCredentialsRotationStatus sets the credentials rotation status
+	SetCredentialsRotationStatus(*gardencorev1beta1.ShootCredentialsRotation)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
 	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
@@ -95,6 +97,8 @@ type Values struct {
 	KubernetesVersion *semver.Version
 	// Workers is the list of worker pools.
 	Workers []gardencorev1beta1.Worker
+	// CredentialsRotationStatus
+	CredentialsRotationStatus *gardencorev1beta1.ShootCredentialsRotation
 
 	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
 	InitValues
@@ -675,6 +679,10 @@ func (o *operatingSystemConfig) SetCABundle(val *string) {
 	o.values.CABundle = val
 }
 
+func (o *operatingSystemConfig) SetCredentialsRotationStatus(status *gardencorev1beta1.ShootCredentialsRotation) {
+	o.values.CredentialsRotationStatus = status
+}
+
 // SetSSHPublicKeys sets the SSHPublicKeys value.
 func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
@@ -933,17 +941,20 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 	if err != nil {
 		return "", err
 	}
+	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(o.values.KubeletConfig, worker.Kubernetes)
 
-	return CalculateKeyForVersion(version, kubernetesVersion, worker)
+	return CalculateKeyForVersion(version, kubernetesVersion, o.values.CredentialsRotationStatus, worker, o.values.NodeLocalDNSEnabled, kubeReserved)
 }
 
 // CalculateKeyForVersion is exposed for testing purposes only
 var CalculateKeyForVersion = calculateKeyForVersion
 
-func calculateKeyForVersion(oscVersion int, kubernetesVersion *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+func calculateKeyForVersion(oscVersion int, kubernetesVersion *semver.Version, credentialsRotation *gardencorev1beta1.ShootCredentialsRotation, worker *gardencorev1beta1.Worker, nodeLocalDNSEnabled bool, kubeReserved *gardencorev1beta1.KubeletConfigReserved) (string, error) {
 	switch oscVersion {
 	case 1:
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
+	case 2:
+		return KeyV2(kubernetesVersion, credentialsRotation, worker, nodeLocalDNSEnabled, kubeReserved), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
 	}
@@ -966,6 +977,57 @@ func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *
 	}
 
 	return fmt.Sprintf("gardener-node-agent-%s-%s", workerPoolName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
+}
+
+// KeyV2 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
+// configuration.
+func KeyV2(kubernetesVersion *semver.Version, credentialsRotation *gardencorev1beta1.ShootCredentialsRotation, worker *gardencorev1beta1.Worker, nodeLocalDNSEnabled bool, kubeReserved *gardencorev1beta1.KubeletConfigReserved) string {
+	if kubernetesVersion == nil {
+		return ""
+	}
+
+	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+
+	data := []string{
+		kubernetesMajorMinorVersion,
+		worker.Machine.Type,
+		worker.Machine.Image.Name + *worker.Machine.Image.Version,
+	}
+
+	if worker.Volume != nil {
+		data = append(data, worker.Volume.VolumeSize)
+		if worker.Volume.Type != nil {
+			data = append(data, *worker.Volume.Type)
+		}
+	}
+
+	if worker.CRI != nil {
+		data = append(data, string(worker.CRI.Name))
+	}
+
+	if credentialsRotation != nil {
+		if credentialsRotation.CertificateAuthorities != nil && credentialsRotation.CertificateAuthorities.LastInitiationTime != nil {
+			data = append(data, credentialsRotation.CertificateAuthorities.LastInitiationTime.Time.String())
+		}
+		if credentialsRotation.ServiceAccountKey != nil && credentialsRotation.ServiceAccountKey.LastInitiationTime != nil {
+			data = append(data, credentialsRotation.ServiceAccountKey.LastInitiationTime.Time.String())
+		}
+	}
+
+	if nodeLocalDNSEnabled {
+		data = append(data, "node-local-dns")
+	}
+
+	if kubeReserved != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
+	}
+
+	var result string
+	for _, v := range data {
+		result += utils.ComputeSHA256Hex([]byte(v))
+	}
+
+	return fmt.Sprintf("gardener-node-agent-%s", utils.ComputeSHA256Hex([]byte(result))[:16])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
