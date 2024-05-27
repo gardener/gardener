@@ -4687,6 +4687,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
+			DescribeTable("not forbid certain rotation maintenance operations when shoot is in deletion",
+				func(operation string) {
+					shoot.DeletionTimestamp = &metav1.Time{}
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+				},
+
+				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
+
 			DescribeTable("forbid hibernating the shoot when certain rotation maintenance operations are set",
 				func(operation string) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
