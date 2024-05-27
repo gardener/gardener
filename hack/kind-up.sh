@@ -331,7 +331,6 @@ if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]] ; then
 fi
 
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
-docker_ip=$(ip addr show docker0 | awk '/inet .* docker0/{print substr($2, 0, index($2, "/") - 1)}')
 
 # Inject garden.local.gardener.cloud into all nodes
 kubectl get nodes -o name |\
@@ -344,8 +343,8 @@ kubectl -n kube-system get configmap coredns -ojson | \
   sed '0,/ready.*$/s//&'"\n\
     hosts {\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
-      $docker_ip gardener.virtual-garden.local.gardener.cloud\n\
-      $docker_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
+      $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
+      $garden_cluster_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\
 "'/' | \
