@@ -339,7 +339,9 @@ func ServiceAccountName(name string) string {
 
 const (
 	// KindManagedSeed is a constant for the "managed seed" kind.
-	KindManagedSeed = "managed seed"
+	KindManagedSeed = "seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource"
+	// KindGardenlet is a constant for the "gardenlet" kind.
+	KindGardenlet = "seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource"
 	// ServiceAccountNamePrefix is the prefix used for service account names.
 	ServiceAccountNamePrefix = "gardenlet-bootstrap-"
 	// ClusterRoleBindingNamePrefix is the prefix used for cluster role binding names.
@@ -369,7 +371,13 @@ func Description(kind, namespace, name string) string {
 }
 
 // MetadataFromDescription returns the namespace and name for a given description with a specific kind.
-func MetadataFromDescription(description, kind string) (namespace, name string) {
+func MetadataFromDescription(description string) (kind, namespace, name string) {
+	if strings.Contains(description, KindManagedSeed) {
+		kind = KindManagedSeed
+	} else if strings.Contains(description, KindGardenlet) {
+		kind = KindGardenlet
+	}
+
 	var (
 		metadata = strings.TrimPrefix(strings.TrimSuffix(description, descriptionSuffix), descriptionForKind(kind))
 		split    = strings.Split(metadata, descriptionMetadataDelimiter)
