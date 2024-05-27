@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package charttest_test
+package test_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestApplier(t *testing.T) {
+func TestChart(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Controller ManagedSeed ChartTest Suite")
+	RunSpecs(t, "Charts Gardener Gardenlet Test Suite")
 }

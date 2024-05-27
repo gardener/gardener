@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package charttest_test
+package test_test
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/charts"
+	. "github.com/gardener/gardener/charts/gardener/gardenlet/test"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -38,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/charttest"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
