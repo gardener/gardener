@@ -2467,6 +2467,7 @@ rules:
 						Name:            fmt.Sprintf("vpn-client-%d", index),
 						Image:           "vpn-client-image:really-latest",
 						ImagePullPolicy: corev1.PullIfNotPresent,
+						Command:         []string{"/run-shoot-client.sh"},
 						Env: []corev1.EnvVar{
 							{
 								Name:  "ENDPOINT",
@@ -2544,6 +2545,7 @@ rules:
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
 				initContainer.Args = []string{"setup"}
+				initContainer.Command = nil
 				initContainer.Env = append(initContainer.Env, []corev1.EnvVar{
 					{
 						Name: "POD_NAME",

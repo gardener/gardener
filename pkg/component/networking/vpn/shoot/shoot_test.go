@@ -457,6 +457,7 @@ spec:
 				}
 				return &corev1.Container{
 					Name:            name,
+					Command:         []string{"/run-shoot-client.sh"},
 					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env:             env,

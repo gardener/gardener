@@ -587,6 +587,7 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 	}
 	return &corev1.Container{
 		Name:            name,
+		Command:         []string{"/run-shoot-client.sh"},
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env:             v.getEnvVars(index),
