@@ -369,7 +369,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 			Spec: networkingv1.IngressSpec{
 				IngressClassName: ptr.To("nginx-ingress-gardener"),
 				Rules: []networkingv1.IngressRule{{
-					Host: "local.gardener.cloud",
+					Host: "discovery.local.gardener.cloud",
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{{
@@ -419,7 +419,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 				},
 			},
 			StringData: map[string]string{
-				"hostname": "local.gardener.cloud",
+				"hostname": "discovery.local.gardener.cloud",
 			},
 		}
 
@@ -498,7 +498,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		values = discoveryserver.Values{
 			RuntimeVersion: semver.MustParse("1.26.4"),
 			Image:          image,
-			Hostname:       "local.gardener.cloud",
+			Domain:         "local.gardener.cloud",
 		}
 		deployer = discoveryserver.New(fakeClient, namespace, fakeSecretManager, values)
 

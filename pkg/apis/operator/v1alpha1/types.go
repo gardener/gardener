@@ -614,16 +614,7 @@ type DashboardTerminalContainer struct {
 }
 
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
-type GardenerDiscoveryServerConfig struct {
-	// Hostname is the hostname that the gardener-discovery-server will use
-	// to serve metadata on. This hostname will also be used to configure
-	// shoot kube-apiservers that want the managed service account issuer feature.
-	Hostname string `json:"hostname,omitempty"`
-	// TLSSecretName is the name of the secret that will be used for TLS.
-	// If not provided a self signed certificate will be created.
-	// +optional
-	TLSSecretName *string `json:"tlsSecretName,omitempty"`
-}
+type GardenerDiscoveryServerConfig struct{}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {

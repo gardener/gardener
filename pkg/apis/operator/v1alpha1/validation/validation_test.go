@@ -1629,26 +1629,6 @@ var _ = Describe("Validation Tests", func() {
 						})
 					})
 				})
-
-				Context("Discovery Server", func() {
-					It("should complain when hostname is not set", func() {
-						garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{}
-
-						Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.virtualCluster.gardener.gardenerDiscoveryServer.hostname"),
-							"Detail": Equal("hostname must be configured"),
-						}))))
-					})
-
-					It("should not complain when hostname is set", func() {
-						garden.Spec.VirtualCluster.Gardener.DiscoveryServer = &operatorv1alpha1.GardenerDiscoveryServerConfig{
-							Hostname: "local.gardener.cloud",
-						}
-
-						Expect(ValidateGarden(garden)).To(BeEmpty())
-					})
-				})
 			})
 		})
 	})

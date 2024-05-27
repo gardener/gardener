@@ -1425,42 +1425,6 @@ DashboardTerminal
 <p>
 <p>GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.</p>
 </p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>hostname</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Hostname is the hostname that the gardener-discovery-server will use
-to serve metadata on. This hostname will also be used to configure
-shoot kube-apiservers that want the managed service account issuer feature.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>tlsSecretName</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>TLSSecretName is the name of the secret that will be used for TLS.
-If not provided a self signed certificate will be created.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
 </h3>
 <p>

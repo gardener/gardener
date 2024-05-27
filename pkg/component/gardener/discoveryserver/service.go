@@ -15,12 +15,10 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const serviceName = DeploymentName
-
 func (g *gardenerDiscoveryServer) service() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
+			Name:      ServiceName,
 			Namespace: g.namespace,
 			Labels:    labels(),
 		},

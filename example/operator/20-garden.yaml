@@ -240,9 +240,7 @@ spec:
     #     container:
     #       image: busybox:latest
     #       description: A nice container for debugging purposes
-      gardenerDiscoveryServer:
-        hostname: discovery.ingress.runtime-garden.local.gardener.cloud
-      # tlsSecretName: gardener-discovery-server-tls
+      gardenerDiscoveryServer: {}
     maintenance:
       timeWindow:
         begin: 220000+0100

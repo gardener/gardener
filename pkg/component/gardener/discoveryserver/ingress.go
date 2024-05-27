@@ -12,10 +12,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
+func (g *gardenerDiscoveryServer) hostname() string {
+	return "discovery." + g.values.Domain
+}
+
 func (g *gardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName,
+			Name:      deploymentName,
 			Namespace: g.namespace,
 			Labels:    labels(),
 			Annotations: map[string]string{
@@ -25,13 +29,13 @@ func (g *gardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			Rules: []networkingv1.IngressRule{{
-				Host: g.values.Hostname,
+				Host: g.hostname(),
 				IngressRuleValue: networkingv1.IngressRuleValue{
 					HTTP: &networkingv1.HTTPIngressRuleValue{
 						Paths: []networkingv1.HTTPIngressPath{{
 							Backend: networkingv1.IngressBackend{
 								Service: &networkingv1.IngressServiceBackend{
-									Name: serviceName,
+									Name: ServiceName,
 									Port: networkingv1.ServiceBackendPort{Number: portServer},
 								},
 							},

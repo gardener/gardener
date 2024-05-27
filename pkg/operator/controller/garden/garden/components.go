@@ -249,7 +249,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(garden, secretsManager)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1303,7 +1303,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 				gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyIstioIngressNamespaceAlias+"-"+v1beta1constants.DefaultSNIIngressServiceName, 9443): v1beta1constants.LabelNetworkPolicyAllowed,
 				gardenerutils.NetworkPolicyLabel(gardenerapiserver.DeploymentName, 8443):                                                                                v1beta1constants.LabelNetworkPolicyAllowed,
-				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.DeploymentName, 8081):                                                                          v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.ServiceName, 8081):                                                                             v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 			Config:            gardenblackboxexporter.Config(),
@@ -1314,21 +1314,13 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 }
 
 func (r *Reconciler) newGardenerDiscoveryServer(
-	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
+	domain string,
+	wildcardCertSecretName *string,
 ) (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDiscoveryServer)
 	if err != nil {
 		return nil, err
-	}
-
-	var (
-		hostname      string
-		tlsSecretName *string
-	)
-	if config := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; config != nil {
-		hostname = config.Hostname
-		tlsSecretName = config.TLSSecretName
 	}
 
 	return gardenerdiscoveryserver.New(
@@ -1338,8 +1330,8 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		gardenerdiscoveryserver.Values{
 			Image:          image.String(),
 			RuntimeVersion: r.RuntimeVersion,
-			Hostname:       hostname,
-			TLSSecretName:  tlsSecretName,
+			Domain:         domain,
+			TLSSecretName:  wildcardCertSecretName,
 		},
 	), nil
 }

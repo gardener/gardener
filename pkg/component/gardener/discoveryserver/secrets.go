@@ -16,7 +16,7 @@ import (
 const serviceAccountIssuerConfigSecretName = v1beta1constants.GardenRoleShootServiceAccountIssuer
 
 func (g *gardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)
+	return gardenerutils.NewShootAccessSecret(deploymentName, g.namespace)
 }
 
 func (g *gardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.Secret {
@@ -29,7 +29,7 @@ func (g *gardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.
 			}),
 		},
 		StringData: map[string]string{
-			"hostname": g.values.Hostname,
+			"hostname": g.hostname(),
 		},
 	}
 }

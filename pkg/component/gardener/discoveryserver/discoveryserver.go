@@ -30,9 +30,12 @@ const (
 	// managedResourceNameVirtual is the name of the ManagedResource for the virtual resources.
 	managedResourceNameVirtual = "gardener-discovery-server-virtual"
 
-	// DeploymentName is the name of the Gardener Discovery Server deployment.
-	DeploymentName = "gardener-discovery-server"
-	role           = "discovery-server"
+	// deploymentName is the name of the Gardener Discovery Server deployment.
+	deploymentName = "gardener-discovery-server"
+	// ServiceName is the name of the service used to expose the Gardener Discovery Server.
+	ServiceName = deploymentName
+
+	role = "discovery-server"
 
 	// timeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources
 	// to become healthy or deleted.
@@ -45,8 +48,8 @@ type Values struct {
 	Image string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
-	// Hostname is the hostname that will be used by the discovery server to serve metadata on.
-	Hostname string
+	// Domain will be prefixed with "discovery." and used by the discovery server to serve metadata on.
+	Domain string
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.
 	// If not provided then self-signed certificate will be generated.
 	TLSSecretName *string
@@ -91,9 +94,9 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 	tlsSecretName := ptr.Deref(g.values.TLSSecretName, "")
 	if tlsSecretName == "" {
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        DeploymentName + "-tls",
-			CommonName:                  DeploymentName,
-			DNSNames:                    []string{g.values.Hostname},
+			Name:                        deploymentName + "-tls",
+			CommonName:                  deploymentName,
+			DNSNames:                    []string{g.hostname()},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,

@@ -14,7 +14,7 @@ import (
 
 func (g *gardenerDiscoveryServer) serviceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(DeploymentName, g.namespace, garden.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(deploymentName, g.namespace, garden.Label),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: labels()},
 			Endpoints: []monitoringv1.Endpoint{{
