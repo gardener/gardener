@@ -40,11 +40,8 @@ images:
     name: node-agent
 - name: gardener-discovery-server
   sourceRepository: github.com/gardener/gardener-discovery-server
-  # TODO: FIX THIS
-  # repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server
-  # tag: "v0.1.0" 
-  repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener/gardener-discovery-server
-  tag: "sha256:587499d6850fcb877bb8436ccf8682d5a253611a54eb1578bdc8952af5a9e941"
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server
+  tag: "v0.1.0" 
 
 # Gardener Dashboard components
 - name: gardener-dashboard
