@@ -183,6 +183,10 @@ config.yaml: |
     controllerInstallationRequired:
       concurrentSyncs: {{ required ".Values.config.controllers.controllerInstallationRequired.concurrentSyncs is required" .Values.config.controllers.controllerInstallationRequired.concurrentSyncs }}
     {{- end }}
+    {{- if .Values.config.controllers.gardenlet }}
+    gardenlet:
+      syncPeriod: {{ required ".Values.config.controllers.gardenlet.syncPeriod is required" .Values.config.controllers.gardenlet.syncPeriod }}
+    {{- end }}
     {{- if .Values.config.controllers.seed }}
     seed:
       syncPeriod: {{ required ".Values.config.controllers.seed.syncPeriod is required" .Values.config.controllers.seed.syncPeriod }}

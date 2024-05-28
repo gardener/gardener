@@ -146,6 +146,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ControllerInstallationRequired == nil {
 		obj.ControllerInstallationRequired = &ControllerInstallationRequiredControllerConfiguration{}
 	}
+	if obj.Gardenlet == nil {
+		obj.Gardenlet = &GardenletObjectControllerConfiguration{}
+	}
 	if obj.Seed == nil {
 		obj.Seed = &SeedControllerConfiguration{}
 	}
@@ -275,6 +278,13 @@ func SetDefaults_ControllerInstallationRequiredControllerConfiguration(obj *Cont
 		// For one seed that is already 1 * 10 extension resources = 10 workers.
 		v := 1
 		obj.ConcurrentSyncs = &v
+	}
+}
+
+// SetDefaults_GardenletObjectControllerConfiguration sets defaults for the gardenlet controller.
+func SetDefaults_GardenletObjectControllerConfiguration(obj *GardenletObjectControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: 1 * time.Hour}
 	}
 }
 

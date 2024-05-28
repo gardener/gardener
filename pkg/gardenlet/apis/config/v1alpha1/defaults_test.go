@@ -40,6 +40,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ControllerInstallation).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationCare).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationRequired).NotTo(BeNil())
+			Expect(obj.Controllers.Gardenlet).NotTo(BeNil())
 			Expect(obj.Controllers.Seed).NotTo(BeNil())
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
@@ -288,6 +289,26 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.ControllerInstallationRequired.ConcurrentSyncs).To(PointTo(Equal(10)))
+		})
+	})
+
+	Describe("GardenletObjectControllerConfiguration defaulting", func() {
+		It("should default the managed seed controller configuration", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.Gardenlet.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+		})
+
+		It("should not overwrite already set values for the managed seed controller configuration", func() {
+			v := metav1.Duration{Duration: 2 * time.Minute}
+			obj.Controllers = &GardenletControllerConfiguration{
+				Gardenlet: &GardenletObjectControllerConfiguration{
+					SyncPeriod: &v,
+				},
+			}
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.Gardenlet.SyncPeriod).To(PointTo(Equal(v)))
 		})
 	})
 

@@ -78,6 +78,8 @@ config:
     # - production
     bastion:
       concurrentSyncs: 20
+    gardenlet:
+      syncPeriod: 1h
     seed:
       syncPeriod: 1h
     # leaseResyncSeconds: 2

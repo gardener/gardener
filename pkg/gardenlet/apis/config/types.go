@@ -132,6 +132,8 @@ type GardenletControllerConfiguration struct {
 	ControllerInstallationCare *ControllerInstallationCareControllerConfiguration
 	// ControllerInstallationRequired defines the configuration of the ControllerInstallationRequired controller.
 	ControllerInstallationRequired *ControllerInstallationRequiredControllerConfiguration
+	// Gardenlet defines the configuration of the Gardenlet controller.
+	Gardenlet *GardenletObjectControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
 	// SeedCare defines the configuration of the SeedCare controller.
@@ -316,6 +318,12 @@ type NetworkPolicyControllerConfiguration struct {
 	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
 	// the controller.
 	AdditionalNamespaceSelectors []metav1.LabelSelector
+}
+
+// GardenletObjectControllerConfiguration defines the configuration of the Gardenlet controller.
+type GardenletObjectControllerConfiguration struct {
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod *metav1.Duration
 }
 
 // ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.

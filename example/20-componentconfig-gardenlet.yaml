@@ -31,6 +31,8 @@ controllers:
     syncPeriod: 30s
   controllerInstallationRequired:
     concurrentSyncs: 1
+  gardenlet:
+    syncPeriod: 1h
   networkPolicy:
     concurrentSyncs: 5
   # additionalNamespaceSelectors:
