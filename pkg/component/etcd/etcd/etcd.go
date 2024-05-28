@@ -577,8 +577,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
+	// etcd deployed for shoot cluster
 	serviceMonitorJobNameEtcd, serviceMonitorJobNameBackupRestore := "kube-etcd3-"+e.values.Role, "kube-etcd3-backup-restore-"+e.values.Role
 	if e.values.NamePrefix != "" {
+		// etcd deployed for garden cluster
 		serviceMonitorJobNameEtcd, serviceMonitorJobNameBackupRestore = e.values.NamePrefix+"etcd", e.values.NamePrefix+"etcd-backup"
 	}
 
@@ -691,7 +693,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// These actions are only performed when ETCD is deployed for a shoot.
+	// etcd deployed for shoot cluster
 	if e.values.NamePrefix == "" {
 		// Add scrape config for druid metrics only if the role is 'main'.
 		if e.values.Role == v1beta1constants.ETCDRoleMain {

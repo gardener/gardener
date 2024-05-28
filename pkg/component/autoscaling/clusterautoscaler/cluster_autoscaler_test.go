@@ -381,7 +381,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Rules: []monitoringv1.Rule{{
 						Alert: "ClusterAutoscalerDown",
 						Expr:  intstr.FromString(`absent(up{job="cluster-autoscaler"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("7m")),
+						For:   ptr.To(monitoringv1.Duration("15m")),
 						Labels: map[string]string{
 							"service":  "cluster-autoscaler",
 							"severity": "critical",

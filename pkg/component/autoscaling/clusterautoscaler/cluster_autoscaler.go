@@ -286,7 +286,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{{
 					Alert: "ClusterAutoscalerDown",
 					Expr:  intstr.FromString(`absent(up{job="cluster-autoscaler"} == 1)`),
-					For:   ptr.To(monitoringv1.Duration("7m")),
+					For:   ptr.To(monitoringv1.Duration("15m")),
 					Labels: map[string]string{
 						"service":  v1beta1constants.DeploymentNameClusterAutoscaler,
 						"severity": "critical",
