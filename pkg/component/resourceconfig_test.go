@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -72,7 +73,7 @@ var _ = Describe("ResourceConfig", func() {
 
 	Context("Deployment/Destruction", func() {
 		var (
-			ctx                   = context.TODO()
+			ctx                   = context.Background()
 			namespace             = "some-namespace"
 			managedResourceName   = "managed-resource-name"
 			managedResourceLabels = map[string]string{"foo": "bar"}
@@ -82,6 +83,7 @@ var _ = Describe("ResourceConfig", func() {
 			registry     *managedresources.Registry
 			allResources ResourceConfigs
 
+			consistOf             func(...client.Object) types.GomegaMatcher
 			managedResource       *resourcesv1alpha1.ManagedResource
 			managedResourceSecret *corev1.Secret
 		)
@@ -90,6 +92,7 @@ var _ = Describe("ResourceConfig", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			allResources = MergeResourceConfigs(resourceConfigs1, resourceConfigs2)
 
+			consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
@@ -134,13 +137,7 @@ var _ = Describe("ResourceConfig", func() {
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedMr))
 					Expect(managedResource).To(DeepEqual(expectedMr))
-
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Data).To(HaveLen(3))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+					Expect(managedResource).To(consistOf(obj1, obj2, obj3))
 				})
 			})
 
@@ -188,13 +185,7 @@ var _ = Describe("ResourceConfig", func() {
 					}
 					utilruntime.Must(references.InjectAnnotations(expectedMr))
 					Expect(managedResource).To(DeepEqual(expectedMr))
-
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Data).To(HaveLen(2))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+					Expect(managedResource).To(consistOf(obj2, obj3))
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(obj1), obj1)).To(Succeed())
 				})

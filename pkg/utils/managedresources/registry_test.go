@@ -5,9 +5,6 @@
 package managedresources_test
 
 import (
-	"bytes"
-
-	"github.com/andybalholm/brotli"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +16,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Registry", func() {
@@ -130,66 +128,61 @@ roleRef:
 			Expect(registry.Add(secret)).To(Succeed())
 			Expect(registry.Add(roleBinding)).To(Succeed())
 
-			serializedData := secretSerialized + "---\n" + roleBindingSerialized
-
-			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
-				"data.yaml.br": compressData([]byte(serializedData))}),
-			)
-		})
-	})
-
-	Describe("#AddSerialized", func() {
-		It("should add the serialized object", func() {
-			registry.AddSerialized("secret__"+secret.Namespace+"__secret_name.yaml", []byte(secretSerialized))
-
-			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
-				"data.yaml.br": compressData([]byte(secretSerialized)),
-			}))
-		})
-	})
-
-	Describe("#AddAllAndSerialize", func() {
-		It("should add all objects and return the serialized object map", func() {
-			objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)
+			serializedData := []byte(secretSerialized + "---\n" + roleBindingSerialized)
+			compressedData, err := test.BrotliCompression(serializedData)
 			Expect(err).NotTo(HaveOccurred())
 
-			serializedData := secretSerialized + "---\n" + roleBindingSerialized
-
-			Expect(objectMap).To(Equal(map[string][]byte{
-				"data.yaml.br": compressData([]byte(serializedData))}),
-			)
+			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+				"data.yaml.br": compressedData,
+			}))
 		})
-	})
 
-	Describe("#RegisteredObjects", func() {
-		It("should return the registered objects", func() {
-			Expect(registry.Add(secret)).To(Succeed())
-			Expect(registry.Add(roleBinding)).To(Succeed())
+		Describe("#AddSerialized", func() {
+			It("should add the serialized object", func() {
+				registry.AddSerialized("secret__"+secret.Namespace+"__secret_name.yaml", []byte(secretSerialized))
 
-			Expect(registry.RegisteredObjects()).To(ConsistOf(roleBinding, secret))
+				compressedData, err := test.BrotliCompression([]byte(secretSerialized))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+					"data.yaml.br": compressedData,
+				}))
+			})
 		})
-	})
 
-	Describe("#String", func() {
-		It("should return the string representation of the registry", func() {
-			Expect(registry.Add(secret)).To(Succeed())
-			Expect(registry.Add(roleBinding)).To(Succeed())
+		Describe("#AddAllAndSerialize", func() {
+			It("should add all objects and return the serialized object map", func() {
+				objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)
+				Expect(err).NotTo(HaveOccurred())
 
-			result := registry.String()
-			Expect(result).To(ContainSubstring(secretSerialized))
-			Expect(result).To(ContainSubstring(roleBindingSerialized))
+				serializedData := []byte(secretSerialized + "---\n" + roleBindingSerialized)
+				compressedData, err := test.BrotliCompression(serializedData)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(objectMap).To(Equal(map[string][]byte{
+					"data.yaml.br": compressedData,
+				}))
+			})
+		})
+
+		Describe("#RegisteredObjects", func() {
+			It("should return the registered objects", func() {
+				Expect(registry.Add(secret)).To(Succeed())
+				Expect(registry.Add(roleBinding)).To(Succeed())
+
+				Expect(registry.RegisteredObjects()).To(ConsistOf(roleBinding, secret))
+			})
+		})
+
+		Describe("#String", func() {
+			It("should return the string representation of the registry", func() {
+				Expect(registry.Add(secret)).To(Succeed())
+				Expect(registry.Add(roleBinding)).To(Succeed())
+
+				result := registry.String()
+				Expect(result).To(ContainSubstring(secretSerialized))
+				Expect(result).To(ContainSubstring(roleBindingSerialized))
+			})
 		})
 	})
 })
-
-func compressData(data []byte) []byte {
-	var buf bytes.Buffer
-	w := brotli.NewWriter(&buf)
-
-	_, err := w.Write(data)
-	Expect(err).NotTo(HaveOccurred())
-
-	Expect(w.Close()).To(Succeed())
-
-	return buf.Bytes()
-}
