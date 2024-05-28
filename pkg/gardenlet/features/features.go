@@ -27,5 +27,6 @@ func GetFeatures() []featuregate.Feature {
 		features.IPv6SingleStack,
 		features.ShootManagedIssuer,
 		features.VPAAndHPAForAPIServer,
+		features.WorkerPoolHashWithNodeAgentSecret,
 	}
 }

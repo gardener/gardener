@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -60,7 +61,13 @@ const (
 )
 
 // LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
-var LatestHashVersion = 2
+var LatestHashVersion = func() int {
+	// WorkerPoolHash is behind feature gate as extensions must be updated first
+	if features.DefaultFeatureGate.Enabled(features.WorkerPoolHashWithNodeAgentSecret) {
+		return 2
+	}
+	return 1
+}
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
@@ -335,7 +342,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 				if migrated {
 					workerHash.CurrentVersion = 1
 				} else {
-					workerHash.CurrentVersion = LatestHashVersion
+					workerHash.CurrentVersion = LatestHashVersion()
 				}
 			}
 
@@ -353,7 +360,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 			}
 
 			if hashHasChanged {
-				workerHash.CurrentVersion = LatestHashVersion
+				workerHash.CurrentVersion = LatestHashVersion()
 			}
 
 			// calculate expected hashes
@@ -361,7 +368,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 			if err != nil {
 				return err
 			}
-			latestHash, err := o.calculateKeyForVersion(LatestHashVersion, &worker)
+			latestHash, err := o.calculateKeyForVersion(LatestHashVersion(), &worker)
 			if err != nil {
 				return err
 			}
@@ -372,7 +379,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 				workerHash.HashVersionToOSCKey = map[int]string{}
 			}
 			workerHash.HashVersionToOSCKey[workerHash.CurrentVersion] = currentHash
-			workerHash.HashVersionToOSCKey[LatestHashVersion] = latestHash
+			workerHash.HashVersionToOSCKey[LatestHashVersion()] = latestHash
 
 			// update secret
 			workerPoolNameToHashEntry[worker.Name] = workerHash
