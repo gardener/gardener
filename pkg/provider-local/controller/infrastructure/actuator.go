@@ -146,5 +146,9 @@ spec:
   cidr: ` + nodeCIDR + `
   ipipMode: Always
   natOutgoing: true
+  nodeSelector: "!all()" # Without this, calico defaults nodeSelector to "all()" and can randomly pick this pool for
+                         # IPAM for pods even if the pod does not explicitly request an IP from this pool via the
+                         # cni.projectcalico.org/IPv{4,6}Pools annotation.
+                         # See https://github.com/projectcalico/calico/issues/7299#issuecomment-1446834103
 `)).Read()
 }
