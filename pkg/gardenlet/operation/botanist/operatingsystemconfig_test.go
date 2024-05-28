@@ -53,7 +53,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		botanist *Botanist
 
-		ctx        = context.TODO()
+		ctx        = context.Background()
 		namespace  = "namespace"
 		fakeErr    = errors.New("fake")
 		shootState = &gardencorev1beta1.ShootState{}
@@ -315,6 +315,9 @@ var _ = Describe("operatingsystemconfig", func() {
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker1Raw, err := runtime.Encode(codec, expectedOSCSecretWorker1)
 					Expect(err).NotTo(HaveOccurred())
+					compressedOSCSecretWorker1Raw, err := test.BrotliCompression(expectedOSCSecretWorker1Raw)
+					Expect(err).NotTo(HaveOccurred())
+
 					expectedMRSecretWorker1 := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            "managedresource-shoot-gardener-node-agent-" + worker1Name,
@@ -323,7 +326,7 @@ var _ = Describe("operatingsystemconfig", func() {
 							ResourceVersion: "1",
 						},
 						Type: corev1.SecretTypeOpaque,
-						Data: map[string][]byte{"secret__kube-system__" + worker1Key + ".yaml": expectedOSCSecretWorker1Raw},
+						Data: map[string][]byte{"data.yaml.br": compressedOSCSecretWorker1Raw},
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker1))
 
@@ -331,6 +334,9 @@ var _ = Describe("operatingsystemconfig", func() {
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker2Raw, err := runtime.Encode(codec, expectedOSCSecretWorker2)
 					Expect(err).NotTo(HaveOccurred())
+					compressedOSCSecretWorker2Raw, err := test.BrotliCompression(expectedOSCSecretWorker2Raw)
+					Expect(err).NotTo(HaveOccurred())
+
 					expectedMRSecretWorker2 := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            "managedresource-shoot-gardener-node-agent-" + worker2Name,
@@ -339,7 +345,7 @@ var _ = Describe("operatingsystemconfig", func() {
 							ResourceVersion: "1",
 						},
 						Type: corev1.SecretTypeOpaque,
-						Data: map[string][]byte{"secret__kube-system__" + worker2Key + ".yaml": expectedOSCSecretWorker2Raw},
+						Data: map[string][]byte{"data.yaml.br": compressedOSCSecretWorker2Raw},
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker2))
 
