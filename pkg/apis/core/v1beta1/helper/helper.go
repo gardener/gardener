@@ -1162,15 +1162,13 @@ func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, wo
 	return controlPlaneVersion, nil
 }
 
-// CalcluateEffectiveResourceReservations if a shoot has a kubelet configuration specified at the worker group, return this,
-// otherwise the shoot resource reservations
-func CalcluateEffectiveResourceReservations(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes) *gardencorev1beta1.KubeletConfigReserved {
+// CalcluateEffectiveKubeletConfiguation if a shoot has a kubelet configuration specified for the worker group, return this,
+// otherwise the shoot kubelet configuration
+func CalcluateEffectiveKubeletConfiguation(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes) *gardencorev1beta1.KubeletConfig {
 	if workerKubernetes != nil && workerKubernetes.Kubelet != nil {
-		if reserved := workerKubernetes.Kubelet.KubeReserved; reserved != nil {
-			return reserved.DeepCopy()
-		}
-	} else if shootKubelet != nil && shootKubelet.KubeReserved != nil {
-		return shootKubelet.KubeReserved.DeepCopy()
+		return workerKubernetes.Kubelet
+	} else if shootKubelet != nil {
+		return shootKubelet
 	}
 	return nil
 }

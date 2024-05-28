@@ -19,6 +19,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -484,7 +485,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_ *gardencorev1beta1.ShootCredentialsRotation,
 				worker *gardencorev1beta1.Worker,
 				_ bool,
-				_ *gardencorev1beta1.KubeletConfigReserved,
+				_ *gardencorev1beta1.KubeletConfig,
 			) (string, error) {
 				switch oscVersion {
 				case 1:
@@ -564,7 +565,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_ *gardencorev1beta1.ShootCredentialsRotation,
 				worker *gardencorev1beta1.Worker,
 				_ bool,
-				_ *gardencorev1beta1.KubeletConfigReserved,
+				_ *gardencorev1beta1.KubeletConfig,
 			) (string, error) {
 				switch oscVersion {
 				case 1:
@@ -1305,7 +1306,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			credentialsRotation *gardencorev1beta1.ShootCredentialsRotation
 			p                   *gardencorev1beta1.Worker
 			nodeLocalDNSEnabled bool
-			kubeReserved        *gardencorev1beta1.KubeletConfigReserved
+			kubletConfig        *gardencorev1beta1.KubeletConfig
 
 			hash                        string
 			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
@@ -1341,16 +1342,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 				},
 			}
 			nodeLocalDNSEnabled = false
-			kubeReserved = &gardencorev1beta1.KubeletConfigReserved{}
+			kubletConfig = &gardencorev1beta1.KubeletConfig{
+				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("80m")),
+					Memory:           ptr.To(resource.MustParse("1Gi")),
+					PID:              ptr.To(resource.MustParse("10k")),
+					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
+				},
+				CPUManagerPolicy: nil,
+			}
 
 			var err error
-			hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+			hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubletConfig)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubletConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -1414,7 +1423,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubletConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
@@ -1457,7 +1466,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := credentialsRotation.CertificateAuthorities.DeepCopy()
 				credentialsRotation.CertificateAuthorities = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubletConfig)
 				Expect(err).ToNot(HaveOccurred())
 
 				credentialsRotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
@@ -1472,7 +1481,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := credentialsRotation.ServiceAccountKey.DeepCopy()
 				credentialsRotation.ServiceAccountKey = nil
-				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubletConfig)
 				Expect(err).ToNot(HaveOccurred())
 
 				credentialsRotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
@@ -1480,6 +1489,26 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("when enabling node local dns via specification", func() {
 				nodeLocalDNSEnabled = true
+			})
+
+			It("when changing kubeReserved CPU", func() {
+				kubletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("100m"))
+			})
+
+			It("when changing kubeReserved memory", func() {
+				kubletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("2Gi"))
+			})
+
+			It("when changing kubeReserved PID", func() {
+				kubletConfig.KubeReserved.PID = ptr.To(resource.MustParse("15k"))
+			})
+
+			It("when changing kubeReserved ephemeral storage", func() {
+				kubletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+			})
+
+			It("when changing CPUManagerPolicy", func() {
+				kubletConfig.CPUManagerPolicy = ptr.To("test")
 			})
 		})
 	})

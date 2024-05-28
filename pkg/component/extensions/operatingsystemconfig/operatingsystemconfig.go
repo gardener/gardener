@@ -951,9 +951,9 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 	if err != nil {
 		return "", err
 	}
-	kubeReserved := v1beta1helper.CalcluateEffectiveResourceReservations(o.values.KubeletConfig, worker.Kubernetes)
+	kubeletConfiguration := v1beta1helper.CalcluateEffectiveKubeletConfiguation(o.values.KubeletConfig, worker.Kubernetes)
 
-	return CalculateKeyForVersion(version, kubernetesVersion, o.values.CredentialsRotationStatus, worker, o.values.NodeLocalDNSEnabled, kubeReserved)
+	return CalculateKeyForVersion(version, kubernetesVersion, o.values.CredentialsRotationStatus, worker, o.values.NodeLocalDNSEnabled, kubeletConfiguration)
 }
 
 // CalculateKeyForVersion is exposed for testing purposes only
@@ -965,13 +965,13 @@ func calculateKeyForVersion(
 	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
 	worker *gardencorev1beta1.Worker,
 	nodeLocalDNSEnabled bool,
-	kubeReserved *gardencorev1beta1.KubeletConfigReserved,
+	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
 ) (string, error) {
 	switch oscVersion {
 	case 1:
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
-		return KeyV2(kubernetesVersion, credentialsRotation, worker, nodeLocalDNSEnabled, kubeReserved), nil
+		return KeyV2(kubernetesVersion, credentialsRotation, worker, nodeLocalDNSEnabled, kubeletConfiguration), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
 	}
@@ -1003,7 +1003,7 @@ func KeyV2(
 	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
 	worker *gardencorev1beta1.Worker,
 	nodeLocalDNSEnabled bool,
-	kubeReserved *gardencorev1beta1.KubeletConfigReserved,
+	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
 ) string {
 	if kubernetesVersion == nil {
 		return ""
@@ -1041,8 +1041,13 @@ func KeyV2(
 		data = append(data, "node-local-dns")
 	}
 
-	if kubeReserved != nil {
-		data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
+	if kubeletConfiguration != nil {
+		if kubeReserved := kubeletConfiguration.KubeReserved; kubeReserved != nil {
+			data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
+		}
+		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+			data = append(data, *policy)
+		}
 	}
 
 	var result string
