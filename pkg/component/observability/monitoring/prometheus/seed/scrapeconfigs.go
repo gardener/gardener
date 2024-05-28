@@ -71,5 +71,29 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				),
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cert-controller-manager",
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				HonorLabels:     ptr.To(true),
+				HonorTimestamps: ptr.To(false),
+				MetricsPath:     ptr.To("/metrics"),
+				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+					Targets: []monitoringv1alpha1.Target{"cert-controller-manager.shoot--garden--aws-ap1.svc:10258"},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action:      "replace",
+					Replacement: ptr.To("cert-controller-manager"),
+					TargetLabel: "job",
+				}},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action:      "replace",
+					TargetLabel: "__name__",
+					Regex:       "promhttp_metric_handler_requests_total",
+					Replacement: "cert_manager_promhttp_metric_handler_requests_total",
+				}},
+			},
+		},
 	}
 }
