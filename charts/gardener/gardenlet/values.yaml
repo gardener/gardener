@@ -214,3 +214,9 @@ config:
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
+
+#selfUpgrade:
+#  deployment:
+#    helm:
+#      ociRepository:
+#        ref: <url-to-oci-repository-containing-gardenlet-helm-chart>

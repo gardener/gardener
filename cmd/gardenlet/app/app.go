@@ -24,6 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
@@ -346,6 +349,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Create Gardenlet object in garden cluster for self-upgrades if necessary")
+	if err := g.createSelfUpgradeConfig(ctx, log, gardenCluster.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Updating last operation status of processing Shoots to 'Aborted'")
 	if err := g.updateProcessingShootStatusToAborted(ctx, gardenCluster.GetClient()); err != nil {
 		return err
@@ -444,6 +452,50 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		}
 		return true, nil
 	})
+}
+
+var seedManagementDecoder runtime.Decoder
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(seedmanagementv1alpha1.AddToScheme(scheme))
+	seedManagementDecoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
+}
+
+func (g *garden) createSelfUpgradeConfig(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
+	var (
+		gardenlet = &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: g.config.SeedConfig.Name}}
+		configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-selfupgrade-config", Namespace: v1beta1constants.GardenNamespace}}
+	)
+
+	if err := g.mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether ConfigMap %q with seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades exists: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+
+		log.Info("ConfigMap does not exist, hence, no need to create seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades", "configMap", client.ObjectKeyFromObject(configMap))
+		return nil
+	}
+
+	if err := runtime.DecodeInto(seedManagementDecoder, []byte(configMap.Data["gardenlet.yaml"]), gardenlet); err != nil {
+		return fmt.Errorf("error decoding seedmanagement.gardener.cloud/v1alpha1.Gardenlet object from ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
+	}
+
+	if err := gardenClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether seedmanagement.gardener.cloud/v1alpha1.Gardenlet object with name %q exists: %w", gardenlet.Name, err)
+		}
+
+		log.Info("The seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades does not exist in garden cluster yet, creating it")
+		if err := gardenClient.Create(ctx, gardenlet); err != nil {
+			return fmt.Errorf("failed creating seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades: %w", err)
+		}
+		log.Info("Successfully created seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades")
+	} else {
+		log.Info("The seedmanagement.gardener.cloud/v1alpha1.Gardenlet object for self-upgrades already exists, nothing to do")
+	}
+
+	return client.IgnoreNotFound(g.mgr.GetClient().Delete(ctx, configMap))
 }
 
 func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, gardenClient client.Client) error {
