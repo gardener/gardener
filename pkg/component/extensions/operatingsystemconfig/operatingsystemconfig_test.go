@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1295,6 +1296,191 @@ var _ = Describe("OperatingSystemConfig", func() {
 				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, false, nil)
 				Expect(err).NotTo(Succeed())
 			}
+		})
+	})
+
+	Describe("#KeyV2", func() {
+		var (
+			kubernetesVersion   *semver.Version
+			credentialsRotation *gardencorev1beta1.ShootCredentialsRotation
+			p                   *gardencorev1beta1.Worker
+			nodeLocalDNSEnabled bool
+			kubeReserved        *gardencorev1beta1.KubeletConfigReserved
+
+			hash                        string
+			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+		)
+
+		BeforeEach(func() {
+			volumeType := "fast"
+			p = &gardencorev1beta1.Worker{
+				Name: "test-worker",
+				Machine: gardencorev1beta1.Machine{
+					Type: "foo",
+					Image: &gardencorev1beta1.ShootMachineImage{
+						Name:    "bar",
+						Version: ptr.To("baz"),
+					},
+				},
+				ProviderConfig: &runtime.RawExtension{
+					Raw: []byte("foo"),
+				},
+				Volume: &gardencorev1beta1.Volume{
+					Type:       &volumeType,
+					VolumeSize: "20Gi",
+				},
+			}
+			kubernetesVersion = semver.MustParse("1.2.3")
+			credentialsRotation = &gardencorev1beta1.ShootCredentialsRotation{
+				CertificateAuthorities: &gardencorev1beta1.CARotation{
+					LastInitiationTime: &lastCARotationInitiation,
+				},
+				ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+					LastInitiationTime: &lastSAKeyRotationInitiation,
+				},
+			}
+			nodeLocalDNSEnabled = false
+			kubeReserved = &gardencorev1beta1.KubeletConfigReserved{}
+
+			var err error
+			hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("hash value should not change", func() {
+			AfterEach(func() {
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hash))
+			})
+
+			It("when changing minimum", func() {
+				p.Minimum = 1
+			})
+
+			It("when changing maximum", func() {
+				p.Maximum = 2
+			})
+
+			It("when changing max surge", func() {
+				p.MaxSurge = &intstr.IntOrString{StrVal: "new-val"}
+			})
+
+			It("when changing max unavailable", func() {
+				p.MaxUnavailable = &intstr.IntOrString{StrVal: "new-val"}
+			})
+
+			It("when changing annotations", func() {
+				p.Annotations = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing labels", func() {
+				p.Labels = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing taints", func() {
+				p.Taints = []corev1.Taint{{Key: "foo"}}
+			})
+
+			It("when changing name", func() {
+				p.Name = "different-name"
+			})
+
+			It("when changing zones", func() {
+				p.Zones = []string{"1"}
+			})
+
+			It("when changing provider config", func() {
+				// must not be interpreted by the operating system config
+				p.ProviderConfig.Raw = nil
+			})
+
+			It("when changing the kubernetes version in the worker object", func() {
+				// must use kubernetesVersion instead
+				p.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+					Version: ptr.To("12.34.5"),
+				}
+			})
+
+			It("when changing the combined kubernetes patch version", func() {
+				kubernetesVersion = semver.MustParse("1.2.4")
+			})
+
+			It("when disabling node local dns via specification", func() {
+				nodeLocalDNSEnabled = false
+			})
+		})
+
+		Context("hash value should change", func() {
+			AfterEach(func() {
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing machine type", func() {
+				p.Machine.Type = "small"
+			})
+
+			It("when changing machine image name", func() {
+				p.Machine.Image.Name = "new-image"
+			})
+
+			It("when changing machine image version", func() {
+				p.Machine.Image.Version = ptr.To("new-version")
+			})
+
+			It("when changing volume type", func() {
+				t := "xl"
+				p.Volume.Type = &t
+			})
+
+			It("when changing volume size", func() {
+				p.Volume.VolumeSize = "100Mi"
+			})
+
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				kubernetesVersion = semver.MustParse("1.3.3")
+			})
+
+			It("when changing the CRI configurations", func() {
+				p.CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
+			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				credentialsRotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := credentialsRotation.CertificateAuthorities.DeepCopy()
+				credentialsRotation.CertificateAuthorities = nil
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				Expect(err).ToNot(HaveOccurred())
+
+				credentialsRotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				credentialsRotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := credentialsRotation.ServiceAccountKey.DeepCopy()
+				credentialsRotation.ServiceAccountKey = nil
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, credentialsRotation, p, nodeLocalDNSEnabled, kubeReserved)
+				Expect(err).ToNot(HaveOccurred())
+
+				credentialsRotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
+			})
+
+			It("when enabling node local dns via specification", func() {
+				nodeLocalDNSEnabled = true
+			})
 		})
 	})
 })
