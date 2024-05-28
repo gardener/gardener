@@ -85,3 +85,8 @@ type GardenletStatus struct {
 	// Gardenlet's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
+
+const (
+	// GardenletReconciled is a condition type for indicating whether the Gardenlet's has been reconciled.
+	GardenletReconciled gardencorev1beta1.ConditionType = "GardenletReconciled"
+)

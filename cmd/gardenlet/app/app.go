@@ -48,6 +48,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -253,6 +254,10 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 				&corev1.ServiceAccount{}: {
 					Namespaces: map[string]cache.Config{seedNamespace: {}},
+				},
+				&seedmanagementv1alpha1.Gardenlet{}: {
+					Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.config.SeedConfig.SeedTemplate.Name}),
+					Namespaces: map[string]cache.Config{v1beta1constants.GardenNamespace: {}},
 				},
 			}
 

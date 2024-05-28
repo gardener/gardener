@@ -1205,6 +1205,7 @@ build:
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
             - pkg/gardenlet/controller/controllerinstallation/required
             - pkg/gardenlet/controller/controllerinstallation/utils
+            - pkg/gardenlet/controller/gardenlet
             - pkg/gardenlet/controller/managedseed
             - pkg/gardenlet/controller/networkpolicy
             - pkg/gardenlet/controller/seed

@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
@@ -93,6 +94,12 @@ func AddToManager(
 
 	if err := controllerinstallation.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
+	}
+
+	if err := (&gardenlet.Reconciler{
+		Config: *cfg,
+	}).AddToManager(mgr, gardenCluster, seedClientSet); err != nil {
+		return fmt.Errorf("failed adding Gardenlet controller: %w", err)
 	}
 
 	if err := (&managedseed.Reconciler{
