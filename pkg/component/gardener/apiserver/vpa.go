@@ -11,16 +11,23 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/component/apiserver"
 )
 
 func (g *gardenerAPIServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
-	if g.values.Autoscaling.Mode != apiserver.AutoscalingModeBaseline {
+	switch g.values.Autoscaling.Mode {
+	case apiserver.AutoscalingModeHVPA:
 		return nil
+	case apiserver.AutoscalingModeVPAAndHPA:
+		return g.verticalPodAutoscalerInVPAAndHPAMode()
+	default:
+		return g.verticalPodAutoscalerInBaselineMode()
 	}
+}
 
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+func (g *gardenerAPIServer) verticalPodAutoscalerInBaselineMode() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName + "-vpa",
@@ -34,15 +41,51 @@ func (g *gardenerAPIServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPo
 				Name:       DeploymentName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-				UpdateMode: &vpaUpdateMode,
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: containerName,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("256Mi"),
 						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (g *gardenerAPIServer) verticalPodAutoscalerInVPAAndHPAMode() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      DeploymentName + "-vpa",
+			Namespace: g.namespace,
+			Labels:    GetLabels(),
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       DeploymentName,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: containerName,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("200M"),
+						},
+						MaxAllowed: corev1.ResourceList{
+							// The CPU and memory are aligned to the machine ration of 1:4.
+							corev1.ResourceCPU:    resource.MustParse("7"),
+							corev1.ResourceMemory: resource.MustParse("28G"),
+						},
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 				},
 			},

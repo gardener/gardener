@@ -631,12 +631,15 @@ func (r *Reconciler) newKubeAPIServer(
 
 func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
 	minReplicas := int32(2)
-	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+	if helper.HighAvailabilityEnabled(garden) {
 		minReplicas = 3
 	}
 
 	var autoscalingMode apiserver.AutoscalingMode
-	if hvpaEnabled() {
+	// The VPAAndHPAForAPIServer feature gate takes precedence over the HVPA feature gate.
+	if features.DefaultFeatureGate.Enabled(features.VPAAndHPAForAPIServer) {
+		autoscalingMode = apiserver.AutoscalingModeVPAAndHPA
+	} else if hvpaEnabled() {
 		autoscalingMode = apiserver.AutoscalingModeHVPA
 	} else {
 		autoscalingMode = apiserver.AutoscalingModeBaseline

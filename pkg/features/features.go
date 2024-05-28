@@ -74,9 +74,10 @@ const (
 	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 
-	// VPAAndHPAForAPIServer enables an autoscaling mechanism for shoot kube-apiserver where it is scaled simultaneously
-	// by VPA and HPA on the same metric (CPU and memory usage). The pod-trashing cycle between VPA and HPA scaling on
-	// the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and
+	// VPAAndHPAForAPIServer an autoscaling mechanism for kube-apiserver of shoot or virtual garden clusters, and the gardener-apiserver.
+	// They are scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage).
+	// The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided
+	// by configuring the HPA to scale on average usage (not on average utilization) and
 	// by picking the target average utilization values in sync with VPA's allowed maximums.
 	// The feature gate takes precedence over the `HVPA` feature gate when they are both enabled.
 	// owner: @ialidzhikov

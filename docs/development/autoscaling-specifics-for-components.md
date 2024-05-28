@@ -81,3 +81,16 @@ There are the following specifics for when disabling scale-down for the Kubernet
 - In `VPAAndHPA` mode if the HPA resource exists and HPA's `spec.minReplicas` is not nil then the min replicas count is `max(spec.minReplicas, status.desiredReplicas)`. When scale-down is disabled, this allows operators to specify a custom value for HPA `spec.minReplicas` and this value not to be reverted by gardenlet. I.e, HPA _does_ scale down to min replicas but not below min replicas. HPA's max replicas count is 4.
 
 > Note: The `alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled` annotation is alpha and can be removed anytime without further notice. Only use it if you know what you do.
+
+##  Virtual Kubernetes API Server and Gardener API Server
+
+The virtual Kubernetes API server's autoscaling is same as the Shoot Kubernetes API server's with the following differences:
+- The initial API server resource requests are `600m` and `512Mi` in all autoscaling modes.
+- The min replicas count is 2 for a non-HA virtual cluster and 3 for an HA virtual cluster. The max replicas count is 6.
+- In `HVPA` mode, HVPA's HPA is scaling on both CPU and memory (average utilization 80% for both).
+
+The Gardener API server's autoscaling is the same as the Shoot Kubernetes API server's with the following differences:
+- The initial API server resource requests are `600m` and `512Mi` in all autoscaling modes.
+- The min replicas count is 2. The max replicas count is 4.
+- In `HVPA` mode, HVPA's HPA is scaling on both CPU and memory (average utilization 80% for both).
+- In `HVPA` mode, HVPA's VPA max allowed values are `4` CPU and `25G`.

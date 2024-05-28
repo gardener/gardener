@@ -15,6 +15,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -79,7 +80,9 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
 		serviceRuntimeFor      func(bool) *corev1.Service
-		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
+		vpaInBaselineMode      *vpaautoscalingv1.VerticalPodAutoscaler
+		vpaInHPAAndVPAMode     *vpaautoscalingv1.VerticalPodAutoscaler
+		hpaOnHPAAndVPAMode     *autoscalingv2.HorizontalPodAutoscaler
 		hvpa                   *hvpav1alpha1.Hvpa
 		deployment             *appsv1.Deployment
 		apiServiceFor          = func(group, version string) *apiregistrationv1.APIService {
@@ -236,8 +239,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			return svc
 		}
 
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+		vpaInBaselineMode = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-apiserver-vpa",
 				Namespace: namespace,
@@ -253,14 +255,113 @@ var _ = Describe("GardenerAPIServer", func() {
 					Name:       "gardener-apiserver",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "*",
+							ContainerName: "gardener-apiserver",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("256Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
+		vpaInHPAAndVPAMode = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver-vpa",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "gardener-apiserver",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "gardener-apiserver",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("7"),
+								corev1.ResourceMemory: resource.MustParse("28G"),
+							},
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						},
+					},
+				},
+			},
+		}
+		hpaOnHPAAndVPAMode = &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				},
+			},
+			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				MinReplicas: ptr.To[int32](2),
+				MaxReplicas: 6,
+				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       "gardener-apiserver",
+				},
+				Metrics: []autoscalingv2.MetricSpec{
+					{
+						Type: autoscalingv2.ResourceMetricSourceType,
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceCPU,
+							Target: autoscalingv2.MetricTarget{
+								Type:         autoscalingv2.AverageValueMetricType,
+								AverageValue: ptr.To(resource.MustParse("6")),
+							},
+						},
+					},
+					{
+						Type: autoscalingv2.ResourceMetricSourceType,
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: corev1.ResourceMemory,
+							Target: autoscalingv2.MetricTarget{
+								Type:         autoscalingv2.AverageValueMetricType,
+								AverageValue: ptr.To(resource.MustParse("24G")),
+							},
+						},
+					},
+				},
+				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+					ScaleUp: &autoscalingv2.HPAScalingRules{
+						StabilizationWindowSeconds: ptr.To[int32](60),
+						Policies: []autoscalingv2.HPAScalingPolicy{
+							{
+								Type:          autoscalingv2.PercentScalingPolicy,
+								Value:         100,
+								PeriodSeconds: 60,
+							},
+						},
+					},
+					ScaleDown: &autoscalingv2.HPAScalingRules{
+						StabilizationWindowSeconds: ptr.To[int32](1800),
+						Policies: []autoscalingv2.HPAScalingPolicy{
+							{
+								Type:          autoscalingv2.PodsScalingPolicy,
+								Value:         1,
+								PeriodSeconds: 300,
 							},
 						},
 					},
@@ -1477,7 +1578,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					It("should successfully deploy all resources", func() {
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
-							vpa,
+							vpaInBaselineMode,
 							podDisruptionBudgetFor(true),
 							serviceRuntimeFor(true),
 						)
@@ -1504,6 +1605,27 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					})
 				})
 
+				Context("when autoscaling mode is VPAAndHPA", func() {
+					BeforeEach(func() {
+						values.Values.Autoscaling.Mode = apiserver.AutoscalingModeVPAAndHPA
+						values.Values.Autoscaling.MinReplicas = 2
+						values.Values.Autoscaling.MaxReplicas = 6
+						deployer = New(fakeClient, namespace, fakeSecretManager, values)
+					})
+
+					It("should successfully deploy all resources", func() {
+						expectedRuntimeObjects = append(
+							expectedRuntimeObjects,
+							vpaInHPAAndVPAMode,
+							hpaOnHPAAndVPAMode,
+							podDisruptionBudgetFor(true),
+							serviceRuntimeFor(true),
+						)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					})
+				})
+
 				Context("when kubernetes version is < 1.26", func() {
 					BeforeEach(func() {
 						values.RuntimeVersion = semver.MustParse("1.25.0")
@@ -1513,7 +1635,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					It("should successfully deploy all resources", func() {
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
-							vpa,
+							vpaInBaselineMode,
 							podDisruptionBudgetFor(false),
 							serviceRuntimeFor(false),
 						)
@@ -1531,7 +1653,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					It("should successfully deploy all resources", func() {
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
-							vpa,
+							vpaInBaselineMode,
 							podDisruptionBudgetFor(true),
 							serviceRuntimeFor(false),
 						)
