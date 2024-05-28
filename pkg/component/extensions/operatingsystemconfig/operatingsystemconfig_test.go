@@ -1349,6 +1349,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 					PID:              ptr.To(resource.MustParse("10k")),
 					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
 				},
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: ptr.To("100Mi"),
+				},
 				CPUManagerPolicy: nil,
 			}
 
@@ -1505,6 +1508,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("when changing kubeReserved ephemeral storage", func() {
 				kubletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+			})
+
+			It("when changing evictionHard memory threshold", func() {
+				kubletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
 			})
 
 			It("when changing CPUManagerPolicy", func() {

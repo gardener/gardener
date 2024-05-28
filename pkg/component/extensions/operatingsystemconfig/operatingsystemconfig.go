@@ -1045,6 +1045,9 @@ func KeyV2(
 		if kubeReserved := kubeletConfiguration.KubeReserved; kubeReserved != nil {
 			data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
 		}
+		if eviction := kubeletConfiguration.EvictionHard; eviction != nil && eviction.MemoryAvailable != nil {
+			data = append(data, *eviction.MemoryAvailable)
+		}
 		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
 			data = append(data, *policy)
 		}
