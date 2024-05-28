@@ -959,7 +959,14 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 // CalculateKeyForVersion is exposed for testing purposes only
 var CalculateKeyForVersion = calculateKeyForVersion
 
-func calculateKeyForVersion(oscVersion int, kubernetesVersion *semver.Version, credentialsRotation *gardencorev1beta1.ShootCredentialsRotation, worker *gardencorev1beta1.Worker, nodeLocalDNSEnabled bool, kubeReserved *gardencorev1beta1.KubeletConfigReserved) (string, error) {
+func calculateKeyForVersion(
+	oscVersion int,
+	kubernetesVersion *semver.Version,
+	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
+	worker *gardencorev1beta1.Worker,
+	nodeLocalDNSEnabled bool,
+	kubeReserved *gardencorev1beta1.KubeletConfigReserved,
+) (string, error) {
 	switch oscVersion {
 	case 1:
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
@@ -991,7 +998,13 @@ func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *
 
 // KeyV2 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
 // configuration.
-func KeyV2(kubernetesVersion *semver.Version, credentialsRotation *gardencorev1beta1.ShootCredentialsRotation, worker *gardencorev1beta1.Worker, nodeLocalDNSEnabled bool, kubeReserved *gardencorev1beta1.KubeletConfigReserved) string {
+func KeyV2(
+	kubernetesVersion *semver.Version,
+	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
+	worker *gardencorev1beta1.Worker,
+	nodeLocalDNSEnabled bool,
+	kubeReserved *gardencorev1beta1.KubeletConfigReserved,
+) string {
 	if kubernetesVersion == nil {
 		return ""
 	}

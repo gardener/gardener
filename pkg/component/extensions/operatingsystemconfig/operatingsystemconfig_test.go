@@ -132,6 +132,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
+							Version:        ptr.To("12.34"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -142,7 +143,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Machine: gardencorev1beta1.Machine{
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
-							Name: "type2",
+							Name:    "type2",
+							Version: ptr.To("12.34"),
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
@@ -475,10 +477,28 @@ var _ = Describe("OperatingSystemConfig", func() {
 `))
 			})
 
+			calculateKeyForVersionFn := func(
+				oscVersion int,
+				_ *semver.Version,
+				_ *gardencorev1beta1.ShootCredentialsRotation,
+				worker *gardencorev1beta1.Worker,
+				_ bool,
+				_ *gardencorev1beta1.KubeletConfigReserved,
+			) (string, error) {
+				switch oscVersion {
+				case 1:
+					return worker.Name + "-version1", nil
+				case 2:
+					return worker.Name + "-version2", nil
+				default:
+					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+				}
+			}
+
 			It("should successfully fill missing hashes and workers in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -512,7 +532,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -537,7 +557,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 `))
 			})
 
-			calculateStableKeyForVersionFn := func(oscVersion int, kubernetesVersion *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+			calculateStableKeyForVersionFn := func(
+				oscVersion int,
+				kubernetesVersion *semver.Version,
+				_ *gardencorev1beta1.ShootCredentialsRotation,
+				worker *gardencorev1beta1.Worker,
+				_ bool,
+				_ *gardencorev1beta1.KubeletConfigReserved,
+			) (string, error) {
 				switch oscVersion {
 				case 1:
 					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
@@ -551,7 +578,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully keep the current hash versions if nothing changes in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 
@@ -581,7 +608,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully use hash version 1 after migration", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 
@@ -1228,7 +1255,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 	})
 
-	Describe("#Key", func() {
+	Describe("#KeyV1", func() {
 		var (
 			workerName        = "foo"
 			kubernetesVersion = "1.2.3"
@@ -1249,16 +1276,23 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		It("should return the expected key for version 1", func() {
-			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), &gardencorev1beta1.Worker{
-				Name: workerName,
-			})
+			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), nil,
+				&gardencorev1beta1.Worker{
+					Name: workerName,
+					Machine: gardencorev1beta1.Machine{
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type1",
+							Version: ptr.To("12.34"),
+						},
+					},
+				}, false, nil)
 			Expect(err).To(Succeed())
 			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("should return an error for unknown versions", func() {
-			for _, version := range []int{0, 2} {
-				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil)
+			for _, version := range []int{0, 3} {
+				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, false, nil)
 				Expect(err).NotTo(Succeed())
 			}
 		})
