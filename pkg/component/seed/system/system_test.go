@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("SeedSystem", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		managedResourceName        = "system"
 		namespace                  = "some-namespace"
@@ -170,6 +170,8 @@ status: {}
 	})
 
 	Describe("#Deploy", func() {
+		var manifests []string
+
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -198,12 +200,15 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			var err error
+			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(11))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-0.yaml"])).To(Equal(deployment0YAML))
-			expectPriorityClasses(managedResourceSecret.Data)
+			expectedManifets := append(expectedPriorityClasses(), deployment0YAML)
+			Expect(manifests).To(ConsistOf(expectedManifets))
 		})
 
 		Context("in case of additional reserve-excess-capacity configs", func() {
@@ -222,10 +227,8 @@ status: {}
 			})
 
 			It("should successfully deploy the resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(12))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-0.yaml"])).To(Equal(deployment0YAML))
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-1.yaml"])).To(Equal(deployment1YAML))
-				expectPriorityClasses(managedResourceSecret.Data)
+				expectedManifets := append(expectedPriorityClasses(), deployment0YAML, deployment1YAML)
+				Expect(manifests).To(ConsistOf(expectedManifets))
 			})
 		})
 
@@ -236,8 +239,7 @@ status: {}
 			})
 
 			It("should successfully deploy the resources", func() {
-				Expect(managedResourceSecret.Data).To(HaveLen(10))
-				expectPriorityClasses(managedResourceSecret.Data)
+				Expect(manifests).To(ConsistOf(expectedPriorityClasses()))
 			})
 		})
 	})
@@ -344,7 +346,9 @@ status: {}
 	})
 })
 
-func expectPriorityClasses(data map[string][]byte) {
+func expectedPriorityClasses() []string {
+	priorityClasses := make([]string, 0, 10)
+
 	expected := []struct {
 		name        string
 		value       int32
@@ -363,14 +367,15 @@ func expectPriorityClasses(data map[string][]byte) {
 	}
 
 	for _, pc := range expected {
-		ExpectWithOffset(1, data).To(HaveKeyWithValue("priorityclass____"+pc.name+".yaml", []byte(`apiVersion: scheduling.k8s.io/v1
+		priorityClasses = append(priorityClasses, `apiVersion: scheduling.k8s.io/v1
 description: `+pc.description+`
 kind: PriorityClass
 metadata:
   creationTimestamp: null
   name: `+pc.name+`
 value: `+strconv.FormatInt(int64(pc.value), 10)+`
-`),
-		))
+`)
 	}
+
+	return priorityClasses
 }
