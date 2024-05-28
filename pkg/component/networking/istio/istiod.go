@@ -418,16 +418,9 @@ func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
 }
 
 func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) (map[string][]byte, error) {
-	data := chart.AsSecretData()
-
-	serializedObjects, err := registry.SerializedObjects()
-	if err != nil {
-		return nil, err
+	for name, data := range chart.AsSecretData() {
+		registry.AddSerialized(name, data)
 	}
 
-	for k, v := range serializedObjects {
-		data[k] = v
-	}
-
-	return data, nil
+	return registry.SerializedObjects()
 }
