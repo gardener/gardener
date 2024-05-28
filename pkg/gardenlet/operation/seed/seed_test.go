@@ -166,6 +166,55 @@ var _ = Describe("seed", func() {
 		})
 	})
 
+	Describe("#GetLoadBalancerServiceProxyProtocolTermination", func() {
+		DescribeTable("should return the proxy protocol policy",
+			func(allowed bool) {
+				seed := &Seed{}
+				seed.SetInfo(&gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						Settings: &gardencorev1beta1.SeedSettings{
+							LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+								ProxyProtocol: &gardencorev1beta1.LoadBalancerServicesProxyProtocol{
+									Allowed: allowed,
+								},
+							},
+						},
+					},
+				})
+
+				Expect(seed.GetLoadBalancerServiceProxyProtocolTermination()).To(Not(BeNil()))
+				Expect(*seed.GetLoadBalancerServiceProxyProtocolTermination()).To(Equal(allowed))
+			},
+
+			Entry("proxy protocol is allowed", true),
+			Entry("proxy protocol is not allowed", false),
+		)
+
+		It("should return no proxy protocol policy if no is available", func() {
+			var (
+				seed = &Seed{}
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Settings: &gardencorev1beta1.SeedSettings{
+						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{},
+					},
+				},
+			})
+
+			Expect(seed.GetLoadBalancerServiceProxyProtocolTermination()).To(BeNil())
+		})
+
+		It("should return no proxy protocol policy if no settings are available", func() {
+			var (
+				seed = &Seed{}
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
+
+			Expect(seed.GetLoadBalancerServiceProxyProtocolTermination()).To(BeNil())
+		})
+	})
+
 	Describe("#GetZonalLoadBalancerServiceAnnotations", func() {
 		It("should return the zonal annotations", func() {
 			var (
@@ -210,7 +259,7 @@ var _ = Describe("seed", func() {
 			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone2)).To(Equal(map[string]string{annotationKey1: annotationValue1}))
 		})
 
-		It("should return no annotations if no zonal annoations are available", func() {
+		It("should return no annotations if no zonal annotations are available", func() {
 			var (
 				zone1 = "a"
 				seed  = &Seed{}
@@ -298,6 +347,93 @@ var _ = Describe("seed", func() {
 			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
 
 			Expect(seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone1)).To(BeNil())
+		})
+	})
+
+	Describe("#GetZonalLoadBalancerServiceProxyProtocolTermination", func() {
+		DescribeTable("should return the zonal proxy protocol policy",
+			func(allowed1, allowed2 bool) {
+				seed := &Seed{}
+				zone1 := "a"
+				zone2 := "b"
+				seed.SetInfo(&gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						Settings: &gardencorev1beta1.SeedSettings{
+							LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+								Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{
+									{
+										Name: zone1,
+										ProxyProtocol: &gardencorev1beta1.LoadBalancerServicesProxyProtocol{
+											Allowed: allowed1,
+										},
+									},
+									{
+										Name: zone2,
+										ProxyProtocol: &gardencorev1beta1.LoadBalancerServicesProxyProtocol{
+											Allowed: allowed2,
+										},
+									},
+								},
+							},
+						},
+					},
+				})
+
+				Expect(seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(Not(BeNil()))
+				Expect(*seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(Equal(allowed1))
+				Expect(seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone2)).To(Not(BeNil()))
+				Expect(*seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone2)).To(Equal(allowed2))
+			},
+
+			Entry("proxy protocol is allowed", true, true),
+			Entry("proxy protocol is allowed in first zone, but disallowed in second", true, false),
+			Entry("proxy protocol is not allowed in first zone, but allowed in second", false, true),
+			Entry("proxy protocol is not allowed", false, false),
+		)
+
+		It("should return no zonal proxy protocol policy if no is available", func() {
+			var (
+				zone1 = "a"
+				seed  = &Seed{}
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Settings: &gardencorev1beta1.SeedSettings{
+						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{},
+					},
+				},
+			})
+
+			Expect(seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(BeNil())
+		})
+
+		It("should return no zonal proxy protocol policy if no settings are available", func() {
+			var (
+				zone1 = "a"
+				seed  = &Seed{}
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{}})
+
+			Expect(seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(BeNil())
+		})
+
+		It("should return global proxy protocol policy if no zonal settings are available", func() {
+			var (
+				zone1 = "a"
+				seed  = &Seed{}
+			)
+			seed.SetInfo(&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{
+				Settings: &gardencorev1beta1.SeedSettings{
+					LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+						ProxyProtocol: &gardencorev1beta1.LoadBalancerServicesProxyProtocol{
+							Allowed: true,
+						},
+					},
+				},
+			}})
+
+			Expect(seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(Not(BeNil()))
+			Expect(*seed.GetZonalLoadBalancerServiceProxyProtocolTermination(zone1)).To(BeTrue())
 		})
 	})
 

@@ -24,23 +24,24 @@ var (
 // IngressGatewayValues holds values for the istio-ingress chart.
 // The only opened port is 15021.
 type IngressGatewayValues struct {
-	Annotations              map[string]string
-	Labels                   map[string]string
-	NetworkPolicyLabels      map[string]string
-	ExternalTrafficPolicy    *corev1.ServiceExternalTrafficPolicyType
-	Image                    string
-	IstiodNamespace          string
-	LoadBalancerIP           *string
-	MaxReplicas              *int
-	MinReplicas              *int
-	Namespace                string
-	PriorityClassName        string
-	TrustDomain              string
-	ProxyProtocolEnabled     bool
-	VPNEnabled               bool
-	Zones                    []string
-	DualStack                bool
-	EnforceSpreadAcrossHosts bool
+	Annotations                        map[string]string
+	Labels                             map[string]string
+	NetworkPolicyLabels                map[string]string
+	ExternalTrafficPolicy              *corev1.ServiceExternalTrafficPolicyType
+	Image                              string
+	IstiodNamespace                    string
+	LoadBalancerIP                     *string
+	MaxReplicas                        *int
+	MinReplicas                        *int
+	Namespace                          string
+	PriorityClassName                  string
+	TrustDomain                        string
+	ProxyProtocolEnabled               bool
+	TerminateLoadBalancerProxyProtocol bool
+	VPNEnabled                         bool
+	Zones                              []string
+	DualStack                          bool
+	EnforceSpreadAcrossHosts           bool
 
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
@@ -52,20 +53,21 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 
 	for _, istioIngressGateway := range i.values.IngressGateway {
 		values := map[string]any{
-			"trustDomain":           istioIngressGateway.TrustDomain,
-			"labels":                istioIngressGateway.Labels,
-			"networkPolicyLabels":   istioIngressGateway.NetworkPolicyLabels,
-			"annotations":           istioIngressGateway.Annotations,
-			"externalTrafficPolicy": istioIngressGateway.ExternalTrafficPolicy,
-			"dualStack":             istioIngressGateway.DualStack,
-			"deployNamespace":       false,
-			"priorityClassName":     istioIngressGateway.PriorityClassName,
-			"ports":                 istioIngressGateway.Ports,
-			"image":                 istioIngressGateway.Image,
-			"istiodNamespace":       istioIngressGateway.IstiodNamespace,
-			"loadBalancerIP":        istioIngressGateway.LoadBalancerIP,
-			"serviceName":           v1beta1constants.DefaultSNIIngressServiceName,
-			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
+			"trustDomain":                        istioIngressGateway.TrustDomain,
+			"labels":                             istioIngressGateway.Labels,
+			"networkPolicyLabels":                istioIngressGateway.NetworkPolicyLabels,
+			"annotations":                        istioIngressGateway.Annotations,
+			"externalTrafficPolicy":              istioIngressGateway.ExternalTrafficPolicy,
+			"dualStack":                          istioIngressGateway.DualStack,
+			"deployNamespace":                    false,
+			"priorityClassName":                  istioIngressGateway.PriorityClassName,
+			"ports":                              istioIngressGateway.Ports,
+			"image":                              istioIngressGateway.Image,
+			"istiodNamespace":                    istioIngressGateway.IstiodNamespace,
+			"loadBalancerIP":                     istioIngressGateway.LoadBalancerIP,
+			"serviceName":                        v1beta1constants.DefaultSNIIngressServiceName,
+			"proxyProtocolEnabled":               istioIngressGateway.ProxyProtocolEnabled,
+			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
 			"vpn": map[string]any{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},

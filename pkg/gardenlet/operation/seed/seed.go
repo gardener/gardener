@@ -204,6 +204,31 @@ func (s *Seed) GetZonalLoadBalancerServiceExternalTrafficPolicy(zone string) *co
 	return s.GetLoadBalancerServiceExternalTrafficPolicy()
 }
 
+// GetLoadBalancerServiceProxyProtocolTermination indicates if the seed allows proxy protocol termination for load balancer services.
+func (s *Seed) GetLoadBalancerServiceProxyProtocolTermination() *bool {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil && seed.Spec.Settings.LoadBalancerServices.ProxyProtocol != nil {
+		return &seed.Spec.Settings.LoadBalancerServices.ProxyProtocol.Allowed
+	}
+	return nil
+}
+
+// GetZonalLoadBalancerServiceProxyProtocolTermination indicates if the seed allows proxy protocol termination for load balancer services for the specified zone.
+func (s *Seed) GetZonalLoadBalancerServiceProxyProtocolTermination(zone string) *bool {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
+		for _, zoneSettings := range seed.Spec.Settings.LoadBalancerServices.Zones {
+			if zoneSettings.Name == zone {
+				if zoneSettings.ProxyProtocol != nil {
+					return &zoneSettings.ProxyProtocol.Allowed
+				}
+				break
+			}
+		}
+	}
+	return s.GetLoadBalancerServiceProxyProtocolTermination()
+}
+
 // IsDualStack checks if the seed is a dual-stack seed.
 func (s *Seed) IsDualStack() bool {
 	seed := s.GetInfo()

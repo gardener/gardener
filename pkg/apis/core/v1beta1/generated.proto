@@ -1587,6 +1587,16 @@ message LastOperation {
   optional string type = 5;
 }
 
+// LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+message LoadBalancerServicesProxyProtocol {
+  // Allowed controls whether the ProxyProtocol is optionally allowed for the load balancer services.
+  // This should only be enabled if the load balancer services are already using ProxyProtocol or will be reconfigured to use it soon.
+  // Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
+  // The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
+  // Defaults to false.
+  optional bool allowed = 1;
+}
+
 // Machine contains information about the machine type and image.
 message Machine {
   // Type is the machine type of the worker group.
@@ -2459,6 +2469,11 @@ message SeedSettingLoadBalancerServices {
   // Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
   // +optional
   repeated SeedSettingLoadBalancerServicesZones zones = 3;
+
+  // ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+  // Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+  // +optional
+  optional LoadBalancerServicesProxyProtocol proxyProtocol = 4;
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -2476,6 +2491,11 @@ message SeedSettingLoadBalancerServicesZones {
   // Defaults to "Cluster".
   // +optional
   optional string externalTrafficPolicy = 3;
+
+  // ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+  // Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+  // +optional
+  optional LoadBalancerServicesProxyProtocol proxyProtocol = 4;
 }
 
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
