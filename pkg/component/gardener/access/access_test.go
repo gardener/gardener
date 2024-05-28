@@ -10,7 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -36,45 +38,52 @@ var _ = Describe("Access", func() {
 		fakeClient client.Client
 		sm         secretsmanager.Interface
 		access     component.DeployWaiter
+		consistOf  func(...client.Object) types.GomegaMatcher
 
-		ctx       = context.TODO()
+		ctx       = context.Background()
 		namespace = "shoot--foo--bar"
 
-		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:system:gardener
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: gardener
-  namespace: kube-system
-- kind: ServiceAccount
-  name: gardener-internal
-  namespace: kube-system
-`
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:gardener",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "gardener",
+					Namespace: "kube-system",
+				},
+				{
+					Kind:      "ServiceAccount",
+					Name:      "gardener-internal",
+					Namespace: "kube-system",
+				},
+			},
+		}
 
 		gardenerSecretName         = "gardener"
 		gardenerInternalSecretName = "gardener-internal"
 		managedResourceName        = "shoot-core-gardeneraccess"
 		managedResourceSecretName  = "managedresource-shoot-core-gardeneraccess"
+		managedResourceSecret      *corev1.Secret
 
 		serverOutOfCluster = "out-of-cluster"
 		serverInCluster    = "in-cluster"
 
 		expectedGardenerSecret         *corev1.Secret
 		expectedGardenerInternalSecret *corev1.Secret
-		expectedManagedResourceSecret  *corev1.Secret
 		expectedManagedResource        *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
@@ -153,20 +162,11 @@ users:
 `)},
 		}
 
-		expectedManagedResourceSecret = &corev1.Secret{
+		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,
 				Namespace: namespace,
-				Labels: map[string]string{
-					"resources.gardener.cloud/garbage-collectable-reference": "true",
-				},
-				ResourceVersion: "1",
 			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{
-				"clusterrolebinding____gardener.cloud_system_gardener.yaml": []byte(clusterRoleBindingYAML),
-			},
-			Immutable: ptr.To(true),
 		}
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -189,7 +189,7 @@ users:
 	AfterEach(func() {
 		Expect(fakeClient.Delete(ctx, expectedGardenerSecret)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(fakeClient.Delete(ctx, expectedGardenerInternalSecret)).To(Or(Succeed(), BeNotFoundError()))
-		Expect(fakeClient.Delete(ctx, expectedManagedResourceSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, managedResourceSecret)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(fakeClient.Delete(ctx, expectedManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
@@ -202,11 +202,7 @@ users:
 			expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: reconciledManagedResource.Spec.SecretRefs[0].Name}}
 			utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
-
-			expectedManagedResourceSecret.Name = reconciledManagedResource.Spec.SecretRefs[0].Name
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedManagedResourceSecret.Name, Namespace: namespace}}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
-			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
+			Expect(reconciledManagedResource).To(consistOf(clusterRoleBinding))
 
 			reconciledGardenerSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
@@ -252,19 +248,19 @@ users:
 		It("should successfully delete all the resources", func() {
 			expectedGardenerSecret.ResourceVersion = ""
 			expectedGardenerInternalSecret.ResourceVersion = ""
-			expectedManagedResourceSecret.ResourceVersion = ""
+			managedResourceSecret.ResourceVersion = ""
 			expectedManagedResource.ResourceVersion = ""
 
 			Expect(fakeClient.Create(ctx, expectedGardenerSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, expectedGardenerInternalSecret)).To(Succeed())
-			Expect(fakeClient.Create(ctx, expectedManagedResourceSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, expectedManagedResource)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedGardenerSecret), expectedGardenerSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedGardenerInternalSecret), expectedGardenerInternalSecret)).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResourceSecret), expectedManagedResourceSecret)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResource), expectedManagedResource)).To(BeNotFoundError())
 		})
 	})
