@@ -42,6 +42,25 @@ func (m *MockChartApplier) EXPECT() *MockChartApplierMockRecorder {
 	return m.recorder
 }
 
+// ApplyFromArchive mocks base method.
+func (m *MockChartApplier) ApplyFromArchive(arg0 context.Context, arg1 []byte, arg2, arg3 string, arg4 ...kubernetes.ApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ApplyFromArchive", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyFromArchive indicates an expected call of ApplyFromArchive.
+func (mr *MockChartApplierMockRecorder) ApplyFromArchive(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFromArchive", reflect.TypeOf((*MockChartApplier)(nil).ApplyFromArchive), varargs...)
+}
+
 // ApplyFromEmbeddedFS mocks base method.
 func (m *MockChartApplier) ApplyFromEmbeddedFS(arg0 context.Context, arg1 embed.FS, arg2, arg3, arg4 string, arg5 ...kubernetes.ApplyOption) error {
 	m.ctrl.T.Helper()
@@ -59,6 +78,25 @@ func (mr *MockChartApplierMockRecorder) ApplyFromEmbeddedFS(arg0, arg1, arg2, ar
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFromEmbeddedFS", reflect.TypeOf((*MockChartApplier)(nil).ApplyFromEmbeddedFS), varargs...)
+}
+
+// DeleteFromArchive mocks base method.
+func (m *MockChartApplier) DeleteFromArchive(arg0 context.Context, arg1 []byte, arg2, arg3 string, arg4 ...kubernetes.DeleteOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteFromArchive", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFromArchive indicates an expected call of DeleteFromArchive.
+func (mr *MockChartApplierMockRecorder) DeleteFromArchive(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFromArchive", reflect.TypeOf((*MockChartApplier)(nil).DeleteFromArchive), varargs...)
 }
 
 // DeleteFromEmbeddedFS mocks base method.
