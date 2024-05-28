@@ -299,7 +299,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager)
+	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -1295,10 +1295,10 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 	})
 }
 
-func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (component.DeployWaiter, error) {
 	var (
 		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
-		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/healthz")
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
@@ -1308,6 +1308,9 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			}
 		}
 	}
+
+	// See function 'gardenerDashboard.ingress(ctx)' in pkg/component/gardener/dashboard/ingress.go
+	isDashboardCertificateIssuedByGardener := wildcardCertSecretName == nil
 
 	return sharedcomponent.NewBlackboxExporter(
 		r.RuntimeClientSet.Client(),
@@ -1326,7 +1329,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.ServiceName, 8081):                                                                             v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
-			Config:            gardenblackboxexporter.Config(),
+			Config:            gardenblackboxexporter.Config(isDashboardCertificateIssuedByGardener),
 			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
 			Replicas:          1,
 		},

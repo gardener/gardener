@@ -23,7 +23,7 @@ const (
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
-func Config() blackboxexporterconfig.Config {
+func Config(isDashboardCertificateIssuedByGardener bool) blackboxexporterconfig.Config {
 	var (
 		defaultModuleConfig = func() blackboxexporterconfig.Module {
 			return blackboxexporterconfig.Module{
@@ -54,6 +54,10 @@ func Config() blackboxexporterconfig.Config {
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathKubeAPIServerCABundle
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
+
+	if isDashboardCertificateIssuedByGardener {
+		httpGardenerDashboardModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
+	}
 
 	return blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
 		httpGardenerAPIServerModuleName:       httpGardenerAPIServerModule,
