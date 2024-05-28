@@ -34,6 +34,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -104,12 +105,6 @@ func init() {
 	telegrafConfigTemplate = template.Must(template.New("telegraf-start").Funcs(sprig.TxtFuncMap()).Parse(telegrafConfigTplContent))
 }
 
-// Interface contains functions for a vali deployer.
-type Interface interface {
-	component.Deployer
-	component.MonitoringComponent
-}
-
 // Values are the values for the Vali.
 type Values struct {
 	ValiImage          string
@@ -139,7 +134,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) Interface {
+) component.Deployer {
 	return &vali{
 		client:         client,
 		namespace:      namespace,
@@ -239,14 +234,9 @@ func (v *vali) Deploy(ctx context.Context) error {
 		v.getService(),
 		v.getVPA(),
 		v.getStatefulSet(valiConfigMap.Name, telegrafConfigMapName, genericTokenKubeconfigSecretName),
+		v.getServiceMonitor(),
+		v.getPrometheusRule(),
 	)
-
-	if v.values.ClusterType == component.ClusterTypeSeed {
-		resources = append(resources,
-			v.getServiceMonitor(),
-			v.getPrometheusRule(),
-		)
-	}
 
 	if err := registry.Add(resources...); err != nil {
 		return err
@@ -842,9 +832,16 @@ func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.
 	}
 }
 
+func (v *vali) getPrometheusLabel() string {
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		return shoot.Label
+	}
+	return aggregate.Label
+}
+
 func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, aggregate.Label),
+	obj := &monitoringv1.ServiceMonitor{
+		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 			Endpoints: []monitoringv1.Endpoint{{
@@ -892,17 +889,50 @@ func (v *vali) getServiceMonitor() *monitoringv1.ServiceMonitor {
 			}},
 		},
 	}
+
+	if v.values.ShootNodeLoggingEnabled {
+		obj.Spec.Endpoints = append(obj.Spec.Endpoints, monitoringv1.Endpoint{
+			Port: telegrafName,
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				// This service monitor is targeting the logging service. Without explicitly overriding the
+				// job label, prometheus-operator would choose job=logging (service name).
+				{
+					Action:      "replace",
+					Replacement: ptr.To("vali-" + telegrafName),
+					TargetLabel: "job",
+				},
+				{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				},
+			},
+			MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+				SourceLabels: []monitoringv1.LabelName{"__name__"},
+				TargetLabel:  "__name__",
+				Regex:        `iptables_(.+)`,
+				Action:       "replace",
+				Replacement:  ptr.To("shoot_node_logging_incoming_$1"),
+			}},
+		})
+	}
+
+	return obj
 }
 
 func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
+	description := "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		description = "There are no vali pods running. No logs will be collected."
+	}
+
 	return &monitoringv1.PrometheusRule{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, aggregate.Label),
+		ObjectMeta: monitoringutils.ConfigObjectMeta("vali", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
 				Name: "vali.rules",
 				Rules: []monitoringv1.Rule{{
 					Alert: "ValiDown",
-					Expr:  intstr.FromString(fmt.Sprintf(`absent(up{%s="%s"} == 1)`, v1beta1constants.LabelApp, valiName)),
+					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
 					For:   ptr.To(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
@@ -911,7 +941,7 @@ func (v *vali) getPrometheusRule() *monitoringv1.PrometheusRule {
 						"visibility": "operator",
 					},
 					Annotations: map[string]string{
-						"description": "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected.",
+						"description": description,
 						"summary":     "Vali is down",
 					},
 				}},

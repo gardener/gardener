@@ -93,12 +93,24 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
+	o.Shoot.Components.ControlPlane.Alertmanager, err = b.DefaultAlertmanager()
+	if err != nil {
+		return nil, err
+	}
+	o.Shoot.Components.ControlPlane.BlackboxExporter, err = b.DefaultBlackboxExporterControlPlane()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
 		return nil, err
 	}
 	o.Shoot.Components.ControlPlane.EtcdEvents, err = b.DefaultEtcd(v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	if err != nil {
+		return nil, err
+	}
+	o.Shoot.Components.ControlPlane.EventLogger, err = b.DefaultEventLogger()
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +130,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 	o.Shoot.Components.ControlPlane.Plutono, err = b.DefaultPlutono()
+	if err != nil {
+		return nil, err
+	}
+	o.Shoot.Components.ControlPlane.Prometheus, err = b.DefaultPrometheus()
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +162,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+	o.Shoot.Components.ControlPlane.Vali, err = b.DefaultVali()
+	if err != nil {
+		return nil, err
 	}
 
 	// system components
@@ -199,30 +219,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
-
-	// Monitoring
-	o.Shoot.Components.Monitoring.Alertmanager, err = b.DefaultAlertmanager()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.Monitoring.Prometheus, err = b.DefaultPrometheus()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.Monitoring.BlackboxExporter, err = b.DefaultBlackboxExporterControlPlane()
-	if err != nil {
-		return nil, err
-	}
-
-	// Logging
-	o.Shoot.Components.Logging.EventLogger, err = b.DefaultEventLogger()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.Logging.Vali, err = b.DefaultVali()
-	if err != nil {
-		return nil, err
-	}
 
 	// Addons
 	if !o.Shoot.IsWorkerless {

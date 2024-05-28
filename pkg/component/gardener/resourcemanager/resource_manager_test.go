@@ -133,7 +133,7 @@ var _ = Describe("ResourceManager", func() {
 		updateMode                          = vpaautoscalingv1.UpdateModeAuto
 		controlledValues                    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		pdb                                 *policyv1.PodDisruptionBudget
-		serviceMonitor                      *monitoringv1.ServiceMonitor
+		serviceMonitorFor                   func(string) *monitoringv1.ServiceMonitor
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		mutatingWebhookConfiguration        *admissionregistrationv1.MutatingWebhookConfiguration
 		validatingWebhookConfiguration      *admissionregistrationv1.ValidatingWebhookConfiguration
@@ -856,34 +856,26 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 		}
-		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-gardener-resource-manager",
-				Namespace: deployNamespace,
-				Labels:    map[string]string{"prometheus": "seed"},
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"app": "gardener-resource-manager",
-				}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
+		serviceMonitorFor = func(prometheusLabel string) *monitoringv1.ServiceMonitor {
+			return &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      prometheusLabel + "-gardener-resource-manager",
+					Namespace: deployNamespace,
+					Labels:    map[string]string{"prometheus": prometheusLabel},
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+						"app": "gardener-resource-manager",
+					}},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port: "metrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_node_name"},
-							TargetLabel:  "pod",
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_namespace"},
-							TargetLabel:  "namespace",
-						},
-					},
-				}},
-			},
+						}},
+					}},
+				},
+			}
 		}
 
 		mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -1952,6 +1944,11 @@ subjects:
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(vpa))
 							}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
+							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(serviceMonitorFor("shoot")))
+							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResourceSecret))
@@ -2050,6 +2047,11 @@ subjects:
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(vpa))
 							}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
+							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(serviceMonitorFor("shoot")))
+							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResourceSecret))
@@ -2134,6 +2136,11 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
+						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitorFor("shoot")))
 						}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
@@ -2247,6 +2254,11 @@ subjects:
 						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
 						}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
+						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitorFor("shoot")))
+						}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResourceSecret))
@@ -2343,6 +2355,11 @@ subjects:
 						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
 						}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "seed-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
+						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitorFor("seed")))
+						}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&admissionregistrationv1.MutatingWebhookConfiguration{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&admissionregistrationv1.MutatingWebhookConfiguration{}), gomock.Any()).
 						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -2352,11 +2369,6 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&admissionregistrationv1.ValidatingWebhookConfiguration{}), gomock.Any()).
 						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(validatingWebhookConfiguration))
-						}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "seed-gardener-resource-manager"}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).
-						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(serviceMonitor))
 						}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
@@ -2383,7 +2395,7 @@ subjects:
 						c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 						c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 						c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-						c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "seed-gardener-resource-manager", Labels: map[string]string{"prometheus": "seed"}}}),
+						c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager", Labels: map[string]string{"prometheus": "shoot"}}}),
 						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 						c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 						c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
@@ -2493,7 +2505,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "seed-gardener-resource-manager", Labels: map[string]string{"prometheus": "seed"}}}).Return(fakeErr),
+					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager", Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
 				)
 
 				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
@@ -2510,7 +2522,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "seed-gardener-resource-manager", Labels: map[string]string{"prometheus": "seed"}}}),
+					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager", Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}).Return(fakeErr),
 				)
 
@@ -2528,7 +2540,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "seed-gardener-resource-manager", Labels: map[string]string{"prometheus": "seed"}}}),
+					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager", Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
 				)
@@ -2547,7 +2559,7 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "seed-gardener-resource-manager", Labels: map[string]string{"prometheus": "seed"}}}),
+					c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-gardener-resource-manager", Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),

@@ -1,5 +1,5 @@
 rule_files:
-- kube-controller-manager.rules.yaml
+- shoot-kube-controller-manager.prometheusrule.yaml
 
 evaluation_interval: 30s
 

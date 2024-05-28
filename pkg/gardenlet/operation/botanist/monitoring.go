@@ -32,7 +32,6 @@ import (
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -64,7 +63,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 // DeployAlertManager reconciles the shoot alert manager.
 func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 	if !b.Shoot.WantsAlertmanager || !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Alertmanager.Destroy(ctx)
+		return b.Shoot.Components.ControlPlane.Alertmanager.Destroy(ctx)
 	}
 
 	ingressAuthSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
@@ -72,10 +71,10 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
-	b.Shoot.Components.Monitoring.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
-	b.Shoot.Components.Monitoring.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.ControlPlane.Alertmanager.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
 
-	return b.Shoot.Components.Monitoring.Alertmanager.Deploy(ctx)
+	return b.Shoot.Components.ControlPlane.Alertmanager.Deploy(ctx)
 }
 
 // DefaultPrometheus creates a new prometheus deployer.
@@ -172,7 +171,7 @@ func (b *Botanist) MigratePrometheus(ctx context.Context) error {
 // DeployPrometheus reconciles the shoot Prometheus.
 func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx)
+		return b.Shoot.Components.ControlPlane.Prometheus.Destroy(ctx)
 	}
 
 	if err := gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
@@ -184,15 +183,15 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
-	b.Shoot.Components.Monitoring.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
-	b.Shoot.Components.Monitoring.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
-	b.Shoot.Components.Monitoring.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
+	b.Shoot.Components.ControlPlane.Prometheus.SetIngressAuthSecret(ingressAuthSecret)
+	b.Shoot.Components.ControlPlane.Prometheus.SetIngressWildcardCertSecret(b.ControlPlaneWildcardCert)
+	b.Shoot.Components.ControlPlane.Prometheus.SetNamespaceUID(b.SeedNamespaceObject.UID)
 
 	caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-	b.Shoot.Components.Monitoring.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
+	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
 	// TODO(rfranzke): Remove this block after v1.100 got released.
 	{
@@ -200,11 +199,11 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalScrapeConfigs(rawScrapeConfigs)
-		b.Shoot.Components.Monitoring.Prometheus.SetAdditionalResources(prometheusRule)
+		b.Shoot.Components.ControlPlane.Prometheus.SetAdditionalScrapeConfigs(rawScrapeConfigs)
+		b.Shoot.Components.ControlPlane.Prometheus.SetAdditionalResources(prometheusRule)
 	}
 
-	if err := b.Shoot.Components.Monitoring.Prometheus.Deploy(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx); err != nil {
 		return err
 	}
 
@@ -228,7 +227,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 
 // DestroyPrometheus destroys the shoot Prometheus.
 func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
-	if err := b.Shoot.Components.Monitoring.Prometheus.Destroy(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.Prometheus.Destroy(ctx); err != nil {
 		return err
 	}
 
@@ -238,22 +237,6 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 // TODO(rfranzke): Remove this function after v1.100 has been released.
 func (b *Botanist) getPrometheusRuleAndRawScrapeConfigs(ctx context.Context) (prometheusRule *monitoringv1.PrometheusRule, rawScrapeConfigs []string, err error) {
 	var rawAlertingRules []string
-
-	for _, component := range b.getMonitoringComponents() {
-		componentsScrapeConfigs, err := component.ScrapeConfigs()
-		if err != nil {
-			return prometheusRule, rawScrapeConfigs, err
-		}
-		rawScrapeConfigs = append(rawScrapeConfigs, componentsScrapeConfigs...)
-
-		componentsAlertingRules, err := component.AlertingRules()
-		if err != nil {
-			return prometheusRule, rawScrapeConfigs, err
-		}
-		for _, rule := range componentsAlertingRules {
-			rawAlertingRules = append(rawAlertingRules, rule)
-		}
-	}
 
 	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
@@ -301,36 +284,6 @@ spec:
 	}
 
 	return
-}
-
-func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
-	// Fetch component-specific monitoring configuration
-	monitoringComponents := []component.MonitoringComponent{
-		b.Shoot.Components.ControlPlane.EtcdMain,
-		b.Shoot.Components.ControlPlane.EtcdEvents,
-		b.Shoot.Components.ControlPlane.KubeAPIServer,
-		b.Shoot.Components.ControlPlane.KubeControllerManager,
-		b.Shoot.Components.ControlPlane.KubeStateMetrics,
-		b.Shoot.Components.ControlPlane.ResourceManager,
-	}
-
-	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
-	}
-
-	if !b.Shoot.IsWorkerless {
-		monitoringComponents = append(monitoringComponents,
-			b.Shoot.Components.ControlPlane.KubeScheduler,
-			b.Shoot.Components.ControlPlane.MachineControllerManager,
-			b.Shoot.Components.ControlPlane.VPNSeedServer,
-		)
-
-		if b.Shoot.WantsClusterAutoscaler {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
-		}
-	}
-
-	return monitoringComponents
 }
 
 // TODO(rfranzke): Remove this function after v1.100 has been released.

@@ -11,6 +11,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +60,8 @@ var _ = Describe("MachineControllerManager", func() {
 		deployment            *appsv1.Deployment
 		podDisruptionBudget   *policyv1.PodDisruptionBudget
 		vpa                   *vpaautoscalingv1.VerticalPodAutoscaler
+		prometheusRule        *monitoringv1.PrometheusRule
+		serviceMonitor        *monitoringv1.ServiceMonitor
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
 	)
@@ -258,8 +261,6 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 		}
 
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager-vpa",
@@ -272,12 +273,12 @@ var _ = Describe("MachineControllerManager", func() {
 					Name:       "machine-controller-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 						ContainerName:    "machine-controller-manager",
-						ControlledValues: &vpaControlledValues,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("70Mi"),
 						},
@@ -287,6 +288,58 @@ var _ = Describe("MachineControllerManager", func() {
 						},
 					}},
 				},
+			},
+		}
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-machine-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "shoot"},
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "machine-controller-manager.rules",
+					Rules: []monitoringv1.Rule{{
+						Alert: "MachineControllerManagerDown",
+						Expr:  intstr.FromString(`absent(up{job="machine-controller-manager"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "machine-controller-manager",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Machine controller manager is down.",
+							"description": "There are no running machine controller manager instances. No shoot nodes can be created/maintained.",
+						},
+					}},
+				}},
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-machine-controller-manager",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "shoot"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "kubernetes",
+					"role": "machine-controller-manager",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(mcm_machine_deployment_items_total|mcm_machine_deployment_info|mcm_machine_deployment_info_spec_paused|mcm_machine_deployment_info_spec_replicas|mcm_machine_deployment_info_spec_min_ready_seconds|mcm_machine_deployment_info_spec_rolling_update_max_surge|mcm_machine_deployment_info_spec_rolling_update_max_unavailable|mcm_machine_deployment_info_spec_revision_history_limit|mcm_machine_deployment_info_spec_progress_deadline_seconds|mcm_machine_deployment_info_spec_rollback_to_revision|mcm_machine_deployment_status_condition|mcm_machine_deployment_status_available_replicas|mcm_machine_deployment_status_unavailable_replicas|mcm_machine_deployment_status_ready_replicas|mcm_machine_deployment_status_updated_replicas|mcm_machine_deployment_status_collision_count|mcm_machine_deployment_status_replicas|mcm_machine_deployment_failed_machines|mcm_machine_set_items_total|mcm_machine_set_info|mcm_machine_set_failed_machines|mcm_machine_set_info_spec_replicas|mcm_machine_set_info_spec_min_ready_seconds|mcm_machine_set_status_condition|mcm_machine_set_status_available_replicas|mcm_machine_set_status_fully_labelled_replicas|mcm_machine_set_status_replicas|mcm_machine_set_status_ready_replicas|mcm_machine_stale_machines_total|mcm_machine_items_total|mcm_machine_current_status_phase|mcm_machine_info|mcm_machine_status_condition|mcm_cloud_api_requests_total|mcm_cloud_api_requests_failed_total|mcm_cloud_api_api_request_duration_seconds_bucket|mcm_cloud_api_api_request_duration_seconds_sum|mcm_cloud_api_api_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_sum|mcm_cloud_api_driver_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_bucket|mcm_cloud_api_driver_request_failed_total|mcm_misc_scrape_failure_total|mcm_machine_controller_frozen|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$`,
+					}},
+				}},
 			},
 		}
 
@@ -483,6 +536,16 @@ subjects:
 			vpa.ResourceVersion = "1"
 			Expect(actualVPA).To(Equal(vpa))
 
+			actualPrometheusRule := &monitoringv1.PrometheusRule{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+			prometheusRule.ResourceVersion = "1"
+			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+			actualServiceMonitor := &monitoringv1.ServiceMonitor{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), actualServiceMonitor)).To(Succeed())
+			serviceMonitor.ResourceVersion = "1"
+			Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
+
 			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
 			managedResource.ResourceVersion = "1"
@@ -536,6 +599,8 @@ subjects:
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 			Expect(fakeClient.Create(ctx, podDisruptionBudget)).To(Succeed())
 			Expect(fakeClient.Create(ctx, vpa)).To(Succeed())
+			Expect(fakeClient.Create(ctx, prometheusRule)).To(Succeed())
+			Expect(fakeClient.Create(ctx, serviceMonitor)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -543,6 +608,8 @@ subjects:
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), &monitoringv1.PrometheusRule{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())

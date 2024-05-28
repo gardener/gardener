@@ -23,8 +23,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -47,7 +48,6 @@ const (
 // Interface contains functions for a kube-apiserver deployer.
 type Interface interface {
 	apiserver.Interface
-	component.MonitoringComponent
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
@@ -405,9 +405,13 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// apiserver deployed for garden cluster
-	if k.values.NamePrefix != "" {
-		if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
+	if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
+		return err
+	}
+
+	// apiserver deployed for shoot cluster
+	if k.values.NamePrefix == "" {
+		if err := k.reconcilePrometheusRule(ctx, k.emptyPrometheusRule()); err != nil {
 			return err
 		}
 	}
@@ -437,6 +441,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyRoleHAVPN(),
 		k.emptyRoleBindingHAVPN(),
 		k.emptyServiceMonitor(),
+		k.emptyPrometheusRule(),
 	)
 }
 
@@ -548,6 +553,20 @@ func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 
 func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
 	k.values.SNI = config
+}
+
+func (k *kubeAPIServer) prometheusAccessSecretName() string {
+	if k.values.NamePrefix != "" {
+		return garden.AccessSecretName
+	}
+	return shoot.AccessSecretName
+}
+
+func (k *kubeAPIServer) prometheusLabel() string {
+	if k.values.NamePrefix != "" {
+		return garden.Label
+	}
+	return shoot.Label
 }
 
 // GetLabels returns the labels for the kube-apiserver.

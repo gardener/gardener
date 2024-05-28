@@ -12,7 +12,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
-	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -25,30 +24,30 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 	}
 
 	if b.isShootEventLoggerEnabled() {
-		if err := b.Shoot.Components.Logging.EventLogger.Deploy(ctx); err != nil {
+		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
 			return err
 		}
 	} else {
-		if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
+		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
 			return err
 		}
 	}
 
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
-		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
+		return b.Shoot.Components.ControlPlane.Vali.Destroy(ctx)
 	}
 
-	return b.Shoot.Components.Logging.Vali.Deploy(ctx)
+	return b.Shoot.Components.ControlPlane.Vali.Deploy(ctx)
 }
 
 // DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
-	if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
 		return err
 	}
 
-	return b.Shoot.Components.Logging.Vali.Destroy(ctx)
+	return b.Shoot.Components.ControlPlane.Vali.Destroy(ctx)
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
@@ -87,7 +86,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 }
 
 // DefaultVali returns a deployer for Vali.
-func (b *Botanist) DefaultVali() (vali.Interface, error) {
+func (b *Botanist) DefaultVali() (component.Deployer, error) {
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,

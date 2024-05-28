@@ -325,7 +325,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteAlertmanager = g.Add(flow.Task{
 			Name:         "Deleting Shoot Alertmanager",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.Alertmanager.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.Alertmanager.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deletePrometheus = g.Add(flow.Task{
@@ -335,7 +335,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteBlackboxExporter = g.Add(flow.Task{
 			Name:         "Destroying control plane blackbox-exporter",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Monitoring.BlackboxExporter.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.BlackboxExporter.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteClusterAutoscaler = g.Add(flow.Task{

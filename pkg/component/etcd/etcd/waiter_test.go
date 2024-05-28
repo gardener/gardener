@@ -13,6 +13,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,6 +66,8 @@ var _ = Describe("#Wait", func() {
 		Expect(networkingv1.AddToScheme(s)).To(Succeed())
 		Expect(hvpav1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(druidv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(monitoringv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(monitoringv1.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		sm = fakesecretsmanager.New(c, testNamespace)

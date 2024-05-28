@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -236,34 +237,73 @@ var _ = Describe("KubeControllerManager", func() {
 			},
 		}
 
-		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "garden-virtual-garden-kube-controller-manager",
-				Namespace:       namespace,
-				Labels:          map[string]string{"prometheus": "garden"},
-				ResourceVersion: "1",
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port:      "metrics",
-					Scheme:    "https",
-					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
-					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
-						Key:                  "token",
+		serviceMonitor = func(prometheusName, namePrefix string) *monitoringv1.ServiceMonitor {
+			return &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            prometheusName + "-" + namePrefix + "kube-controller-manager",
+					Namespace:       namespace,
+					Labels:          map[string]string{"prometheus": prometheusName},
+					ResourceVersion: "1",
+				},
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "kubernetes", "role": "controller-manager"}},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port:      "metrics",
+						Scheme:    "https",
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
+							Key:                  "token",
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						}},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(rest_client_requests_total|process_max_fds|process_open_fds)$`,
+						}},
 					}},
-					RelabelConfigs: []monitoringv1.RelabelConfig{{
-						Action: "labelmap",
-						Regex:  `__meta_kubernetes_service_label_(.+)`,
+				},
+			}
+		}
+		prometheusRule = func(prometheusName, namePrefix string) *monitoringv1.PrometheusRule {
+			labels := map[string]string{
+				"service":    v1beta1constants.DeploymentNameKubeControllerManager,
+				"severity":   "critical",
+				"visibility": "all",
+			}
+
+			if namePrefix != "" {
+				labels["topology"] = "garden"
+			} else {
+				labels["type"] = "seed"
+			}
+
+			return &monitoringv1.PrometheusRule{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            prometheusName + "-" + namePrefix + "kube-controller-manager",
+					Namespace:       namespace,
+					Labels:          map[string]string{"prometheus": prometheusName},
+					ResourceVersion: "1",
+				},
+				Spec: monitoringv1.PrometheusRuleSpec{
+					Groups: []monitoringv1.RuleGroup{{
+						Name: "kube-controller-manager.rules",
+						Rules: []monitoringv1.Rule{{
+							Alert:  "KubeControllerManagerDown",
+							Expr:   intstr.FromString(`absent(up{job="` + namePrefix + `kube-controller-manager"} == 1)`),
+							For:    ptr.To(monitoringv1.Duration("15m")),
+							Labels: labels,
+							Annotations: map[string]string{
+								"summary":     "Kube Controller Manager is down.",
+								"description": "Deployments and replication controllers are not making progress.",
+							},
+						}},
 					}},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__name__"},
-						Action:       "keep",
-						Regex:        `^(rest_client_requests_total|process_max_fds|process_open_fds)$`,
-					}},
-				}},
-			},
+				},
+			}
 		}
 
 		replicas      int32 = 1
@@ -581,6 +621,18 @@ namespace: kube-system
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
 			Expect(actualPDB).To(DeepEqual(pdbFor(runtimeVersionGreaterEqual126)))
 
+			expectedServiceMonitor := serviceMonitor("shoot", "")
+			actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: expectedServiceMonitor.Name, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
+			Expect(actualServiceMonitor).To(DeepEqual(expectedServiceMonitor))
+
+			expectedPrometheusRule := prometheusRule("shoot", "")
+			actualPrometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: expectedPrometheusRule.Name, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPrometheusRule), actualPrometheusRule)).To(Succeed())
+			Expect(actualPrometheusRule).To(DeepEqual(expectedPrometheusRule))
+
+			componenttest.PrometheusRule(actualPrometheusRule, "testdata/shoot-kube-controller-manager.prometheusrule.test.yaml")
+
 			actualSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
 			Expect(actualSecret).To(DeepEqual(secret))
@@ -804,12 +856,18 @@ namespace: kube-system
 				Expect(actualService).To(DeepEqual(service))
 			})
 
-			It("should deploy the expected ServiceMonitor", func() {
+			It("should deploy the expected monitoring resources", func() {
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: serviceMonitor.Name, Namespace: namespace}}
+				expectedServiceMonitor := serviceMonitor("garden", values.NamePrefix)
+				actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: expectedServiceMonitor.Name, Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
-				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
+				Expect(actualServiceMonitor).To(DeepEqual(expectedServiceMonitor))
+
+				expectedPrometheusRule := prometheusRule("garden", values.NamePrefix)
+				actualPrometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: expectedPrometheusRule.Name, Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPrometheusRule), actualPrometheusRule)).To(Succeed())
+				Expect(actualPrometheusRule).To(DeepEqual(expectedPrometheusRule))
 			})
 		})
 	})
@@ -821,7 +879,8 @@ namespace: kube-system
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
 			hvpa := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
-			serviceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "garden-kube-controller-manager", Namespace: namespace}}
+			serviceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-kube-controller-manager", Namespace: namespace}}
+			prometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: "shoot-kube-controller-manager", Namespace: namespace}}
 			pdb := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
@@ -831,6 +890,7 @@ namespace: kube-system
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, service)).To(Succeed())
 			Expect(c.Create(ctx, serviceMonitor)).To(Succeed())
+			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
 			Expect(c.Create(ctx, deploy)).To(Succeed())
 			Expect(c.Create(ctx, pdb)).To(Succeed())
 			Expect(c.Create(ctx, secret)).To(Succeed())
@@ -851,6 +911,7 @@ namespace: kube-system
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(service), service)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())

@@ -219,6 +219,8 @@ rules:
   - monitoring.coreos.com
   resources:
   - servicemonitors
+  - prometheusrules
+  - scrapeconfigs
   verbs:
   - list
   - watch

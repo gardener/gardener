@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -40,9 +43,7 @@ import (
 )
 
 const (
-	// ServiceName is the name of the service of the cluster-autoscaler.
-	ServiceName = "cluster-autoscaler"
-
+	serviceName               = "cluster-autoscaler"
 	managedResourceTargetName = "shoot-core-cluster-autoscaler"
 	containerName             = v1beta1constants.DeploymentNameClusterAutoscaler
 
@@ -53,7 +54,6 @@ const (
 // Interface contains functions for a cluster-autoscaler deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
 	SetNamespaceUID(types.UID)
 	// SetMachineDeployments sets the machine deployments.
@@ -106,6 +106,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service             = c.emptyService()
 		deployment          = c.emptyDeployment()
 		podDisruptionBudget = c.emptyPodDisruptionBudget()
+		serviceMonitor      = c.emptyServiceMonitor()
+		prometheusRule      = c.emptyPrometheusRule()
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -276,6 +278,76 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, prometheusRule, func() error {
+		metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", shoot.Label)
+		prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+			Groups: []monitoringv1.RuleGroup{{
+				Name: "cluster-autoscaler.rules",
+				Rules: []monitoringv1.Rule{{
+					Alert: "ClusterAutoscalerDown",
+					Expr:  intstr.FromString(`absent(up{job="cluster-autoscaler"} == 1)`),
+					For:   ptr.To(monitoringv1.Duration("15m")),
+					Labels: map[string]string{
+						"service":  v1beta1constants.DeploymentNameClusterAutoscaler,
+						"severity": "critical",
+						"type":     "seed",
+					},
+					Annotations: map[string]string{
+						"summary":     "Cluster autoscaler is down",
+						"description": "There is no running cluster autoscaler. Shoot's Nodes wont be scaled dynamically, based on the load.",
+					},
+				}},
+			}},
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, serviceMonitor, func() error {
+		metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", shoot.Label)
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: portNameMetrics,
+				RelabelConfigs: []monitoringv1.RelabelConfig{{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				}},
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"process_max_fds",
+					"process_open_fds",
+					"cluster_autoscaler_cluster_safe_to_autoscale",
+					"cluster_autoscaler_nodes_count",
+					"cluster_autoscaler_unschedulable_pods_count",
+					"cluster_autoscaler_node_groups_count",
+					"cluster_autoscaler_max_nodes_count",
+					"cluster_autoscaler_cluster_cpu_current_cores",
+					"cluster_autoscaler_cpu_limits_cores",
+					"cluster_autoscaler_cluster_memory_current_bytes",
+					"cluster_autoscaler_memory_limits_bytes",
+					"cluster_autoscaler_last_activity",
+					"cluster_autoscaler_function_duration_seconds",
+					"cluster_autoscaler_errors_total",
+					"cluster_autoscaler_scaled_up_nodes_total",
+					"cluster_autoscaler_scaled_down_nodes_total",
+					"cluster_autoscaler_scaled_up_gpu_nodes_total",
+					"cluster_autoscaler_scaled_down_gpu_nodes_total",
+					"cluster_autoscaler_failed_scale_ups_total",
+					"cluster_autoscaler_evicted_pods_total",
+					"cluster_autoscaler_unneeded_nodes_count",
+					"cluster_autoscaler_old_unregistered_nodes_removed_count",
+					"cluster_autoscaler_skipped_scale_events_count",
+				),
+			}},
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
 	if err != nil {
 		return err
@@ -304,6 +376,8 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 		c.newShootAccessSecret().Secret,
 		c.emptyService(),
 		c.emptyServiceAccount(),
+		c.emptyPrometheusRule(),
+		c.emptyServiceMonitor(),
 	)
 }
 
@@ -327,7 +401,7 @@ func (c *clusterAutoscaler) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (c *clusterAutoscaler) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: c.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: c.namespace}}
 }
 
 func (c *clusterAutoscaler) newShootAccessSecret() *gardenerutils.AccessSecret {
@@ -340,6 +414,14 @@ func (c *clusterAutoscaler) emptyDeployment() *appsv1.Deployment {
 
 func (c *clusterAutoscaler) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: c.namespace}}
+}
+
+func (c *clusterAutoscaler) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace, shoot.Label)}
+}
+
+func (c *clusterAutoscaler) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace, shoot.Label)}
 }
 
 func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
@@ -430,7 +512,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"endpoints"},
-					ResourceNames: []string{ServiceName},
+					ResourceNames: []string{serviceName},
 					Verbs:         []string{"get", "update"},
 				},
 				{

@@ -1,22 +1,24 @@
 rule_files:
-- vali.rules.yaml
+- shoot-vali.prometheusrule.yaml
 
 evaluation_interval: 30s
 
 tests:
 - interval: 30s
   input_series:
+  # ValiDown
   - series: 'up{job="vali"}'
-    values: '0+0x40'
+    values: '0+0x30'
   alert_rule_test:
-  - eval_time: 20m
+  - eval_time: 30m
     alertname: ValiDown
     exp_alerts:
     - exp_labels:
-        service: vali
+        service: logging
         severity: warning
         type: seed
         visibility: operator
       exp_annotations:
-        description: There are no running vali pods. No logs will be collected.
+        description: "There are no vali pods running. No logs will be collected."
         summary: Vali is down
+

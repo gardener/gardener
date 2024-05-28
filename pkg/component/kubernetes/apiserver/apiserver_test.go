@@ -45,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -109,6 +110,7 @@ var _ = Describe("KubeAPIServer", func() {
 		hvpa                       *hvpav1alpha1.Hvpa
 		podDisruptionBudget        *policyv1.PodDisruptionBudget
 		serviceMonitor             *monitoringv1.ServiceMonitor
+		prometheusRule             *monitoringv1.PrometheusRule
 		configMapAdmission         *corev1.ConfigMap
 		secretAdmissionKubeconfigs *corev1.Secret
 		configMapAuditPolicy       *corev1.ConfigMap
@@ -186,7 +188,11 @@ var _ = Describe("KubeAPIServer", func() {
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "garden-virtual-garden-kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespace,
 			},
 		}
@@ -871,20 +877,27 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("ServiceMonitor", func() {
+			var (
+				prometheusName         string
+				expectedServiceMonitor *monitoringv1.ServiceMonitor
+			)
+
 			BeforeEach(func() {
-				namePrefix = "virtual-garden-"
+				prometheusName = ""
 			})
 
-			It("should successfully deploy the resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(BeNotFoundError())
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(Succeed())
-				Expect(serviceMonitor).To(DeepEqual(&monitoringv1.ServiceMonitor{
+			JustBeforeEach(func() {
+				name := "garden-virtual-garden-kube-apiserver"
+				if prometheusName == "shoot" {
+					name = "shoot-kube-apiserver"
+				}
+
+				expectedServiceMonitor = &monitoringv1.ServiceMonitor{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            serviceMonitor.Name,
+						Name:            name,
 						Namespace:       serviceMonitor.Namespace,
 						ResourceVersion: "1",
-						Labels:          map[string]string{"prometheus": "garden"},
+						Labels:          map[string]string{"prometheus": prometheusName},
 					},
 					Spec: monitoringv1.ServiceMonitorSpec{
 						Selector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -896,17 +909,288 @@ var _ = Describe("KubeAPIServer", func() {
 							Scheme:     "https",
 							TLSConfig:  &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
 							Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+								LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
 								Key:                  "token",
+							}},
+							RelabelConfigs: []monitoringv1.RelabelConfig{{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_service_label_(.+)`,
 							}},
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 								SourceLabels: []monitoringv1.LabelName{"__name__"},
 								Action:       "keep",
-								Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_request_total|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_registered_watchers|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_request_duration_seconds_.+|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|go_.+)$`,
+								Regex:        `^(apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_cache_list_.+|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_init_events_total|apiserver_latency|apiserver_latency_seconds|apiserver_longrunning_requests|apiserver_request_duration_seconds_.+|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_terminations_total|apiserver_response_sizes_.+|apiserver_storage_db_total_size_in_bytes|apiserver_storage_list_.+|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_storage_size_bytes|apiserver_registered_watchers|apiserver_request_count|apiserver_request_total|apiserver_watch_duration|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_object_counts|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$`,
 							}},
 						}},
 					},
-				}))
+				}
+			})
+
+			When("name prefix is provided", func() {
+				BeforeEach(func() {
+					namePrefix = "virtual-garden-"
+					prometheusName = "garden"
+				})
+
+				It("should successfully deploy the resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedServiceMonitor), serviceMonitor)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedServiceMonitor), serviceMonitor)).To(Succeed())
+					Expect(serviceMonitor).To(DeepEqual(expectedServiceMonitor))
+				})
+			})
+
+			When("name prefix is not provided", func() {
+				BeforeEach(func() {
+					prometheusName = "shoot"
+				})
+
+				It("should successfully deploy the resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedServiceMonitor), serviceMonitor)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedServiceMonitor), serviceMonitor)).To(Succeed())
+					Expect(serviceMonitor).To(DeepEqual(expectedServiceMonitor))
+				})
+			})
+		})
+
+		Describe("PrometheusRule", func() {
+			var (
+				prometheusName         string
+				expectedPrometheusRule *monitoringv1.PrometheusRule
+			)
+
+			BeforeEach(func() {
+				prometheusName = ""
+			})
+
+			JustBeforeEach(func() {
+				name := "garden-virtual-garden-kube-apiserver"
+				if prometheusName == "shoot" {
+					name = "shoot-kube-apiserver"
+				}
+
+				expectedPrometheusRule = &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            name,
+						Namespace:       serviceMonitor.Namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"prometheus": prometheusName},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{{
+							Name: "kube-apiserver.rules",
+							Rules: []monitoringv1.Rule{
+								{
+									Alert: "ApiServerNotReachable",
+									Expr:  intstr.FromString(`probe_success{job="blackbox-apiserver"} == 0`),
+									For:   ptr.To(monitoringv1.Duration("5m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "blocker",
+										"type":       "seed",
+										"visibility": "all",
+									},
+									Annotations: map[string]string{
+										"summary":     "API server not reachable (externally).",
+										"description": "API server not reachable via external endpoint: {{ $labels.instance }}.",
+									},
+								},
+								{
+									Alert: "KubeApiserverDown",
+									Expr:  intstr.FromString(`absent(up{job="kube-apiserver"} == 1)`),
+									For:   ptr.To(monitoringv1.Duration("5m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "blocker",
+										"type":       "seed",
+										"visibility": "operator",
+									},
+									Annotations: map[string]string{
+										"summary":     "API server unreachable.",
+										"description": "All API server replicas are down/unreachable, or all API server could not be found.",
+									},
+								},
+								{
+									Alert: "KubeApiServerTooManyOpenFileDescriptors",
+									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50`),
+									For:   ptr.To(monitoringv1.Duration("30m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "warning",
+										"type":       "seed",
+										"visibility": "owner",
+									},
+									Annotations: map[string]string{
+										"summary":     "The API server has too many open file descriptors",
+										"description": "The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.",
+									},
+								},
+								{
+									Alert: "KubeApiServerTooManyOpenFileDescriptors",
+									Expr:  intstr.FromString(`100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80`),
+									For:   ptr.To(monitoringv1.Duration("30m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "critical",
+										"type":       "seed",
+										"visibility": "owner",
+									},
+									Annotations: map[string]string{
+										"summary":     "The API server has too many open file descriptors",
+										"description": "The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.",
+									},
+								},
+								{
+									Alert: "KubeApiServerLatency",
+									// Some verbs excluded because they are expected to be long-lasting:
+									// - WATCHLIST is long-poll
+									// - CONNECT is "kubectl exec"
+									Expr: intstr.FromString(`histogram_quantile(0.99, sum without (instance,resource,subresource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3`),
+									For:  ptr.To(monitoringv1.Duration("30m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "warning",
+										"type":       "seed",
+										"visibility": "owner",
+									},
+									Annotations: map[string]string{
+										"summary":     "Kubernetes API server latency is high",
+										"description": "Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.",
+									},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.2"},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.5"},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.9"},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.2"},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.5"},
+								},
+								{
+									Record: "shoot:apiserver_watch_duration:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))`),
+									Labels: map[string]string{"quantile": "0.9"},
+								},
+
+								// API Auditlog
+								{
+									Alert: "KubeApiServerTooManyAuditlogFailures",
+									Expr:  intstr.FromString(`sum(rate (apiserver_audit_error_total{plugin!="log",job="kube-apiserver"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1`),
+									For:   ptr.To(monitoringv1.Duration("15m")),
+									Labels: map[string]string{
+										"service":    "auditlog",
+										"severity":   "warning",
+										"type":       "seed",
+										"visibility": "operator",
+									},
+									Annotations: map[string]string{
+										"summary":     "The kubernetes API server has too many failed attempts to log audit events",
+										"description": "The API servers cumulative failure rate in logging audit events is greater than 2%.",
+									},
+								},
+								{
+									Record: "shoot:apiserver_audit_event_total:sum",
+									Expr:   intstr.FromString(`sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m]))`),
+								},
+								{
+									Record: "shoot:apiserver_audit_error_total:sum",
+									Expr:   intstr.FromString(`sum(rate(apiserver_audit_error_total{plugin!="log",job="kube-apiserver"}[5m]))`),
+								},
+
+								// API latency
+								{
+									Record: "shoot:apiserver_latency_seconds:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.99, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))`),
+									Labels: map[string]string{"quantile": "0.99"},
+								},
+								{
+									Record: "shoot:apiserver_latency_seconds:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.9, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))`),
+									Labels: map[string]string{"quantile": "0.9"},
+								},
+								{
+									Record: "shoot:apiserver_latency_seconds:quantile",
+									Expr:   intstr.FromString(`histogram_quantile(0.5, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))`),
+									Labels: map[string]string{"quantile": "0.5"},
+								},
+
+								// API server request duration greater than 1s percentage
+								{
+									Record: "shoot:apiserver_latency:percentage",
+									Expr:   intstr.FromString(`1 - sum(rate(apiserver_request_duration_seconds_bucket{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h])) / sum(rate(apiserver_request_duration_seconds_count{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH"}[1h]))`),
+								},
+
+								{
+									Record: "shoot:kube_apiserver:sum_by_pod",
+									Expr:   intstr.FromString(`sum(up{job="kube-apiserver"}) by (pod)`),
+								},
+
+								// API failure rate
+								{
+									Alert: "ApiserverRequestsFailureRate",
+									Expr:  intstr.FromString(`max(sum by(instance,resource,verb) (rate(apiserver_request_total{code=~"5.."}[10m])) / sum by(instance,resource,verb) (rate(apiserver_request_total[10m]))) * 100 > 10`),
+									For:   ptr.To(monitoringv1.Duration("30m")),
+									Labels: map[string]string{
+										"service":    "kube-apiserver",
+										"severity":   "warning",
+										"type":       "seed",
+										"visibility": "operator",
+									},
+									Annotations: map[string]string{
+										"summary":     "Kubernetes API server failure rate is high",
+										"description": "The API Server requests failure rate exceeds 10%.",
+									},
+								},
+							},
+						}},
+					},
+				}
+			})
+
+			When("name prefix is provided", func() {
+				BeforeEach(func() {
+					namePrefix = "virtual-garden-"
+					prometheusName = "garden"
+				})
+
+				It("should not deploy the resource at all", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPrometheusRule), prometheusRule)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPrometheusRule), prometheusRule)).To(BeNotFoundError())
+				})
+			})
+
+			When("name prefix is not provided", func() {
+				BeforeEach(func() {
+					prometheusName = "shoot"
+				})
+
+				It("should successfully deploy the resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPrometheusRule), prometheusRule)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPrometheusRule), prometheusRule)).To(Succeed())
+					Expect(prometheusRule).To(DeepEqual(expectedPrometheusRule))
+
+					componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-apiserver.prometheusrule.test.yaml")
+				})
 			})
 		})
 

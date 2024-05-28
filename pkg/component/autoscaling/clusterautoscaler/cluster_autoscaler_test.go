@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -367,6 +368,59 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Expect(gardenerutils.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
 			return deploy
 		}
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-cluster-autoscaler",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "cluster-autoscaler.rules",
+					Rules: []monitoringv1.Rule{{
+						Alert: "ClusterAutoscalerDown",
+						Expr:  intstr.FromString(`absent(up{job="cluster-autoscaler"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":  "cluster-autoscaler",
+							"severity": "critical",
+							"type":     "seed",
+						},
+						Annotations: map[string]string{
+							"summary":     "Cluster autoscaler is down",
+							"description": "There is no running cluster autoscaler. Shoot's Nodes wont be scaled dynamically, based on the load.",
+						},
+					}},
+				}},
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-cluster-autoscaler",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "kubernetes",
+					"role": "cluster-autoscaler",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(process_max_fds|process_open_fds|cluster_autoscaler_cluster_safe_to_autoscale|cluster_autoscaler_nodes_count|cluster_autoscaler_unschedulable_pods_count|cluster_autoscaler_node_groups_count|cluster_autoscaler_max_nodes_count|cluster_autoscaler_cluster_cpu_current_cores|cluster_autoscaler_cpu_limits_cores|cluster_autoscaler_cluster_memory_current_bytes|cluster_autoscaler_memory_limits_bytes|cluster_autoscaler_last_activity|cluster_autoscaler_function_duration_seconds|cluster_autoscaler_errors_total|cluster_autoscaler_scaled_up_nodes_total|cluster_autoscaler_scaled_down_nodes_total|cluster_autoscaler_scaled_up_gpu_nodes_total|cluster_autoscaler_scaled_down_gpu_nodes_total|cluster_autoscaler_failed_scale_ups_total|cluster_autoscaler_evicted_pods_total|cluster_autoscaler_unneeded_nodes_count|cluster_autoscaler_old_unregistered_nodes_removed_count|cluster_autoscaler_skipped_scale_events_count)$`,
+					}},
+				}},
+			},
+		}
 
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -658,6 +712,14 @@ subjects:
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
 				Expect(actualVPA).To(DeepEqual(vpa))
+
+				actualPrometheusRule := &monitoringv1.PrometheusRule{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+				Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+				actualServiceMonitor := &monitoringv1.ServiceMonitor{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), actualServiceMonitor)).To(Succeed())
+				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
 			It("w/o config", func() { test(false, false) })
@@ -775,6 +837,41 @@ subjects:
 			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the prometheus rule cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
+				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "shoot-cluster-autoscaler", Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the service monitor cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
+				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "shoot-cluster-autoscaler", Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "shoot-cluster-autoscaler", Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should successfully delete all the resources", func() {
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
@@ -786,6 +883,8 @@ subjects:
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "shoot-cluster-autoscaler", Labels: map[string]string{"prometheus": "shoot"}}}),
+				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "shoot-cluster-autoscaler", Labels: map[string]string{"prometheus": "shoot"}}}),
 			)
 
 			Expect(clusterAutoscaler.Destroy(ctx)).To(Succeed())

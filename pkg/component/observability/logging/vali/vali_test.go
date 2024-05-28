@@ -54,7 +54,6 @@ const (
 	telegrafConfigMapName              = "telegraf-config-b4c38756"
 	valiImage                          = "vali:0.0.1"
 	curatorImage                       = "curator:0.0.1"
-	alpineImage                        = "alpine:0.0.1"
 	initLargeDirImage                  = "tune2fs:0.0.1"
 	telegrafImage                      = "telegraf-iptables:0.0.1"
 	kubeRBACProxyImage                 = "kube-rbac-proxy:0.0.1"
@@ -175,6 +174,8 @@ var _ = Describe("Vali", func() {
 				getIngress(),
 				getService(true, "shoot"),
 				getStatefulSet(true),
+				getServiceMonitor("shoot", true),
+				getPrometheusRule("shoot"),
 			))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
@@ -212,6 +213,8 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecretTarget.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecretTarget.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			test.PrometheusRule(getPrometheusRule("shoot"), "testdata/shoot-vali.prometheusrule.test.yaml")
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -268,8 +271,8 @@ var _ = Describe("Vali", func() {
 				getService(false, "seed"),
 				getVPA(false),
 				getStatefulSet(false),
-				getServiceMonitor(),
-				getPrometheusRule(),
+				getServiceMonitor("aggregate", false),
+				getPrometheusRule("aggregate"),
 			))
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
@@ -278,7 +281,7 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			test.PrometheusRule(getPrometheusRule(), "testdata/aggregate-vali.prometheusrule.test.yaml")
+			test.PrometheusRule(getPrometheusRule("aggregate"), "testdata/aggregate-vali.prometheusrule.test.yaml")
 		})
 	})
 
@@ -783,12 +786,12 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 	return svc
 }
 
-func getServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{
+func getServiceMonitor(label string, withTelegraf bool) *monitoringv1.ServiceMonitor {
+	obj := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aggregate-vali",
+			Name:      label + "-vali",
 			Namespace: namespace,
-			Labels:    map[string]string{"prometheus": "aggregate"},
+			Labels:    map[string]string{"prometheus": label},
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
@@ -813,21 +816,52 @@ func getServiceMonitor() *monitoringv1.ServiceMonitor {
 			}},
 		},
 	}
+
+	if withTelegraf {
+		obj.Spec.Endpoints = append(obj.Spec.Endpoints, monitoringv1.Endpoint{
+			Port: "telegraf",
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					Action:      "replace",
+					Replacement: ptr.To("vali-telegraf"),
+					TargetLabel: "job",
+				},
+				{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_service_label_(.+)`,
+				},
+			},
+			MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+				SourceLabels: []monitoringv1.LabelName{"__name__"},
+				TargetLabel:  "__name__",
+				Regex:        `iptables_(.+)`,
+				Action:       "replace",
+				Replacement:  ptr.To("shoot_node_logging_incoming_$1"),
+			}},
+		})
+	}
+
+	return obj
 }
 
-func getPrometheusRule() *monitoringv1.PrometheusRule {
+func getPrometheusRule(label string) *monitoringv1.PrometheusRule {
+	description := "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
+	if label == "shoot" {
+		description = "There are no vali pods running. No logs will be collected."
+	}
+
 	return &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aggregate-vali",
+			Name:      label + "-vali",
 			Namespace: namespace,
-			Labels:    map[string]string{"prometheus": "aggregate"},
+			Labels:    map[string]string{"prometheus": label},
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
 				Name: "vali.rules",
 				Rules: []monitoringv1.Rule{{
 					Alert: "ValiDown",
-					Expr:  intstr.FromString(`absent(up{app="vali"} == 1)`),
+					Expr:  intstr.FromString(`absent(up{job="vali"} == 1)`),
 					For:   ptr.To(monitoringv1.Duration("30m")),
 					Labels: map[string]string{
 						"service":    "logging",
@@ -836,7 +870,7 @@ func getPrometheusRule() *monitoringv1.PrometheusRule {
 						"visibility": "operator",
 					},
 					Annotations: map[string]string{
-						"description": "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected.",
+						"description": description,
 						"summary":     "Vali is down",
 					},
 				}},

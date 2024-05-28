@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -36,7 +40,9 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -84,7 +90,6 @@ var (
 // Interface contains functions for a etcd deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 	// Snapshot triggers the backup-restore sidecar to perform a full snapshot in case backup configuration is provided.
 	Snapshot(context.Context, rest.HTTPClient) error
 	// SetBackupConfig sets the backup configuration.
@@ -189,8 +194,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		hvpa = e.emptyHVPA()
-		vpa  = e.emptyVerticalPodAutoscaler()
+		hvpa           = e.emptyHVPA()
+		vpa            = e.emptyVerticalPodAutoscaler()
+		serviceMonitor = e.emptyServiceMonitor()
 
 		replicas = e.computeReplicas(existingEtcd)
 
@@ -570,101 +576,335 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return err
 		}
 	}
-	// etcd deployed for garden cluster
-	if e.values.NamePrefix != "" {
-		serviceMonitor := e.emptyServiceMonitor()
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, serviceMonitor, func() error {
-			serviceMonitor.Labels = monitoringutils.Labels(garden.Label)
-			serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"name":     "etcd",
-					"instance": e.etcd.Name,
-				}},
-				Endpoints: []monitoringv1.Endpoint{
-					{
-						Port:   portNameClient,
-						Scheme: "https",
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
-							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-								Key:                  secretsutils.DataKeyCertificate,
-							}},
-							KeySecret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-								Key:                  secretsutils.DataKeyPrivateKey,
-							},
-						}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{
-							{
-								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
-								TargetLabel:  "role",
-							},
-							{
-								Action:      "replace",
-								Replacement: ptr.To(e.values.NamePrefix + "etcd"),
-								TargetLabel: "job",
-							},
-						},
-						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-							Action: "labeldrop",
-							Regex:  `^instance$`,
-						}},
-					},
-					{
-						Port:   portNameBackupRestore,
-						Scheme: "https",
-						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
-							Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-								Key:                  secretsutils.DataKeyCertificate,
-							}},
-							KeySecret: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
-								Key:                  secretsutils.DataKeyPrivateKey,
-							},
-						}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{
-							{
-								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
-								TargetLabel:  "role",
-							},
 
-							{
-								Action:      "replace",
-								Replacement: ptr.To(e.values.NamePrefix + "etcd-backup"),
-								TargetLabel: "job",
+	// etcd deployed for shoot cluster
+	serviceMonitorJobNameEtcd, serviceMonitorJobNameBackupRestore := "kube-etcd3-"+e.values.Role, "kube-etcd3-backup-restore-"+e.values.Role
+	if e.values.NamePrefix != "" {
+		// etcd deployed for garden cluster
+		serviceMonitorJobNameEtcd, serviceMonitorJobNameBackupRestore = e.values.NamePrefix+"etcd", e.values.NamePrefix+"etcd-backup"
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, serviceMonitor, func() error {
+		serviceMonitor.Labels = monitoringutils.Labels(e.prometheusLabel())
+		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+				"name":     "etcd",
+				"instance": e.etcd.Name,
+			}},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port:   portNameClient,
+					Scheme: "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
+						InsecureSkipVerify: ptr.To(true),
+						Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+							Key:                  secretsutils.DataKeyCertificate,
+						}},
+						KeySecret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+							Key:                  secretsutils.DataKeyPrivateKey,
+						},
+					}},
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+							TargetLabel:  "role",
+						},
+						{
+							Action:      "replace",
+							Replacement: ptr.To(serviceMonitorJobNameEtcd),
+							TargetLabel: "job",
+						},
+					},
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labeldrop",
+						Regex:  `^instance$`,
+					}},
+				},
+				{
+					Port:   portNameBackupRestore,
+					Scheme: "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
+						// This is needed because the etcd's certificates are not are generated for a specific pod IP.
+						InsecureSkipVerify: ptr.To(true),
+						Cert: monitoringv1.SecretOrConfigMap{Secret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+							Key:                  secretsutils.DataKeyCertificate,
+						}},
+						KeySecret: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: clientSecret.Name},
+							Key:                  secretsutils.DataKeyPrivateKey,
+						},
+					}},
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+							TargetLabel:  "role",
+						},
+
+						{
+							Action:      "replace",
+							Replacement: ptr.To(serviceMonitorJobNameBackupRestore),
+							TargetLabel: "job",
+						},
+					},
+					MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
+						Action: "labeldrop",
+						Regex:  `^instance$`,
+					}}, monitoringutils.StandardMetricRelabelConfig(
+						"etcdbr_defragmentation_duration_seconds_bucket",
+						"etcdbr_defragmentation_duration_seconds_count",
+						"etcdbr_defragmentation_duration_seconds_sum",
+						"etcdbr_network_received_bytes",
+						"etcdbr_network_transmitted_bytes",
+						"etcdbr_restoration_duration_seconds_bucket",
+						"etcdbr_restoration_duration_seconds_count",
+						"etcdbr_restoration_duration_seconds_sum",
+						"etcdbr_snapshot_duration_seconds_bucket",
+						"etcdbr_snapshot_duration_seconds_count",
+						"etcdbr_snapshot_duration_seconds_sum",
+						"etcdbr_snapshot_gc_total",
+						"etcdbr_snapshot_latest_revision",
+						"etcdbr_snapshot_latest_timestamp",
+						"etcdbr_snapshot_required",
+						"etcdbr_validation_duration_seconds_bucket",
+						"etcdbr_validation_duration_seconds_count",
+						"etcdbr_validation_duration_seconds_sum",
+						"etcdbr_snapshotter_failure",
+						"etcdbr_cluster_size",
+						"etcdbr_is_learner",
+						"etcdbr_is_learner_count_total",
+						"etcdbr_add_learner_duration_seconds_bucket",
+						"etcdbr_add_learner_duration_seconds_sum",
+						"etcdbr_member_remove_duration_seconds_bucket",
+						"etcdbr_member_remove_duration_seconds_sum",
+						"etcdbr_member_promote_duration_seconds_bucket",
+						"etcdbr_member_promote_duration_seconds_sum",
+						"process_resident_memory_bytes",
+						"process_cpu_seconds_total",
+					)...),
+				},
+			},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// etcd deployed for shoot cluster
+	if e.values.NamePrefix == "" {
+		// Add scrape config for druid metrics only if the role is 'main'.
+		if e.values.Role == v1beta1constants.ETCDRoleMain {
+			scrapeConfig := e.emptyScrapeConfig()
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, scrapeConfig, func() error {
+				scrapeConfig.Labels = monitoringutils.Labels(e.prometheusLabel())
+				scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+					HonorTimestamps: ptr.To(false),
+					MetricsPath:     ptr.To("/federate"),
+					Params:          map[string][]string{"match[]": {`{job="` + druidServiceName + `",etcd_namespace="` + e.namespace + `"}`}},
+					StaticConfigs:   []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-" + cache.Label + ".garden.svc"}}},
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+
+		// TODO: The PrometheusRules for the garden cluster case are maintained in a separate file located here:
+		//  pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/etcd.yaml
+		//  These rules highly overlap with those for the shoots maintained here. They should be merged in the future.
+		var (
+			role     = cases.Title(language.English).String(e.values.Role)
+			alertFor = func(classImportantDuration, classNormalDuration monitoringv1.Duration) *monitoringv1.Duration {
+				if e.values.Class == ClassImportant {
+					return &classImportantDuration
+				}
+				return &classNormalDuration
+			}
+			severityLabel = func(classImportantValue, classNormalValue string) string {
+				if e.values.Class == ClassImportant {
+					return classImportantValue
+				}
+				return classNormalValue
+			}
+		)
+
+		prometheusRule := e.emptyPrometheusRule()
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, prometheusRule, func() error {
+			prometheusRule.Labels = monitoringutils.Labels(e.prometheusLabel())
+			prometheusRule.Spec = monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: serviceMonitorJobNameEtcd + ".rules",
+					Rules: []monitoringv1.Rule{
+						// alert if etcd is down
+						{
+							Alert: "KubeEtcd" + role + "Down",
+							Expr:  intstr.FromString(`sum(up{job="` + serviceMonitorJobNameEtcd + `"}) < ` + strconv.Itoa(int(replicas/2)+1)),
+							For:   alertFor("5m", "15m"),
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   severityLabel("blocker", "critical"),
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"summary":     "Etcd3 " + e.values.Role + " cluster down.",
+								"description": "Etcd3 cluster " + e.values.Role + " is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 " + e.values.Role + " is down, the cluster is unreachable.",
 							},
 						},
-						MetricRelabelConfigs: append([]monitoringv1.RelabelConfig{{
-							Action: "labeldrop",
-							Regex:  `^instance$`,
-						}}, monitoringutils.StandardMetricRelabelConfig(
-							"etcdbr_defragmentation_duration_seconds_.+",
-							"etcdbr_defragmentation_duration_seconds_count",
-							"etcdbr_defragmentation_duration_seconds_sum",
-							"etcdbr_network_received_bytes",
-							"etcdbr_network_transmitted_bytes",
-							"etcdbr_restoration_duration_seconds_.+",
-							"etcdbr_restoration_duration_seconds_count",
-							"etcdbr_restoration_duration_seconds_sum",
-							"etcdbr_snapshot_duration_seconds_.+",
-							"etcdbr_snapshot_duration_seconds_count",
-							"etcdbr_snapshot_duration_seconds_sum",
-							"etcdbr_snapshot_gc_total",
-							"etcdbr_snapshot_latest_revision",
-							"etcdbr_snapshot_latest_timestamp",
-							"etcdbr_snapshot_required",
-							"etcdbr_validation_duration_seconds_.+",
-							"etcdbr_validation_duration_seconds_count",
-							"etcdbr_validation_duration_seconds_sum",
-							"process_resident_memory_bytes",
-							"process_cpu_seconds_total",
-						)...),
+						// etcd leader alerts
+						{
+							Alert: "KubeEtcd3" + role + "NoLeader",
+							Expr:  intstr.FromString(`sum(etcd_server_has_leader{job="` + serviceMonitorJobNameEtcd + `"}) < count(etcd_server_has_leader{job="` + serviceMonitorJobNameEtcd + `"})`),
+							For:   alertFor("10m", "15m"),
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   "critical",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"summary":     "Etcd3 " + e.values.Role + " has no leader.",
+								"description": "Etcd3 cluster " + e.values.Role + " has no leader. Possible network partition in the etcd cluster.",
+							},
+						},
+						// etcd proposal alerts
+						// alert if there are several failed proposals within an hour
+						{
+							Alert: "KubeEtcd3" + role + "HighNumberOfFailedProposals",
+							Expr:  intstr.FromString(`increase(etcd_server_proposals_failed_total{job="` + serviceMonitorJobNameEtcd + `"}[1h]) > 5`),
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"summary":     "High number of failed etcd proposals",
+								"description": "Etcd3 " + e.values.Role + " pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.",
+							},
+						},
+						{
+							Alert: "KubeEtcd3" + role + "HighMemoryConsumption",
+							Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + e.values.Role + `-0",container="` + containerNameEtcd + `"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="` + containerNameEtcd + `", targetName="etcd-` + e.values.Role + `", resource="memory"}) > .5`),
+							For:   ptr.To(monitoringv1.Duration("15m")),
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "operator",
+							},
+							Annotations: map[string]string{
+								"summary":     "Etcd3 " + e.values.Role + " is consuming too much memory",
+								"description": "Etcd3 " + e.values.Role + " is consuming over 50% of the max allowed value specified by VPA.",
+							},
+						},
+						// etcd DB size alerts
+						{
+							Alert: "KubeEtcd3" + role + "DbSizeLimitApproaching",
+							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} <= bool 8589935000) == 2`), // between 7GB and 8GB
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   "warning",
+								"type":       "seed",
+								"visibility": "all",
+							},
+							Annotations: map[string]string{
+								"summary":     "Etcd3 " + e.values.Role + " DB size is approaching its current practical limit.",
+								"description": "Etcd3 " + e.values.Role + " DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.",
+							},
+						},
+						{
+							Alert: "KubeEtcd3" + role + "DbSizeLimitCrossed",
+							Expr:  intstr.FromString(`etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} > 8589935000`), // above 8GB
+							Labels: map[string]string{
+								"service":    "etcd",
+								"severity":   "critical",
+								"type":       "seed",
+								"visibility": "all",
+							},
+							Annotations: map[string]string{
+								"summary":     "Etcd3 " + e.values.Role + " DB size has crossed its current practical limit.",
+								"description": "Etcd3 " + e.values.Role + " DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.",
+							},
+						},
+						{
+							Record: "shoot:apiserver_storage_objects:sum_by_resource",
+							Expr:   intstr.FromString(`max(apiserver_storage_objects) by (resource)`),
+						},
 					},
-				},
+				}},
 			}
+
+			if e.values.BackupConfig != nil {
+				prometheusRule.Spec.Groups[0].Rules = append(prometheusRule.Spec.Groups[0].Rules,
+					// etcd backup failure alerts
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + role + "DeltaBackupFailed",
+						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + serviceMonitorJobNameBackupRestore + `",kind="Incr"} > bool 900) * etcdbr_snapshot_required{job="` + serviceMonitorJobNameBackupRestore + `",kind="Incr"}) * on (pod, role) etcd_server_is_leader{job="` + serviceMonitorJobNameEtcd + `"} > 0`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd delta snapshot failure.",
+							"description": "No delta snapshot for the past 30 minutes have been taken by backup-restore leader.",
+						},
+					},
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + role + "FullBackupFailed",
+						Expr:  intstr.FromString(`((time() - etcdbr_snapshot_latest_timestamp{job="` + serviceMonitorJobNameBackupRestore + `",kind="Full"} > bool 86400) * etcdbr_snapshot_required{job="` + serviceMonitorJobNameBackupRestore + `",kind="Full"}) * on (pod, role) etcd_server_is_leader{job="` + serviceMonitorJobNameEtcd + `"} > 0`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd full snapshot failure.",
+							"description": "No full snapshot for at least last 24 hours have been taken by backup-restore leader.",
+						},
+					},
+					// etcd data restoration failure alert
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + role + "RestorationFailed",
+						Expr:  intstr.FromString(`rate(etcdbr_restoration_duration_seconds_count{job="` + serviceMonitorJobNameBackupRestore + `",succeeded="false"}[2m]) > 0`),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd data restoration failure.",
+							"description": "Etcd data restoration was triggered, but has failed.",
+						},
+					},
+					// etcd backup failure alert
+					monitoringv1.Rule{
+						Alert: "KubeEtcd" + role + "BackupRestoreDown",
+						Expr:  intstr.FromString(`(sum(up{job="` + serviceMonitorJobNameEtcd + `"}) - sum(up{job="` + serviceMonitorJobNameBackupRestore + `"}) > 0) or (rate(etcdbr_snapshotter_failure{job="` + serviceMonitorJobNameBackupRestore + `"}[5m]) > 0)`),
+						For:   ptr.To(monitoringv1.Duration("10m")),
+						Labels: map[string]string{
+							"service":    "etcd",
+							"severity":   "critical",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Etcd backup restore " + e.values.Role + " process down or snapshotter failed with error",
+							"description": "Etcd backup restore " + e.values.Role + " process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.",
+						},
+					},
+				)
+			}
+
 			return nil
 		}); err != nil {
 			return err
@@ -683,6 +923,8 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		e.emptyHVPA(),
 		e.emptyVerticalPodAutoscaler(),
 		e.emptyServiceMonitor(),
+		e.emptyScrapeConfig(),
+		e.emptyPrometheusRule(),
 		e.etcd,
 	)
 }
@@ -694,12 +936,11 @@ func (e *etcd) getRoleLabels() map[string]string {
 	})
 }
 
-// GetLabels returns a set of labels that is common for all etcd resources.
-func GetLabels() map[string]string {
-	return map[string]string{
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelApp:   LabelAppValue,
+func (e *etcd) prometheusLabel() string {
+	if e.values.NamePrefix != "" {
+		return garden.Label
 	}
+	return shoot.Label
 }
 
 func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
@@ -707,7 +948,15 @@ func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
 }
 
 func (e *etcd) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(e.etcd.Name, e.namespace, garden.Label)}
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(e.etcd.Name, e.namespace, e.prometheusLabel())}
+}
+
+func (e *etcd) emptyPrometheusRule() *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(e.etcd.Name, e.namespace, e.prometheusLabel())}
+}
+
+func (e *etcd) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(Druid, e.namespace, e.prometheusLabel())}
 }
 
 func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {

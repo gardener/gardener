@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -36,6 +38,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -50,10 +54,9 @@ const (
 	GatewayPort = 8132
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
 	SecretNameTLSAuth = "vpn-seed-server-tlsauth"
-	// DeploymentName is the name of vpn seed server deployment.
-	DeploymentName = v1beta1constants.DeploymentNameVPNSeedServer
+	deploymentName    = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
-	ServiceName = DeploymentName
+	ServiceName = deploymentName
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
 	// OpenVPNPort is the port exposed by the vpn seed server for tcp tunneling.
@@ -61,8 +64,7 @@ const (
 	// HighAvailabilityReplicaCount is the replica count used when highly available VPN is configured.
 	HighAvailabilityReplicaCount = 2
 	metricsPortName              = "metrics"
-	// MetricsPort is the port metrics can be scraped at.
-	MetricsPort = 15000
+	metricsPort                  = 15000
 
 	envoyProxyContainerName = "envoy-proxy"
 
@@ -85,7 +87,6 @@ const (
 // Interface contains functions for a vpn-seed-server deployer.
 type Interface interface {
 	component.DeployWaiter
-	component.MonitoringComponent
 
 	SetNodeNetworkCIDR(nodes *string)
 	// SetSeedNamespaceObjectUID sets UID for the namespace
@@ -244,6 +245,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		}
 	}
 
+	if err := v.deployScrapeConfig(ctx); err != nil {
+		return err
+	}
+
 	return v.deployVPA(ctx)
 }
 
@@ -269,7 +274,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 			Containers: []corev1.Container{
 				{
-					Name:            DeploymentName,
+					Name:            deploymentName,
 					Image:           v.values.ImageVPNSeedServer,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{
@@ -488,12 +493,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				"-openvpn.status_paths",
 				statusPath,
 				"-web.listen-address",
-				fmt.Sprintf(":%d", MetricsPort),
+				fmt.Sprintf(":%d", metricsPort),
 			},
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          metricsPortName,
-					ContainerPort: MetricsPort,
+					ContainerPort: metricsPort,
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
@@ -507,14 +512,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(MetricsPort),
+						Port: intstr.FromInt32(metricsPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(MetricsPort),
+						Port: intstr.FromInt32(metricsPort),
 					},
 				},
 			},
@@ -579,7 +584,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string]string, template *corev1.PodTemplateSpec) error {
 	sts := v.emptyStatefulSet()
 	podLabels := map[string]string{
-		v1beta1constants.LabelApp: DeploymentName,
+		v1beta1constants.LabelApp: deploymentName,
 	}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, sts, func() error {
 		sts.Labels = labels
@@ -630,7 +635,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 			Replicas:             ptr.To(v.values.Replicas),
 			RevisionHistoryLimit: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp: DeploymentName,
+				v1beta1constants.LabelApp: deploymentName,
 			}},
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -657,12 +662,12 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(MetricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: ptr.To(intstr.FromInt32(metricsPort)), Protocol: ptr.To(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
 			{
-				Name:       DeploymentName,
+				Name:       deploymentName,
 				Port:       OpenVPNPort,
 				TargetPort: intstr.FromInt32(OpenVPNPort),
 			},
@@ -673,14 +678,14 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 			},
 			{
 				Name:       metricsPortName,
-				Port:       MetricsPort,
-				TargetPort: intstr.FromInt32(MetricsPort),
+				Port:       metricsPort,
+				TargetPort: intstr.FromInt32(metricsPort),
 			},
 		}
 
 		if idx == nil {
 			service.Spec.Selector = map[string]string{
-				v1beta1constants.LabelApp: DeploymentName,
+				v1beta1constants.LabelApp: deploymentName,
 			}
 		} else {
 			service.Spec.Selector = map[string]string{
@@ -688,6 +693,123 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 			}
 		}
 
+		return nil
+	})
+	return err
+}
+
+func (v *vpnSeedServer) deployScrapeConfig(ctx context.Context) error {
+	var (
+		jobName, serviceNameRegexSuffix = "reversed-vpn-envoy-side-car", ""
+		allowedMetrics                  = []string{
+			"envoy_cluster_external_upstream_rq",
+			"envoy_cluster_external_upstream_rq_completed",
+			"envoy_cluster_external_upstream_rq_xx",
+			"envoy_cluster_lb_healthy_panic",
+			"envoy_cluster_original_dst_host_invalid",
+			"envoy_cluster_upstream_cx_active",
+			"envoy_cluster_upstream_cx_connect_attempts_exceeded",
+			"envoy_cluster_upstream_cx_connect_fail",
+			"envoy_cluster_upstream_cx_connect_timeout",
+			"envoy_cluster_upstream_cx_max_requests",
+			"envoy_cluster_upstream_cx_none_healthy",
+			"envoy_cluster_upstream_cx_overflow",
+			"envoy_cluster_upstream_cx_pool_overflow",
+			"envoy_cluster_upstream_cx_protocol_error",
+			"envoy_cluster_upstream_cx_rx_bytes_total",
+			"envoy_cluster_upstream_cx_total",
+			"envoy_cluster_upstream_cx_tx_bytes_total",
+			"envoy_cluster_upstream_rq",
+			"envoy_cluster_upstream_rq_completed",
+			"envoy_cluster_upstream_rq_max_duration_reached",
+			"envoy_cluster_upstream_rq_pending_overflow",
+			"envoy_cluster_upstream_rq_per_try_timeout",
+			"envoy_cluster_upstream_rq_retry",
+			"envoy_cluster_upstream_rq_retry_limit_exceeded",
+			"envoy_cluster_upstream_rq_retry_overflow",
+			"envoy_cluster_upstream_rq_rx_reset",
+			"envoy_cluster_upstream_rq_timeout",
+			"envoy_cluster_upstream_rq_total",
+			"envoy_cluster_upstream_rq_tx_reset",
+			"envoy_cluster_upstream_rq_xx",
+			"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt",
+			"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure",
+			"envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success",
+			"envoy_dns_cache_dynamic_forward_proxy_cache_config_host_overflow",
+			"envoy_dns_cache_dynamic_forward_proxy_cache_config_num_hosts",
+			"envoy_http_downstream_cx_rx_bytes_total",
+			"envoy_http_downstream_cx_total",
+			"envoy_http_downstream_cx_tx_bytes_total",
+			"envoy_http_downstream_rq_xx",
+			"envoy_http_no_route",
+			"envoy_http_rq_total",
+			"envoy_listener_http_downstream_rq_xx",
+			"envoy_server_memory_allocated",
+			"envoy_server_memory_heap_size",
+			"envoy_server_memory_physical_size",
+			"envoy_cluster_upstream_cx_connect_ms_bucket",
+			"envoy_cluster_upstream_cx_connect_ms_sum",
+			"envoy_cluster_upstream_cx_length_ms_bucket",
+			"envoy_cluster_upstream_cx_length_ms_sum",
+			"envoy_http_downstream_cx_length_ms_bucket",
+			"envoy_http_downstream_cx_length_ms_sum",
+		}
+	)
+
+	if v.values.HighAvailabilityEnabled {
+		jobName, serviceNameRegexSuffix = "openvpn-server-exporter", "[0-2]"
+		allowedMetrics = []string{
+			"openvpn_server_client_received_bytes_total",
+			"openvpn_server_client_sent_bytes_total",
+			"openvpn_server_route_last_reference_time_seconds",
+			"openvpn_status_update_time_seconds",
+			"openvpn_up",
+		}
+	}
+
+	scrapeConfig := v.emptyScrapeConfig()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
+		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
+		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
+			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+				Role:       "service",
+				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v.namespace}},
+			}},
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					Action:      "replace",
+					Replacement: ptr.To(jobName),
+					TargetLabel: "job",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_service_port_name"},
+					Action:       "keep",
+					Regex:        ServiceName + serviceNameRegexSuffix + `;` + metricsPortName,
+				},
+			},
+			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(allowedMetrics...),
+		}
+
+		if v.values.HighAvailabilityEnabled {
+			scrapeConfig.Spec.MetricRelabelConfigs = append(scrapeConfig.Spec.MetricRelabelConfigs,
+				monitoringv1.RelabelConfig{
+					SourceLabels: []monitoringv1.LabelName{"instance"},
+					Action:       "replace",
+					Regex:        `([^.]+).+`,
+					TargetLabel:  "service",
+				},
+				monitoringv1.RelabelConfig{
+					SourceLabels: []monitoringv1.LabelName{"real_address"},
+					Action:       "replace",
+					Regex:        `([^:]+).+`,
+					TargetLabel:  "real_ip",
+				},
+				monitoringv1.RelabelConfig{
+					Regex:  "username",
+					Action: "labeldrop",
+				},
+			)
+		}
 		return nil
 	})
 	return err
@@ -743,7 +865,7 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",
-			Name:       DeploymentName,
+			Name:       deploymentName,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
@@ -751,7 +873,7 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: DeploymentName,
+					ContainerName: deploymentName,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
@@ -773,6 +895,7 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 	objects := []client.Object{
+		v.emptyScrapeConfig(),
 		v.emptyDeployment(),
 		v.emptyStatefulSet(),
 		v.emptyDestinationRule(nil),
@@ -800,25 +923,29 @@ func (v *vpnSeedServer) SetNodeNetworkCIDR(nodes *string) {
 
 func (v *vpnSeedServer) indexedName(idx *int) string {
 	if idx == nil {
-		return DeploymentName
+		return deploymentName
 	}
-	return fmt.Sprintf("%s-%d", DeploymentName, *idx)
+	return fmt.Sprintf("%s-%d", deploymentName, *idx)
 }
 
 func (v *vpnSeedServer) emptyService(idx *int) *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v.indexedName(idx), Namespace: v.namespace}}
 }
 
+func (v *vpnSeedServer) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(deploymentName, v.namespace, shoot.Label)}
+}
+
 func (v *vpnSeedServer) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyStatefulSet() *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
-	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyDestinationRule(idx *int) *networkingv1beta1.DestinationRule {
@@ -826,7 +953,7 @@ func (v *vpnSeedServer) emptyDestinationRule(idx *int) *networkingv1beta1.Destin
 }
 
 func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: v.namespace}}
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: deploymentName + "-vpa", Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
@@ -836,7 +963,7 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		v1beta1constants.LabelApp:   DeploymentName,
+		v1beta1constants.LabelApp:   deploymentName,
 	}
 }
 
@@ -936,7 +1063,7 @@ func (v *vpnSeedServer) getEnvoyConfig() string {
     address:
       socket_address:
         address: "` + listenAddress + `"
-        port_value: ` + strconv.Itoa(MetricsPort) + `
+        port_value: ` + strconv.Itoa(metricsPort) + `
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager

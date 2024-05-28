@@ -9,7 +9,7 @@ tests:
     seed: aws
   input_series:
   # ValiDown
-  - series: 'up{app="vali"}'
+  - series: 'up{job="vali"}'
     values: '0+0x30'
   alert_rule_test:
   - eval_time: 30m

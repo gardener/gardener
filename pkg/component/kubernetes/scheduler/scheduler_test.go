@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +30,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,7 +46,7 @@ var _ = Describe("KubeScheduler", func() {
 	var (
 		c                             client.Client
 		sm                            secretsmanager.Interface
-		kubeScheduler                 Interface
+		kubeScheduler                 component.DeployWaiter
 		ctx                           = context.TODO()
 		namespace                     = "shoot--foo--bar"
 		runtimeVersion, targetVersion *semver.Version
@@ -65,6 +68,8 @@ var _ = Describe("KubeScheduler", func() {
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-scheduler-vpa"
 		pdbName                          = "kube-scheduler"
+		prometheusRuleName               = "shoot-kube-scheduler"
+		serviceMonitorName               = "shoot-kube-scheduler"
 		serviceName                      = "kube-scheduler"
 		secretName                       = "shoot-access-kube-scheduler"
 		deploymentName                   = "kube-scheduler"
@@ -346,6 +351,115 @@ var _ = Describe("KubeScheduler", func() {
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
 		}
+
+		prometheusRule = &monitoringv1.PrometheusRule{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-kube-scheduler",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.PrometheusRuleSpec{
+				Groups: []monitoringv1.RuleGroup{{
+					Name: "kube-scheduler.rules",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "KubeSchedulerDown",
+							Expr:  intstr.FromString(`absent(up{job="kube-scheduler"} == 1)`),
+							For:   ptr.To(monitoringv1.Duration("15m")),
+							Labels: map[string]string{
+								"service":    "kube-scheduler",
+								"severity":   "critical",
+								"type":       "seed",
+								"visibility": "all",
+							},
+							Annotations: map[string]string{
+								"summary":     "Kube Scheduler is down.",
+								"description": "New pods are not being assigned to nodes.",
+							},
+						},
+						{
+							Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.99"},
+						},
+						{
+							Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.9"},
+						},
+						{
+							Record: "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.5"},
+						},
+						{
+							Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.99"},
+						},
+						{
+							Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.9"},
+						},
+						{
+							Record: "cluster:scheduler_scheduling_algorithm_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.5"},
+						},
+						{
+							Record: "cluster:scheduler_binding_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.99, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.99"},
+						},
+						{
+							Record: "cluster:scheduler_binding_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.9, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.9"},
+						},
+						{
+							Record: "cluster:scheduler_binding_duration_seconds:quantile",
+							Expr:   intstr.FromString(`histogram_quantile(0.5, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))`),
+							Labels: map[string]string{"quantile": "0.5"},
+						},
+					},
+				}},
+			},
+		}
+		serviceMonitor = &monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "shoot-kube-scheduler",
+				Namespace:       namespace,
+				Labels:          map[string]string{"prometheus": "shoot"},
+				ResourceVersion: "1",
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "kubernetes",
+					"role": "scheduler",
+				}},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port:      "metrics",
+					Scheme:    "https",
+					TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)}},
+					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
+						Key:                  "token",
+					}},
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(scheduler_binding_duration_seconds_bucket|scheduler_e2e_scheduling_duration_seconds_bucket|scheduler_scheduling_algorithm_duration_seconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$`,
+					}},
+				}},
+			},
+		}
+
 		clusterRoleBinding1YAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -498,6 +612,26 @@ subjects:
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
 				Expect(actualPDB).To(DeepEqual(pdbFor(runtimeSemverVersion)))
+
+				actualPrometheusRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      prometheusRuleName,
+						Namespace: namespace,
+					},
+				}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPrometheusRule), actualPrometheusRule)).To(Succeed())
+				Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+				componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-scheduler.prometheusrule.test.yaml")
+
+				actualServiceMonitor := &monitoringv1.ServiceMonitor{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      serviceMonitorName,
+						Namespace: namespace,
+					},
+				}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
+				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			},
 
 			Entry("kubernetes 1.25 w/o config", "1.25.0", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),

@@ -34,14 +34,11 @@ import (
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	kubernetesdashboard "github.com/gardener/gardener/pkg/component/kubernetes/dashboard"
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
-	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	shootsystem "github.com/gardener/gardener/pkg/component/shoot/system"
@@ -109,8 +106,6 @@ type Components struct {
 	ControlPlane             *ControlPlane
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
-	Logging                  *Logging
-	Monitoring               *Monitoring
 	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
@@ -118,20 +113,25 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
+	Alertmanager             alertmanager.Interface
+	BlackboxExporter         component.DeployWaiter
 	ClusterAutoscaler        clusterautoscaler.Interface
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
+	EventLogger              component.Deployer
 	KubeAPIServerIngress     component.Deployer
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
 	KubeAPIServer            kubeapiserver.Interface
-	KubeScheduler            kubescheduler.Interface
+	KubeScheduler            component.DeployWaiter
 	KubeControllerManager    kubecontrollermanager.Interface
-	KubeStateMetrics         kubestatemetrics.Interface
+	KubeStateMetrics         component.DeployWaiter
 	MachineControllerManager machinecontrollermanager.Interface
 	Plutono                  plutono.Interface
+	Prometheus               prometheus.Interface
 	ResourceManager          resourcemanager.Interface
+	Vali                     component.Deployer
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
 }
@@ -165,19 +165,6 @@ type SystemComponents struct {
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
 	VPNShoot            component.DeployWaiter
-}
-
-// Monitoring contains references to monitoring deployers.
-type Monitoring struct {
-	Alertmanager     alertmanager.Interface
-	Prometheus       prometheus.Interface
-	BlackboxExporter component.DeployWaiter
-}
-
-// Logging contains references to logging deployers.
-type Logging struct {
-	EventLogger component.Deployer
-	Vali        vali.Interface
 }
 
 // Addons contains references for the addons.

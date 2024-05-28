@@ -137,7 +137,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 							"visibility": "owner",
 						},
 						Annotations: map[string]string{
-							"summary":     "NodeExporter, down or unreachable",
+							"summary":     "NodeExporter down or unreachable",
 							"description": "The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.",
 						},
 					},
@@ -201,7 +201,7 @@ func (n *nodeExporter) Deploy(ctx context.Context) error {
 							"visibility": "owner",
 						},
 						Annotations: map[string]string{
-							"description": "Root filesystem device on instance{{$labels.instance}} is almost full.",
+							"description": "Root filesystem device on instance {{$labels.instance}} is almost full.",
 							"summary":     "Node's root filesystem is almost full",
 						},
 					},

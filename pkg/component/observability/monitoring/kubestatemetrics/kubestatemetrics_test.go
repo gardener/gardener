@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -559,6 +560,153 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			},
 		}
+		scrapeConfigShoot = &monitoringv1alpha1.ScrapeConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-kube-state-metrics",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "shoot"},
+			},
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       "service",
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
+				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_label_component",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "kube-state-metrics;metrics",
+						Action: "keep",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_type"},
+						Regex:        `(.+)`,
+						Replacement:  ptr.To(`${1}`),
+						TargetLabel:  "type",
+					},
+					{
+						Action:      "replace",
+						Replacement: ptr.To("kube-state-metrics"),
+						TargetLabel: "job",
+					},
+					{
+						TargetLabel: "instance",
+						Replacement: ptr.To("kube-state-metrics"),
+					},
+				},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"pod"},
+						Regex:        `^.+\.tf-pod.+$`,
+						Action:       "drop",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"__name__"},
+						Action:       "keep",
+						Regex:        `^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_replicaset_metadata_generation|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$`,
+					},
+				},
+			},
+		}
+		prometheusRuleShoot = func(workerless bool) *monitoringv1.PrometheusRule {
+			rules := []monitoringv1.Rule{{
+				Alert: "KubeStateMetricsSeedDown",
+				Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
+				For:   ptr.To(monitoringv1.Duration("15m")),
+				Labels: map[string]string{
+					"service":    "kube-state-metrics-seed",
+					"severity":   "critical",
+					"type":       "seed",
+					"visibility": "operator",
+				},
+				Annotations: map[string]string{
+					"summary":     "There are no kube-state-metrics metrics for the control plane",
+					"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+				},
+			}}
+
+			if !workerless {
+				rules = append(rules,
+					monitoringv1.Rule{
+						Alert: "KubeStateMetricsShootDown",
+						Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
+						For:   ptr.To(monitoringv1.Duration("15m")),
+						Labels: map[string]string{
+							"service":    "kube-state-metrics-shoot",
+							"severity":   "info",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
+							"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
+						},
+					},
+					monitoringv1.Rule{
+						Alert: "NoWorkerNodes",
+						Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
+						For:   ptr.To(monitoringv1.Duration("25m")),
+						Labels: map[string]string{
+							"service":    "nodes",
+							"severity":   "blocker",
+							"visibility": "all",
+						},
+						Annotations: map[string]string{
+							"summary":     "No nodes available. Possibly all workloads down.",
+							"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
+						},
+					},
+					monitoringv1.Rule{
+						Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
+						Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
+					},
+					monitoringv1.Rule{
+						Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
+						Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
+					},
+					monitoringv1.Rule{
+						Record: "shoot:machine_types:sum",
+						Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
+					},
+					monitoringv1.Rule{
+						Record: "shoot:node_operating_system:sum",
+						Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
+					},
+					monitoringv1.Rule{
+						Record: "kube_pod_container_resource_limits_cpu_cores",
+						Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
+					},
+					monitoringv1.Rule{
+						Record: "kube_pod_container_resource_requests_cpu_cores",
+						Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
+					},
+					monitoringv1.Rule{
+						Record: "kube_pod_container_resource_limits_memory_bytes",
+						Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
+					},
+					monitoringv1.Rule{
+						Record: "kube_pod_container_resource_requests_memory_bytes",
+						Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
+					},
+				)
+			}
+
+			return &monitoringv1.PrometheusRule{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-kube-state-metrics",
+					Namespace: namespace,
+					Labels:    map[string]string{"prometheus": "shoot"},
+				},
+				Spec: monitoringv1.PrometheusRuleSpec{
+					Groups: []monitoringv1.RuleGroup{{
+						Name:  "kube-state-metrics.rules",
+						Rules: rules,
+					}},
+				},
+			}
+		}
 	)
 
 	BeforeEach(func() {
@@ -677,7 +825,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					KubernetesVersion: semver.MustParse("1.26.3"),
 					Image:             image,
 					PriorityClassName: priorityClassName,
-					IsWorkerless:      false,
 				})
 				managedResourceName = "kube-state-metrics"
 			})
@@ -754,72 +901,172 @@ var _ = Describe("KubeStateMetrics", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				ksm = New(c, namespace, sm, Values{
+				values = Values{
 					ClusterType:       component.ClusterTypeShoot,
 					Image:             image,
 					PriorityClassName: priorityClassName,
-					IsWorkerless:      false,
-				})
+				}
 				managedResourceName = "shoot-core-kube-state-metrics"
 			})
 
-			It("should successfully deploy all resources", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			JustBeforeEach(func() {
+				ksm = New(c, namespace, sm, values)
+			})
 
-				Expect(ksm.Deploy(ctx)).To(Succeed())
+			Context("when shoot is not workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = false
+				})
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				expectedMr := &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceName,
-						Namespace:       namespace,
-						ResourceVersion: "1",
-						Labels:          map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResource.Spec.SecretRefs[0].Name,
-						}},
-						KeepObjects: ptr.To(false),
-					},
-				}
-				utilruntime.Must(references.InjectAnnotations(expectedMr))
-				Expect(managedResource).To(DeepEqual(expectedMr))
-				Expect(managedResource).To(consistOf(
-					clusterRoleFor(component.ClusterTypeShoot),
-					clusterRoleBindingFor(component.ClusterTypeShoot),
-				))
+				It("should successfully deploy all resources", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+					Expect(ksm.Deploy(ctx)).To(Succeed())
 
-				actualSecretShootAccess := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
-				expectedSecretShootAccess := secretShootAccess.DeepCopy()
-				expectedSecretShootAccess.ResourceVersion = "1"
-				Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					expectedMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceName,
+							Namespace:       namespace,
+							ResourceVersion: "1",
+							Labels:          map[string]string{"origin": "gardener"},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+							SecretRefs: []corev1.LocalObjectReference{{
+								Name: managedResource.Spec.SecretRefs[0].Name,
+							}},
+							KeepObjects: ptr.To(false),
+						},
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(managedResource).To(DeepEqual(expectedMr))
+					Expect(managedResource).To(consistOf(
+						clusterRoleFor(component.ClusterTypeShoot),
+						clusterRoleBindingFor(component.ClusterTypeShoot),
+					))
 
-				actualService := &corev1.Service{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), actualService)).To(Succeed())
-				expectedService := serviceFor(component.ClusterTypeShoot).DeepCopy()
-				expectedService.ResourceVersion = "1"
-				Expect(actualService).To(Equal(expectedService))
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				actualDeployment := &appsv1.Deployment{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), actualDeployment)).To(Succeed())
-				expectedDeployment := deploymentFor(component.ClusterTypeShoot).DeepCopy()
-				expectedDeployment.ResourceVersion = "1"
-				Expect(actualDeployment).To(Equal(expectedDeployment))
+					actualSecretShootAccess := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
+					expectedSecretShootAccess := secretShootAccess.DeepCopy()
+					expectedSecretShootAccess.ResourceVersion = "1"
+					Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
 
-				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
-				expectedVPA := vpa.DeepCopy()
-				expectedVPA.ResourceVersion = "1"
-				Expect(actualVPA).To(Equal(expectedVPA))
+					actualService := &corev1.Service{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), actualService)).To(Succeed())
+					expectedService := serviceFor(component.ClusterTypeShoot).DeepCopy()
+					expectedService.ResourceVersion = "1"
+					Expect(actualService).To(Equal(expectedService))
+
+					actualDeployment := &appsv1.Deployment{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), actualDeployment)).To(Succeed())
+					expectedDeployment := deploymentFor(component.ClusterTypeShoot).DeepCopy()
+					expectedDeployment.ResourceVersion = "1"
+					Expect(actualDeployment).To(Equal(expectedDeployment))
+
+					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
+					expectedVPA := vpa.DeepCopy()
+					expectedVPA.ResourceVersion = "1"
+					Expect(actualVPA).To(Equal(expectedVPA))
+
+					actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfigShoot), actualScrapeConfig)).To(Succeed())
+					expectedScrapeConfig := scrapeConfigShoot.DeepCopy()
+					expectedScrapeConfig.ResourceVersion = "1"
+					Expect(actualScrapeConfig).To(Equal(expectedScrapeConfig))
+
+					actualPrometheusRule := &monitoringv1.PrometheusRule{}
+					prometheusRule := prometheusRuleShoot(values.IsWorkerless)
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+					expectedPrometheusRule := prometheusRule.DeepCopy()
+					expectedPrometheusRule.ResourceVersion = "1"
+					Expect(actualPrometheusRule).To(Equal(expectedPrometheusRule))
+
+					componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-state-metrics.prometheusrule.test.yaml")
+				})
+			})
+
+			Context("when shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+
+					Expect(ksm.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					expectedMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceName,
+							Namespace:       namespace,
+							ResourceVersion: "1",
+							Labels:          map[string]string{"origin": "gardener"},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+							SecretRefs: []corev1.LocalObjectReference{{
+								Name: managedResource.Spec.SecretRefs[0].Name,
+							}},
+							KeepObjects: ptr.To(false),
+						},
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedMr))
+					Expect(managedResource).To(DeepEqual(expectedMr))
+					Expect(managedResource).To(consistOf(
+						clusterRoleFor(component.ClusterTypeShoot),
+						clusterRoleBindingFor(component.ClusterTypeShoot),
+					))
+
+					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+					actualSecretShootAccess := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
+					expectedSecretShootAccess := secretShootAccess.DeepCopy()
+					expectedSecretShootAccess.ResourceVersion = "1"
+					Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
+
+					actualService := &corev1.Service{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), actualService)).To(Succeed())
+					expectedService := serviceFor(component.ClusterTypeShoot).DeepCopy()
+					expectedService.ResourceVersion = "1"
+					Expect(actualService).To(Equal(expectedService))
+
+					actualDeployment := &appsv1.Deployment{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), actualDeployment)).To(Succeed())
+					expectedDeployment := deploymentFor(component.ClusterTypeShoot).DeepCopy()
+					expectedDeployment.ResourceVersion = "1"
+					Expect(actualDeployment).To(Equal(expectedDeployment))
+
+					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
+					expectedVPA := vpa.DeepCopy()
+					expectedVPA.ResourceVersion = "1"
+					Expect(actualVPA).To(Equal(expectedVPA))
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfigShoot), &monitoringv1alpha1.ScrapeConfig{})).To(BeNotFoundError())
+
+					actualPrometheusRule := &monitoringv1.PrometheusRule{}
+					prometheusRule := prometheusRuleShoot(values.IsWorkerless)
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
+					expectedPrometheusRule := prometheusRule.DeepCopy()
+					expectedPrometheusRule.ResourceVersion = "1"
+					Expect(actualPrometheusRule).To(Equal(expectedPrometheusRule))
+
+					componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-state-metrics.workerless.prometheusrule.test.yaml")
+				})
 			})
 		})
 	})
@@ -855,6 +1102,8 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Create(ctx, serviceFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, deploymentFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpa)).To(Succeed())
+				Expect(c.Create(ctx, scrapeConfigShoot)).To(Succeed())
+				Expect(c.Create(ctx, prometheusRuleShoot(false))).To(Succeed())
 
 				Expect(ksm.Destroy(ctx)).To(Succeed())
 
@@ -864,6 +1113,8 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceFor(component.ClusterTypeShoot)), serviceFor(component.ClusterTypeShoot))).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentFor(component.ClusterTypeShoot)), deploymentFor(component.ClusterTypeShoot))).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfigSeed), scrapeConfigSeed)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRuleShoot(false)), prometheusRuleShoot(false))).To(BeNotFoundError())
 			})
 		})
 	})
