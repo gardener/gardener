@@ -2507,8 +2507,8 @@ rules:
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
 							Limits: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -2607,7 +2607,7 @@ rules:
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
-							corev1.ResourceMemory: resource.MustParse("20Mi"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("50Mi"),
