@@ -107,15 +107,15 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		if len(p.values.Alerting.Alertmanagers) > 0 {
 			obj.Spec.Alerting = &monitoringv1.AlertingSpec{}
 		}
-		for _, alertmanagerItem := range p.values.Alerting.Alertmanagers {
+		for _, alertManager := range p.values.Alerting.Alertmanagers {
 			namespace := p.namespace
-			if alertmanagerItem.Namespace != nil {
-				namespace = *alertmanagerItem.Namespace
+			if alertManager.Namespace != nil {
+				namespace = *alertManager.Namespace
 			}
 			obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers,
 				monitoringv1.AlertmanagerEndpoints{
 					Namespace: namespace,
-					Name:      alertmanagerItem.Name,
+					Name:      alertManager.Name,
 					Port:      intstr.FromString(alertmanager.PortNameMetrics),
 				})
 		}
