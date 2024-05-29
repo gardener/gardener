@@ -43,7 +43,7 @@ type TargetSystem struct {
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
-	ProviderConfig runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 }
 
 // WorkloadIdentityStatus contain the latest observed status of the WorkloadIdentity.

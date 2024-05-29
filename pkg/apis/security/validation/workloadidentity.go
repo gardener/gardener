@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -51,15 +52,15 @@ func validateAudiences(audiences []string, fldPath *field.Path) field.ErrorList 
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one audience"))
 	}
 
-	duplicatedAudiences := map[string]bool{}
+	duplicatedAudiences := sets.Set[string]{}
 	for idx, aud := range audiences {
 		if aud == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Index(idx), "must specify non-empty audience"))
 		}
-		if _, ok := duplicatedAudiences[aud]; ok {
+		if duplicatedAudiences.Has(aud) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(idx), aud))
 		} else {
-			duplicatedAudiences[aud] = true
+			duplicatedAudiences.Insert(aud)
 		}
 	}
 
