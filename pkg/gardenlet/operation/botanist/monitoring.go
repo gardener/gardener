@@ -114,6 +114,10 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			PrometheusRules: shootprometheus.CentralPrometheusRules(b.Shoot.IsWorkerless, b.Shoot.WantsAlertmanager),
 			ServiceMonitors: shootprometheus.CentralServiceMonitors(b.Shoot.WantsAlertmanager),
 		},
+		Alerting: &prometheus.AlertingValues{
+			Alertmanagers: []*prometheus.Alertmanager{{
+				Name:      "alertmanager-seed",
+				Namespace: ptr.To(v1beta1constants.GardenNamespace)}}},
 		Ingress: &prometheus.IngressValues{
 			Host:                              b.ComputePrometheusHost(),
 			SecretsManager:                    b.SecretsManager,
@@ -129,7 +133,6 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		},
 	}
 
-	values.Alerting = &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-seed", Namespace: ptr.To(v1beta1constants.GardenNamespace)}}}
 	if b.Shoot.WantsAlertmanager {
 		values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &prometheus.Alertmanager{Name: "alertmanager-shoot"})
 
