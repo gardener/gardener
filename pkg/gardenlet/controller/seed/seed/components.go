@@ -685,7 +685,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 	}
 
 	if alertingSMTPSecret != nil {
-		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-seed"}
+		values.Alerting = &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-seed"}}}
 	}
 
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, values)

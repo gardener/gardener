@@ -1211,7 +1211,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			PrometheusRules:         gardenprometheus.CentralPrometheusRules(),
 			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
 		},
-		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
+		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},
 		AdditionalAlertRelabelConfigs: []monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{"project", "name"},
