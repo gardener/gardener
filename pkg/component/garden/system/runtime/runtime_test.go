@@ -98,11 +98,11 @@ var _ = Describe("Runtime", func() {
 
 		It("should successfully deploy the resources", func() {
 			priorityClasses := make([]client.Object, 0, 5)
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-500", 999999500, "PriorityClass for Garden system components"))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-400", 999999400, "PriorityClass for Garden system components"))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-300", 999999300, "PriorityClass for Garden system components"))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-200", 999999200, "PriorityClass for Garden system components"))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-100", 999999100, "PriorityClass for Garden system components"))
+			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-500", 999999500))
+			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-400", 999999400))
+			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-300", 999999300))
+			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-200", 999999200))
+			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-100", 999999100))
 
 			Expect(managedResource).To(consistOf(priorityClasses...))
 		})
@@ -210,12 +210,12 @@ var _ = Describe("Runtime", func() {
 	})
 })
 
-func createPriorityClass(name string, value int32, description string) *schedulingv1.PriorityClass {
+func createPriorityClass(name string, value int32) *schedulingv1.PriorityClass {
 	return &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Description: description,
+		Description: "PriorityClass for Garden system components",
 		Value:       value,
 	}
 }

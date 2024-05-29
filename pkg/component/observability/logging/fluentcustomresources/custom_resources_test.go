@@ -200,11 +200,11 @@ var _ = Describe("Custom Resources", func() {
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 			Expect(err).NotTo(HaveOccurred())
-			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2", "")
+			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet")
+			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor")
+			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension")
+			expectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser")
+			expectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2")
 		})
 	})
 
@@ -313,12 +313,11 @@ var _ = Describe("Custom Resources", func() {
 	})
 })
 
-func expectKindWithNameAndNamespace(manifests []string, kind, name, namespace string) {
+func expectKindWithNameAndNamespace(manifests []string, kind, name string) {
 	var objectFound bool
 
 	for _, manifest := range manifests {
-		if strings.Contains(manifest, "kind: "+kind) && strings.Contains(manifest, "name: "+name) &&
-			(namespace == "" || strings.Contains(manifest, "namespace: "+namespace)) {
+		if strings.Contains(manifest, "kind: "+kind) && strings.Contains(manifest, "name: "+name) {
 			objectFound = true
 			break
 		}
