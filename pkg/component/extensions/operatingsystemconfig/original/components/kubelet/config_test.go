@@ -226,10 +226,17 @@ var _ = Describe("Config", func() {
 			PodPidsLimit:                     params.PodPidsLimit,
 			ProtectKernelDefaults:            true,
 			ReadOnlyPort:                     0,
-			RegisterWithTaints: []corev1.Taint{{
-				Key:    "node.gardener.cloud/critical-components-not-ready",
-				Effect: corev1.TaintEffectNoSchedule,
-			}},
+			RegisterWithTaints: []corev1.Taint{
+				{
+					Key:    "foo",
+					Value:  "bar",
+					Effect: corev1.TaintEffectNoSchedule,
+				},
+				{
+					Key:    "node.gardener.cloud/critical-components-not-ready",
+					Effect: corev1.TaintEffectNoSchedule,
+				},
+			},
 			RegistryBurst:                  20,
 			RegistryPullQPS:                ptr.To[int32](10),
 			ResolverConfig:                 ptr.To("/etc/resolv.conf"),
@@ -251,7 +258,13 @@ var _ = Describe("Config", func() {
 				mutateExpectConfigFn(expectation)
 			}
 
-			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)).To(DeepEqual(expectation))
+			taints := []corev1.Taint{{
+				Key:    "foo",
+				Value:  "bar",
+				Effect: corev1.TaintEffectNoSchedule,
+			}}
+
+			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, taints, params)).To(DeepEqual(expectation))
 		},
 
 		Entry(
