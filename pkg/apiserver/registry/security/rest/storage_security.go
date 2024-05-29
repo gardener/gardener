@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	credentialsbindingstore "github.com/gardener/gardener/pkg/apiserver/registry/security/credentialsbinding/storage"
+	workloadidentitystore "github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity/storage"
 )
 
 // StorageProvider is an empty struct.
@@ -36,6 +37,9 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	credentialsBindingStorage := credentialsbindingstore.NewStorage(restOptionsGetter)
 	storage["credentialsbindings"] = credentialsBindingStorage.CredentialsBinding
+
+	workloadIdentityStorage := workloadidentitystore.NewStorage(restOptionsGetter)
+	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
 
 	return storage
 }

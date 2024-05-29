@@ -43,6 +43,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=security.gardener.cloud, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("credentialsbindings"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Security().V1alpha1().CredentialsBindings().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("workloadidentities"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Security().V1alpha1().WorkloadIdentities().Informer()}, nil
 
 	}
 

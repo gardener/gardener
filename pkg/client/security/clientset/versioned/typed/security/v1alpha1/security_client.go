@@ -17,6 +17,7 @@ import (
 type SecurityV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	CredentialsBindingsGetter
+	WorkloadIdentitiesGetter
 }
 
 // SecurityV1alpha1Client is used to interact with features provided by the security.gardener.cloud group.
@@ -26,6 +27,10 @@ type SecurityV1alpha1Client struct {
 
 func (c *SecurityV1alpha1Client) CredentialsBindings(namespace string) CredentialsBindingInterface {
 	return newCredentialsBindings(c, namespace)
+}
+
+func (c *SecurityV1alpha1Client) WorkloadIdentities(namespace string) WorkloadIdentityInterface {
+	return newWorkloadIdentities(c, namespace)
 }
 
 // NewForConfig creates a new SecurityV1alpha1Client for the given config.

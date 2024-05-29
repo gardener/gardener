@@ -75,6 +75,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/operations/v1alpha1,BastionSpec,Ingress
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/operations/v1alpha1,BastionStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/security/v1alpha1,CredentialsBinding,Quotas
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/security/v1alpha1,WorkloadIdentitySpec,Audiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,AdditionalVolumeMounts
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,AdditionalVolumes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,Env

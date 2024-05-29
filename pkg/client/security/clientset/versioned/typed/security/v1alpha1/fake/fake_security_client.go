@@ -20,6 +20,10 @@ func (c *FakeSecurityV1alpha1) CredentialsBindings(namespace string) v1alpha1.Cr
 	return &FakeCredentialsBindings{c, namespace}
 }
 
+func (c *FakeSecurityV1alpha1) WorkloadIdentities(namespace string) v1alpha1.WorkloadIdentityInterface {
+	return &FakeWorkloadIdentities{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSecurityV1alpha1) RESTClient() rest.Interface {

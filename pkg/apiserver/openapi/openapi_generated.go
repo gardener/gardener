@@ -219,6 +219,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBinding":                    schema_pkg_apis_security_v1alpha1_CredentialsBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingList":                schema_pkg_apis_security_v1alpha1_CredentialsBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.CredentialsBindingProvider":            schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem":                          schema_pkg_apis_security_v1alpha1_TargetSystem(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity":                      schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityList":                  schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec":                  schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref),
+		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus":                schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet":                       schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment":             schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                           schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
@@ -9908,6 +9913,198 @@ func schema_pkg_apis_security_v1alpha1_CredentialsBindingProvider(ref common.Ref
 					},
 				},
 				Required: []string{"type"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_TargetSystem(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "TargetSystem represents specific configurations for the system that will accept the JWTs.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the target system.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to extension resource.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"type"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_WorkloadIdentity(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadIdentity is resource that allows workloads to be presented before external systems by giving them identities managed by the Gardener API server. The identity of such workload is represented by JSON Web Token issued by the Gardener API server. Workload identities are designed to be used by components running in the Gardener environment, seed or runtime cluster, that make use of identity federation inspired by the OIDC protocol.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec configures the JSON Web Token issued by the Gardener API server.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status contain the latest observed status of the WorkloadIdentity.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus"),
+						},
+					},
+				},
+				Required: []string{"spec", "status"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec", "github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_WorkloadIdentityList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadIdentityList is a collection of WorkloadIdentities.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of WorkloadIdentities.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentity", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadIdentitySpec configures the JSON Web Token issued by the Gardener API server.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"audiences": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Audiences specify the list of recipients that the JWT is intended for. The values of this field will be set in the 'aud' claim.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"targetSystem": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TargetSystem represents specific configurations for the system that will accept the JWTs.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem"),
+						},
+					},
+				},
+				Required: []string{"audiences", "targetSystem"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.TargetSystem"},
+	}
+}
+
+func schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadIdentityStatus contain the latest observed status of the WorkloadIdentity.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"sub": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"sub"},
 			},
 		},
 	}

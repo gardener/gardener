@@ -7,3 +7,5 @@
 package v1alpha1
 
 type CredentialsBindingExpansion interface{}
+
+type WorkloadIdentityExpansion interface{}

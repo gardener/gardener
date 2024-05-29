@@ -1,0 +1,16 @@
+# WorkloadIdentity containing provider-specific details for account that shall be used to deploy the shoot into.
+---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: WorkloadIdentity
+metadata:
+  name: my-provider-account
+  namespace: garden-dev
+spec:
+  audiences:
+  - gardener
+  targetSystem:
+    type: <some-provider-name> # {aws,azure,gcp,...}
+    providerConfig:
+      apiVersion: <some-provider-name>.provider.extensions.gardener.cloud/v1alpha1
+      kind: WorkloadIdentityConfig
+      # Provider-related config

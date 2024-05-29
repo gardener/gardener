@@ -13,3 +13,11 @@ type CredentialsBindingListerExpansion interface{}
 // CredentialsBindingNamespaceListerExpansion allows custom methods to be added to
 // CredentialsBindingNamespaceLister.
 type CredentialsBindingNamespaceListerExpansion interface{}
+
+// WorkloadIdentityListerExpansion allows custom methods to be added to
+// WorkloadIdentityLister.
+type WorkloadIdentityListerExpansion interface{}
+
+// WorkloadIdentityNamespaceListerExpansion allows custom methods to be added to
+// WorkloadIdentityNamespaceLister.
+type WorkloadIdentityNamespaceListerExpansion interface{}

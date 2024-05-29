@@ -164,8 +164,8 @@ spec:
   targetSystem: # Required field.
     type: aws # Required field.
     providerConfig: # Optional field of type *runtime.RawExtension, extensions can make it mandatory via admission webhooks.
-      apiVersion: aws.security.gardener.cloud/v1alpha1
-      kind: Config
+      apiVersion: aws.provider.extensions.gardener.cloud/v1alpha1
+      kind: WorkloadIdentityConfig
       iamRoleARN: arn:aws:iam::112233445566:role/gardener-dev
 status:
   sub: gardener.cloud:workloadidentity:garden-local:banana-testing:12b580fe-1f74-4195-852b-e1a74b03496a
