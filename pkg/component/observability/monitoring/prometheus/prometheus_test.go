@@ -45,6 +45,11 @@ import (
 )
 
 var _ = Describe("Prometheus", func() {
+	type alertmanager struct {
+		name      string
+		namespace string
+	}
+
 	var (
 		ctx context.Context
 
@@ -62,6 +67,8 @@ var _ = Describe("Prometheus", func() {
 		externalLabels                        = map[string]string{"seed": "test"}
 		additionalLabels                      = map[string]string{"foo": "bar"}
 		alertmanagerName                      = "alertmgr-test"
+		alertmanagerName2                     = "alertmgr-test-2"
+		alertmanagerNamespace2                = "alertmanager-namespace-2"
 		serviceAccountNameTargetCluster       = "target-cluster-service-account"
 
 		additionalScrapeConfig1 = `job_name: foo
@@ -87,7 +94,7 @@ honor_labels: true`
 		serviceAccount                      *corev1.ServiceAccount
 		service                             *corev1.Service
 		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
-		prometheusFor                       func(string, bool) *monitoringv1.Prometheus
+		prometheusFor                       func([]alertmanager, bool) *monitoringv1.Prometheus
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                             *networkingv1.Ingress
 		prometheusRule                      *monitoringv1.PrometheusRule
@@ -202,7 +209,7 @@ honor_labels: true`
 				Namespace: namespace,
 			}},
 		}
-		prometheusFor = func(alertmanagerName string, restrictToNamespace bool) *monitoringv1.Prometheus {
+		prometheusFor = func(alertmanagers []alertmanager, restrictToNamespace bool) *monitoringv1.Prometheus {
 			obj := &monitoringv1.Prometheus{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -281,19 +288,22 @@ honor_labels: true`
 				obj.Spec.RuleNamespaceSelector = nil
 			}
 
-			if alertmanagerName != "" {
-				obj.Spec.Alerting = &monitoringv1.AlertingSpec{
-					Alertmanagers: []monitoringv1.AlertmanagerEndpoints{{
-						Namespace: namespace,
-						Name:      alertmanagerName,
+			if len(alertmanagers) > 0 {
+				obj.Spec.Alerting = &monitoringv1.AlertingSpec{}
+			}
+
+			for _, alertmanager := range alertmanagers {
+				obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers,
+					monitoringv1.AlertmanagerEndpoints{
+						Namespace: alertmanager.namespace,
+						Name:      alertmanager.name,
 						Port:      intstr.FromString("metrics"),
 						AlertRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
 							Regex:        `true`,
 							Action:       "drop",
 						}},
-					}},
-				}
+					})
 			}
 
 			return obj
@@ -584,7 +594,7 @@ honor_labels: true`
 					serviceAccount,
 					service,
 					clusterRoleBinding,
-					prometheusFor("", false),
+					prometheusFor(nil, false),
 					vpa,
 					prometheusRule,
 					scrapeConfig,
@@ -621,7 +631,7 @@ honor_labels: true`
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor("", false),
+						prometheusFor(nil, false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -655,7 +665,7 @@ honor_labels: true`
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor("", true),
+						prometheusFor(nil, true),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -670,7 +680,7 @@ honor_labels: true`
 			When("ingress is configured", func() {
 				test := func() {
 					It("should successfully deploy all resources", func() {
-						prometheusObj := prometheusFor("", false)
+						prometheusObj := prometheusFor(nil, false)
 						prometheusObj.Spec.ExternalURL = "https://" + ingressHost
 
 						prometheusRule.Namespace = namespace
@@ -714,7 +724,7 @@ honor_labels: true`
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor("", false)
+							prometheusObj := prometheusFor(nil, false)
 							prometheusObj.Spec.ExternalURL = "https://" + ingressHost
 							ingress.Annotations["nginx.ingress.kubernetes.io/server-snippet"] = `location /-/reload {
   return 403;
@@ -764,7 +774,7 @@ location /api/v1/targets {
 
 			When("alerting is configured", func() {
 				BeforeEach(func() {
-					values.Alerting = &AlertingValues{AlertmanagerName: alertmanagerName}
+					values.Alerting = &AlertingValues{Alertmanagers: []*Alertmanager{{Name: alertmanagerName}}}
 					deployer = New(logr.Discard(), fakeClient, namespace, values)
 				})
 
@@ -779,7 +789,7 @@ location /api/v1/targets {
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor(alertmanagerName, false),
+						prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -790,7 +800,39 @@ location /api/v1/targets {
 					))
 				})
 
-				When("additional alertmanagers are configured", func() {
+				When("an additional alertmanager is configured via the Alertmananagers slice", func() {
+					BeforeEach(func() {
+						values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &Alertmanager{Name: alertmanagerName2, Namespace: ptr.To(alertmanagerNamespace2)})
+					})
+
+					It("should successfully deploy all resources", func() {
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						Expect(managedResource).To(contain(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheusFor(
+								[]alertmanager{
+									{name: alertmanagerName, namespace: namespace},
+									{name: alertmanagerName2, namespace: alertmanagerNamespace2}},
+								false),
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+						))
+					})
+				})
+
+				When("additional alertmanagers are configured via the AdditionalAlertmanager field", func() {
 					When("configured w/ basic auth", func() {
 						BeforeEach(func() {
 							values.Alerting.AdditionalAlertmanager = map[string][]byte{
@@ -802,7 +844,7 @@ location /api/v1/targets {
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor(alertmanagerName, false)
+							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -852,7 +894,7 @@ basic_auth:
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor(alertmanagerName, false)
+							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -910,7 +952,7 @@ tls_config:
 						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
 						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
 
-						prometheus := prometheusFor(alertmanagerName, false)
+						prometheus := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
 						prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs = append(
 							prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs,
 							monitoringv1.RelabelConfig{
@@ -946,7 +988,7 @@ tls_config:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("", false)
+					prometheusObj := prometheusFor(nil, false)
 					prometheusObj.Spec.Replicas = ptr.To(int32(2))
 
 					prometheusRule.Namespace = namespace
@@ -978,7 +1020,7 @@ tls_config:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("", false)
+					prometheusObj := prometheusFor(nil, false)
 					prometheusObj.Spec.ScrapeTimeout = "10s"
 
 					prometheusRule.Namespace = namespace
@@ -1048,7 +1090,7 @@ query_range:
 					}
 					Expect(kubernetesutils.MakeUnique(cortexConfigMap)).To(Succeed())
 
-					prometheusObj := prometheusFor("", false)
+					prometheusObj := prometheusFor(nil, false)
 					prometheusObj.Spec.Containers = append(prometheusObj.Spec.Containers, corev1.Container{
 						Name:            "cortex",
 						Image:           cortexImage,
@@ -1119,7 +1161,7 @@ query_range:
 				})
 
 				It("should successfully deploy all resources", func() {
-					prometheusObj := prometheusFor("", false)
+					prometheusObj := prometheusFor(nil, false)
 					prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
 						URL: "rw-url",
 						WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -1159,7 +1201,7 @@ query_range:
 					})
 
 					It("should successfully deploy all resources", func() {
-						prometheusObj := prometheusFor("", false)
+						prometheusObj := prometheusFor(nil, false)
 						prometheusObj.Spec.RemoteWrite = []monitoringv1.RemoteWriteSpec{{
 							URL: "rw-url",
 							WriteRelabelConfigs: []monitoringv1.RelabelConfig{{
@@ -1282,7 +1324,7 @@ query_range:
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor("", false),
+						prometheusFor(nil, false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -1327,7 +1369,7 @@ query_range:
 							serviceAccount,
 							service,
 							clusterRoleBinding,
-							prometheusFor("", false),
+							prometheusFor(nil, false),
 							vpa,
 							prometheusRule,
 							scrapeConfig,
