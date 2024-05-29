@@ -19,6 +19,7 @@ import (
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&CredentialsBinding{}, func(obj interface{}) { SetObjectDefaults_CredentialsBinding(obj.(*CredentialsBinding)) })
 	scheme.AddTypeDefaultingFunc(&CredentialsBindingList{}, func(obj interface{}) { SetObjectDefaults_CredentialsBindingList(obj.(*CredentialsBindingList)) })
+	scheme.AddTypeDefaultingFunc(&TokenRequest{}, func(obj interface{}) { SetObjectDefaults_TokenRequest(obj.(*TokenRequest)) })
 	return nil
 }
 
@@ -31,4 +32,8 @@ func SetObjectDefaults_CredentialsBindingList(in *CredentialsBindingList) {
 		a := &in.Items[i]
 		SetObjectDefaults_CredentialsBinding(a)
 	}
+}
+
+func SetObjectDefaults_TokenRequest(in *TokenRequest) {
+	SetDefaults_TokenRequest(in)
 }

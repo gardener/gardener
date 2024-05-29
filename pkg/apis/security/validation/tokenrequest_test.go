@@ -13,6 +13,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/security"
 	. "github.com/gardener/gardener/pkg/apis/security/validation"
@@ -21,53 +22,54 @@ import (
 var _ = Describe("TokenRequest Validation Tests", func() {
 	Describe("#ValidateTokenRequest", func() {
 		var tokenRequest *security.TokenRequest
+		const duration = time.Hour * 12
 
 		BeforeEach(func() {
 			tokenRequest = &security.TokenRequest{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: security.TokenRequestSpec{
-					Duration:      &metav1.Duration{Duration: time.Hour * 12},
-					ContextObject: nil,
+					DurationSeconds: int64(duration.Seconds()),
+					ContextObject:   nil,
 				},
 			}
 		})
 
 		DescribeTable("Duration",
-			func(duration time.Duration, matcher gomegatypes.GomegaMatcher) {
-				tokenRequest.Spec.Duration.Duration = duration
+			func(duration int64, matcher gomegatypes.GomegaMatcher) {
+				tokenRequest.Spec.DurationSeconds = duration
 
 				errs := ValidateTokenRequest(tokenRequest)
 				Expect(errs).To(matcher)
 			},
 			Entry("should allow min < duration < max",
-				time.Hour*12,
+				int64((time.Hour*12).Seconds()),
 				BeEmpty(),
 			),
 			Entry("should allow duration==min",
-				time.Minute*10,
+				int64((time.Minute*10).Seconds()),
 				BeEmpty(),
 			),
 			Entry("should allow duration==max",
-				time.Hour*48,
+				int64(1<<32),
 				BeEmpty(),
 			),
 			Entry("should forbid duration < min",
-				time.Minute*10-time.Second,
+				int64((time.Minute*10-time.Second).Seconds()),
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.duration"),
-						"Detail": ContainSubstring("may not specify a duration shorter than"),
+						"Field":  Equal("spec.durationSeconds"),
+						"Detail": Equal("may not specify a duration shorter than 10 minutes"),
 					}),
 				)),
 			),
 			Entry("should forbid duration > max",
-				time.Hour*48+time.Second,
+				int64(1<<32)+1,
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.duration"),
-						"Detail": ContainSubstring("may not specify a duration longer than"),
+						"Field":  Equal("spec.durationSeconds"),
+						"Detail": Equal("may not specify a duration longer than 2^32 seconds"),
 					}),
 				)),
 			),
@@ -85,7 +87,7 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 				BeEmpty(),
 			),
 			Entry("should allow namespaced context object",
-				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Namespace: "default", Name: "foo-bar"},
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Namespace: ptr.To("default"), Name: "foo-bar"},
 				BeEmpty(),
 			),
 			Entry("should allow non-namespaced (cluster scoped) context object",
@@ -138,7 +140,7 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 				)),
 			),
 			Entry("should forbid context object with Namespace that is not DNS1123 subdomain",
-				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: "Default"},
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: ptr.To("Default")},
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -146,6 +148,21 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
 					}),
 				)),
+			),
+			Entry("should forbid context object with empty Namespace",
+				&security.ContextObject{APIVersion: "foo.bar/v1", Kind: "Baz", Name: "foo-bar", Namespace: ptr.To("")},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.contextObject.namespace"),
+						"Detail": ContainSubstring("namespace name cannot be empty"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.contextObject.namespace"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters"),
+					})),
+				),
 			),
 		)
 	})

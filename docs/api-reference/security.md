@@ -219,7 +219,7 @@ WorkloadIdentityStatus
 <a href="#security.gardener.cloud/v1alpha1.TokenRequestSpec">TokenRequestSpec</a>)
 </p>
 <p>
-<p>ContextObject identify the object the token is requested for.</p>
+<p>ContextObject identifies the object the token is requested for.</p>
 </p>
 <table>
 <thead>
@@ -270,6 +270,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Namespace of the object the token is requested for.</p>
 </td>
 </tr>
@@ -361,7 +362,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <h3 id="security.gardener.cloud/v1alpha1.TokenRequest">TokenRequest
 </h3>
 <p>
-<p>TokenRequest is resource that can be used to request WorkloadIdentity tokens.</p>
+<p>TokenRequest is a resource that is used to request WorkloadIdentity tokens.</p>
 </p>
 <table>
 <thead>
@@ -411,21 +412,19 @@ ContextObject
 </td>
 <td>
 <em>(Optional)</em>
-<p>ContextObject identify the object the token is requested for.</p>
+<p>ContextObject identifies the object the token is requested for.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>duration</code></br>
+<code>durationSeconds</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
+int64
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Duration specifies for how long the requested token to be valid.</p>
+<p>DurationSeconds specifies for how long the requested token should be valid.</p>
 </td>
 </tr>
 </table>
@@ -441,7 +440,7 @@ TokenRequestStatus
 </em>
 </td>
 <td>
-<p>Status is bears the issued token with additional information back to the client.</p>
+<p>Status bears the issued token with additional information back to the client.</p>
 </td>
 </tr>
 </tbody>
@@ -474,21 +473,19 @@ ContextObject
 </td>
 <td>
 <em>(Optional)</em>
-<p>ContextObject identify the object the token is requested for.</p>
+<p>ContextObject identifies the object the token is requested for.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>duration</code></br>
+<code>durationSeconds</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
-Kubernetes meta/v1.Duration
-</a>
+int64
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Duration specifies for how long the requested token to be valid.</p>
+<p>DurationSeconds specifies for how long the requested token should be valid.</p>
 </td>
 </tr>
 </tbody>

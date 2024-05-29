@@ -11,28 +11,28 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// TokenRequest is resource that can be used to request WorkloadIdentity tokens.
+// TokenRequest is a resource that is used to request WorkloadIdentity tokens.
 type TokenRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec holds configuration settings for the requested token.
 	Spec TokenRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
-	// Status is bears the issued token with additional information back to the client.
+	// Status bears the issued token with additional information back to the client.
 	Status TokenRequestStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
 // TokenRequestSpec holds configuration settings for the requested token.
 type TokenRequestSpec struct {
-	// ContextObject identify the object the token is requested for.
+	// ContextObject identifies the object the token is requested for.
 	// +optional
 	ContextObject *ContextObject `json:"contextObject,omitempty" protobuf:"bytes,1,opt,name=contextObject"`
-	// Duration specifies for how long the requested token to be valid.
+	// DurationSeconds specifies for how long the requested token should be valid.
 	// +optional
-	Duration *metav1.Duration `json:"duration,omitempty" protobuf:"bytes,2,opt,name=duration"`
+	DurationSeconds *int64 `json:"durationSeconds,omitempty" protobuf:"bytes,2,opt,name=durationSeconds"`
 }
 
-// ContextObject identify the object the token is requested for.
+// ContextObject identifies the object the token is requested for.
 type ContextObject struct {
 	// Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
@@ -41,7 +41,8 @@ type ContextObject struct {
 	// Name of the object the token is requested for.
 	Name string `json:"name" protobuf:"bytes,3,opt,name=name"`
 	// Namespace of the object the token is requested for.
-	Namespace string `json:"namespace" protobuf:"bytes,4,opt,name=namespace"`
+	// +optional
+	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,4,opt,name=namespace"`
 	// UID of the object the token is requested for.
 	UID types.UID `json:"uid" protobuf:"bytes,5,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
 }

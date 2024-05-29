@@ -26,8 +26,8 @@ import (
 type TokenRequestREST struct {
 	// client kubernetes.Interface // Might be needed later to read the context object
 
-	minDuration            time.Duration
-	maxDuration            time.Duration
+	minDuration            int64
+	maxDuration            int64
 	workloadIdentityGetter getter
 }
 
@@ -85,11 +85,10 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 	}
 
 	var (
-		aud = wi.Spec.Audiences
-		sub = wi.Status.Sub
+		aud      = wi.Spec.Audiences
+		sub      = wi.Status.Sub
+		duration = tokenRequest.Spec.DurationSeconds
 	)
-
-	duration := tokenRequest.Spec.Duration.Duration
 
 	if duration < r.minDuration {
 		duration = r.minDuration
@@ -99,7 +98,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 
 	var (
 		now = time.Now()
-		exp = now.Add(duration)
+		exp = now.Add(time.Second * time.Duration(duration))
 	)
 	token, err := issueToken(aud, sub, now, now, exp)
 	if err != nil {
@@ -152,7 +151,8 @@ func NewTokenRequestREST(
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
-		minDuration:            minDuration,
-		maxDuration:            maxDuration,
+
+		minDuration: int64(minDuration.Seconds()),
+		maxDuration: int64(maxDuration.Seconds()),
 	}
 }

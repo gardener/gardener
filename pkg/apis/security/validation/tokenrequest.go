@@ -15,26 +15,34 @@ import (
 
 // ValidateTokenRequest validates a TokenRequest.
 func ValidateTokenRequest(request *security.TokenRequest) field.ErrorList {
-	allErrs := field.ErrorList{}
 	var (
+		allErrs  = field.ErrorList{}
 		specPath = field.NewPath("spec")
 	)
-	const (
-		minDuration = time.Minute * 10 // TODO(vpnachev): Make min duration configurable.
-		maxDuration = time.Hour * 48   // TODO(vpnachev): Make max duration configurable.
-	)
-	if request.Spec.Duration != nil {
-		if request.Spec.Duration.Duration < minDuration {
-			allErrs = append(allErrs, field.Invalid(specPath.Child("duration"), request.Spec.Duration.String(), "may not specify a duration shorter than "+minDuration.String()))
-		}
-		if request.Spec.Duration.Duration > maxDuration {
-			allErrs = append(allErrs, field.Invalid(specPath.Child("duration"), request.Spec.Duration.String(), "may not specify a duration longer than "+maxDuration.String()))
-		}
-	}
+
+	allErrs = append(allErrs, validateDurationSeconds(request.Spec.DurationSeconds, specPath.Child("durationSeconds"))...)
 
 	if request.Spec.ContextObject != nil {
 		allErrs = append(allErrs, validateContextObject(*request.Spec.ContextObject, specPath.Child("contextObject"))...)
 	}
+
+	return allErrs
+}
+
+func validateDurationSeconds(durationSeconds int64, path *field.Path) field.ErrorList {
+	const (
+		minDuration = time.Minute * 10
+		maxDuration = 1 << 32
+	)
+	allErrs := field.ErrorList{}
+
+	if durationSeconds < int64(minDuration.Seconds()) {
+		allErrs = append(allErrs, field.Invalid(path, durationSeconds, "may not specify a duration shorter than 10 minutes"))
+	}
+	if durationSeconds > maxDuration {
+		allErrs = append(allErrs, field.Invalid(path, durationSeconds, "may not specify a duration longer than 2^32 seconds"))
+	}
+
 	return allErrs
 }
 
@@ -57,9 +65,12 @@ func validateContextObject(ctxObj security.ContextObject, path *field.Path) fiel
 		allErrs = append(allErrs, field.Invalid(path.Child("name"), ctxObj.Name, err))
 	}
 
-	if len(ctxObj.Namespace) != 0 { // Namespace can be omitted when cluster scoped object is referenced.
-		for _, err := range validation.IsDNS1123Subdomain(ctxObj.Namespace) {
-			allErrs = append(allErrs, field.Invalid(path.Child("namespace"), ctxObj.Namespace, err))
+	if ctxObj.Namespace != nil { // Namespace can be omitted when cluster scoped object is referenced.
+		if len(*ctxObj.Namespace) == 0 {
+			allErrs = append(allErrs, field.Required(path.Child("namespace"), "namespace name cannot be empty"))
+		}
+		for _, err := range validation.IsDNS1123Subdomain(*ctxObj.Namespace) {
+			allErrs = append(allErrs, field.Invalid(path.Child("namespace"), *ctxObj.Namespace, err))
 		}
 	}
 

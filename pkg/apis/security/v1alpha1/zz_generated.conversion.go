@@ -154,7 +154,7 @@ func autoConvert_v1alpha1_ContextObject_To_security_ContextObject(in *ContextObj
 	out.Kind = in.Kind
 	out.APIVersion = in.APIVersion
 	out.Name = in.Name
-	out.Namespace = in.Namespace
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	out.UID = types.UID(in.UID)
 	return nil
 }
@@ -168,7 +168,7 @@ func autoConvert_security_ContextObject_To_v1alpha1_ContextObject(in *security.C
 	out.Kind = in.Kind
 	out.APIVersion = in.APIVersion
 	out.Name = in.Name
-	out.Namespace = in.Namespace
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	out.UID = types.UID(in.UID)
 	return nil
 }
@@ -296,7 +296,9 @@ func Convert_security_TokenRequest_To_v1alpha1_TokenRequest(in *security.TokenRe
 
 func autoConvert_v1alpha1_TokenRequestSpec_To_security_TokenRequestSpec(in *TokenRequestSpec, out *security.TokenRequestSpec, s conversion.Scope) error {
 	out.ContextObject = (*security.ContextObject)(unsafe.Pointer(in.ContextObject))
-	out.Duration = (*metav1.Duration)(unsafe.Pointer(in.Duration))
+	if err := metav1.Convert_Pointer_int64_To_int64(&in.DurationSeconds, &out.DurationSeconds, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -307,7 +309,9 @@ func Convert_v1alpha1_TokenRequestSpec_To_security_TokenRequestSpec(in *TokenReq
 
 func autoConvert_security_TokenRequestSpec_To_v1alpha1_TokenRequestSpec(in *security.TokenRequestSpec, out *TokenRequestSpec, s conversion.Scope) error {
 	out.ContextObject = (*ContextObject)(unsafe.Pointer(in.ContextObject))
-	out.Duration = (*metav1.Duration)(unsafe.Pointer(in.Duration))
+	if err := metav1.Convert_int64_To_Pointer_int64(&in.DurationSeconds, &out.DurationSeconds, s); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -16,7 +16,7 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/security/v1alpha1";
 
-// ContextObject identify the object the token is requested for.
+// ContextObject identifies the object the token is requested for.
 message ContextObject {
   // Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.
   optional string kind = 1;
@@ -28,6 +28,7 @@ message ContextObject {
   optional string name = 3;
 
   // Namespace of the object the token is requested for.
+  // +optional
   optional string namespace = 4;
 
   // UID of the object the token is requested for.
@@ -80,7 +81,7 @@ message TargetSystem {
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
-// TokenRequest is resource that can be used to request WorkloadIdentity tokens.
+// TokenRequest is a resource that is used to request WorkloadIdentity tokens.
 message TokenRequest {
   // Standard object metadata.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
@@ -88,19 +89,19 @@ message TokenRequest {
   // Spec holds configuration settings for the requested token.
   optional TokenRequestSpec spec = 2;
 
-  // Status is bears the issued token with additional information back to the client.
+  // Status bears the issued token with additional information back to the client.
   optional TokenRequestStatus status = 3;
 }
 
 // TokenRequestSpec holds configuration settings for the requested token.
 message TokenRequestSpec {
-  // ContextObject identify the object the token is requested for.
+  // ContextObject identifies the object the token is requested for.
   // +optional
   optional ContextObject contextObject = 1;
 
-  // Duration specifies for how long the requested token to be valid.
+  // DurationSeconds specifies for how long the requested token should be valid.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration duration = 2;
+  optional int64 durationSeconds = 2;
 }
 
 // TokenRequestStatus bears the issued token with additional information back to the client.

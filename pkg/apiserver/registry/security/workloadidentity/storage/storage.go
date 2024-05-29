@@ -33,7 +33,7 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) WorkloadIdentityStorage {
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, time.Minute*10, time.Hour*48),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, time.Minute*10, time.Hour*48), // TODO(vpnachev): Make min and max durations configurable.
 	}
 }
 

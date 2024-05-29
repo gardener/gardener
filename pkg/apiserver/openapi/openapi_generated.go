@@ -9788,7 +9788,7 @@ func schema_pkg_apis_security_v1alpha1_ContextObject(ref common.ReferenceCallbac
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ContextObject identify the object the token is requested for.",
+				Description: "ContextObject identifies the object the token is requested for.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -9818,7 +9818,6 @@ func schema_pkg_apis_security_v1alpha1_ContextObject(ref common.ReferenceCallbac
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Namespace of the object the token is requested for.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -9832,7 +9831,7 @@ func schema_pkg_apis_security_v1alpha1_ContextObject(ref common.ReferenceCallbac
 						},
 					},
 				},
-				Required: []string{"kind", "apiVersion", "name", "namespace", "uid"},
+				Required: []string{"kind", "apiVersion", "name", "uid"},
 			},
 		},
 	}
@@ -10010,7 +10009,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequest(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "TokenRequest is resource that can be used to request WorkloadIdentity tokens.",
+				Description: "TokenRequest is a resource that is used to request WorkloadIdentity tokens.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -10043,7 +10042,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequest(ref common.ReferenceCallback
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Status is bears the issued token with additional information back to the client.",
+							Description: "Status bears the issued token with additional information back to the client.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.TokenRequestStatus"),
 						},
@@ -10066,21 +10065,22 @@ func schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"contextObject": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ContextObject identify the object the token is requested for.",
+							Description: "ContextObject identifies the object the token is requested for.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"),
 						},
 					},
-					"duration": {
+					"durationSeconds": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Duration specifies for how long the requested token to be valid.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							Description: "DurationSeconds specifies for how long the requested token should be valid.",
+							Type:        []string{"integer"},
+							Format:      "int64",
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"},
 	}
 }
 
