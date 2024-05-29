@@ -6,6 +6,8 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -15,8 +17,9 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -32,27 +35,16 @@ func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	}
 }
 
-func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
-	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-			}},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-
+func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
 	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Ingress: []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}}},
-			},
-		}},
+				{
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+				},
+			}},
+		},
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{
 				{
@@ -80,10 +72,23 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		},
 	}
 
-	for _, obj := range []client.Object{
-		networkPolicyAllowToMachinePods,
+	if cluster.Shoot.Spec.Networking == nil || cluster.Shoot.Spec.Networking.Nodes == nil {
+		return fmt.Errorf("shoot specification does not contain node network CIDR required for VPN tunnel")
+	}
+
+	objects := []client.Object{
 		networkPolicyAllowMachinePods,
-	} {
+	}
+
+	for _, ipFamily := range cluster.Shoot.Spec.Networking.IPFamilies {
+		ipPoolObj, err := ipPool(infrastructure.Namespace, string(ipFamily), *cluster.Shoot.Spec.Networking.Nodes)
+		if err != nil {
+			return err
+		}
+		objects = append(objects, ipPoolObj)
+	}
+
+	for _, obj := range objects {
 		if err := a.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return err
 		}
@@ -97,7 +102,8 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
-		emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace),
+		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv4))}},
+		&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: IPPoolName(infrastructure.Namespace, string(gardencorev1beta1.IPFamilyIPv6))}},
 	)
 }
 
@@ -124,4 +130,25 @@ func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
 			Namespace: namespace,
 		},
 	}
+}
+
+// IPPoolName returns the name of the crd.projectcalico.org/v1.IPPool resource for the given shoot namespace.
+func IPPoolName(shootNamespace, ipFamily string) string {
+	return "shoot-machine-pods-" + shootNamespace + "-" + strings.ToLower(ipFamily)
+}
+
+func ipPool(shootNamespace, ipFamily, nodeCIDR string) (client.Object, error) {
+	return kubernetes.NewManifestReader([]byte(`apiVersion: crd.projectcalico.org/v1
+kind: IPPool
+metadata:
+  name: ` + IPPoolName(shootNamespace, ipFamily) + `
+spec:
+  cidr: ` + nodeCIDR + `
+  ipipMode: Always
+  natOutgoing: true
+  nodeSelector: "!all()" # Without this, calico defaults nodeSelector to "all()" and can randomly pick this pool for
+                         # IPAM for pods even if the pod does not explicitly request an IP from this pool via the
+                         # cni.projectcalico.org/IPv{4,6}Pools annotation.
+                         # See https://github.com/projectcalico/calico/issues/7299#issuecomment-1446834103
+`)).Read()
 }

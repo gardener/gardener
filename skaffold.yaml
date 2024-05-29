@@ -732,7 +732,6 @@ build:
             - pkg/provider-local/local
             - pkg/provider-local/webhook/controlplane
             - pkg/provider-local/webhook/dnsconfig
-            - pkg/provider-local/webhook/machinecontrollermanager
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/nodeagentosc

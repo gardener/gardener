@@ -6,6 +6,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -16,9 +17,11 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
+	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -103,6 +106,24 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Data: map[string][]byte{"userData": userData},
 		})
 
+		providerConfig := map[string]interface{}{
+			"image": image,
+		}
+
+		for _, ipFamily := range w.cluster.Shoot.Spec.Networking.IPFamilies {
+			key := "ipPoolNameV4"
+			if ipFamily == gardencorev1beta1.IPFamilyIPv6 {
+				key = "ipPoolNameV6"
+			}
+
+			providerConfig[key] = infrastructure.IPPoolName(w.worker.Namespace, string(ipFamily))
+		}
+
+		providerConfigBytes, err := json.Marshal(providerConfig)
+		if err != nil {
+			return err
+		}
+
 		machineClasses = append(machineClasses, &machinev1alpha1.MachineClass{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
@@ -121,7 +142,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 				Namespace: w.worker.Spec.SecretRef.Namespace,
 			},
 			Provider:     local.Type,
-			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `"}`)},
+			ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
 		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{

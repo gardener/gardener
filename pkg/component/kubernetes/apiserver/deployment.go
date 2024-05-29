@@ -609,7 +609,6 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	}
 
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
-	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {

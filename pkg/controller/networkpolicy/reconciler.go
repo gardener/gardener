@@ -232,13 +232,8 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
-		{
-			name:          "allow-to-shoot-networks",
-			reconcileFunc: r.reconcileNetworkPolicyAllowToShootNetworks,
-			namespaceSelectors: []labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			},
-		},
+		// TODO(rfranzke): Remove this after v1.98 has been released.
+		{name: "allow-to-shoot-networks"},
 	}
 
 	return configs
@@ -419,50 +414,6 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 				{To: privateNetworkPeersV4},
 				{To: privateNetworkPeersV6},
 			},
-			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-		}
-	})
-}
-
-func (r *Reconciler) reconcileNetworkPolicyAllowToShootNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	cluster := &extensionsv1alpha1.Cluster{}
-	if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: networkPolicy.Namespace}, cluster); err != nil {
-		return err
-	}
-
-	shoot, err := extensions.ShootFromCluster(cluster)
-	if err != nil {
-		return err
-	}
-
-	var shootNetworks []string
-	if shoot.Spec.Networking != nil {
-		if v := shoot.Spec.Networking.Nodes; v != nil {
-			shootNetworks = append(shootNetworks, *v)
-		}
-		if v := shoot.Spec.Networking.Pods; v != nil {
-			shootNetworks = append(shootNetworks, *v)
-		}
-		if v := shoot.Spec.Networking.Services; v != nil {
-			shootNetworks = append(shootNetworks, *v)
-		}
-	}
-
-	shootNetworkPeers, err := networkPolicyPeersWithExceptions(shootNetworks, r.RuntimeNetworks.BlockCIDRs...)
-	if err != nil {
-		return err
-	}
-
-	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
-		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"egress from pods labeled with '%s=%s' to IPv4 blocks belonging to the shoot networks. In practice, this "+
-			"should be used by components which use VPN tunnel to communicate to pods in the shoot cluster.",
-			v1beta1constants.LabelNetworkPolicyToShootNetworks, v1beta1constants.LabelNetworkPolicyAllowed))
-
-		policy.Spec = networkingv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
-			Egress:      []networkingv1.NetworkPolicyEgressRule{{To: shootNetworkPeers}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}

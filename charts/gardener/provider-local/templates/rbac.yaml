@@ -83,6 +83,7 @@ rules:
   - admissionregistration.k8s.io
   - apiextensions.k8s.io
   - networking.k8s.io
+  - crd.projectcalico.org
   resources:
   - namespaces
   - namespaces/finalizers
@@ -109,6 +110,7 @@ rules:
   - networkpolicies
   - ingresses
   - poddisruptionbudgets
+  - ippools
   verbs:
   - "*"
 - apiGroups:

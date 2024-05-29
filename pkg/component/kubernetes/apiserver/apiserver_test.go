@@ -2313,7 +2313,6 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Labels).To(Equal(utils.MergeStringMaps(defaultLabels, map[string]string{
-						"networking.gardener.cloud/to-shoot-networks":                       "allowed",
 						"networking.gardener.cloud/to-runtime-apiserver":                    "allowed",
 						"networking.resources.gardener.cloud/to-vpn-seed-server-0-tcp-1194": "allowed",
 						"networking.resources.gardener.cloud/to-vpn-seed-server-1-tcp-1194": "allowed",

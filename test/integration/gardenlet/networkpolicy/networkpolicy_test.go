@@ -209,15 +209,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-dns")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("deny-all")})}),
 			))
-
-			By("Verify that no unexpected NetworkPolicies get created")
-			Consistently(func(g Gomega) []networkingv1.NetworkPolicy {
-				networkPolicyList := &networkingv1.NetworkPolicyList{}
-				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
-				return networkPolicyList.Items
-			}).ShouldNot(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-shoot-networks")})}),
-			))
 		})
 	})
 
@@ -460,26 +451,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inShootNamespaces:     true,
 			inExtensionNamespaces: true,
 			inCustomNamespace:     true,
-		})
-	})
-
-	Describe("allow-to-shoot-networks", func() {
-		defaultTests(testAttributes{
-			networkPolicyName: "allow-to-shoot-networks",
-			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec {
-				return networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
-					PolicyTypes: []networkingv1.PolicyType{"Egress"},
-					Egress: []networkingv1.NetworkPolicyEgressRule{{
-						To: []networkingv1.NetworkPolicyPeer{
-							{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/18"}},
-							{IPBlock: &networkingv1.IPBlock{CIDR: "10.150.0.0/16"}},
-							{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/17"}},
-						}},
-					},
-				}
-			},
-			inShootNamespaces: true,
 		})
 	})
 

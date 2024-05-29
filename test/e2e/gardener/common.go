@@ -8,8 +8,10 @@ import (
 	"context"
 	"net"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -109,9 +111,23 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			},
 		},
 	}
+
+	// We must not set the node CIDR in the pre-upgrade phase of the upgrade tests because it will not be handled
+	// by the Infrastructure and Worker controllers until https://github.com/gardener/gardener/pull/9752 is released
+	// (v1.96). Hence, we set it for upgrade tests from v1.95 in the post-upgrade phase.
+	// TODO(timebertt): drop this after v1.96 has been released
+	setNodeCIDR := !(ginkgo.Label("pre-upgrade").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) &&
+		strings.HasPrefix(os.Getenv("GARDENER_PREVIOUS_VERSION"), "v1.95."))
+
+	if setNodeCIDR {
+		shoot.Spec.Networking.Nodes = ptr.To("10.10.0.0/16")
+	}
+
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
 	}
+
 	return shoot
 }
 
@@ -142,11 +158,13 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 				},
 			}},
 	}
+
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking = &gardencorev1beta1.Networking{
 			IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 		}
 	}
+
 	return shoot
 }
 

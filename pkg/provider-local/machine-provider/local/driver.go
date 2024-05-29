@@ -42,19 +42,6 @@ func (_ *localDriver) InitializeMachine(context.Context, *driver.InitializeMachi
 	return nil, status.Error(codes.Unimplemented, "InitializeMachine is not yet implemented")
 }
 
-func service(machine *machinev1alpha1.Machine) *corev1.Service {
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "machines",
-			Namespace: machine.Namespace,
-		},
-	}
-}
-
 func podForMachine(machine *machinev1alpha1.Machine) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
