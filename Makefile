@@ -205,7 +205,7 @@ format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
-test: $(REPORT_COLLECTOR) $(PROMTOOL) logcheck-symlinks
+test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
 	@./hack/test.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
@@ -214,7 +214,7 @@ test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./test/integration/...
 
 .PHONY: test-cov
-test-cov: $(PROMTOOL)
+test-cov: $(PROMTOOL) $(HELM)
 	@./hack/test-cover.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 
 .PHONY: test-cov-clean
