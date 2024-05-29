@@ -108,20 +108,19 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 			obj.Spec.Alerting = &monitoringv1.AlertingSpec{}
 		}
 		for _, alertManager := range p.values.Alerting.Alertmanagers {
-			obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers,
-				monitoringv1.AlertmanagerEndpoints{
-					Namespace: ptr.Deref(alertManager.Namespace, p.namespace),
-					Name:      alertManager.Name,
-					Port:      intstr.FromString(alertmanager.PortNameMetrics),
-					AlertRelabelConfigs: append(
-						[]monitoringv1.RelabelConfig{{
-							SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
-							Regex:        `true`,
-							Action:       "drop",
-						}},
-						p.values.AdditionalAlertRelabelConfigs...,
-					),
-				})
+			obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers, monitoringv1.AlertmanagerEndpoints{
+				Namespace: ptr.Deref(alertManager.Namespace, p.namespace),
+				Name:      alertManager.Name,
+				Port:      intstr.FromString(alertmanager.PortNameMetrics),
+				AlertRelabelConfigs: append(
+					[]monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"ignoreAlerts"},
+						Regex:        `true`,
+						Action:       "drop",
+					}},
+					p.values.AdditionalAlertRelabelConfigs...,
+				),
+			})
 		}
 
 		if p.values.Alerting.AdditionalAlertmanager != nil {
