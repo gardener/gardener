@@ -225,9 +225,9 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		var oscHash *string
+		var nodeAgentSecretName *string
 		if oscConfig.Init.IncludeHashInWorker {
-			oscHash = &oscConfig.Init.GardenerNodeAgentSecretName
+			nodeAgentSecretName = &oscConfig.Init.GardenerNodeAgentSecretName
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
@@ -244,9 +244,9 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			NodeTemplate:   nodeTemplate,
-			OSCHash:        oscHash,
-			ProviderConfig: pConfig,
+			NodeTemplate:        nodeTemplate,
+			NodeAgentSecretName: nodeAgentSecretName,
+			ProviderConfig:      pConfig,
 			// TODO(rfranzke): Remove usage of UserData field after v1.100 has been released.
 			UserData:                         userData,
 			UserDataSecretRef:                userDataSecretRef,

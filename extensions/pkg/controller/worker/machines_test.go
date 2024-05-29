@@ -291,9 +291,9 @@ var _ = Describe("Machines", func() {
 		)
 
 		BeforeEach(func() {
-			oscHash := "sample-hash"
+			nodeAgentSecretName := "sample-hash"
 			p = extensionsv1alpha1.WorkerPool{
-				OSCHash: &oscHash,
+				NodeAgentSecretName: &nodeAgentSecretName,
 			}
 			additionalDataV1 = []string{"sample"}
 			additionalDataV2 = []string{"sample"}
@@ -358,8 +358,8 @@ var _ = Describe("Machines", func() {
 				additionalDataV2 = []string{"test"}
 			})
 
-			It("when changing oscHash", func() {
-				p.OSCHash = ptr.To("different")
+			It("when changing nodeAgentSecretName", func() {
+				p.NodeAgentSecretName = ptr.To("different")
 			})
 		})
 	})

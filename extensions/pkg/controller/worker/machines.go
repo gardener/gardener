@@ -94,8 +94,8 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1 []string, additionalDataV2 []string) (string, error) {
-	if pool.OSCHash != nil {
-		return WorkerPoolHashV2(*pool.OSCHash, additionalDataV2...)
+	if pool.NodeAgentSecretName != nil {
+		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
 	}
 	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
 }
@@ -160,9 +160,9 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
 }
 
-// WorkerPoolHashV2 returns a hash value for a given oscHash and additional data.
-func WorkerPoolHashV2(oscHash string, additionalData ...string) (string, error) {
-	data := []string{oscHash}
+// WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
+func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
+	data := []string{nodeAgentSecretName}
 
 	data = append(data, additionalData...)
 

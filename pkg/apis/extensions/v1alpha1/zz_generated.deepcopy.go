@@ -1711,8 +1711,8 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		}
 	}
 	out.MachineImage = in.MachineImage
-	if in.OSCHash != nil {
-		in, out := &in.OSCHash, &out.OSCHash
+	if in.NodeAgentSecretName != nil {
+		in, out := &in.NodeAgentSecretName, &out.NodeAgentSecretName
 		*out = new(string)
 		**out = **in
 	}

@@ -222,6 +222,11 @@ spec:
                     name:
                       description: Name is the name of this worker pool.
                       type: string
+                    nodeAgentSecretName:
+                      description: |-
+                        NodeAgentSecretName is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
+                        worker pool must be rolled.
+                      type: string
                     nodeTemplate:
                       description: NodeTemplate contains resource information of the
                         machine which is used by Cluster Autoscaler to generate nodeTemplate
@@ -239,11 +244,6 @@ spec:
                       required:
                       - capacity
                       type: object
-                    oscHash:
-                      description: |-
-                        OSCHash is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
-                        worker pool must be rolled.
-                      type: string
                     providerConfig:
                       description: ProviderConfig is a provider specific configuration
                         for the worker pool.

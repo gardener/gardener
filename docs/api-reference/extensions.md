@@ -4167,14 +4167,14 @@ string
 </tr>
 <tr>
 <td>
-<code>oscHash</code></br>
+<code>nodeAgentSecretName</code></br>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>OSCHash is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
+<p>NodeAgentSecretName is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
 worker pool must be rolled.</p>
 </td>
 </tr>
