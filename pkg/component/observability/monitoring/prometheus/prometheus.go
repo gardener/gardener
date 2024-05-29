@@ -104,12 +104,20 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 	}
 
 	if p.values.Alerting != nil {
-		obj.Spec.Alerting = &monitoringv1.AlertingSpec{
-			Alertmanagers: []monitoringv1.AlertmanagerEndpoints{{
-				Namespace: p.namespace,
-				Name:      p.values.Alerting.AlertmanagerName,
-				Port:      intstr.FromString(alertmanager.PortNameMetrics),
-			}},
+		if len(p.values.Alerting.Alertmanagers) > 0 {
+			obj.Spec.Alerting = &monitoringv1.AlertingSpec{}
+		}
+		for _, alertmanagerItem := range p.values.Alerting.Alertmanagers {
+			namespace := p.namespace
+			if alertmanagerItem.Namespace != nil {
+				namespace = *alertmanagerItem.Namespace
+			}
+			obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers,
+				monitoringv1.AlertmanagerEndpoints{
+					Namespace: namespace,
+					Name:      alertmanagerItem.Name,
+					Port:      intstr.FromString(alertmanager.PortNameMetrics),
+				})
 		}
 		obj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertRelabelConfigs},
