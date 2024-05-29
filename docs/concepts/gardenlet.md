@@ -499,7 +499,7 @@ creates a clone of itself with the same version and the same configuration
 that it currently has.
 Then it deploys the gardenlet clone into the managed seed cluster.
 
-For more information, see [Register Shoot as Seed](../operations/managed_seed.md).
+For more information, see [`ManagedSeed`s: Register Shoot as Seed](../operations/managed_seed.md).
 
 ## Migrating from Previous Gardener Versions
 

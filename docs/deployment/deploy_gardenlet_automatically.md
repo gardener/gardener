@@ -1,28 +1,26 @@
-# Automatic Deployment of gardenlets
+# Deploy a gardenlet Automatically
 
-The gardenlet can automatically deploy itself into shoot clusters, and register a cluster as a seed cluster.
+The gardenlet can automatically deploy itself into shoot clusters, and register them as a seed cluster.
 These clusters are called "managed seeds" (aka "shooted seeds").
 This procedure is the preferred way to add additional seed clusters, because shoot clusters already come with production-grade qualities that are also demanded for seed clusters.
 
 ## Prerequisites
 
-The only prerequisite is to register an initial cluster as a seed cluster that already has a gardenlet deployed in one of the following ways:
+The only prerequisite is to register an initial cluster as a seed cluster that already has a manually deployed gardenlet (for a step-by-step manual installation guide, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md)).
 
-* The gardenlet was deployed as part of a Gardener installation using a setup tool (for example, `gardener/garden-setup`).
-* The gardenlet was deployed manually (for a step-by-step manual installation guide, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md)).
+> [!TIP]
+> The initial seed cluster can be the garden cluster itself, but for better separation of concerns, it is recommended to only register other clusters as seeds.
 
-> The initial cluster can be the garden cluster itself.
+## Auto-Deployment of Gardenlets into Shoot Clusters
 
-## Self-Deployment of gardenlets in Additional Managed Seed Clusters
+For a better scalability of your Gardener landscape (e.g., when the total number of `Shoot`s grows), you usually need more seed clusters that you can create, as follows:
 
-For a better scalability, you usually need more seed clusters that you can create, as follows:
+1. Use the initial seed cluster ("unmanaged seed") to create shoot clusters that you later register as seed clusters.
+2. The gardenlet deployed in the initial cluster can deploy itself into the shoot clusters (which eventually makes them getting registered as seeds) if `ManagedSeed` resources are created.
 
-1. Use the initial cluster as the seed cluster for other managed seed clusters. It hosts the control planes of the other seed clusters.
-1. The gardenlet deployed in the initial cluster deploys itself automatically into the managed seed clusters.
-
-The advantage of this approach is that there’s only one initial gardenlet installation required. Every other managed seed cluster has a gardenlet deployed automatically.
+The advantage of this approach is that there's only one initial gardenlet installation required.
+Every other managed seed cluster gets an automatically deployed gardenlet.
 
 ## Related Links
 
-- [Register Shoot as Seed](../operations/managed_seed.md)
-- [garden-setup](http://github.com/gardener/garden-setup)
+- [`ManagedSeed`s: Register Shoot as Seed](../operations/managed_seed.md)
