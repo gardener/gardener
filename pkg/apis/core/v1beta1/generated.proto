@@ -1890,6 +1890,21 @@ message Networking {
   repeated string ipFamilies = 6;
 }
 
+// NetworkingStatus contains information about cluster networking such as CIDRs.
+message NetworkingStatus {
+  // Pods are the CIDRs of the pod network.
+  // +optional
+  repeated string pods = 1;
+
+  // Nodes are the CIDRs of the node network.
+  // +optional
+  repeated string nodes = 2;
+
+  // Services are the CIDRs of the service network.
+  // +optional
+  repeated string services = 3;
+}
+
 // NginxIngress describes configuration values for the nginx-ingress addon.
 message NginxIngress {
   optional Addon addon = 1;
@@ -3070,6 +3085,10 @@ message ShootStatus {
   // See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
   // +optional
   repeated string encryptedResources = 18;
+
+  // Networking contains information about cluster networking such as CIDRs.
+  // +optional
+  optional NetworkingStatus networking = 19;
 }
 
 // ShootTemplate is a template for creating a Shoot object.
