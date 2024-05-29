@@ -12,8 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -335,7 +333,7 @@ spec:
 			ExpectWithOffset(1, kubernetesutils.MakeUnique(serverSecret)).To(Succeed())
 			serverSecretYAML := testruntime.Serialize(serverSecret, kubernetes.ShootScheme)
 
-			return serverSecret.Name, string(serverSecretYAML)
+			return serverSecret.Name, serverSecretYAML
 		}
 
 		managedResourceName       = "shoot-core-metrics-server"
@@ -497,11 +495,3 @@ spec:
 		})
 	})
 })
-
-func newCodec() runtime.Codec {
-	var groupVersions []schema.GroupVersion
-	for k := range kubernetes.ShootScheme.AllKnownTypes() {
-		groupVersions = append(groupVersions, k.GroupVersion())
-	}
-	return kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
-}

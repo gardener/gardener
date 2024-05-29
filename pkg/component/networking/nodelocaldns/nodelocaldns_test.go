@@ -1259,7 +1259,6 @@ func extractDaemonSet(manifests []string, decoder runtime.Decoder) (*appsv1.Daem
 			}
 			break
 		}
-
 	}
 	return ds, nil
 }
