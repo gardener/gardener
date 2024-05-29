@@ -230,6 +230,8 @@ func DeployKubeAPIServer(
 	//   resources in VPAAndHPA mode.
 	if deployment != nil {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
+			// Autoscaling for the VPN sidecar containers is disabled,
+			// that's why it is enough to preserve the resource requests for the kube-apiserver container only.
 			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
 				// Only set requests to allow limits to be removed
 				kubeAPIServer.SetAutoscalingAPIServerResources(corev1.ResourceRequirements{Requests: container.Resources.Requests})

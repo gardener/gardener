@@ -465,25 +465,16 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 						{
-							ContainerName:    "vpn-client-0",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
-							},
+							ContainerName: "vpn-client-0",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 						{
-							ContainerName:    "vpn-client-1",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
-							},
+							ContainerName: "vpn-client-1",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 						{
-							ContainerName:    "vpn-path-controller",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
-							},
+							ContainerName: "vpn-path-controller",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
 					},
 				),
@@ -2516,8 +2507,8 @@ rules:
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
 							Limits: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -2616,7 +2607,7 @@ rules:
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
-							corev1.ResourceMemory: resource.MustParse("20Mi"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("50Mi"),

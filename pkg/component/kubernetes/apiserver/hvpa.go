@@ -197,18 +197,12 @@ func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(ku
 		for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 			vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName: fmt.Sprintf("%s-%d", containerNameVPNSeedClient, i),
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("20Mi"),
-				},
-				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 			})
 		}
 		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName: containerNameVPNPathController,
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("20Mi"),
-			},
-			ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 		})
 	}
 
