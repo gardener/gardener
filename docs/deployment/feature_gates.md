@@ -34,7 +34,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
 | UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
 | ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
-| VPAForETCD                         | `false` | `Alpha` | `1.94` |        |
+| VPAForETCD                         | `false` | `Alpha` | `1.94` | `1.95` |
+| VPAForETCD                         | `true`  | `Beta`  | `1.96` |        |
 | VPAAndHPAForAPIServer              | `false` | `Alpha` | `1.95` |        |
 
 ## Feature Gates for Graduated or Deprecated Features

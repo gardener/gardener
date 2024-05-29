@@ -17,13 +17,15 @@ However, there are two supported autoscaling modes for the Garden or Shoot clust
    In `HVPA` mode, the etcd is scaled by the [hvpa-controller](https://github.com/gardener/hvpa-controller). The gardenlet/gardener-operator is creating an `HVPA` resource for the etcd (`main` or `events`).
    The `HVPA` enables a vertical scaling for etcd.
 
-   The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled (and the `VPAForETCD` feature gate is disabled).
+   The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled and the `VPAForETCD` feature gate is disabled.
 
 - `VPA`
 
    In `VPA` mode, the etcd is scaled by a native `VPA` resource.
 
-   The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate).
+   The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate). 
+
+Note: starting with release 1.96, the `VPAForETCD` feature gate is enabled by default.
 
 For both of the autoscaling modes downscaling is handled more pessimistically to prevent many subsequent etcd restarts. Thus, for `production` and `infrastructure` Shoot clusters (or all Garden clusters), downscaling is deactivated for the main etcd. For all other Shoot clusters, lower advertised requests/limits are only applied during the Shoot's maintenance time window.
 
