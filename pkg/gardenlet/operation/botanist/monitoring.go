@@ -129,8 +129,9 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		},
 	}
 
+	values.Alerting = &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-seed", Namespace: ptr.To(v1beta1constants.GardenNamespace)}}}
 	if b.Shoot.WantsAlertmanager {
-		values.Alerting = &prometheus.AlertingValues{AlertmanagerName: "alertmanager-shoot"}
+		values.Alerting.Alertmanagers = append(values.Alerting.Alertmanagers, &prometheus.Alertmanager{Name: "alertmanager-shoot"})
 
 		if secret := b.LoadSecret(v1beta1constants.GardenRoleAlerting); secret != nil &&
 			len(secret.Data["auth_type"]) > 0 &&
