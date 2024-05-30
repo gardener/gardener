@@ -65,6 +65,39 @@ var _ = Describe("ScrapeConfigs", func() {
 						}},
 					},
 				},
+
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cadvisor",
+					},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						HonorLabels:     ptr.To(true),
+						HonorTimestamps: ptr.To(false),
+						MetricsPath:     ptr.To("/metrics"),
+						Params: map[string][]string{
+							"match[]": {
+								`{job="cadvisor",namespace=~"extension-(.+)"}`,
+								`{job="cadvisor",namespace="garden"}`,
+								`{job="cadvisor",namespace=~"istio-(.+)"}`,
+								`{job="cadvisor",namespace="kube-system"}`,
+							},
+						},
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"cert-controller-manager:10258"},
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action:      "replace",
+							Replacement: ptr.To("cadvisor"),
+							TargetLabel: "job",
+						}},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        "promhttp_metric_handler_requests_total",
+							Replacement: ptr.To("cert_manager_promhttp_metric_handler_requests_total")
+						}},
+					},
+				},
 			))
 		})
 	})
