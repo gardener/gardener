@@ -174,19 +174,19 @@ status:
 JWTs will be available when the clients send `create` requests on the
 `WorkloadIdentity/token` subresource. As the clients will be providing various
 custom information that will be used for the generation of the JWT, yet another
-resource `TokenRequest` in the API group `security.gardener.cloud` will be
-used, similar to `TokenRequest` from `authentication.k8s.io/v1` API. It is
-envisioned this resource to contain just metadata for the context where the JWT
-is being used, e.g. shoot or backup entry identifier. Gardener API server must
-verify the provided metadata and it can enhance the JWT with additional
-information derived from the context, for example with information for the
-project and the seed of the shoot cluster. Gardener API can also add global
-information like a garden cluster identity. `TokenRequest` will feature optional
-field `duration` that will allow clients to specify for how long the issued
-workload identity token to be valid. This duration will be ensured to be between
-certain limits of minimal and maximal validity, in order to avoid frequent token
-renewals as well as tokens with too long validity. If the duration field is not
-set, a default duration will be applied.
+resource `TokenRequest` in the API group `security.gardener.cloud` will be used,
+similar to `TokenRequest` from `authentication.k8s.io/v1` API. It is envisioned
+this resource to contain just metadata for the context where the JWT is being
+used, e.g. shoot or backup entry identifier. Gardener API server must verify the
+provided metadata and it can enhance the JWT with additional information derived
+from the context, for example with information for the project and the seed of
+the shoot cluster. Gardener API can also add global information like a garden
+cluster identity. `TokenRequest` will feature optional field `durationSeconds`
+that will allow clients to specify for how long the issued workload identity
+token to be valid. This duration will be ensured to be between certain limits of
+minimal and maximal validity, in order to avoid frequent token renewals as well
+as tokens with too long validity. If the `durationSeconds` field is not set, a
+default duration of 3600 seconds will be applied.
 
 `TokenRequest` resources will never be persisted in the storage layer, the
 generated token will be written in the `.status.token` field and returned to the
@@ -203,7 +203,7 @@ spec:
     name: foo
     namespace: garden-local
     uid: 54d09554-6a68-4f46-a23a-e3592385d820
-  duration: 48h # Optional field, gardener will have default value of token duration if the field is unset.
+  durationSeconds: 600 # Optional field, gardener will set default value of 3600 seconds for token duration if the field is unset.
 status:
   token: eyJhbGciOiJ....OkBBrVWA # The generated OIDC token
   expirationTimestamp: 2024-02-09T16:35:02Z
@@ -351,11 +351,11 @@ parameter whose value should not be the same as the issuer of the Kubernetes
 service accounts. The workload identity issuer url should not be among the
 accepted issuers of the Kubernetes API server. Other configuration options for
 the Gardener API server will be the private key used to sign the tokens, the
-minimal, maximal and the default durations for each token. The private key also
-should not be shared with the Kubernetes API server. When `gardener-operator` is
-used to manage the Garden cluster, it will be also responsible for the Workload
-Identity token signing key rotation, a strategy similar to the one for the
-Kubernetes Service Account token signing key rotation will be used.
+minimal and maximal durations for each token. The private key also should not be
+shared with the Kubernetes API server. When `gardener-operator` is used to
+manage the Garden cluster, it will be also responsible for the Workload Identity
+token signing key rotation, a strategy similar to the one for the Kubernetes
+Service Account token signing key rotation will be used.
 
 When Gardener API server is using own issuer and signing keys, the service
 account token authenticator of the Kubernetes API server will reject the
