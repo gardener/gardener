@@ -80,7 +80,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 				HonorTimestamps: ptr.To(false),
 				MetricsPath:     ptr.To("/metrics"),
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-					Targets: []monitoringv1alpha1.Target{"cert-controller-manager.shoot--garden--aws-ap1.svc:10258"},
+					Targets: []monitoringv1alpha1.Target{"cert-controller-manager:10258"},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
 					Action:      "replace",
@@ -91,7 +91,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					Action:      "replace",
 					TargetLabel: "__name__",
 					Regex:       "promhttp_metric_handler_requests_total",
-					Replacement: "cert_manager_promhttp_metric_handler_requests_total",
+					Replacement: ptr.To("cert_manager_promhttp_metric_handler_requests_total"),
 				}},
 			},
 		},
