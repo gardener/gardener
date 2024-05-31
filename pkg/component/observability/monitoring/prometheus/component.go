@@ -134,10 +134,19 @@ type CentralConfigs struct {
 
 // AlertingValues contains alerting configuration for this Prometheus instance.
 type AlertingValues struct {
-	// AlertmanagerName is the name of the alertmanager to which alerts should be sent.
-	AlertmanagerName string
+	// Alertmanagers is a slice containing the alertmanager names (and namespaces) to which alerts should be sent.
+	Alertmanagers []*Alertmanager
 	// AdditionalAlertmanager contains the data of the 'alerting' secret (url, credentials, etc.).
 	AdditionalAlertmanager map[string][]byte
+}
+
+// Alertmanager contains the name and namespace of an alertmanager to which alerts should be sent.
+type Alertmanager struct {
+	// Name is the name of the alertmanager to which alerts should be sent.
+	Name string
+	// Namespace is the namespace of the alertmanager to which alerts should be sent.
+	// If not set, the namespace of the Prometheus instance is used.
+	Namespace *string
 }
 
 // RemoteWriteValues contains remote write configuration for this Prometheus instance.

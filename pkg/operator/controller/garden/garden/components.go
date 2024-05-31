@@ -1201,7 +1201,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			PrometheusRules:         gardenprometheus.CentralPrometheusRules(),
 			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
 		},
-		Alerting: &prometheus.AlertingValues{AlertmanagerName: "alertmanager-garden"},
+		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},
 		Ingress: &prometheus.IngressValues{
 			Host:                   "prometheus-garden." + ingressDomain,
 			SecretsManager:         secretsManager,
