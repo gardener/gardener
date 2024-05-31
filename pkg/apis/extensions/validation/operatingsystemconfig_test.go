@@ -20,8 +20,6 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 	var osc *extensionsv1alpha1.OperatingSystemConfig
 
 	BeforeEach(func() {
-		reloadConfigFilePath := "some-path"
-
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-osc",
@@ -32,8 +30,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Type:           "provider",
 					ProviderConfig: &runtime.RawExtension{},
 				},
-				Purpose:              extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-				ReloadConfigFilePath: &reloadConfigFilePath,
+				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 				Units: []extensionsv1alpha1.Unit{
 					{
 						Name: "foo",

@@ -160,15 +160,6 @@ spec:
                   gardener-node-agent already running on a bootstrapped VM.
                   This field is immutable.
                 type: string
-              reloadConfigFilePath:
-                description: |-
-                  ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
-                  are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
-                  the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
-                  "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
-                  Deprecated: This field is deprecated and has no further usage.
-                  TODO(rfranzke): Remove this field after v1.95 got released.
-                type: string
               type:
                 description: Type contains the instance of the resource's kind.
                 type: string
@@ -250,14 +241,6 @@ spec:
                 required:
                 - secretRef
                 type: object
-              command:
-                description: |-
-                  Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
-                  "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
-                  in the .spec.reloadConfigFilePath field.
-                  Deprecated: This field is deprecated and has no further usage.
-                  TODO(rfranzke): Remove this field after v1.95 got released.
-                type: string
               conditions:
                 description: Conditions represents the latest available observations
                   of a Seed's current state.
@@ -428,15 +411,6 @@ spec:
                   - name
                   type: object
                 type: array
-              files:
-                description: |-
-                  Files is a list of file paths that are part of the generated Cloud Config and shall be
-                  written to the host's file system.
-                  Deprecated: This field is deprecated and has no further usage.
-                  TODO(rfranzke): Remove this field after v1.95 got released.
-                items:
-                  type: string
-                type: array
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.
@@ -540,15 +514,6 @@ spec:
                   what ever data it needs.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
-              units:
-                description: |-
-                  Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
-                  restarted when a new version has been downloaded.
-                  Deprecated: This field is deprecated and has no further usage.
-                  TODO(rfranzke): Remove this field after v1.95 got released.
-                items:
-                  type: string
-                type: array
             type: object
         required:
         - spec

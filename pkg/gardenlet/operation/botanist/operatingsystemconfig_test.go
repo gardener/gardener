@@ -192,16 +192,10 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			worker1Name            = "worker1"
 			worker1OriginalContent = "w1content"
-			worker1OriginalCommand = "/foo"
-			worker1OriginalUnits   = []string{"w1u1", "w1u2"}
-			worker1OriginalFiles   = []string{"w1f1", "w1f2"}
 			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
-			worker2OriginalCommand       = "/bar"
-			worker2OriginalUnits         = []string{"w2u2", "w2u2", "w2u3"}
-			worker2OriginalFiles         = []string{"w2f2", "w2f2", "w2f3"}
 			worker2KubernetesVersion     = "4.5.6"
 			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
 			worker2KubeletDataVolumeName = "vol"
@@ -211,9 +205,6 @@ var _ = Describe("operatingsystemconfig", func() {
 					Original: operatingsystemconfig.Data{
 						GardenerNodeAgentSecretName: worker1Key,
 						Content:                     worker1OriginalContent,
-						Command:                     &worker1OriginalCommand,
-						Units:                       worker1OriginalUnits,
-						Files:                       worker1OriginalFiles,
 						Object: &extensionsv1alpha1.OperatingSystemConfig{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: worker1Name + "-original",
@@ -229,9 +220,6 @@ var _ = Describe("operatingsystemconfig", func() {
 					Original: operatingsystemconfig.Data{
 						GardenerNodeAgentSecretName: worker2Key,
 						Content:                     worker2OriginalContent,
-						Command:                     &worker2OriginalCommand,
-						Units:                       worker2OriginalUnits,
-						Files:                       worker2OriginalFiles,
 						Object: &extensionsv1alpha1.OperatingSystemConfig{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: worker2Name + "-original",

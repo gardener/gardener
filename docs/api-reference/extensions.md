@@ -1429,23 +1429,6 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>reloadConfigFilePath</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
-are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
-the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
-Deprecated: This field is deprecated and has no further usage.
-TODO(rfranzke): Remove this field after v1.95 got released.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>units</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.Unit">
@@ -3747,23 +3730,6 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>reloadConfigFilePath</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
-are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
-the reload-path might be &ldquo;/var/lib/config&rdquo;; then the controller shall set .status.command to
-&ldquo;/usr/bin/coreos-cloudinit &ndash;from-file=/var/lib/config&rdquo;.
-Deprecated: This field is deprecated and has no further usage.
-TODO(rfranzke): Remove this field after v1.95 got released.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>units</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.Unit">
@@ -3866,52 +3832,6 @@ CloudConfig
 <em>(Optional)</em>
 <p>CloudConfig is a structure for containing the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>command</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
-&ldquo;/usr/bin/reload-cloud-config -from-file=<path>&rdquo;. The <path> is optionally provided by Gardener
-in the .spec.reloadConfigFilePath field.
-Deprecated: This field is deprecated and has no further usage.
-TODO(rfranzke): Remove this field after v1.95 got released.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>units</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
-restarted when a new version has been downloaded.
-Deprecated: This field is deprecated and has no further usage.
-TODO(rfranzke): Remove this field after v1.95 got released.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>files</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Files is a list of file paths that are part of the generated Cloud Config and shall be
-written to the host&rsquo;s file system.
-Deprecated: This field is deprecated and has no further usage.
-TODO(rfranzke): Remove this field after v1.95 got released.</p>
 </td>
 </tr>
 </tbody>
