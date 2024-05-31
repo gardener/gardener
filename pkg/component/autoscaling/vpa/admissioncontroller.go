@@ -181,6 +181,8 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Args: []string{
 						"--v=2",
 						"--stderrthreshold=info",
+						"--kube-api-qps=100",
+						"--kube-api-burst=120",
 						fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificateBundle),
 						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
 						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),
