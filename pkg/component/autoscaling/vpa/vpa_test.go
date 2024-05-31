@@ -869,6 +869,8 @@ var _ = Describe("VPA", func() {
 								Args: []string{
 									"--v=2",
 									"--stderrthreshold=info",
+									"--kube-api-qps=100",
+									"--kube-api-burst=120",
 									"--client-ca-file=/etc/tls-certs/bundle.crt",
 									"--tls-cert-file=/etc/tls-certs/tls.crt",
 									"--tls-private-key=/etc/tls-certs/tls.key",
