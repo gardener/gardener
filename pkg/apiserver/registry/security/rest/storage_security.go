@@ -21,6 +21,7 @@ import (
 
 // StorageProvider is an empty struct.
 type StorageProvider struct {
+	WorkloadIdentityTokenIssuer        string
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
 }
@@ -45,6 +46,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	workloadIdentityStorage := workloadidentitystore.NewStorage(
 		restOptionsGetter,
+		p.WorkloadIdentityTokenIssuer,
 		p.WorkloadIdentityTokenMinExpiration,
 		p.WorkloadIdentityTokenMaxExpiration,
 	)

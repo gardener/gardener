@@ -281,6 +281,7 @@ global:
  #      version: audit.k8s.io/v1
     workloadIdentity:
       token:
+        # issuer: https://issuer.gardener.cloud
         minExpiration: 1h
         maxExpiration: 48h
   # Gardener admission controller configuration values

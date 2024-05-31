@@ -7,6 +7,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 type TokenRequestREST struct {
 	// client kubernetes.Interface // Might be needed later to read the context object
 
+	issuer                 string
 	minDuration            int64
 	maxDuration            int64
 	workloadIdentityGetter getter
@@ -57,6 +59,9 @@ func (r *TokenRequestREST) Destroy() {
 // - referenced context object
 // - gardener installation
 func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
+	if len(r.issuer) == 0 {
+		return nil, errors.New("workload identity token issuer is not configured and tokens cannot be issued")
+	}
 	if createValidation != nil {
 		if err := createValidation(ctx, obj.DeepCopyObject()); err != nil {
 			return nil, err
@@ -100,7 +105,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 		now = time.Now()
 		exp = now.Add(time.Second * time.Duration(duration))
 	)
-	token, err := issueToken(aud, sub, now, now, exp)
+	token, err := issueToken(aud, sub, r.issuer, now, now, exp)
 	if err != nil {
 		return nil, err
 	}
@@ -111,10 +116,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 }
 
 // issueToken generates JWT out of the provided configs.
-func issueToken(aud []string, sub string, iat, nbf, exp time.Time) (string, error) {
-	issuer := "https://issuer.gardener.cloud" // TODO(vpnachev): Make issuer configurable
-
-	// TODO(vpnachev): Implement real JWT issuer.
+func issueToken(aud []string, sub, iss string, iat, nbf, exp time.Time) (string, error) {
 	token := struct {
 		Iss string    `json:"iss"`
 		Sub string    `json:"sub"`
@@ -123,7 +125,7 @@ func issueToken(aud []string, sub string, iat, nbf, exp time.Time) (string, erro
 		Nbf time.Time `json:"nbf"`
 		Exp time.Time `json:"exp"`
 	}{
-		Iss: issuer,
+		Iss: iss,
 		Sub: sub,
 		Aud: aud,
 		Iat: iat,
@@ -146,12 +148,14 @@ func (r *TokenRequestREST) GroupVersionKind(schema.GroupVersion) schema.GroupVer
 // NewTokenRequestREST returns a new TokenRequestREST for workload identity token.
 func NewTokenRequestREST(
 	storage getter,
+	issuer string,
 	minDuration,
 	maxDuration time.Duration,
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
 
+		issuer:      issuer,
 		minDuration: int64(minDuration.Seconds()),
 		maxDuration: int64(maxDuration.Seconds()),
 	}

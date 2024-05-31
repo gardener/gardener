@@ -28,12 +28,12 @@ type WorkloadIdentityStorage struct {
 }
 
 // NewStorage creates a new WorkloadIdentityStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter, minExpiration, maxExpiration time.Duration) WorkloadIdentityStorage {
+func NewStorage(optsGetter generic.RESTOptionsGetter, issuer string, minExpiration, maxExpiration time.Duration) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, minExpiration, maxExpiration),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, issuer, minExpiration, maxExpiration),
 	}
 }
 

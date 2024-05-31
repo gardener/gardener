@@ -7,6 +7,7 @@ package apiserver
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -28,6 +29,7 @@ type ExtraConfig struct {
 	AdminKubeconfigMaxExpiration       time.Duration
 	ViewerKubeconfigMaxExpiration      time.Duration
 	CredentialsRotationInterval        time.Duration
+	WorkloadIdentityTokenIssuer        string
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
 }
@@ -90,6 +92,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		securityAPIGroupInfo       = (securityrest.StorageProvider{
+			WorkloadIdentityTokenIssuer:        c.ExtraConfig.WorkloadIdentityTokenIssuer,
 			WorkloadIdentityTokenMinExpiration: c.ExtraConfig.WorkloadIdentityTokenMinExpiration,
 			WorkloadIdentityTokenMaxExpiration: c.ExtraConfig.WorkloadIdentityTokenMaxExpiration,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
@@ -108,6 +111,7 @@ type ExtraOptions struct {
 	AdminKubeconfigMaxExpiration       time.Duration
 	ViewerKubeconfigMaxExpiration      time.Duration
 	CredentialsRotationInterval        time.Duration
+	WorkloadIdentityTokenIssuer        string
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
 
@@ -137,6 +141,11 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, errors.New("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
 	}
 
+	if len(o.WorkloadIdentityTokenIssuer) != 0 {
+		if _, err := url.Parse(o.WorkloadIdentityTokenIssuer); err != nil {
+			allErrors = append(allErrors, fmt.Errorf("--workload-identity-token-issuer is not a valid URL, err: %w", err))
+		}
+	}
 	if o.WorkloadIdentityTokenMinExpiration < 10*time.Minute ||
 		o.WorkloadIdentityTokenMinExpiration > time.Duration(1<<32)*time.Second {
 		allErrors = append(allErrors, errors.New("--workload-identity-token-min-expiration must be between 10 minutes and 2^32 seconds"))
@@ -164,6 +173,7 @@ func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.ViewerKubeconfigMaxExpiration, "shoot-viewer-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an ViewerKubeconfigRequest. If an otherwise valid ViewerKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.CredentialsRotationInterval, "shoot-credentials-rotation-interval", time.Hour*24*90, "The duration after the initial shoot creation or the last credentials rotation when a client warning for the next credentials rotation is issued.")
+	fs.StringVar(&o.WorkloadIdentityTokenIssuer, "workload-identity-token-issuer", o.WorkloadIdentityTokenIssuer, "The issuer identifier of the workload identity tokens set in the 'iss' claim. If set, it must be a valid URL")
 	fs.DurationVar(&o.WorkloadIdentityTokenMinExpiration, "workload-identity-token-min-expiration", time.Hour, "The minimum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration less than this value is requested, a token will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.WorkloadIdentityTokenMaxExpiration, "workload-identity-token-max-expiration", time.Hour*48, "The maximum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration greater than this value is requested, a token will be issued with a validity duration of this value.")
 
@@ -176,6 +186,7 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.AdminKubeconfigMaxExpiration = o.AdminKubeconfigMaxExpiration
 	c.ExtraConfig.ViewerKubeconfigMaxExpiration = o.ViewerKubeconfigMaxExpiration
 	c.ExtraConfig.CredentialsRotationInterval = o.CredentialsRotationInterval
+	c.ExtraConfig.WorkloadIdentityTokenIssuer = o.WorkloadIdentityTokenIssuer
 	c.ExtraConfig.WorkloadIdentityTokenMinExpiration = o.WorkloadIdentityTokenMinExpiration
 	c.ExtraConfig.WorkloadIdentityTokenMaxExpiration = o.WorkloadIdentityTokenMaxExpiration
 	return nil
