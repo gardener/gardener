@@ -11,16 +11,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -31,8 +26,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 		return err
 	}
 
-	log.Info("Deleting orphaned vali VPAs which used to be managed by the HVPA controller")
-	return deleteOrphanedValiVPAs(ctx, log, g.mgr.GetClient())
+	return nil
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.
@@ -112,44 +106,4 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
-}
-
-// TODO(plkokanov): Remove this code after gardener v1.96 has been released.
-// The refactoring done in https://github.com/gardener/gardener/pull/8061 incorrectly changed
-// the label used to select vali vpas by the corresponding vali hvpa from `role: vali-vpa` to
-// `role: valivpa`. This caused the hvpa controller to orphan the existing vpa objects with
-// the `role: vali-vpa` label and create new ones.
-// deleteOrphanedValiVPAs deletes the orphaned vali vpas with the `role vali-vpa` label.
-func deleteOrphanedValiVPAs(ctx context.Context, log logr.Logger, c client.Client) error {
-	var (
-		orphanedValiVPALabel = "vali-vpa"
-		orphanedVPAList      = &vpaautoscalingv1.VerticalPodAutoscalerList{}
-		vpaCRDName           = "verticalpodautoscalers.autoscaling.k8s.io"
-		vpaCRD               = &apiextensionsv1.CustomResourceDefinition{}
-	)
-
-	if err := c.Get(ctx, types.NamespacedName{Name: vpaCRDName}, vpaCRD); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Could not get required CRD, no need to delete orphaned vali VPA resources", "crd", vpaCRDName)
-			return nil
-		}
-		return fmt.Errorf("could not get %q CRD: %w", vpaCRDName, err)
-	}
-
-	if err := c.List(ctx, orphanedVPAList, client.MatchingLabels{v1beta1constants.LabelRole: orphanedValiVPALabel}); err != nil {
-		return fmt.Errorf("could not list orphaned vali VPAs with label '%s: %s': %w", v1beta1constants.LabelRole, orphanedValiVPALabel, err)
-	}
-
-	fns := make([]flow.TaskFn, 0, len(orphanedVPAList.Items))
-	for _, obj := range orphanedVPAList.Items {
-		fns = append(fns, func(ctx context.Context) error {
-			log.Info("Deleting orphaned vali VPA", "vpa", client.ObjectKeyFromObject(&obj))
-			if err := client.IgnoreNotFound(c.Delete(ctx, &obj)); err != nil {
-				return fmt.Errorf("could not delete orphaned vali VPA %q: %w", client.ObjectKeyFromObject(&obj).String(), err)
-			}
-			return nil
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
