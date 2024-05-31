@@ -11,7 +11,6 @@ import (
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,9 +53,11 @@ type ingress struct {
 }
 
 func (i *ingress) Deploy(ctx context.Context) error {
-	destinationRule := i.emptyDestinationRule()
-	gateway := i.emptyGateway()
-	virtualService := i.emptyVirtualService()
+	var (
+		destinationRule = i.emptyDestinationRule()
+		gateway         = i.emptyGateway()
+		virtualService  = i.emptyVirtualService()
+	)
 
 	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings_DISABLE
 	if i.values.TLSSecretName != nil {
@@ -129,14 +130,11 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// TODO(scheererj): Drop this after v1.92
-	return kubernetesutils.DeleteObjects(ctx, i.client, i.emptyIngress())
+	return nil
 }
 
 func (i *ingress) Destroy(ctx context.Context) error {
 	objects := []client.Object{
-		// TODO(scheererj): Drop ingress after v1.92
-		i.emptyIngress(),
 		i.emptyDestinationRule(),
 		i.emptyGateway(),
 		i.emptyVirtualService(),
@@ -145,10 +143,6 @@ func (i *ingress) Destroy(ctx context.Context) error {
 		objects = append(objects, i.emptyWildcardSecret())
 	}
 	return kubernetesutils.DeleteObjects(ctx, i.client, objects...)
-}
-
-func (i *ingress) emptyIngress() *networkingv1.Ingress {
-	return &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: i.namespace}}
 }
 
 func (i *ingress) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
