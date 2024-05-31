@@ -25,9 +25,11 @@ import (
 
 // ExtraConfig contains non-generic Gardener API server configuration.
 type ExtraConfig struct {
-	AdminKubeconfigMaxExpiration  time.Duration
-	ViewerKubeconfigMaxExpiration time.Duration
-	CredentialsRotationInterval   time.Duration
+	AdminKubeconfigMaxExpiration       time.Duration
+	ViewerKubeconfigMaxExpiration      time.Duration
+	CredentialsRotationInterval        time.Duration
+	WorkloadIdentityTokenMinExpiration time.Duration
+	WorkloadIdentityTokenMaxExpiration time.Duration
 }
 
 // Config contains Gardener API server configuration.
@@ -87,7 +89,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
-		securityAPIGroupInfo       = (securityrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		securityAPIGroupInfo       = (securityrest.StorageProvider{
+			WorkloadIdentityTokenMinExpiration: c.ExtraConfig.WorkloadIdentityTokenMinExpiration,
+			WorkloadIdentityTokenMaxExpiration: c.ExtraConfig.WorkloadIdentityTokenMaxExpiration,
+		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
 	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo, &securityAPIGroupInfo); err != nil {
@@ -99,10 +104,12 @@ func (c completedConfig) New() (*GardenerServer, error) {
 
 // ExtraOptions is used for providing additional options to the Gardener API Server
 type ExtraOptions struct {
-	ClusterIdentity               string
-	AdminKubeconfigMaxExpiration  time.Duration
-	ViewerKubeconfigMaxExpiration time.Duration
-	CredentialsRotationInterval   time.Duration
+	ClusterIdentity                    string
+	AdminKubeconfigMaxExpiration       time.Duration
+	ViewerKubeconfigMaxExpiration      time.Duration
+	CredentialsRotationInterval        time.Duration
+	WorkloadIdentityTokenMinExpiration time.Duration
+	WorkloadIdentityTokenMaxExpiration time.Duration
 
 	LogLevel  string
 	LogFormat string
@@ -130,6 +137,16 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, errors.New("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
 	}
 
+	if o.WorkloadIdentityTokenMinExpiration < 10*time.Minute ||
+		o.WorkloadIdentityTokenMinExpiration > time.Duration(1<<32)*time.Second {
+		allErrors = append(allErrors, errors.New("--workload-identity-token-min-expiration must be between 10 minutes and 2^32 seconds"))
+	}
+
+	if o.WorkloadIdentityTokenMaxExpiration < 10*time.Minute ||
+		o.WorkloadIdentityTokenMaxExpiration > time.Duration(1<<32)*time.Second {
+		allErrors = append(allErrors, errors.New("--workload-identity-token-max-expiration must be between 10 minutes and 2^32 seconds"))
+	}
+
 	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {
 		allErrors = append(allErrors, fmt.Errorf("invalid --log-level: %s", o.LogLevel))
 	}
@@ -147,6 +164,8 @@ func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.ViewerKubeconfigMaxExpiration, "shoot-viewer-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an ViewerKubeconfigRequest. If an otherwise valid ViewerKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.CredentialsRotationInterval, "shoot-credentials-rotation-interval", time.Hour*24*90, "The duration after the initial shoot creation or the last credentials rotation when a client warning for the next credentials rotation is issued.")
+	fs.DurationVar(&o.WorkloadIdentityTokenMinExpiration, "workload-identity-token-min-expiration", time.Hour, "The minimum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration less than this value is requested, a token will be issued with a validity duration of this value.")
+	fs.DurationVar(&o.WorkloadIdentityTokenMaxExpiration, "workload-identity-token-max-expiration", time.Hour*48, "The maximum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration greater than this value is requested, a token will be issued with a validity duration of this value.")
 
 	fs.StringVar(&o.LogLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
 	fs.StringVar(&o.LogFormat, "log-format", "json", "The format for the logs. Must be one of [json,text]")
@@ -157,6 +176,7 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.AdminKubeconfigMaxExpiration = o.AdminKubeconfigMaxExpiration
 	c.ExtraConfig.ViewerKubeconfigMaxExpiration = o.ViewerKubeconfigMaxExpiration
 	c.ExtraConfig.CredentialsRotationInterval = o.CredentialsRotationInterval
-
+	c.ExtraConfig.WorkloadIdentityTokenMinExpiration = o.WorkloadIdentityTokenMinExpiration
+	c.ExtraConfig.WorkloadIdentityTokenMaxExpiration = o.WorkloadIdentityTokenMaxExpiration
 	return nil
 }

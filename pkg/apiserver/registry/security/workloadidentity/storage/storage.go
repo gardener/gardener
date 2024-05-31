@@ -28,12 +28,12 @@ type WorkloadIdentityStorage struct {
 }
 
 // NewStorage creates a new WorkloadIdentityStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter) WorkloadIdentityStorage {
+func NewStorage(optsGetter generic.RESTOptionsGetter, minExpiration, maxExpiration time.Duration) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, time.Minute*10, time.Hour*48), // TODO(vpnachev): Make min and max durations configurable.
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, minExpiration, maxExpiration),
 	}
 }
 
