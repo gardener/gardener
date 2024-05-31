@@ -363,7 +363,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		}
 	}
 
-	// TODO(scheererj): Remove this after v1.95 has been released.
+	// TODO(scheererj): Remove this after v1.102 has been released.
 	// Allow temporary creation of ingress gateway copy to easy migration
 
 	// Map all ingress gateway namespace names to the corresponding gateway values for easier access

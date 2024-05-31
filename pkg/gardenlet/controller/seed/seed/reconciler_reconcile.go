@@ -529,7 +529,7 @@ func cleanupOrphanExposureClassHandlerResources(
 		}
 	}
 
-	// TODO(scheererj): Remove this after v1.95 has been released.
+	// TODO(scheererj): Remove this after v1.102 has been released.
 	// Allow temporary creation of ingress gateway copy to easy migration
 	migrationTargetToSource := map[string]string{}
 	for _, label := range []string{"istio", v1beta1constants.LabelExposureClassHandlerName} {
