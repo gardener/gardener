@@ -550,7 +550,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, k.seedClient.Client(),
 		k.emptyManagedResource(),
-		k.emptyManagedResourceSecret(),
 		k.emptyVPA(),
 		k.emptyHVPA(),
 		k.emptyService(),
@@ -594,11 +593,6 @@ func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.AccessSecr
 
 func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceName, Namespace: k.namespace}}
-}
-
-func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
-	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) prometheusAccessSecretName() string {

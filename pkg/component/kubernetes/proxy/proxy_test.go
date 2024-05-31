@@ -1082,15 +1082,6 @@ status: {}
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources despite undesired managed resources", func() {
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
-			// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-			managedResourceSecretCentral = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "managedresource-" + managedResourceCentral.Name,
-					Namespace: namespace,
-					Labels:    map[string]string{"component": "kube-proxy"},
-				},
-			}
-			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
 			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
@@ -1133,7 +1124,6 @@ status: {}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecret), undesiredManagedResourceSecret)).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), scrapeConfig)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
@@ -1143,15 +1133,6 @@ status: {}
 	Describe("#DeleteStaleResources", func() {
 		It("should successfully delete all stale resources", func() {
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
-			// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-			managedResourceSecretCentral = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "managedresource-" + managedResourceCentral.Name,
-					Namespace: namespace,
-					Labels:    map[string]string{"component": "kube-proxy"},
-				},
-			}
-			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
 			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
@@ -1200,7 +1181,6 @@ status: {}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecretForMajorMinorVersionOnly), undesiredManagedResourceSecretForMajorMinorVersionOnly)).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 		})
 	})
 

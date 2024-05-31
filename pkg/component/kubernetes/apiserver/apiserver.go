@@ -431,7 +431,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, k.client.Client(),
 		k.emptyManagedResource(),
-		k.emptyManagedResourceSecret(),
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),

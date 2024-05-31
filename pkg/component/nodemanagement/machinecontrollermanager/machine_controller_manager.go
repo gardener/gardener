@@ -409,7 +409,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, m.client,
 		m.emptyManagedResource(),
-		m.emptyManagedResourceSecret(),
 		m.emptyServiceMonitor(),
 		m.emptyPrometheusRule(),
 		m.emptyVPA(),
@@ -595,11 +594,6 @@ func (m *machineControllerManager) emptyServiceMonitor() *monitoringv1.ServiceMo
 
 func (m *machineControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceTargetName, Namespace: m.namespace}}
-}
-
-func (m *machineControllerManager) emptyManagedResourceSecret() *corev1.Secret {
-	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + managedResourceTargetName, Namespace: m.namespace}}
 }
 
 func getLabels() map[string]string {
