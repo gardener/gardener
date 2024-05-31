@@ -52,6 +52,12 @@ var _ = Describe("Config", func() {
 			StreamingConnectionIdleTimeout:   &metav1.Duration{Duration: time.Minute * 12},
 		}
 
+		taints = []corev1.Taint{{
+			Key:    "foo",
+			Value:  "bar",
+			Effect: corev1.TaintEffectNoSchedule,
+		}}
+
 		kubeletConfigWithDefaults = &kubeletconfigv1beta1.KubeletConfiguration{
 			Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 				Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
@@ -135,10 +141,11 @@ var _ = Describe("Config", func() {
 			PodsPerCore:    0,
 			ReadOnlyPort:   0,
 			ResolverConfig: ptr.To("/etc/resolv.conf"),
-			RegisterWithTaints: []corev1.Taint{{
-				Key:    "node.gardener.cloud/critical-components-not-ready",
-				Effect: corev1.TaintEffectNoSchedule,
-			}},
+			RegisterWithTaints: append(taints,
+				corev1.Taint{
+					Key:    "node.gardener.cloud/critical-components-not-ready",
+					Effect: corev1.TaintEffectNoSchedule,
+				}),
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            ptr.To(true),
 			ServerTLSBootstrap:             true,
@@ -257,12 +264,6 @@ var _ = Describe("Config", func() {
 			if mutateExpectConfigFn != nil {
 				mutateExpectConfigFn(expectation)
 			}
-
-			taints := []corev1.Taint{{
-				Key:    "foo",
-				Value:  "bar",
-				Effect: corev1.TaintEffectNoSchedule,
-			}}
 
 			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, taints, params)).To(DeepEqual(expectation))
 		},
