@@ -12,15 +12,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ManagedSeedSet Validation Tests", func() {
@@ -388,7 +385,6 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid changes to immutable fields in shootTemplate", func() {
-			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.MutableShootSpecNetworkingNodes, true))
 			shootCopy := shoot.DeepCopy()
 			shootCopy.Spec.Region = "other-region"
 			shootCopy.Spec.Networking.Nodes = ptr.To("10.181.0.0/16")

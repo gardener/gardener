@@ -1282,7 +1282,7 @@ type Networking struct {
 	// +optional
 	Pods *string `json:"pods,omitempty" protobuf:"bytes,3,opt,name=pods"`
 	// Nodes is the CIDR of the entire node network.
-	// This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.
+	// This field is mutable.
 	// +optional
 	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,4,opt,name=nodes"`
 	// Services is the CIDR of the service network. This field is immutable.

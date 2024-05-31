@@ -987,7 +987,7 @@ type Networking struct {
 	// Pods is the CIDR of the pod network. This field is immutable.
 	Pods *string
 	// Nodes is the CIDR of the entire node network.
-	// This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.
+	// This field is mutable.
 	Nodes *string
 	// Services is the CIDR of the service network. This field is immutable.
 	Services *string

@@ -1872,7 +1872,7 @@ message Networking {
   optional string pods = 3;
 
   // Nodes is the CIDR of the entire node network.
-  // This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.
+  // This field is mutable.
   // +optional
   optional string nodes = 4;
 
