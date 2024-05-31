@@ -1235,15 +1235,6 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
-		// TODO(rfranzke): Remove this after v1.95 has been released.
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "garden-prometheus",
-			OldSubPath:      ptr.To("/"),
-			PVCNames: []string{
-				"prometheus-db-garden-prometheus-0",
-				"prometheus-db-garden-prometheus-1",
-			},
-		},
 	})
 }
 
