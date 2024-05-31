@@ -61,7 +61,7 @@ Use gardenlet's ability to request a signed certificate for the garden cluster b
 The gardenlet performs a TLS bootstrapping process that is similar to the [Kubelet TLS Bootstrapping](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/).
 Make sure that the API server of the garden cluster has [bootstrap token authentication](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/#enabling-bootstrap-token-authentication) enabled.
 
-The client credentials required for the gardenlet's TLS bootstrapping process  need to be either `token` or `certificate` (OIDC isn't supported) and have permissions to create a Certificate Signing Request ([CSR](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/)).
+The client credentials required for the gardenlet's TLS bootstrapping process need to be either `token` or `certificate` (OIDC isn't supported) and have permissions to create a Certificate Signing Request ([CSR](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/)).
 It's recommended to use [bootstrap tokens](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) due to their desirable security properties (such as a limited token lifetime).
 
 Therefore, first create a bootstrap token secret for the garden cluster:
@@ -498,7 +498,7 @@ Such resources contain its component configuration and deployment values.
 Most notably, a URL to an OCI repository containing gardenlet's Helm chart is included.
 
 On reconciliation, gardenlet downloads the Helm chart, renders it with the provided values, and then applies it to its own cluster.
-Hence, in order to keep a gardenlet up-to-date, it is enough to bump the OCI URL for the Helm chart.
+Hence, in order to keep a gardenlet up-to-date, it is enough to update the tag/digest of the OCI repository ref for the Helm chart.
 This way, network connectivity to the cluster in which gardenlet runs is not required at all (at least for deployment purposes).
 
 An example `Gardenlet` resource looks like this:

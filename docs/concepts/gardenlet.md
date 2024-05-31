@@ -311,7 +311,7 @@ This condition is taken into account by the `ControllerRegistration` controller 
 
 ### [`Gardenlet` Controller](../../pkg/gardenlet/controller/gardenlet)
 
-The `Gardenlet` controller in the `gardenlet` reconciles a `Gardenlet` resources with the same name as the `Seed` the gardenlet is responsible for.
+The `Gardenlet` controller reconciles a `Gardenlet` resource with the same name as the `Seed` the gardenlet is responsible for.
 This is used to implement self-upgrades of `gardenlet` based on information pulled from the garden cluster.
 For a general overview, see [this document](../deployment/deploy_gardenlet.md).
 

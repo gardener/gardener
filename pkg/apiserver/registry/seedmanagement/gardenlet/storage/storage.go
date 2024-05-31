@@ -38,7 +38,7 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) GardenletStorage {
 	}
 }
 
-// NewREST returns a RESTStorage object that will work with Gardenlet objects.
+// NewREST returns two *REST objects that can be used to manage Gardenlets and their status.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	strategy := gardenlet.NewStrategy()
 	statusStrategy := gardenlet.NewStatusStrategy()

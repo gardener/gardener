@@ -232,7 +232,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 		return errors.New("missing managed seed lister")
 	}
 	if r.gardenletLister == nil {
-		return errors.New("missing gardenlet lister lister")
+		return errors.New("missing gardenlet lister")
 	}
 	return nil
 }

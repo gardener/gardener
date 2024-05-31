@@ -1,6 +1,6 @@
 # Deploy a gardenlet Automatically
 
-The gardenlet can automatically deploy itself into shoot clusters, and register them as a seed cluster.
+The gardenlet can automatically deploy itself into shoot clusters, and register them as seed clusters.
 These clusters are called "managed seeds" (aka "shooted seeds").
 This procedure is the preferred way to add additional seed clusters, because shoot clusters already come with production-grade qualities that are also demanded for seed clusters.
 
