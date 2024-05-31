@@ -1215,12 +1215,6 @@ func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComp
 	return systemComponents.CoreDNS.Autoscaling.Mode == autoscalingMode
 }
 
-// IsCoreDNSRewritingEnabled indicates whether automatic query rewriting in CoreDNS is enabled or not.
-func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) bool {
-	_, disabled := annotations[v1beta1constants.AnnotationCoreDNSRewritingDisabled]
-	return featureGate && !disabled
-}
-
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.
 func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents) bool {
 	return systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.Enabled

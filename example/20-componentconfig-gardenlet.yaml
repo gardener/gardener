@@ -114,7 +114,6 @@ featureGates:
   HVPA: true
   HVPAForShootedSeed: true
   DefaultSeccompProfile: true
-  CoreDNSQueryRewriting: true
   # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.
   # This feature gate doesn't change gardenlet's default behavior, it only allows setting `ipFamilies=[IPv6]` in the
   # Seed config. Only when this is set, gardenlet's behavior changes.

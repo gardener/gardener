@@ -94,8 +94,6 @@ type Values struct {
 	ClusterProportionalAutoscalerImage string
 	// WantsVerticalPodAutoscaler indicates whether vertical autoscaler should be used.
 	WantsVerticalPodAutoscaler bool
-	// SearchPathRewritesEnabled indicates whether obviously invalid requests due to search path should be rewritten.
-	SearchPathRewritesEnabled bool
 	// SearchPathRewriteCommonSuffixes contains common suffixes to be rewritten when SearchPathRewritesEnabled is set.
 	SearchPathRewriteCommonSuffixes []string
 }
@@ -296,7 +294,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
   health {
       lameduck 15s
   }
-  ready` + getSearchPathRewrites(c.values.SearchPathRewritesEnabled, c.values.ClusterDomain, c.values.SearchPathRewriteCommonSuffixes) + `
+  ready` + getSearchPathRewrites(c.values.ClusterDomain, c.values.SearchPathRewriteCommonSuffixes) + `
   kubernetes ` + c.values.ClusterDomain + ` in-addr.arpa ip6.arpa {
       pods insecure
       fallthrough in-addr.arpa ip6.arpa
@@ -817,10 +815,7 @@ func getClusterProportionalDNSAutoscalerLabels() map[string]string {
 	}
 }
 
-func getSearchPathRewrites(enabled bool, clusterDomain string, commonSuffixes []string) string {
-	if !enabled {
-		return ``
-	}
+func getSearchPathRewrites(clusterDomain string, commonSuffixes []string) string {
 	quotedClusterDomain := regexp.QuoteMeta(clusterDomain)
 	suffixRewrites := ""
 	for _, suffix := range commonSuffixes {
