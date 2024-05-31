@@ -390,7 +390,6 @@ var _ = Describe("Worker", func() {
 			shootClient    *mockclient.MockClient
 
 			namespace = "shoot--foo--bar"
-			name      = "shoot-cloud-config-execution"
 		)
 
 		BeforeEach(func() {
@@ -553,17 +552,6 @@ var _ = Describe("Worker", func() {
 					}}}
 					return nil
 				}).AnyTimes(),
-			)
-
-			gomock.InOrder(
-				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().Delete(gomock.Any(), &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}),
-				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}}),
-				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().DeleteAllOf(gomock.Any(), &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"managed-resource": name}),
-				shootInterface.EXPECT().Client().Return(shootClient),
-				shootClient.EXPECT().Delete(gomock.Any(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: "kube-system"}}),
 			)
 
 			Expect(botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx)).To(Succeed())
