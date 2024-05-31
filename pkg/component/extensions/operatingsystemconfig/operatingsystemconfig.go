@@ -541,6 +541,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		valitailEnabled:         o.values.ValitailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 		primaryIPFamily:         o.values.PrimaryIPFamily,
+		taints:                  worker.Taints,
 	}, nil
 }
 
@@ -604,6 +605,7 @@ type deployer struct {
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
 	primaryIPFamily         gardencorev1beta1.IPFamily
+	taints                  []corev1.Taint
 }
 
 // exposed for testing
@@ -641,6 +643,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		APIServerURL:            d.apiServerURL,
 		Sysctls:                 d.worker.Sysctls,
 		PreferIPv6:              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
+		Taints:                  d.taints,
 	}
 
 	switch d.purpose {

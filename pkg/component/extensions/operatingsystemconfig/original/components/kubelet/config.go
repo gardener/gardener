@@ -19,8 +19,13 @@ import (
 )
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
-func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
+func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
 	setConfigDefaults(&params, kubernetesVersion)
+
+	nodeTaints := append(taints, corev1.Taint{
+		Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+		Effect: corev1.TaintEffectNoSchedule,
+	})
 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
@@ -88,16 +93,13 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		SerializeImagePulls:              params.SerializeImagePulls,
 		ServerTLSBootstrap:               true,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
-		RegisterWithTaints: []corev1.Taint{{
-			Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-			Effect: corev1.TaintEffectNoSchedule,
-		}},
-		RegistryPullQPS:      params.RegistryPullQPS,
-		RegistryBurst:        ptr.Deref(params.RegistryBurst, 0),
-		SyncFrequency:        metav1.Duration{Duration: time.Minute},
-		SystemReserved:       params.SystemReserved,
-		VolumeStatsAggPeriod: metav1.Duration{Duration: time.Minute},
-		VolumePluginDir:      pathVolumePluginDirectory,
+		RegisterWithTaints:               nodeTaints,
+		RegistryPullQPS:                  params.RegistryPullQPS,
+		RegistryBurst:                    ptr.Deref(params.RegistryBurst, 0),
+		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
+		SystemReserved:                   params.SystemReserved,
+		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
+		VolumePluginDir:                  pathVolumePluginDirectory,
 	}
 
 	if params.MemorySwap != nil {

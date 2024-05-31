@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -52,7 +53,7 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	fileContentKubeletConfig, err := getFileContentKubeletConfig(ctx.KubernetesVersion, ctx.ClusterDNSAddress, ctx.ClusterDomain, ctx.KubeletConfigParameters)
+	fileContentKubeletConfig, err := getFileContentKubeletConfig(ctx.KubernetesVersion, ctx.ClusterDNSAddress, ctx.ClusterDomain, ctx.Taints, ctx.KubeletConfigParameters)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -112,9 +113,9 @@ ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet
 	return []extensionsv1alpha1.Unit{kubeletUnit}, kubeletFiles, nil
 }
 
-func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {
+func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) (*extensionsv1alpha1.FileContentInline, error) {
 	var (
-		kubeletConfig = Config(kubernetesVersion, clusterDNSAddress, clusterDomain, params)
+		kubeletConfig = Config(kubernetesVersion, clusterDNSAddress, clusterDomain, taints, params)
 		configFCI     = &extensionsv1alpha1.FileContentInline{Encoding: "b64"}
 		kcCodec       = NewConfigCodec(oscutils.NewFileContentInlineCodec())
 	)
