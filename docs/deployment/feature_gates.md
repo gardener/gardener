@@ -25,6 +25,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
 | CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` | `1.95` |
 | CoreDNSQueryRewriting              | `true`  | `Beta`  | `1.96` |        |
+| CoreDNSQueryRewriting              | `true`  | `GA`    | `1.97` |        |
 | IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` | `1.95` |
 | MutableShootSpecNetworkingNodes    | `true`  | `Beta`  | `1.96` |        |
