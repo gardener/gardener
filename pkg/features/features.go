@@ -53,6 +53,7 @@ const (
 	// owner: @axel7born @ScheererJ @DockToFuture @kon-angelo
 	// alpha: v1.64.0
 	// beta: v1.96.0
+	// GA: v1.97.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 
 	// ShootForceDeletion allows force deletion of Shoots.
@@ -116,7 +117,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:           {Default: true, PreRelease: featuregate.Beta},
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes: {Default: true, PreRelease: featuregate.Beta},
+	MutableShootSpecNetworkingNodes: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
