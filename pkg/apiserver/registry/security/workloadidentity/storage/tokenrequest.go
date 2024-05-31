@@ -74,19 +74,19 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 	// TODO(vpnachev): implement context specific features
 	// if tokenRequest.Spec.ContextObject != nil {	}
 
-	wiObj, err := r.workloadIdentityGetter.Get(ctx, name, &metav1.GetOptions{})
+	workloadIdentityObj, err := r.workloadIdentityGetter.Get(ctx, name, &metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	wi, ok := wiObj.(*securityapi.WorkloadIdentity)
+	workloadIdentity, ok := workloadIdentityObj.(*securityapi.WorkloadIdentity)
 	if !ok {
-		return nil, apierrors.NewInternalError(fmt.Errorf("cannot convert to *security.WorkloadIdentity object - got type %T", wiObj))
+		return nil, apierrors.NewInternalError(fmt.Errorf("cannot convert to *security.WorkloadIdentity object - got type %T", workloadIdentityObj))
 	}
 
 	var (
-		aud      = wi.Spec.Audiences
-		sub      = wi.Status.Sub
+		aud      = workloadIdentity.Spec.Audiences
+		sub      = workloadIdentity.Status.Sub
 		duration = tokenRequest.Spec.DurationSeconds
 	)
 
