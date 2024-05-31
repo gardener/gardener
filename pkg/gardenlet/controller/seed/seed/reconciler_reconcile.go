@@ -529,6 +529,22 @@ func cleanupOrphanExposureClassHandlerResources(
 		}
 	}
 
+	// TODO(scheererj): Remove this after v1.95 has been released.
+	// Allow temporary creation of ingress gateway copy to easy migration
+	migrationTargetToSource := map[string]string{}
+	for _, label := range []string{"istio", v1beta1constants.LabelExposureClassHandlerName} {
+		namespaceList := &metav1.PartialObjectMetadataList{}
+		namespaceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NamespaceList"))
+		if err := c.List(ctx, namespaceList, client.HasLabels{label}); err != nil {
+			return err
+		}
+		for _, ns := range namespaceList.Items {
+			if targetNamespace, ok := ns.Annotations["alpha.istio-ingress.gardener.cloud/migrate-to"]; ok && targetNamespace != "" {
+				migrationTargetToSource[targetNamespace] = ns.Name
+			}
+		}
+	}
+
 	// Remove zonal, orphaned istio exposure class namespaces
 	zonalExposureClassHandlerNamespaces := &corev1.NamespaceList{}
 	if err := c.List(ctx, zonalExposureClassHandlerNamespaces, client.MatchingLabelsSelector{
@@ -541,6 +557,9 @@ func cleanupOrphanExposureClassHandlerResources(
 	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
 		if ok, zone := sharedcomponent.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
+				if migrationTargetToSource[namespace.Name] != "" {
+					return true
+				}
 				if !zoneSet.Has(zone) {
 					return false
 				}
@@ -567,7 +586,7 @@ func cleanupOrphanExposureClassHandlerResources(
 	for _, namespace := range zonalIstioNamespaces.Items {
 		if ok, zone := sharedcomponent.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, false, func() bool {
-				return zoneSet.Has(zone)
+				return zoneSet.Has(zone) || migrationTargetToSource[namespace.Name] != ""
 			}); err != nil {
 				return err
 			}
