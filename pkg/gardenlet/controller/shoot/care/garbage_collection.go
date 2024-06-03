@@ -147,7 +147,9 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 	for _, pod := range podList.Items {
 		log := g.log.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
-		if strings.Contains(pod.Status.Reason, "Evicted") || strings.HasPrefix(pod.Status.Reason, "OutOf") {
+		if strings.Contains(pod.Status.Reason, "Evicted") ||
+			strings.HasPrefix(pod.Status.Reason, "OutOf") ||
+			strings.Contains(pod.Status.Reason, "NodeAffinity") {
 			log.V(1).Info("Deleting pod", "reason", pod.Status.Reason)
 			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)

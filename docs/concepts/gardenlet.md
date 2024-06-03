@@ -469,7 +469,7 @@ Please see [Shoot Status](../usage/shoot_status.md#constraints) for more details
 Stale pods in the shoot namespace in the seed cluster and in the `kube-system` namespace in the shoot cluster are deleted.
 A pod is considered stale when:
 
-- it was terminated with reason `Evicted`.
+- it was terminated with reason `Evicted`, `NodeAffinity`, or because node has insufficient ressources, i.e., reason starts with `OutOf*`, e.g., `OutOfCpu`, `OutOfMemory`, `OutOfDisk`.
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
 
