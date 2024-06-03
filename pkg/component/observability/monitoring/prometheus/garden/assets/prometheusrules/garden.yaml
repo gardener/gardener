@@ -28,6 +28,7 @@ spec:
           $labels.instance
           | query | first | value}}).
 
+<<- if .GardenerDiscoveryServerEnabled >>
     - alert: DiscoveryServerDown
       expr: |
         probe_success{job     = "blackbox-discovery-server",
@@ -49,6 +50,7 @@ spec:
           ,                                instance = "%s"}`
           $labels.instance
           | query | first | value}}).
+<<- end >>
 
     - alert: ApiServerDown
       expr: |
