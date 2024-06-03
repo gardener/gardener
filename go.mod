@@ -15,7 +15,7 @@ require (
 	github.com/gardener/etcd-druid v0.22.0
 	github.com/gardener/hvpa-controller/api v0.15.0
 	github.com/gardener/machine-controller-manager v0.53.0
-	github.com/gardener/terminal-controller-manager v0.32.0
+	github.com/gardener/terminal-controller-manager v0.33.0
 	github.com/go-logr/logr v1.4.1
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
@@ -231,7 +231,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/oauth2 v0.19.0 // indirect
+	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
