@@ -116,7 +116,7 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	return flow.Parallel(taskFns...)(ctx)
 }
 
-// TODO(MichaelEischer): Remove this function after v1.101 has been released
+// TODO(MichaelEischer): Remove this function after v1.99 has been released
 func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -128,14 +128,13 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
 			continue
 		}
-		namespace := ns
 		tasks = append(tasks, func(ctx context.Context) error {
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: namespace.Name, Name: operatingsystemconfig.PoolHashesSecret}, &corev1.Secret{}); err == nil || !apierrors.IsNotFound(err) {
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.PoolHashesSecretName}, &corev1.Secret{}); err == nil || !apierrors.IsNotFound(err) {
 				// nothing to do if secret already exists
 				return err
 			}
 
-			secret := operatingsystemconfig.CreateMigrationSecret(namespace.Name)
+			secret := operatingsystemconfig.CreateMigrationSecret(ns.Name)
 
 			if err := seedClient.Create(ctx, secret); err != nil {
 				if !apierrors.IsAlreadyExists(err) {

@@ -53,10 +53,10 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
 	// of an OperatingSystemConfig resource.
 	DefaultTimeout = 3 * time.Minute
-	// PoolHashesSecret is the name of the secret that tracks the OSC key calculation version used for each worker pool
-	PoolHashesSecret = "pool-hashes"
-	// poolHashesSecretField is the field in the PoolHashesSecret used to store the calculated hashes
-	poolHashesSecretField = "pools"
+	// PoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
+	PoolHashesSecretName = "pool-hashes"
+	// poolHashesDataKey is the key in the data of the PoolHashesSecretName used to store the calculated hashes.
+	poolHashesDataKey = "pools"
 )
 
 // LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
@@ -173,10 +173,10 @@ type operatingSystemConfig struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	lock             sync.Mutex
-	workerNameToOSCs map[string]*OperatingSystemConfigs
-	oscs             map[string]*extensionsv1alpha1.OperatingSystemConfig
-	versionByName    map[string]int
+	lock              sync.Mutex
+	workerNameToOSCs  map[string]*OperatingSystemConfigs
+	oscs              map[string]*extensionsv1alpha1.OperatingSystemConfig
+	hashVersionByName map[string]int
 }
 
 // OperatingSystemConfigs contains operating system configs for the init script as well as for the original config.
@@ -225,12 +225,12 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	if err := o.updateVersioningSecret(ctx); err != nil {
+	if err := o.updateHashVersioningSecret(ctx); err != nil {
 		return err
 	}
 
-	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d, err := o.newDeployer(version, osc, worker, purpose)
+	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+		d, err := o.newDeployer(hashVersion, osc, worker, purpose)
 		if err != nil {
 			return err
 		}
@@ -245,23 +245,22 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 }
 
 type poolHash struct {
-	Pools    []poolHashEntry
-	Migrated *bool `yaml:"migrated,omitempty"`
+	Pools    []poolHashEntry `yaml:"pools"`
+	Migrated *bool           `yaml:"migrated,omitempty"`
 }
 
 type poolHashEntry struct {
-	Name           string
-	CurrentVersion int
-	Hashes         map[int]string
+	Name                  string
+	CurrentVersion        int
+	HashVersionToPoolName map[int]string
 }
 
 func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, error) {
 	var pools poolHash
 
-	versions := secret.Data[poolHashesSecretField]
+	versions := secret.Data[poolHashesDataKey]
 	if len(versions) > 0 {
-		dec := yaml.NewDecoder(bytes.NewReader(versions))
-		if err := dec.Decode(&pools); err != nil {
+		if err := yaml.NewDecoder(bytes.NewReader(versions)).Decode(&pools); err != nil {
 			return nil, false, err
 		}
 	}
@@ -284,17 +283,16 @@ func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
 	if secret.Data == nil {
 		secret.Data = map[string][]byte{}
 	}
-	secret.Data[poolHashesSecretField] = buf.Bytes()
+	secret.Data[poolHashesDataKey] = buf.Bytes()
 	return nil
 }
 
-func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) error {
-	// FIXME set controller etc.
-	versioning := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecret},
+func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecretName},
 	}
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, versioning, func() error {
-		hashesByName, migrated, err := decodePoolHashes(versioning)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
+		hashesByName, migrated, err := decodePoolHashes(secret)
 		if err != nil {
 			return err
 		}
@@ -317,7 +315,7 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 
 			// check if hashes still match
 			hashHasChanged := false
-			for version, hash := range workerHash.Hashes {
+			for version, hash := range workerHash.HashVersionToPoolName {
 				expectedHash, err := o.calculateKeyForVersion(version, &worker)
 				if err != nil {
 					return err
@@ -343,12 +341,12 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 			}
 
 			// rebuild hashes
-			clear(workerHash.Hashes)
-			if workerHash.Hashes == nil {
-				workerHash.Hashes = map[int]string{}
+			clear(workerHash.HashVersionToPoolName)
+			if workerHash.HashVersionToPoolName == nil {
+				workerHash.HashVersionToPoolName = map[int]string{}
 			}
-			workerHash.Hashes[workerHash.CurrentVersion] = currentHash
-			workerHash.Hashes[LatestHashVersion] = latestHash
+			workerHash.HashVersionToPoolName[workerHash.CurrentVersion] = currentHash
+			workerHash.HashVersionToPoolName[LatestHashVersion] = latestHash
 
 			// update secret
 			hashesByName[worker.Name] = workerHash
@@ -356,38 +354,38 @@ func (o *operatingSystemConfig) updateVersioningSecret(ctx context.Context) erro
 			pools.Pools = append(pools.Pools, workerHash)
 		}
 
-		if err := encodePoolHashes(&pools, versioning); err != nil {
+		if err := encodePoolHashes(&pools, secret); err != nil {
 			return err
 		}
-		metav1.SetMetaDataLabel(&versioning.ObjectMeta, secretsmanager.LabelKeyPersist, "true")
-		versioning.Type = corev1.SecretTypeOpaque
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyPersist, "true")
+		secret.Type = corev1.SecretTypeOpaque
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	hashesByName, _, err := decodePoolHashes(versioning)
+	hashesByName, _, err := decodePoolHashes(secret)
 	if err != nil {
 		return err
 	}
 
-	o.versionByName = make(map[string]int, len(hashesByName))
+	o.hashVersionByName = make(map[string]int, len(hashesByName))
 	for name, entry := range hashesByName {
-		o.versionByName[name] = entry.CurrentVersion
+		o.hashVersionByName[name] = entry.CurrentVersion
 	}
 
 	return nil
 }
 
 func (o *operatingSystemConfig) hashVersion(workerName string) (int, error) {
-	// updateVersioningSecret() is currently always called before this method
-	// thus just implement a sanity check instead of querying the versioning secret
-	if o.versionByName == nil {
+	// updateHashVersioningSecret() is currently always called before this method
+	// thus just implement a sanity check instead of querying the hash version secret
+	if o.hashVersionByName == nil {
 		return 0, fmt.Errorf("hash version not yet synced")
 	}
 
-	if version, ok := o.versionByName[workerName]; ok {
+	if version, ok := o.hashVersionByName[workerName]; ok {
 		return version, nil
 	}
 	return 0, fmt.Errorf("no version available for %v", workerName)
@@ -401,17 +399,16 @@ func CreateMigrationSecret(namespace string) *corev1.Secret {
 	}
 
 	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	if err := enc.Encode(&pools); err != nil {
+	if err := yaml.NewEncoder(&buf).Encode(&pools); err != nil {
 		// this really should be impossible
 		panic(err)
 	}
 
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: PoolHashesSecret},
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: PoolHashesSecretName},
 		Type:       corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			poolHashesSecretField: buf.Bytes(),
+			poolHashesDataKey: buf.Bytes(),
 		},
 	}
 }
@@ -420,7 +417,7 @@ func CreateMigrationSecret(namespace string) *corev1.Secret {
 // containing the cloud-config and stores its data which can later be retrieved with the WorkerNameToOperatingSystemConfigsMap
 // method.
 func (o *operatingSystemConfig) Wait(ctx context.Context) error {
-	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		return extensions.WaitUntilExtensionObjectReady(ctx,
 			o.client,
 			o.log,
@@ -439,7 +436,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					return err
 				}
 
-				oscKey, err := o.calculateKeyForVersion(version, &worker)
+				oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
 				if err != nil {
 					return err
 				}
@@ -505,10 +502,10 @@ func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	versioning := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecret},
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecretName},
 	}
-	return client.IgnoreNotFound(o.client.Delete(ctx, versioning))
+	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
 }
 
 func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.Set[string]) error {
