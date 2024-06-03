@@ -1167,10 +1167,8 @@ func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, wo
 func CalcluateEffectiveKubeletConfiguation(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes) *gardencorev1beta1.KubeletConfig {
 	if workerKubernetes != nil && workerKubernetes.Kubelet != nil {
 		return workerKubernetes.Kubelet
-	} else if shootKubelet != nil {
-		return shootKubelet
 	}
-	return nil
+	return shootKubelet
 }
 
 // GetSecretBindingTypes returns the SecretBinding provider types.
