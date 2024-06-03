@@ -250,9 +250,9 @@ type poolHash struct {
 }
 
 type poolHashEntry struct {
-	Name                  string
-	CurrentVersion        int
-	HashVersionToPoolName map[int]string
+	Name                string         `yaml:"name"`
+	CurrentVersion      int            `yaml:"currentVersion"`
+	HashVersionToOSCKey map[int]string `yaml:"hashVersionToOSCKey"`
 }
 
 func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, error) {
@@ -315,7 +315,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 
 			// check if hashes still match
 			hashHasChanged := false
-			for version, hash := range workerHash.HashVersionToPoolName {
+			for version, hash := range workerHash.HashVersionToOSCKey {
 				expectedHash, err := o.calculateKeyForVersion(version, &worker)
 				if err != nil {
 					return err
@@ -341,12 +341,12 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			}
 
 			// rebuild hashes
-			clear(workerHash.HashVersionToPoolName)
-			if workerHash.HashVersionToPoolName == nil {
-				workerHash.HashVersionToPoolName = map[int]string{}
+			clear(workerHash.HashVersionToOSCKey)
+			if workerHash.HashVersionToOSCKey == nil {
+				workerHash.HashVersionToOSCKey = map[int]string{}
 			}
-			workerHash.HashVersionToPoolName[workerHash.CurrentVersion] = currentHash
-			workerHash.HashVersionToPoolName[LatestHashVersion] = latestHash
+			workerHash.HashVersionToOSCKey[workerHash.CurrentVersion] = currentHash
+			workerHash.HashVersionToOSCKey[LatestHashVersion] = latestHash
 
 			// update secret
 			hashesByName[worker.Name] = workerHash

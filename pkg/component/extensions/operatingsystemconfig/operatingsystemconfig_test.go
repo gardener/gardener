@@ -333,12 +333,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Data: map[string][]byte{
 					"pools": []byte(`pools:
     - name: worker1
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker1-77ac3
     - name: worker2
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
 `)},
 			}
@@ -388,12 +388,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker1-77ac3
     - name: worker2
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
 `))
 			})
@@ -418,7 +418,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				poolHashesSecret.Data["pools"] = []byte(`pools:
     - name: worker1
-      currentversion: 1
+      currentVersion: 1
 `)
 				Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -431,13 +431,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: worker1-version1
         2: worker1-version2
     - name: worker2
-      currentversion: 2
-      hashes:
+      currentVersion: 2
+      hashVersionToOSCKey:
         2: worker2-version2
 `))
 
@@ -461,12 +461,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentversion: 2
-      hashes:
+      currentVersion: 2
+      hashVersionToOSCKey:
         2: worker1-version2
     - name: worker2
-      currentversion: 2
-      hashes:
+      currentVersion: 2
+      hashVersionToOSCKey:
         2: worker2-version2
 `))
 			})
@@ -500,13 +500,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker1-77ac3
         2: worker1-version2
     - name: worker2
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
         2: worker2-version2
 `))
@@ -530,13 +530,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				pools := secret.Data["pools"]
 				Expect(string(pools)).To(Equal(`pools:
     - name: worker1
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker1-77ac3
         2: worker1-version2
     - name: worker2
-      currentversion: 1
-      hashes:
+      currentVersion: 1
+      hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
         2: worker2-version2
 `))
