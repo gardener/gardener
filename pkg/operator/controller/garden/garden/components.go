@@ -1208,7 +1208,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 		},
 		CentralConfigs: prometheus.CentralConfigs{
 			AdditionalScrapeConfigs: gardenprometheus.AdditionalScrapeConfigs(),
-			PrometheusRules:         gardenprometheus.CentralPrometheusRules(),
+			PrometheusRules:         gardenprometheus.CentralPrometheusRules(garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil),
 			ServiceMonitors:         gardenprometheus.CentralServiceMonitors(),
 		},
 		Alerting: &prometheus.AlertingValues{Alertmanagers: []*prometheus.Alertmanager{{Name: "alertmanager-garden"}}},
@@ -1328,7 +1328,7 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.ServiceName, 8081):                                                                             v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
-			Config:            gardenblackboxexporter.Config(isDashboardCertificateIssuedByGardener),
+			Config:            gardenblackboxexporter.Config(isDashboardCertificateIssuedByGardener, garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil),
 			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
 			Replicas:          1,
 		},

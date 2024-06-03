@@ -5,7 +5,9 @@
 package garden
 
 import (
+	"bytes"
 	_ "embed"
+	"text/template"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,7 +27,6 @@ var (
 
 	//go:embed assets/prometheusrules/garden.yaml
 	gardenYAML []byte
-	garden     *monitoringv1.PrometheusRule
 
 	//go:embed assets/prometheusrules/metering-meta.yaml
 	meteringYAML []byte
@@ -51,9 +52,6 @@ func init() {
 	etcd = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, etcdYAML, etcd))
 
-	garden = &monitoringv1.PrometheusRule{}
-	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, gardenYAML, garden))
-
 	metering = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, meteringYAML, metering))
 
@@ -68,7 +66,24 @@ func init() {
 }
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the garden prometheus.
-func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
+func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool) []*monitoringv1.PrometheusRule {
+	gardenTmpl, err := template.New("garden").Delims("<<", ">>").Parse(string(gardenYAML))
+	utilruntime.Must(err)
+
+	var (
+		gardenConfig = struct {
+			GardenerDiscoveryServerEnabled bool
+		}{
+			GardenerDiscoveryServerEnabled: isGardenerDiscoveryServerEnabled,
+		}
+		gardenRaw bytes.Buffer
+	)
+
+	utilruntime.Must(gardenTmpl.Execute(&gardenRaw, gardenConfig))
+
+	garden := &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, gardenRaw.Bytes(), garden))
+
 	return []*monitoringv1.PrometheusRule{
 		auditLog.DeepCopy(),
 		etcd.DeepCopy(),
