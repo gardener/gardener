@@ -45,7 +45,7 @@ func (controllerRegistrationStrategy) PrepareForUpdate(_ context.Context, obj, o
 }
 
 func mustIncreaseGeneration(oldControllerRegistration, newControllerRegistration *core.ControllerRegistration) bool {
-	// The ControllerRegistration specification changes.
+	// The specification changes.
 	if !apiequality.Semantic.DeepEqual(oldControllerRegistration.Spec, newControllerRegistration.Spec) {
 		return true
 	}

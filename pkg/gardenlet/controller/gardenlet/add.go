@@ -19,6 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -72,7 +73,7 @@ func (r *Reconciler) AddToManager(
 		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.Gardenlet{}),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}, predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Complete(r)
 }

@@ -50,7 +50,7 @@ func (gardenletStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Ob
 }
 
 func mustIncreaseGeneration(oldGardenlet, newGardenlet *seedmanagement.Gardenlet) bool {
-	// The ControllerRegistration specification changes.
+	// The specification changes.
 	if !apiequality.Semantic.DeepEqual(oldGardenlet.Spec, newGardenlet.Spec) {
 		return true
 	}
