@@ -353,6 +353,9 @@ metadata:
 												corev1.ResourceCPU:    resource.MustParse("5m"),
 												corev1.ResourceMemory: resource.MustParse("45Mi"),
 											},
+											Limits: corev1.ResourceList{
+												corev1.ResourceMemory: resource.MustParse("400Mi"),
+											},
 										},
 									},
 									{

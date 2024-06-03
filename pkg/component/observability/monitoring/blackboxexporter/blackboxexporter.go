@@ -251,6 +251,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceCPU:    resource.MustParse("10m"),
 										corev1.ResourceMemory: resource.MustParse("25Mi"),
 									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
 								},
 								Ports: []corev1.ContainerPort{
 									{

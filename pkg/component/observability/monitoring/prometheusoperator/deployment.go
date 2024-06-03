@@ -55,7 +55,7 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 								"--config-reloader-cpu-request=10m",
 								"--config-reloader-cpu-limit=0",
 								"--config-reloader-memory-request=25Mi",
-								"--config-reloader-memory-limit=0",
+								"--config-reloader-memory-limit=50Mi",
 								"--enable-config-reloader-probes=false",
 							},
 							Env: []corev1.EnvVar{{
