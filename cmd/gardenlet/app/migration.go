@@ -11,7 +11,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -129,17 +128,17 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 			continue
 		}
 		tasks = append(tasks, func(ctx context.Context) error {
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.PoolHashesSecretName}, &corev1.Secret{}); err == nil || !apierrors.IsNotFound(err) {
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.PoolHashesSecretName}, &corev1.Secret{}); err == nil {
 				// nothing to do if secret already exists
 				return err
+			} else if client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("could not query pool-hashes secret in namespace %v: %w", ns.Name, err)
 			}
 
 			secret := operatingsystemconfig.CreateMigrationSecret(ns.Name)
 
-			if err := seedClient.Create(ctx, secret); err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return err
-				}
+			if err := seedClient.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
+				return fmt.Errorf("could not create pool-hashes secret in namespace %v: %w", ns.Name, err)
 			}
 
 			return nil
