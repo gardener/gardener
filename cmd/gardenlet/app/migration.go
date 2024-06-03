@@ -135,7 +135,10 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 				return fmt.Errorf("could not query pool-hashes secret in namespace %v: %w", ns.Name, err)
 			}
 
-			secret := operatingsystemconfig.CreateMigrationSecret(ns.Name)
+			secret, err := operatingsystemconfig.CreateMigrationSecret(ns.Name)
+			if err != nil {
+				return fmt.Errorf("failed to serialize pool-hashes secret for namespace %v: %w", ns.Name, err)
+			}
 
 			if err := seedClient.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
 				return fmt.Errorf("could not create pool-hashes secret in namespace %v: %w", ns.Name, err)

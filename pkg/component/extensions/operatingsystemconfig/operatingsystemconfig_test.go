@@ -519,7 +519,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 
-				Expect(c.Create(ctx, CreateMigrationSecret(namespace))).To(Succeed())
+				migrationSecret, err := CreateMigrationSecret(namespace)
+				Expect(err).To(Succeed())
+				Expect(c.Create(ctx, migrationSecret)).To(Succeed())
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}

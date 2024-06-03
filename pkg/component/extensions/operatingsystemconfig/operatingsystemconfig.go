@@ -393,15 +393,14 @@ func (o *operatingSystemConfig) hashVersion(workerName string) (int, error) {
 
 // CreateMigrationSecret creates a pool-hash secret for initially deploying the
 // pool hash secret into a shoot (namespace).
-func CreateMigrationSecret(namespace string) *corev1.Secret {
+func CreateMigrationSecret(namespace string) (*corev1.Secret, error) {
 	pools := poolHash{
 		Migrated: ptr.To(true),
 	}
 
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf).Encode(&pools); err != nil {
-		// this really should be impossible
-		panic(err)
+		return nil, err
 	}
 
 	return &corev1.Secret{
@@ -410,7 +409,7 @@ func CreateMigrationSecret(namespace string) *corev1.Secret {
 		Data: map[string][]byte{
 			poolHashesDataKey: buf.Bytes(),
 		},
-	}
+	}, nil
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
