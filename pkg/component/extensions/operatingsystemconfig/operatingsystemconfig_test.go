@@ -1523,6 +1523,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 				kubeletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
 			})
 
+			It("when changing evictionHard image fs threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard image fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSInodesFree = ptr.To("1k")
+			})
+
+			It("when changing evictionHard node fs threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard node fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSInodesFree = ptr.To("1k")
+			})
+
 			It("when changing CPUManagerPolicy", func() {
 				kubeletConfig.CPUManagerPolicy = ptr.To("test")
 			})

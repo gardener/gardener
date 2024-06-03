@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -1048,8 +1049,12 @@ func KeyV2(
 		if kubeReserved := kubeletConfiguration.KubeReserved; kubeReserved != nil {
 			data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
 		}
-		if eviction := kubeletConfiguration.EvictionHard; eviction != nil && eviction.MemoryAvailable != nil {
-			data = append(data, *eviction.MemoryAvailable)
+		if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+			parts := make([]string, 0, 5)
+			for _, value := range []*string{eviction.ImageFSAvailable, eviction.ImageFSInodesFree, eviction.MemoryAvailable, eviction.NodeFSAvailable, eviction.NodeFSInodesFree} {
+				parts = append(parts, ptr.Deref(value, ""))
+			}
+			data = append(data, strings.Join(parts, "-"))
 		}
 		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
 			data = append(data, *policy)
