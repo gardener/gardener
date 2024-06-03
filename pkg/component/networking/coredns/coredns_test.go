@@ -108,7 +108,7 @@ subjects:
   name: coredns
   namespace: kube-system
 `
-		configMapYAML = func(rewritingEnabled bool, commonSuffixes []string) string {
+		configMapYAML = func(commonSuffixes []string) string {
 			out := `apiVersion: v1
 data:
   Corefile: |
@@ -120,22 +120,19 @@ data:
       health {
           lameduck 15s
       }
-      ready`
-			if rewritingEnabled {
-				out += `
+      ready
       rewrite stop {
         name regex (^(?:[^\.]+\.)+)svc\.foo\.bar\.svc\.foo\.bar {1}svc.foo.bar
         answer name (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
         answer value (^(?:[^\.]+\.)+)svc\.foo\.bar {1}svc.foo.bar.svc.foo.bar
       }`
-				for _, suffix := range commonSuffixes {
-					out += `
+			for _, suffix := range commonSuffixes {
+				out += `
       rewrite stop {
         name regex (.*)\.` + regexp.QuoteMeta(suffix) + `\.svc\.foo\.bar {1}.` + suffix + `
         answer name (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
         answer value (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
       }`
-				}
 			}
 			out += `
       kubernetes ` + clusterDomain + ` in-addr.arpa ip6.arpa {
@@ -722,7 +719,6 @@ status: {}
 		var (
 			cpaEnabled          bool
 			vpaEnabled          bool
-			rewritingEnabled    bool
 			commonSuffixes      []string
 			k8sGreaterEquals126 bool
 		)
@@ -730,7 +726,6 @@ status: {}
 		BeforeEach(func() {
 			cpaEnabled = false
 			vpaEnabled = false
-			rewritingEnabled = false
 			commonSuffixes = []string{}
 			k8sGreaterEquals126 = false
 		})
@@ -777,7 +772,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML(rewritingEnabled, commonSuffixes)))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML(commonSuffixes)))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
@@ -851,11 +846,9 @@ status: {}
 			})
 		})
 
-		Context("w/ rewriting enabled", func() {
+		Context("w/ rewriting common suffixes enabled", func() {
 			BeforeEach(func() {
-				rewritingEnabled = true
 				commonSuffixes = []string{"gardener.cloud", "github.com"}
-				values.SearchPathRewritesEnabled = true
 				values.SearchPathRewriteCommonSuffixes = commonSuffixes
 			})
 
@@ -864,9 +857,7 @@ status: {}
 			})
 
 			AfterEach(func() {
-				rewritingEnabled = false
 				commonSuffixes = []string{}
-				values.SearchPathRewritesEnabled = false
 				values.SearchPathRewriteCommonSuffixes = commonSuffixes
 			})
 		})

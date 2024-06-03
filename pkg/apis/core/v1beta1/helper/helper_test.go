@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
 var _ = Describe("Helper", func() {
@@ -2665,25 +2664,6 @@ var _ = Describe("Helper", func() {
 		Entry("with cluster-proportional autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, true),
 		Entry("with cluster-proportional autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
 	)
-
-	Context("#IsCoreDNSRewritingEnabled feature gate context", func() {
-		BeforeEach(func() {
-			gardenletfeatures.RegisterFeatureGates()
-		})
-
-		DescribeTable("#IsCoreDNSRewritingEnabled",
-			func(featureGate bool, annotations map[string]string, expected bool) {
-				Expect(IsCoreDNSRewritingEnabled(featureGate, annotations)).To(Equal(expected))
-			},
-
-			Entry("with feature gate enabled and no annotation", true, map[string]string{}, true),
-			Entry("with feature gate disabled and no annotation", false, map[string]string{}, false),
-			Entry("with feature gate enabled and incorrect annotations", true, map[string]string{"some annotation": "some value", "foo": "bar"}, true),
-			Entry("with feature gate disabled and incorrect annotation", false, map[string]string{"some annotation": "some value", "foo": "bar"}, false),
-			Entry("with feature gate enabled and correct annotations", true, map[string]string{v1beta1constants.AnnotationCoreDNSRewritingDisabled: "some value"}, false),
-			Entry("with feature gate disabled and correct annotation", false, map[string]string{v1beta1constants.AnnotationCoreDNSRewritingDisabled: "some value"}, false),
-		)
-	})
 
 	DescribeTable("#IsNodeLocalDNSEnabled",
 		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {

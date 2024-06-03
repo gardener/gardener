@@ -76,17 +76,7 @@ creation of DNS requests. Especially with the default setting of `ndots=5`, seem
 services in the cluster may trigger the DNS search path application.
 
 Gardener allows to automatically rewrite some obviously incorrect DNS names, which stem from an application of the DNS search
-path to the most likely desired name. The feature can be enabled by setting the Gardenlet feature gate `CoreDNSQueryRewriting` to `true`:
-
-```yaml
-featureGates:
-  CoreDNSQueryRewriting: true
-``` 
-
-In case the feature is enabled in the gardenlet, it can be disabled per shoot cluster by setting the annotation
-`alpha.featuregates.shoot.gardener.cloud/core-dns-rewriting-disabled` to any value.
-
-This will automatically rewrite requests like `service.namespace.svc.cluster.local.svc.cluster.local` to
+path to the most likely desired name. This will automatically rewrite requests like `service.namespace.svc.cluster.local.svc.cluster.local` to
 `service.namespace.svc.cluster.local`.
 
 In case the applications also target services for name resolution, which are outside of the cluster and have less than `ndots` dots,

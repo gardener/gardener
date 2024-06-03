@@ -42,6 +42,7 @@ const (
 	// owner: @ScheererJ @DockToFuture @axel7born
 	// alpha: v1.55.0
 	// beta: v1.96.0
+	// GA: v1.97.0
 	CoreDNSQueryRewriting featuregate.Feature = "CoreDNSQueryRewriting"
 
 	// IPv6SingleStack allows creating shoot clusters with IPv6 single-stack networking (GEP-21).
@@ -115,7 +116,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
 	VPAForETCD:                      {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:           {Default: true, PreRelease: featuregate.Beta},
+	CoreDNSQueryRewriting:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
