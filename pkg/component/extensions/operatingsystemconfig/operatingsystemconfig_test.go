@@ -922,9 +922,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
+					lastUpdateTime := metav1.Time{Time: now}.Rfc3339Copy()
+					// fix timezone
+					lastUpdateTime.Time = lastUpdateTime.Local()
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
 						State:          gardencorev1beta1.LastOperationStateSucceeded,
-						LastUpdateTime: metav1.Time{Time: now}.Rfc3339Copy(),
+						LastUpdateTime: lastUpdateTime,
 					}
 					// set cloud-config secret information
 					expected[i].Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
