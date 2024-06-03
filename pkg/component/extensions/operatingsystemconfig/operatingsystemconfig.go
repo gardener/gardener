@@ -953,7 +953,7 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 	}
 	kubeletConfiguration := v1beta1helper.CalcluateEffectiveKubeletConfiguation(o.values.KubeletConfig, worker.Kubernetes)
 
-	return CalculateKeyForVersion(version, kubernetesVersion, o.values.CredentialsRotationStatus, worker, o.values.NodeLocalDNSEnabled, kubeletConfiguration)
+	return CalculateKeyForVersion(version, kubernetesVersion, o.values, worker, kubeletConfiguration)
 }
 
 // CalculateKeyForVersion is exposed for testing purposes only
@@ -962,16 +962,19 @@ var CalculateKeyForVersion = calculateKeyForVersion
 func calculateKeyForVersion(
 	oscVersion int,
 	kubernetesVersion *semver.Version,
-	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
+	values *Values,
 	worker *gardencorev1beta1.Worker,
-	nodeLocalDNSEnabled bool,
 	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
-) (string, error) {
+) (
+	string,
+	error,
+) {
 	switch oscVersion {
 	case 1:
+		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
-		return KeyV2(kubernetesVersion, credentialsRotation, worker, nodeLocalDNSEnabled, kubeletConfiguration), nil
+		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
 	}

@@ -95,7 +95,7 @@ const (
 	// WorkerPoolHashWithNodeAgentSecret enables a new calculation method for the worker pool hash used by provider extensions. All
 	// such extensions must be upgraded to this Gardener version before enabling the feature gate.
 	// owner: @MichaelEischer
-	// alpha: v1.96.0
+	// alpha: v1.97.0
 	WorkerPoolHashWithNodeAgentSecret featuregate.Feature = "WorkerPoolHashWithNodeAgentSecret"
 )
 
