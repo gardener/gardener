@@ -671,9 +671,6 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 	if oldNetworking.Services != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
 	}
-	if !features.DefaultFeatureGate.Enabled(features.MutableShootSpecNetworkingNodes) && oldNetworking.Nodes != nil {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Nodes, oldNetworking.Nodes, fldPath.Child("nodes"))...)
-	}
 
 	return allErrs
 }

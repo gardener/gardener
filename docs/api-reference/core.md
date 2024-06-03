@@ -8179,7 +8179,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Nodes is the CIDR of the entire node network.
-This field is immutable if the feature gate MutableShootSpecNetworkingNodes is disabled.</p>
+This field is mutable.</p>
 </td>
 </tr>
 <tr>
