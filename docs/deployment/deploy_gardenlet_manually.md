@@ -497,10 +497,6 @@ gardenlet runs [a controller](../concepts/gardenlet.md#gardenlet-controller) whi
 Such resources contain its component configuration and deployment values.
 Most notably, a URL to an OCI repository containing gardenlet's Helm chart is included.
 
-On reconciliation, gardenlet downloads the Helm chart, renders it with the provided values, and then applies it to its own cluster.
-Hence, in order to keep a gardenlet up-to-date, it is enough to update the tag/digest of the OCI repository ref for the Helm chart.
-This way, network connectivity to the cluster in which gardenlet runs is not required at all (at least for deployment purposes).
-
 An example `Gardenlet` resource looks like this:
 
 ```yaml
@@ -515,7 +511,7 @@ spec:
     revisionHistoryLimit: 2
     helm:
       ociRepository:
-        ref: localhost:5001/local-skaffold_gardenlet_chart:v1.97.0
+        ref: <url-to-gardenlet-chart-repository>:v1.97.0
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
@@ -592,10 +588,22 @@ spec:
           verticalPodAutoscaler:
             enabled: true
 ```
+On reconciliation, gardenlet downloads the Helm chart, renders it with the provided values, and then applies it to its own cluster.
+Hence, in order to keep a gardenlet up-to-date, it is enough to update the tag/digest of the OCI repository ref for the Helm chart:
+
+```yaml
+spec:
+  deployment:
+    helm:
+      ociRepository:
+        ref: <url-to-gardenlet-chart-repository>:v1.97.0
+```
+
+This way, network connectivity to the cluster in which gardenlet runs is not required at all (at least for deployment purposes).
 
 When you delete this resource, nothing happens: gardenlet remains running with the configuration as before.
 However, self-upgrades are obviously not possible anymore.
-In order to upgrade it, you have to either recreate the `Gardenlet` object, or deploy the Helm chart.
+In order to upgrade it, you have to either recreate the `Gardenlet` object, or redeploy the Helm chart.
 
 ## Related Links
 
