@@ -77,6 +77,9 @@ Apart from the above mentioned triggers, a rolling update of the shoot worker no
 The complete list of fields that trigger a rolling update:
 
 * `.spec.kubernetes.version` (except for patch version changes)
+* `.spec.kubernetes.kubelet.kubeReserved` (unless a worker pool-specific value is set; if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
+* `.spec.kubernetes.kubelet.evictionHard` (unless a worker pool-specific value is set; if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
+* `.spec.kubernetes.kubelet.cpuManagerPolicy` (unless a worker pool-specific value is set; if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
 * `.spec.provider.workers[].machine.image.name`
 * `.spec.provider.workers[].machine.image.version`
 * `.spec.provider.workers[].machine.type`
@@ -85,6 +88,9 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].providerConfig`
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
+* `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` (if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
+* `.spec.provider.workers[].kubernetes.kubelet.evictionHard` (if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
+* `.spec.provider.workers[].kubernetes.kubelet.cpuManagerPolicy` (if feature gate `WorkerPoolHashWithNodeAgentSecret` enabled)
 * `.spec.systemComponents.nodeLocalDNS.enabled`
 * `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by Gardener when a shoot CA rotation is initiated)
 * `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by Gardener when a shoot service account signing key rotation is initiated)
