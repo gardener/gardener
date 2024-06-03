@@ -36,6 +36,8 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 - [CloudFlare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [PowerDNS](https://github.com/metal-stack/gardener-extension-dns-powerdns)
+- [RFC2136](https://github.com/Avarei/gardener-extension-dns-rfc2136)
 
 ### Operating System
 
