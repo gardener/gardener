@@ -66,7 +66,6 @@ func init() {
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the garden prometheus.
 func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool) []*monitoringv1.PrometheusRule {
-
 	return []*monitoringv1.PrometheusRule{
 		auditLog.DeepCopy(),
 		etcd.DeepCopy(),
@@ -79,8 +78,7 @@ func CentralPrometheusRules(isGardenerDiscoveryServerEnabled bool) []*monitoring
 }
 
 func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.PrometheusRule {
-
-	var getLabels = func(severity string) map[string]string {
+	getLabels := func(severity string) map[string]string {
 		return map[string]string{
 			"severity": severity,
 			"topology": "garden",
