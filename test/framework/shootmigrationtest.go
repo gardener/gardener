@@ -434,7 +434,7 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 // MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated
 func (t ShootMigrationTest) MarkOSCSecret(ctx context.Context) error {
 	secret := &corev1.Secret{}
-	if err := t.SourceSeedClient.Client().Get(ctx, types.NamespacedName{Namespace: t.SeedShootNamespace, Name: operatingsystemconfig.PoolHashesSecret}, secret); err != nil {
+	if err := t.SourceSeedClient.Client().Get(ctx, types.NamespacedName{Namespace: t.SeedShootNamespace, Name: operatingsystemconfig.PoolHashesSecretName}, secret); err != nil {
 		return err
 	}
 	metav1.SetMetaDataLabel(&secret.ObjectMeta, "gardener.cloud/custom-test-annotation", "test")

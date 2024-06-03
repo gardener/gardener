@@ -130,7 +130,7 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 		tasks = append(tasks, func(ctx context.Context) error {
 			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.PoolHashesSecretName}, &corev1.Secret{}); err == nil {
 				// nothing to do if secret already exists
-				return err
+				return nil
 			} else if client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("could not query pool-hashes secret in namespace %v: %w", ns.Name, err)
 			}
