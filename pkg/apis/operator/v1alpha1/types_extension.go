@@ -5,9 +5,11 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -45,45 +47,49 @@ type ExtensionSpec struct {
 	// (aws-route53, gcp).
 	// +optional
 	Resources []gardencorev1beta1.ControllerResource `json:"resources,omitempty"`
-	// Deployment contains deployment configuration for the admission and extension concept.
+	// ExtensionDeployment contains deployment configuration for the admission and extension concept.
 	// +optional
-	Deployment *DeploymentSpec `json:"deployment,omitempty"`
-}
-
-// Deployment contains deployment configuration for the admission and extension concept.
-type Deployment struct {
-	// Admission contains the deployment specification for the extension admission controller.
+	ExtensionDeployment *ExtensionDeploymentSpec `json:"extensionDeployment,omitempty"`
+	// AdmissionDeployment contains deployment configuration for the admission and extension concept.
 	// +optional
-	Admission *DeploymentSpec `json:"admission,omitempty"`
-	// Extension contains the deployment specification for the extension.
-	// +optional
-	Extension *ExtensionDeploymentSpec `json:"extension,omitempty"`
-}
-
-// DeploymentSpec is the specification for the deployment of a component.
-type DeploymentSpec struct {
-	// Helm is the Helm deployment configuration.
-	Helm *Helm `json:"helm,omitempty"`
-}
-
-// Helm is the Helm deployment configuration.
-type Helm struct {
-	// OCIRepository is the configuration of to the OCI repository.
-	OCIRepository string `json:"ociRepository"`
-	// RawChart is the base64-encoded, gzip'ed, tar'ed Helm chart.
-	// +optional
-	RawChart []byte `json:"rawChart,omitempty"`
-	// Values are the chart values.
-	// +optional
-	Values *runtime.RawExtension `json:"values,omitempty"`
+	AdmissionDeployment *AdmissionDeploymentSpec `json:"admissionDeployment,omitempty"`
 }
 
 // ExtensionDeploymentSpec contains the deployment specification for an extension.
 type ExtensionDeploymentSpec struct {
-	DeploymentSpec `json:",inline"`
+	// RuntimeDeployment is the deployment configuration for the extension in the runtime cluster.
+	// The deployment controls the extension behavior for the purpose of managing infrastructure resources
+	// of the runtime cluster.
+	// +optional
+	RuntimeDeployment *DeploymentSpec `json:"runtimeDeployment,omitempty"`
+	// GardenDeployment is the deployment configuration for the extension deployment in the garden cluster.
+	// It controls the creation of the ControllerDeployment created in the garden virtual cluster and control how the
+	// extensions operate in a seed cluster.
+	// +optional
+	GardenDeployment *DeploymentSpec `json:"gardenDeployment,omitempty"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
+	// Annotations are annotations that need to be added to both the controller registration and deployment.
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.
+type AdmissionDeploymentSpec struct{}
+
+// DeploymentSpec is the specification for the deployment of a component.
+type DeploymentSpec struct {
+	helm *Helm `json:"helm,omitempty"`
+}
+
+// Helm is the Helm deployment configuration.
+type Helm struct {
+	// OCIRepository defines where to pull the chart.
+	// +optional
+	OCIRepository *v1.OCIRepository `json:"ociRepository,omitempty"`
+	// Values are the chart values.
+	// +optional
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }
 
 // ExtensionStatus is the status of a Gardener extension.
@@ -94,7 +100,7 @@ type ExtensionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// ProviderStatus contains type-specific status.
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
