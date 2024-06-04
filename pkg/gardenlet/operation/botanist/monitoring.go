@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -290,11 +291,13 @@ spec:
 	return
 }
 
+var alertingRuleHeaderLineRegexp = regexp.MustCompile(`^\S+: \|`)
+
 // TODO(rfranzke): Remove this function after v1.100 has been released.
 func normalizeAlertingRules(input string) []string {
 	var cleanedLines []string
 	for _, line := range strings.Split(input, "\n") {
-		if strings.Contains(line, ": |") {
+		if alertingRuleHeaderLineRegexp.MatchString(line) {
 			continue
 		}
 		if len(line) >= 2 && line[:2] == "  " {
