@@ -203,16 +203,16 @@ func (mr *MockInterfaceMockRecorder) WaitMigrate(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockInterface)(nil).WaitMigrate), arg0)
 }
 
-// WorkerNameToOperatingSystemConfigsMap mocks base method.
-func (m *MockInterface) WorkerNameToOperatingSystemConfigsMap() map[string]*operatingsystemconfig.OperatingSystemConfigs {
+// WorkerPoolNameToOperatingSystemConfigsMap mocks base method.
+func (m *MockInterface) WorkerPoolNameToOperatingSystemConfigsMap() map[string]*operatingsystemconfig.OperatingSystemConfigs {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WorkerNameToOperatingSystemConfigsMap")
+	ret := m.ctrl.Call(m, "WorkerPoolNameToOperatingSystemConfigsMap")
 	ret0, _ := ret[0].(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	return ret0
 }
 
-// WorkerNameToOperatingSystemConfigsMap indicates an expected call of WorkerNameToOperatingSystemConfigsMap.
-func (mr *MockInterfaceMockRecorder) WorkerNameToOperatingSystemConfigsMap() *gomock.Call {
+// WorkerPoolNameToOperatingSystemConfigsMap indicates an expected call of WorkerPoolNameToOperatingSystemConfigsMap.
+func (mr *MockInterfaceMockRecorder) WorkerPoolNameToOperatingSystemConfigsMap() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkerNameToOperatingSystemConfigsMap", reflect.TypeOf((*MockInterface)(nil).WorkerNameToOperatingSystemConfigsMap))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkerPoolNameToOperatingSystemConfigsMap", reflect.TypeOf((*MockInterface)(nil).WorkerPoolNameToOperatingSystemConfigsMap))
 }

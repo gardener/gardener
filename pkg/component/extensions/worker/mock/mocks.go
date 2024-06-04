@@ -137,16 +137,16 @@ func (mr *MockInterfaceMockRecorder) SetSSHPublicKey(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKey", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKey), arg0)
 }
 
-// SetWorkerNameToOperatingSystemConfigsMap mocks base method.
-func (m *MockInterface) SetWorkerNameToOperatingSystemConfigsMap(arg0 map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+// SetWorkerPoolNameToOperatingSystemConfigsMap mocks base method.
+func (m *MockInterface) SetWorkerPoolNameToOperatingSystemConfigsMap(arg0 map[string]*operatingsystemconfig.OperatingSystemConfigs) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetWorkerNameToOperatingSystemConfigsMap", arg0)
+	m.ctrl.Call(m, "SetWorkerPoolNameToOperatingSystemConfigsMap", arg0)
 }
 
-// SetWorkerNameToOperatingSystemConfigsMap indicates an expected call of SetWorkerNameToOperatingSystemConfigsMap.
-func (mr *MockInterfaceMockRecorder) SetWorkerNameToOperatingSystemConfigsMap(arg0 any) *gomock.Call {
+// SetWorkerPoolNameToOperatingSystemConfigsMap indicates an expected call of SetWorkerPoolNameToOperatingSystemConfigsMap.
+func (mr *MockInterfaceMockRecorder) SetWorkerPoolNameToOperatingSystemConfigsMap(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerNameToOperatingSystemConfigsMap", reflect.TypeOf((*MockInterface)(nil).SetWorkerNameToOperatingSystemConfigsMap), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerPoolNameToOperatingSystemConfigsMap", reflect.TypeOf((*MockInterface)(nil).SetWorkerPoolNameToOperatingSystemConfigsMap), arg0)
 }
 
 // Wait mocks base method.

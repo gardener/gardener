@@ -53,9 +53,9 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
 	// of an OperatingSystemConfig resource.
 	DefaultTimeout = 3 * time.Minute
-	// PoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
-	PoolHashesSecretName = "pool-hashes"
-	// poolHashesDataKey is the key in the data of the PoolHashesSecretName used to store the calculated hashes.
+	// WorkerPoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
+	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes"
+	// poolHashesDataKey is the key in the data of the WorkerPoolHashesSecretName used to store the calculated hashes.
 	poolHashesDataKey = "pools"
 )
 
@@ -78,9 +78,9 @@ type Interface interface {
 	SetCABundle(*string)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
-	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
+	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
 	// containing both the init and the original operating system config data.
-	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
+	WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -154,11 +154,11 @@ func New(
 		waitTimeout:         waitTimeout,
 	}
 
-	osc.workerNameToOSCs = make(map[string]*OperatingSystemConfigs, len(values.Workers))
+	osc.workerPoolNameToOSCs = make(map[string]*OperatingSystemConfigs, len(values.Workers))
 	for _, worker := range values.Workers {
-		osc.workerNameToOSCs[worker.Name] = &OperatingSystemConfigs{}
+		osc.workerPoolNameToOSCs[worker.Name] = &OperatingSystemConfigs{}
 	}
-	osc.oscs = make(map[string]*extensionsv1alpha1.OperatingSystemConfig, len(osc.workerNameToOSCs)*2)
+	osc.oscs = make(map[string]*extensionsv1alpha1.OperatingSystemConfig, len(osc.workerPoolNameToOSCs)*2)
 
 	return osc
 }
@@ -173,10 +173,10 @@ type operatingSystemConfig struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	lock              sync.Mutex
-	workerNameToOSCs  map[string]*OperatingSystemConfigs
-	oscs              map[string]*extensionsv1alpha1.OperatingSystemConfig
-	hashVersionByName map[string]int
+	lock                        sync.Mutex
+	workerPoolNameToOSCs        map[string]*OperatingSystemConfigs
+	oscs                        map[string]*extensionsv1alpha1.OperatingSystemConfig
+	workerPoolNameToHashVersion map[string]int
 }
 
 // OperatingSystemConfigs contains operating system configs for the init script as well as for the original config.
@@ -265,12 +265,12 @@ func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, er
 		}
 	}
 
-	hashesByName := make(map[string]poolHashEntry)
+	workerPoolNameToHashEntry := make(map[string]poolHashEntry)
 	for _, entry := range pools.Pools {
-		hashesByName[entry.Name] = entry
+		workerPoolNameToHashEntry[entry.Name] = entry
 	}
 
-	return hashesByName, ptr.Deref(pools.Migrated, false), nil
+	return workerPoolNameToHashEntry, ptr.Deref(pools.Migrated, false), nil
 }
 
 func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
@@ -289,10 +289,10 @@ func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
 
 func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) error {
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecretName},
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
 	}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
-		hashesByName, migrated, err := decodePoolHashes(secret)
+		workerPoolNameToHashEntry, migrated, err := decodePoolHashes(secret)
 		if err != nil {
 			return err
 		}
@@ -303,7 +303,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 				continue
 			}
 
-			workerHash, ok := hashesByName[worker.Name]
+			workerHash, ok := workerPoolNameToHashEntry[worker.Name]
 			if !ok {
 				workerHash.Name = worker.Name
 				if migrated {
@@ -349,7 +349,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 			workerHash.HashVersionToOSCKey[LatestHashVersion] = latestHash
 
 			// update secret
-			hashesByName[worker.Name] = workerHash
+			workerPoolNameToHashEntry[worker.Name] = workerHash
 
 			pools.Pools = append(pools.Pools, workerHash)
 		}
@@ -365,30 +365,30 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 		return err
 	}
 
-	hashesByName, _, err := decodePoolHashes(secret)
+	workerPoolNameToHashEntry, _, err := decodePoolHashes(secret)
 	if err != nil {
 		return err
 	}
 
-	o.hashVersionByName = make(map[string]int, len(hashesByName))
-	for name, entry := range hashesByName {
-		o.hashVersionByName[name] = entry.CurrentVersion
+	o.workerPoolNameToHashVersion = make(map[string]int, len(workerPoolNameToHashEntry))
+	for name, entry := range workerPoolNameToHashEntry {
+		o.workerPoolNameToHashVersion[name] = entry.CurrentVersion
 	}
 
 	return nil
 }
 
-func (o *operatingSystemConfig) hashVersion(workerName string) (int, error) {
+func (o *operatingSystemConfig) hashVersion(workerPoolName string) (int, error) {
 	// updateHashVersioningSecret() is currently always called before this method
 	// thus just implement a sanity check instead of querying the hash version secret
-	if o.hashVersionByName == nil {
+	if o.workerPoolNameToHashVersion == nil {
 		return 0, fmt.Errorf("hash version not yet synced")
 	}
 
-	if version, ok := o.hashVersionByName[workerName]; ok {
+	if version, ok := o.workerPoolNameToHashVersion[workerPoolName]; ok {
 		return version, nil
 	}
-	return 0, fmt.Errorf("no version available for %v", workerName)
+	return 0, fmt.Errorf("no version available for %v", workerPoolName)
 }
 
 // CreateMigrationSecret creates a pool-hash secret for initially deploying the
@@ -404,7 +404,7 @@ func CreateMigrationSecret(namespace string) (*corev1.Secret, error) {
 	}
 
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: PoolHashesSecretName},
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: WorkerPoolHashesSecretName},
 		Type:       corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			poolHashesDataKey: buf.Bytes(),
@@ -413,7 +413,7 @@ func CreateMigrationSecret(namespace string) (*corev1.Secret, error) {
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
-// containing the cloud-config and stores its data which can later be retrieved with the WorkerNameToOperatingSystemConfigsMap
+// containing the cloud-config and stores its data which can later be retrieved with the WorkerPoolNameToOperatingSystemConfigsMap
 // method.
 func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
@@ -452,9 +452,9 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 				switch purpose {
 				case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-					o.workerNameToOSCs[worker.Name].Init = data
+					o.workerPoolNameToOSCs[worker.Name].Init = data
 				case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-					o.workerNameToOSCs[worker.Name].Original = data
+					o.workerPoolNameToOSCs[worker.Name].Original = data
 				default:
 					return fmt.Errorf("unknown purpose %q", purpose)
 				}
@@ -502,7 +502,7 @@ func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
 	}
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: PoolHashesSecretName},
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
 	}
 	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
 }
@@ -658,10 +658,10 @@ func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
 }
 
-// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
+// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
 // containing both the init script and the original config.
-func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
-	return o.workerNameToOSCs
+func (o *operatingSystemConfig) WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
+	return o.workerPoolNameToOSCs
 }
 
 func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
@@ -929,7 +929,7 @@ func calculateKeyForVersion(oscVersion int, kubernetesVersion *semver.Version, w
 
 // KeyV1 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
 // configuration.
-func KeyV1(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
+func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
@@ -943,7 +943,7 @@ func KeyV1(workerName string, kubernetesVersion *semver.Version, criConfig *gard
 		criName = criConfig.Name
 	}
 
-	return fmt.Sprintf("gardener-node-agent-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
+	return fmt.Sprintf("gardener-node-agent-%s-%s", workerPoolName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {

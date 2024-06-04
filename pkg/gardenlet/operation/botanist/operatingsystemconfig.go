@@ -167,7 +167,7 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		managedResourceSecretNameToData  = make(map[string]map[string][]byte, managedResourceSecretsCount)
 
 		secretNames                           []string
-		workerNameToOperatingSystemConfigMaps = b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap()
+		workerNameToOperatingSystemConfigMaps = b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap()
 
 		fns = make([]flow.TaskFn, 0, managedResourceSecretsCount)
 	)

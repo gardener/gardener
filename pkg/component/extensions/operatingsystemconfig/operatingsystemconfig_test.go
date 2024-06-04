@@ -323,7 +323,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			poolHashesSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pool-hashes",
+					Name:      "worker-pools-operatingsystemconfig-hashes",
 					Namespace: namespace,
 					Labels: map[string]string{
 						"persist": "true",
@@ -374,14 +374,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}))
 			})
 
-			It("should successfully create the pool-hashes secret", func() {
+			It("should successfully create the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 				))
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"persist": "true",
 				}))
@@ -409,7 +409,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			}
 
-			It("should successfully fill missing hashes and workers in the pool-hashes secret", func() {
+			It("should successfully fill missing hashes and workers in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 					&LatestHashVersion, 2,
@@ -424,7 +424,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"persist": "true",
 				}))
@@ -443,7 +443,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			})
 
-			It("should successfully upgrade the hash versions in the pool-hashes secret", func() {
+			It("should successfully upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 					&LatestHashVersion, 2,
@@ -454,7 +454,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"persist": "true",
 				}))
@@ -482,7 +482,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			}
 
-			It("should successfully keep the current hash versions if nothing changes in the pool-hashes secret", func() {
+			It("should successfully keep the current hash versions if nothing changes in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 					&LatestHashVersion, 2,
@@ -493,7 +493,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"persist": "true",
 				}))
@@ -525,7 +525,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "pool-hashes", Namespace: namespace}, secret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"persist": "true",
 				}))
@@ -958,7 +958,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 
-				wn := defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()
+				wn := defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()
 				exp := map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{

@@ -128,20 +128,20 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 			continue
 		}
 		tasks = append(tasks, func(ctx context.Context) error {
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.PoolHashesSecretName}, &corev1.Secret{}); err == nil {
+			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, &corev1.Secret{}); err == nil {
 				// nothing to do if secret already exists
 				return nil
 			} else if client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("could not query pool-hashes secret in namespace %v: %w", ns.Name, err)
+				return fmt.Errorf("could not query worker-pools-operatingsystemconfig-hashes secret in namespace %v: %w", ns.Name, err)
 			}
 
 			secret, err := operatingsystemconfig.CreateMigrationSecret(ns.Name)
 			if err != nil {
-				return fmt.Errorf("failed to serialize pool-hashes secret for namespace %v: %w", ns.Name, err)
+				return fmt.Errorf("failed to serialize worker-pools-operatingsystemconfig-hashes secret for namespace %v: %w", ns.Name, err)
 			}
 
 			if err := seedClient.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
-				return fmt.Errorf("could not create pool-hashes secret in namespace %v: %w", ns.Name, err)
+				return fmt.Errorf("could not create worker-pools-operatingsystemconfig-hashes secret in namespace %v: %w", ns.Name, err)
 			}
 
 			return nil

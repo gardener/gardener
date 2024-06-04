@@ -104,11 +104,11 @@ var _ = Describe("Worker", func() {
 	Describe("#DeployWorker", func() {
 		BeforeEach(func() {
 			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
-			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+			operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
 
 			worker.EXPECT().SetSSHPublicKey(gomock.Any())
 			worker.EXPECT().SetInfrastructureProviderStatus(infrastructureProviderStatus)
-			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
+			worker.EXPECT().SetWorkerPoolNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
 		})
 
 		Context("deploy", func() {

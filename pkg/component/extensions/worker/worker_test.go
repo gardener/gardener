@@ -163,7 +163,7 @@ var _ = Describe("Worker", func() {
 			MachineTypes:                 machineTypes,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
-			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
+			WorkerPoolNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
 					Init: operatingsystemconfig.Data{
 						Content:                     string(worker1UserData),

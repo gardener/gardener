@@ -269,14 +269,14 @@ var _ = Describe("operatingsystemconfig", func() {
 			})
 
 			It("should fail because the operating system config maps for a worker pool are not available", func() {
-				operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(nil)
+				operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(nil)
 
 				Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
 			})
 
 			When("operating system config maps are available", func() {
 				BeforeEach(func() {
-					operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+					operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
 				})
 
 				It("should fail because the secret data generation function fails", func() {
