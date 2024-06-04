@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
@@ -70,23 +70,31 @@ type ExtensionDeploymentSpec struct {
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
-	// Annotations are annotations that need to be added to both the controller registration and deployment.
-	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.
-type AdmissionDeploymentSpec struct{}
+type AdmissionDeploymentSpec struct {
+	// RuntimeDeployment is the deployment configuration for the admission in the runtime cluster. The runtime deployment
+	// is responsible for creating the admission controller in the runtime cluster.
+	// +optional
+	RuntimeDeployment *DeploymentSpec `json:"runtimeDeployment,omitempty"`
+	// GardenDeployment is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
+	// installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
+	// +optional
+	GardenDeployment *DeploymentSpec `json:"gardenDeployment,omitempty"`
+}
 
 // DeploymentSpec is the specification for the deployment of a component.
 type DeploymentSpec struct {
-	helm *Helm `json:"helm,omitempty"`
+	// Helm contains the specification for a Helm deployment.
+	Helm *Helm `json:"helm,omitempty"`
 }
 
 // Helm is the Helm deployment configuration.
 type Helm struct {
 	// OCIRepository defines where to pull the chart.
 	// +optional
-	OCIRepository *v1.OCIRepository `json:"ociRepository,omitempty"`
+	OCIRepository *gardencorev1.OCIRepository `json:"ociRepository,omitempty"`
 	// Values are the chart values.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
