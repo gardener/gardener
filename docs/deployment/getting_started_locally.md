@@ -333,8 +333,8 @@ make kind-down
 
 ## Alternative way to set up Garden and Seed leveraging `gardener-operator`
 
-Instead of starting Garden and Seed via `make kind-up gardener-up` you can also use `gardener-operator` to create your local dev landscape.  
-In this setup virtual garden cluster ash its own loadbalancer, so you have to create an own DNS entry in your `/etc/hosts`.
+Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.  
+In this setup virtual garden cluster has its own loadbalancer, so you have to create an own DNS entry in your `/etc/hosts`.
 
 ```shell
 cat <<EOF | sudo tee -a /etc/hosts
@@ -345,27 +345,28 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-You can bring up `gardener-operator` with this command.
+You can bring up `gardener-operator` with this command:
 
 ```shell
 make kind-operator-up operator-up
 ```
 
-Then you can create your local `Garden` and install `gardenlet` into the KinD cluster with:
+Afterwards, you can create your local `Garden` and install `gardenlet` into the KinD cluster with this command:
 
 ```shell
 make operator-seed-up
 ```
 
-You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`. The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.  
-Please use this command to tear down your environment.
+You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`.
+The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.
+
+Please use this command to tear down your environment:
 
 ```shell
 make kind-operator-down
 ```
 
-This setup supports creating shoots and managed seeds the same way as explained in the previous chapters. However, the development and debugging setups and the e2e tests are not working yet.
-
+This setup supports creating shoots and managed seeds the same way as explained in the previous chapters. However, the development and debugging setups are not working yet.
 
 ## Remote Local Setup
 
