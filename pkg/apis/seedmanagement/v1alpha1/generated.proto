@@ -160,8 +160,9 @@ message GardenletStatus {
   // +optional
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
 
-  // ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the
-  // Gardenlet's generation, which is updated on mutation by the API Server.
+  // ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's
+  // generation, which is updated on mutation by the API Server.
+  // +optional
   optional int64 observedGeneration = 2;
 }
 

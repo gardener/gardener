@@ -838,8 +838,9 @@ int64
 </em>
 </td>
 <td>
-<p>ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the
-Gardenlet&rsquo;s generation, which is updated on mutation by the API Server.</p>
+<em>(Optional)</em>
+<p>ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet&rsquo;s
+generation, which is updated on mutation by the API Server.</p>
 </td>
 </tr>
 </tbody>

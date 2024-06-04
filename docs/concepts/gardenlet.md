@@ -506,8 +506,8 @@ Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/nam
 
 The `VPAEvictionRequirements` controller in the `gardenlet` reconciles `VerticalPodAutoscaler` objects labeled with `autoscaling.gardener.cloud/eviction-requirements: managed-by-controller`. It manages the [`EvictionRequirements`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler/enhancements/4831-control-eviction-behavior) on a VPA object, which are used to restrict when and how a Pod can be evicted to apply a new resource recommendation.
 Specifically, the following actions will be taken for the respective label and annotation configuration:
-* If the VPA has the label `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: never`, an `EvictionRequirement` is added to the VPA object that allows evictions for upscaling only
-* If the VPA has the label `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: in-maintenance-window-only`, the same `EvictionRequirement` is added to the VPA object when the Shoot is currently outside of its maintenance window. When the Shoot is inside its maintenance window, the `EvictionRequirement` is removed. Information about the Shoot maintenance window times are stored in the annotation `shoot.gardener.cloud/maintenance-window` on the VPA
+* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: never`, an `EvictionRequirement` is added to the VPA object that allows evictions for upscaling only
+* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: in-maintenance-window-only`, the same `EvictionRequirement` is added to the VPA object when the Shoot is currently outside of its maintenance window. When the Shoot is inside its maintenance window, the `EvictionRequirement` is removed. Information about the Shoot maintenance window times are stored in the annotation `shoot.gardener.cloud/maintenance-window` on the VPA
 
 ## Managed Seeds
 
