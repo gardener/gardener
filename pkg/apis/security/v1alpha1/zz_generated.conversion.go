@@ -296,7 +296,7 @@ func Convert_security_TokenRequest_To_v1alpha1_TokenRequest(in *security.TokenRe
 
 func autoConvert_v1alpha1_TokenRequestSpec_To_security_TokenRequestSpec(in *TokenRequestSpec, out *security.TokenRequestSpec, s conversion.Scope) error {
 	out.ContextObject = (*security.ContextObject)(unsafe.Pointer(in.ContextObject))
-	if err := metav1.Convert_Pointer_int64_To_int64(&in.DurationSeconds, &out.DurationSeconds, s); err != nil {
+	if err := metav1.Convert_Pointer_int64_To_int64(&in.ExpirationSeconds, &out.ExpirationSeconds, s); err != nil {
 		return err
 	}
 	return nil
@@ -309,7 +309,7 @@ func Convert_v1alpha1_TokenRequestSpec_To_security_TokenRequestSpec(in *TokenReq
 
 func autoConvert_security_TokenRequestSpec_To_v1alpha1_TokenRequestSpec(in *security.TokenRequestSpec, out *TokenRequestSpec, s conversion.Scope) error {
 	out.ContextObject = (*ContextObject)(unsafe.Pointer(in.ContextObject))
-	if err := metav1.Convert_int64_To_Pointer_int64(&in.DurationSeconds, &out.DurationSeconds, s); err != nil {
+	if err := metav1.Convert_int64_To_Pointer_int64(&in.ExpirationSeconds, &out.ExpirationSeconds, s); err != nil {
 		return err
 	}
 	return nil

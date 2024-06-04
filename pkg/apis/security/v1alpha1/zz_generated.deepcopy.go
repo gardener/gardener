@@ -174,8 +174,8 @@ func (in *TokenRequestSpec) DeepCopyInto(out *TokenRequestSpec) {
 		*out = new(ContextObject)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DurationSeconds != nil {
-		in, out := &in.DurationSeconds, &out.DurationSeconds
+	if in.ExpirationSeconds != nil {
+		in, out := &in.ExpirationSeconds, &out.ExpirationSeconds
 		*out = new(int64)
 		**out = **in
 	}

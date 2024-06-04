@@ -26,8 +26,8 @@ type TokenRequest struct {
 type TokenRequestSpec struct {
 	// ContextObject identifies the object the token is requested for.
 	ContextObject *ContextObject
-	// DurationSeconds specifies for how long the requested token should be valid.
-	DurationSeconds int64
+	// ExpirationSeconds specifies for how long the requested token should be valid.
+	ExpirationSeconds int64
 }
 
 // ContextObject identifies the object the token is requested for.

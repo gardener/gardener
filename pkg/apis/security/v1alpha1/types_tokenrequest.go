@@ -27,9 +27,9 @@ type TokenRequestSpec struct {
 	// ContextObject identifies the object the token is requested for.
 	// +optional
 	ContextObject *ContextObject `json:"contextObject,omitempty" protobuf:"bytes,1,opt,name=contextObject"`
-	// DurationSeconds specifies for how long the requested token should be valid.
+	// ExpirationSeconds specifies for how long the requested token should be valid.
 	// +optional
-	DurationSeconds *int64 `json:"durationSeconds,omitempty" protobuf:"bytes,2,opt,name=durationSeconds"`
+	ExpirationSeconds *int64 `json:"expirationSeconds,omitempty" protobuf:"bytes,2,opt,name=expirationSeconds"`
 }
 
 // ContextObject identifies the object the token is requested for.

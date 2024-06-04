@@ -99,9 +99,9 @@ message TokenRequestSpec {
   // +optional
   optional ContextObject contextObject = 1;
 
-  // DurationSeconds specifies for how long the requested token should be valid.
+  // ExpirationSeconds specifies for how long the requested token should be valid.
   // +optional
-  optional int64 durationSeconds = 2;
+  optional int64 expirationSeconds = 2;
 }
 
 // TokenRequestStatus bears the issued token with additional information back to the client.

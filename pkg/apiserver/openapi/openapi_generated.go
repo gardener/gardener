@@ -10069,9 +10069,9 @@ func schema_pkg_apis_security_v1alpha1_TokenRequestSpec(ref common.ReferenceCall
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/security/v1alpha1.ContextObject"),
 						},
 					},
-					"durationSeconds": {
+					"expirationSeconds": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DurationSeconds specifies for how long the requested token should be valid.",
+							Description: "ExpirationSeconds specifies for how long the requested token should be valid.",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},

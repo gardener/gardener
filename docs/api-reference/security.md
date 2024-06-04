@@ -417,14 +417,14 @@ ContextObject
 </tr>
 <tr>
 <td>
-<code>durationSeconds</code></br>
+<code>expirationSeconds</code></br>
 <em>
 int64
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DurationSeconds specifies for how long the requested token should be valid.</p>
+<p>ExpirationSeconds specifies for how long the requested token should be valid.</p>
 </td>
 </tr>
 </table>
@@ -478,14 +478,14 @@ ContextObject
 </tr>
 <tr>
 <td>
-<code>durationSeconds</code></br>
+<code>expirationSeconds</code></br>
 <em>
 int64
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DurationSeconds specifies for how long the requested token should be valid.</p>
+<p>ExpirationSeconds specifies for how long the requested token should be valid.</p>
 </td>
 </tr>
 </tbody>

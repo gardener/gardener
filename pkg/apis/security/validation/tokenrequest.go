@@ -20,7 +20,7 @@ func ValidateTokenRequest(request *security.TokenRequest) field.ErrorList {
 		specPath = field.NewPath("spec")
 	)
 
-	allErrs = append(allErrs, validateDurationSeconds(request.Spec.DurationSeconds, specPath.Child("durationSeconds"))...)
+	allErrs = append(allErrs, validateExpirationSeconds(request.Spec.ExpirationSeconds, specPath.Child("expirationSeconds"))...)
 
 	if request.Spec.ContextObject != nil {
 		allErrs = append(allErrs, validateContextObject(*request.Spec.ContextObject, specPath.Child("contextObject"))...)
@@ -29,18 +29,18 @@ func ValidateTokenRequest(request *security.TokenRequest) field.ErrorList {
 	return allErrs
 }
 
-func validateDurationSeconds(durationSeconds int64, path *field.Path) field.ErrorList {
+func validateExpirationSeconds(expirationSeconds int64, path *field.Path) field.ErrorList {
 	const (
 		minDuration = time.Minute * 10
 		maxDuration = 1 << 32
 	)
 	allErrs := field.ErrorList{}
 
-	if durationSeconds < int64(minDuration.Seconds()) {
-		allErrs = append(allErrs, field.Invalid(path, durationSeconds, "may not specify a duration shorter than 10 minutes"))
+	if expirationSeconds < int64(minDuration.Seconds()) {
+		allErrs = append(allErrs, field.Invalid(path, expirationSeconds, "may not specify a duration shorter than 10 minutes"))
 	}
-	if durationSeconds > maxDuration {
-		allErrs = append(allErrs, field.Invalid(path, durationSeconds, "may not specify a duration longer than 2^32 seconds"))
+	if expirationSeconds > maxDuration {
+		allErrs = append(allErrs, field.Invalid(path, expirationSeconds, "may not specify a duration longer than 2^32 seconds"))
 	}
 
 	return allErrs

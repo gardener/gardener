@@ -92,7 +92,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 	var (
 		aud      = workloadIdentity.Spec.Audiences
 		sub      = workloadIdentity.Status.Sub
-		duration = tokenRequest.Spec.DurationSeconds
+		duration = tokenRequest.Spec.ExpirationSeconds
 	)
 
 	if duration < r.minDuration {

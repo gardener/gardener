@@ -28,47 +28,47 @@ var _ = Describe("TokenRequest Validation Tests", func() {
 			tokenRequest = &security.TokenRequest{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: security.TokenRequestSpec{
-					DurationSeconds: int64(duration.Seconds()),
-					ContextObject:   nil,
+					ExpirationSeconds: int64(duration.Seconds()),
+					ContextObject:     nil,
 				},
 			}
 		})
 
-		DescribeTable("Duration",
-			func(duration int64, matcher gomegatypes.GomegaMatcher) {
-				tokenRequest.Spec.DurationSeconds = duration
+		DescribeTable("ExpirationSeconds",
+			func(expirationSeconds int64, matcher gomegatypes.GomegaMatcher) {
+				tokenRequest.Spec.ExpirationSeconds = expirationSeconds
 
 				errs := ValidateTokenRequest(tokenRequest)
 				Expect(errs).To(matcher)
 			},
-			Entry("should allow min < duration < max",
+			Entry("should allow min < expirationSeconds < max",
 				int64((time.Hour*12).Seconds()),
 				BeEmpty(),
 			),
-			Entry("should allow duration==min",
+			Entry("should allow expirationSeconds==min",
 				int64((time.Minute*10).Seconds()),
 				BeEmpty(),
 			),
-			Entry("should allow duration==max",
+			Entry("should allow expirationSeconds==max",
 				int64(1<<32),
 				BeEmpty(),
 			),
-			Entry("should forbid duration < min",
+			Entry("should forbid expirationSeconds < min",
 				int64((time.Minute*10-time.Second).Seconds()),
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.durationSeconds"),
+						"Field":  Equal("spec.expirationSeconds"),
 						"Detail": Equal("may not specify a duration shorter than 10 minutes"),
 					}),
 				)),
 			),
-			Entry("should forbid duration > max",
+			Entry("should forbid expirationSeconds > max",
 				int64(1<<32)+1,
 				ConsistOf(PointTo(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.durationSeconds"),
+						"Field":  Equal("spec.expirationSeconds"),
 						"Detail": Equal("may not specify a duration longer than 2^32 seconds"),
 					}),
 				)),
