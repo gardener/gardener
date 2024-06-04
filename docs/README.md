@@ -200,7 +200,7 @@
 * [Gardener configuration and usage](operations/configuration.md)
 * [Control Plane Migration](operations/control_plane_migration.md)
 * [Istio](operations/istio.md)
-* [Register Shoot as Seed](operations/managed_seed.md)
+* [`ManagedSeed`s: Register Shoot as Seed](operations/managed_seed.md)
 * [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](operations/network_policies.md)
 * [Seed Bootstrapping](operations/seed_bootstrapping.md)
 * [Seed Settings](operations/seed_settings.md)

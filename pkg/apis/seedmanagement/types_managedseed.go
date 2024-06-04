@@ -52,7 +52,7 @@ type ManagedSeedSpec struct {
 	Shoot *Shoot
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
-	Gardenlet *Gardenlet
+	Gardenlet *GardenletConfig
 }
 
 // Shoot identifies the Shoot that should be registered as Seed.
@@ -61,8 +61,8 @@ type Shoot struct {
 	Name string
 }
 
-// Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
-type Gardenlet struct {
+// GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+type GardenletConfig struct {
 	// Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 	// the image, etc.
 	Deployment *GardenletDeployment

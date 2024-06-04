@@ -369,7 +369,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
-	// Check if the secret is a bootstrap token for a ManagedSeed.
+	// Check if the secret is a bootstrap token for a ManagedSeed or a Gardenlet.
 	if strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) && request.Namespace == metav1.NamespaceSystem {
 		secret := &corev1.Secret{}
 		if err := h.Decoder.Decode(request, secret); err != nil {
@@ -389,12 +389,15 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("%q must not be set", bootstraptokenapi.BootstrapTokenExtraGroupsKey))
 		}
 
-		managedSeedNamespace, managedSeedName := gardenletbootstraputil.MetadataFromDescription(
-			string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]),
-			gardenletbootstraputil.KindManagedSeed,
-		)
-
-		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
+		kind, namespace, name := gardenletbootstraputil.MetadataFromDescription(string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]))
+		switch kind {
+		case gardenletbootstraputil.KindManagedSeed:
+			return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, namespace, name)
+		case gardenletbootstraputil.KindGardenlet:
+			return h.allowIfGardenletIsNotYetBootstrapped(ctx, namespace, name)
+		default:
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unknown kind %q found in bootstrap token secret description %q", kind, secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]))
+		}
 	}
 
 	// Check if the secret is related to a ManagedSeed assigned to the seed the gardenlet is responsible for.
@@ -413,7 +416,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			continue
 		}
 
-		seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(&managedSeed)
+		seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, seedmanagementv1alpha1helper.GardenletConfigFromManagedSeed(managedSeed.Spec.Gardenlet))
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
@@ -565,4 +568,28 @@ func (h *Handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 	}
 
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("managed seed %s/%s is already bootstrapped", managedSeed.Namespace, managedSeed.Name))
+}
+
+func (h *Handler) allowIfGardenletIsNotYetBootstrapped(ctx context.Context, gardenletNamespace, gardenletName string) admission.Response {
+	gardenlet := &seedmanagementv1alpha1.Gardenlet{}
+	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gardenlet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusForbidden, err)
+		}
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := h.Client.Get(ctx, client.ObjectKey{Name: gardenletName}, seed); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		return admission.Errored(http.StatusForbidden, err)
+	} else if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
+		return admission.Allowed("")
+	} else if gardenlet.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+		return admission.Allowed("")
+	}
+
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("gardenlet %s/%s is already bootstrapped", gardenlet.Namespace, gardenlet.Name))
 }

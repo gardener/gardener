@@ -13,9 +13,10 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
+	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagement "github.com/gardener/gardener/pkg/apis/seedmanagement"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -27,6 +28,16 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
+	if err := s.AddGeneratedConversionFunc((*Gardenlet)(nil), (*seedmanagement.Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(a.(*Gardenlet), b.(*seedmanagement.Gardenlet), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.Gardenlet)(nil), (*Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(a.(*seedmanagement.Gardenlet), b.(*Gardenlet), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*GardenletDeployment)(nil), (*seedmanagement.GardenletDeployment)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeployment(a.(*GardenletDeployment), b.(*seedmanagement.GardenletDeployment), scope)
 	}); err != nil {
@@ -34,6 +45,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*seedmanagement.GardenletDeployment)(nil), (*GardenletDeployment)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeployment(a.(*seedmanagement.GardenletDeployment), b.(*GardenletDeployment), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*GardenletHelm)(nil), (*seedmanagement.GardenletHelm)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm(a.(*GardenletHelm), b.(*seedmanagement.GardenletHelm), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.GardenletHelm)(nil), (*GardenletHelm)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm(a.(*seedmanagement.GardenletHelm), b.(*GardenletHelm), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*GardenletList)(nil), (*seedmanagement.GardenletList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletList_To_seedmanagement_GardenletList(a.(*GardenletList), b.(*seedmanagement.GardenletList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.GardenletList)(nil), (*GardenletList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletList_To_v1alpha1_GardenletList(a.(*seedmanagement.GardenletList), b.(*GardenletList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*GardenletSelfDeployment)(nil), (*seedmanagement.GardenletSelfDeployment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment(a.(*GardenletSelfDeployment), b.(*seedmanagement.GardenletSelfDeployment), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.GardenletSelfDeployment)(nil), (*GardenletSelfDeployment)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment(a.(*seedmanagement.GardenletSelfDeployment), b.(*GardenletSelfDeployment), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*GardenletStatus)(nil), (*seedmanagement.GardenletStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(a.(*GardenletStatus), b.(*seedmanagement.GardenletStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.GardenletStatus)(nil), (*GardenletStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(a.(*seedmanagement.GardenletStatus), b.(*GardenletStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -177,6 +228,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*core.OCIRepository)(nil), (*v1.OCIRepository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_OCIRepository_To_v1_OCIRepository(a.(*core.OCIRepository), b.(*v1.OCIRepository), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*core.SeedTemplate)(nil), (*v1beta1.SeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(a.(*core.SeedTemplate), b.(*v1beta1.SeedTemplate), scope)
 	}); err != nil {
@@ -187,13 +243,28 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*seedmanagement.Gardenlet)(nil), (*Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(a.(*seedmanagement.Gardenlet), b.(*Gardenlet), scope)
+	if err := s.AddConversionFunc((*seedmanagement.GardenletConfig)(nil), (*GardenletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(a.(*seedmanagement.GardenletConfig), b.(*GardenletConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*Gardenlet)(nil), (*seedmanagement.Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(a.(*Gardenlet), b.(*seedmanagement.Gardenlet), scope)
+	if err := s.AddConversionFunc((*seedmanagement.GardenletSpec)(nil), (*GardenletSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(a.(*seedmanagement.GardenletSpec), b.(*GardenletSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1.OCIRepository)(nil), (*core.OCIRepository)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_OCIRepository_To_core_OCIRepository(a.(*v1.OCIRepository), b.(*core.OCIRepository), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*GardenletConfig)(nil), (*seedmanagement.GardenletConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletConfig_To_seedmanagement_GardenletConfig(a.(*GardenletConfig), b.(*seedmanagement.GardenletConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*GardenletSpec)(nil), (*seedmanagement.GardenletSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletSpec_To_seedmanagement_GardenletSpec(a.(*GardenletSpec), b.(*seedmanagement.GardenletSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -211,6 +282,38 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *seedmanagement.Gardenlet, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_GardenletSpec_To_seedmanagement_GardenletSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet is an autogenerated conversion function.
+func Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *seedmanagement.Gardenlet, s conversion.Scope) error {
+	return autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in, out, s)
+}
+
+func autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.Gardenlet, out *Gardenlet, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet is an autogenerated conversion function.
+func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.Gardenlet, out *Gardenlet, s conversion.Scope) error {
+	return autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in, out, s)
+}
+
+func autoConvert_v1alpha1_GardenletConfig_To_seedmanagement_GardenletConfig(in *GardenletConfig, out *seedmanagement.GardenletConfig, s conversion.Scope) error {
 	out.Deployment = (*seedmanagement.GardenletDeployment)(unsafe.Pointer(in.Deployment))
 	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
 		return err
@@ -220,7 +323,7 @@ func autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, o
 	return nil
 }
 
-func autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.Gardenlet, out *Gardenlet, s conversion.Scope) error {
+func autoConvert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in *seedmanagement.GardenletConfig, out *GardenletConfig, s conversion.Scope) error {
 	out.Deployment = (*GardenletDeployment)(unsafe.Pointer(in.Deployment))
 	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
 		return err
@@ -235,12 +338,12 @@ func autoConvert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeploym
 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
 	out.ServiceAccountName = (*string)(unsafe.Pointer(in.ServiceAccountName))
 	out.Image = (*seedmanagement.Image)(unsafe.Pointer(in.Image))
-	out.Resources = (*v1.ResourceRequirements)(unsafe.Pointer(in.Resources))
+	out.Resources = (*corev1.ResourceRequirements)(unsafe.Pointer(in.Resources))
 	out.PodLabels = *(*map[string]string)(unsafe.Pointer(&in.PodLabels))
 	out.PodAnnotations = *(*map[string]string)(unsafe.Pointer(&in.PodAnnotations))
-	out.AdditionalVolumes = *(*[]v1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
-	out.AdditionalVolumeMounts = *(*[]v1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
-	out.Env = *(*[]v1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
+	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
+	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
 	out.VPA = (*bool)(unsafe.Pointer(in.VPA))
 	return nil
 }
@@ -255,12 +358,12 @@ func autoConvert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeploym
 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
 	out.ServiceAccountName = (*string)(unsafe.Pointer(in.ServiceAccountName))
 	out.Image = (*Image)(unsafe.Pointer(in.Image))
-	out.Resources = (*v1.ResourceRequirements)(unsafe.Pointer(in.Resources))
+	out.Resources = (*corev1.ResourceRequirements)(unsafe.Pointer(in.Resources))
 	out.PodLabels = *(*map[string]string)(unsafe.Pointer(&in.PodLabels))
 	out.PodAnnotations = *(*map[string]string)(unsafe.Pointer(&in.PodAnnotations))
-	out.AdditionalVolumes = *(*[]v1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
-	out.AdditionalVolumeMounts = *(*[]v1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
-	out.Env = *(*[]v1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
+	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
+	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
 	out.VPA = (*bool)(unsafe.Pointer(in.VPA))
 	return nil
 }
@@ -270,10 +373,152 @@ func Convert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeployment(
 	return autoConvert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeployment(in, out, s)
 }
 
+func autoConvert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm(in *GardenletHelm, out *seedmanagement.GardenletHelm, s conversion.Scope) error {
+	if err := Convert_v1_OCIRepository_To_core_OCIRepository(&in.OCIRepository, &out.OCIRepository, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm is an autogenerated conversion function.
+func Convert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm(in *GardenletHelm, out *seedmanagement.GardenletHelm, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm(in, out, s)
+}
+
+func autoConvert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm(in *seedmanagement.GardenletHelm, out *GardenletHelm, s conversion.Scope) error {
+	if err := Convert_core_OCIRepository_To_v1_OCIRepository(&in.OCIRepository, &out.OCIRepository, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm is an autogenerated conversion function.
+func Convert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm(in *seedmanagement.GardenletHelm, out *GardenletHelm, s conversion.Scope) error {
+	return autoConvert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm(in, out, s)
+}
+
+func autoConvert_v1alpha1_GardenletList_To_seedmanagement_GardenletList(in *GardenletList, out *seedmanagement.GardenletList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]seedmanagement.Gardenlet, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_v1alpha1_GardenletList_To_seedmanagement_GardenletList is an autogenerated conversion function.
+func Convert_v1alpha1_GardenletList_To_seedmanagement_GardenletList(in *GardenletList, out *seedmanagement.GardenletList, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GardenletList_To_seedmanagement_GardenletList(in, out, s)
+}
+
+func autoConvert_seedmanagement_GardenletList_To_v1alpha1_GardenletList(in *seedmanagement.GardenletList, out *GardenletList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Gardenlet, len(*in))
+		for i := range *in {
+			if err := Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_seedmanagement_GardenletList_To_v1alpha1_GardenletList is an autogenerated conversion function.
+func Convert_seedmanagement_GardenletList_To_v1alpha1_GardenletList(in *seedmanagement.GardenletList, out *GardenletList, s conversion.Scope) error {
+	return autoConvert_seedmanagement_GardenletList_To_v1alpha1_GardenletList(in, out, s)
+}
+
+func autoConvert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment(in *GardenletSelfDeployment, out *seedmanagement.GardenletSelfDeployment, s conversion.Scope) error {
+	if err := Convert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeployment(&in.GardenletDeployment, &out.GardenletDeployment, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_GardenletHelm_To_seedmanagement_GardenletHelm(&in.Helm, &out.Helm, s); err != nil {
+		return err
+	}
+	out.ImageVectorOverwrite = (*string)(unsafe.Pointer(in.ImageVectorOverwrite))
+	out.ComponentImageVectorOverwrite = (*string)(unsafe.Pointer(in.ComponentImageVectorOverwrite))
+	return nil
+}
+
+// Convert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment is an autogenerated conversion function.
+func Convert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment(in *GardenletSelfDeployment, out *seedmanagement.GardenletSelfDeployment, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment(in, out, s)
+}
+
+func autoConvert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment(in *seedmanagement.GardenletSelfDeployment, out *GardenletSelfDeployment, s conversion.Scope) error {
+	if err := Convert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeployment(&in.GardenletDeployment, &out.GardenletDeployment, s); err != nil {
+		return err
+	}
+	if err := Convert_seedmanagement_GardenletHelm_To_v1alpha1_GardenletHelm(&in.Helm, &out.Helm, s); err != nil {
+		return err
+	}
+	out.ImageVectorOverwrite = (*string)(unsafe.Pointer(in.ImageVectorOverwrite))
+	out.ComponentImageVectorOverwrite = (*string)(unsafe.Pointer(in.ComponentImageVectorOverwrite))
+	return nil
+}
+
+// Convert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment is an autogenerated conversion function.
+func Convert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment(in *seedmanagement.GardenletSelfDeployment, out *GardenletSelfDeployment, s conversion.Scope) error {
+	return autoConvert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment(in, out, s)
+}
+
+func autoConvert_v1alpha1_GardenletSpec_To_seedmanagement_GardenletSpec(in *GardenletSpec, out *seedmanagement.GardenletSpec, s conversion.Scope) error {
+	if err := Convert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSelfDeployment(&in.Deployment, &out.Deployment, s); err != nil {
+		return err
+	}
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func autoConvert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(in *seedmanagement.GardenletSpec, out *GardenletSpec, s conversion.Scope) error {
+	if err := Convert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSelfDeployment(&in.Deployment, &out.Deployment, s); err != nil {
+		return err
+	}
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func autoConvert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(in *GardenletStatus, out *seedmanagement.GardenletStatus, s conversion.Scope) error {
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	out.ObservedGeneration = in.ObservedGeneration
+	return nil
+}
+
+// Convert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus is an autogenerated conversion function.
+func Convert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(in *GardenletStatus, out *seedmanagement.GardenletStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(in, out, s)
+}
+
+func autoConvert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(in *seedmanagement.GardenletStatus, out *GardenletStatus, s conversion.Scope) error {
+	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
+	out.ObservedGeneration = in.ObservedGeneration
+	return nil
+}
+
+// Convert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus is an autogenerated conversion function.
+func Convert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(in *seedmanagement.GardenletStatus, out *GardenletStatus, s conversion.Scope) error {
+	return autoConvert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(in, out, s)
+}
+
 func autoConvert_v1alpha1_Image_To_seedmanagement_Image(in *Image, out *seedmanagement.Image, s conversion.Scope) error {
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.PullPolicy = (*v1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
+	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
 	return nil
 }
 
@@ -285,7 +530,7 @@ func Convert_v1alpha1_Image_To_seedmanagement_Image(in *Image, out *seedmanageme
 func autoConvert_seedmanagement_Image_To_v1alpha1_Image(in *seedmanagement.Image, out *Image, s conversion.Scope) error {
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.PullPolicy = (*v1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
+	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
 	return nil
 }
 
@@ -524,8 +769,8 @@ func autoConvert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *
 	out.Shoot = (*seedmanagement.Shoot)(unsafe.Pointer(in.Shoot))
 	if in.Gardenlet != nil {
 		in, out := &in.Gardenlet, &out.Gardenlet
-		*out = new(seedmanagement.Gardenlet)
-		if err := Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(*in, *out, s); err != nil {
+		*out = new(seedmanagement.GardenletConfig)
+		if err := Convert_v1alpha1_GardenletConfig_To_seedmanagement_GardenletConfig(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
@@ -543,8 +788,8 @@ func autoConvert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(in *
 	out.Shoot = (*Shoot)(unsafe.Pointer(in.Shoot))
 	if in.Gardenlet != nil {
 		in, out := &in.Gardenlet, &out.Gardenlet
-		*out = new(Gardenlet)
-		if err := Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(*in, *out, s); err != nil {
+		*out = new(GardenletConfig)
+		if err := Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(*in, *out, s); err != nil {
 			return err
 		}
 	} else {

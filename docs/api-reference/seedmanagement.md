@@ -10,10 +10,120 @@
 </p>
 Resource Types:
 <ul><li>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>
+</li><li>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeed">ManagedSeed</a>
 </li><li>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSet">ManagedSeedSet</a>
 </li></ul>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet
+</h3>
+<p>
+<p>Gardenlet represents a Gardenlet configuration for an unmanaged seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+seedmanagement.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Gardenlet</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSpec">
+GardenletSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the Gardenlet.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>deployment</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSelfDeployment">
+GardenletSelfDeployment
+</a>
+</em>
+</td>
+<td>
+<p>Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
+the image, etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>config</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Config is the GardenletConfiguration used to configure gardenlet.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletStatus">
+GardenletStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Most recently observed status of the Gardenlet.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeed">ManagedSeed
 </h3>
 <p>
@@ -94,8 +204,8 @@ This field is immutable.</p>
 <td>
 <code>gardenlet</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">
-Gardenlet
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">
+GardenletConfig
 </a>
 </em>
 </td>
@@ -291,19 +401,19 @@ ManagedSeedSetStatus
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">GardenletConfig</a>)
 </p>
 <p>
 <p>Bootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.</p>
 </p>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">GardenletConfig
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec</a>)
 </p>
 <p>
-<p>Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.</p>
+<p>GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.</p>
 </p>
 <table>
 <thead>
@@ -378,7 +488,8 @@ should be merged with the specified GardenletConfiguration. Defaults to true. Th
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">GardenletConfig</a>, 
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSelfDeployment">GardenletSelfDeployment</a>)
 </p>
 <p>
 <p>GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
@@ -532,6 +643,204 @@ bool
 <td>
 <em>(Optional)</em>
 <p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletHelm">GardenletHelm
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSelfDeployment">GardenletSelfDeployment</a>)
+</p>
+<p>
+<p>GardenletHelm is the Helm deployment configuration for gardenlet.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ociRepository</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository
+</em>
+</td>
+<td>
+<p>OCIRepository defines where to pull the chart.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletSelfDeployment">GardenletSelfDeployment
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSpec">GardenletSpec</a>)
+</p>
+<p>
+<p>GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
+the image, etc.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>GardenletDeployment</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletDeployment">
+GardenletDeployment
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>GardenletDeployment</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>GardenletDeployment specifies common gardenlet deployment parameters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>helm</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletHelm">
+GardenletHelm
+</a>
+</em>
+</td>
+<td>
+<p>Helm is the Helm deployment configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageVectorOverwrite</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>componentImageVectorOverwrite</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this
+gardenlet.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletSpec">GardenletSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
+</p>
+<p>
+<p>GardenletSpec specifies gardenlet deployment parameters and the configuration used to configure gardenlet.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>deployment</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletSelfDeployment">
+GardenletSelfDeployment
+</a>
+</em>
+</td>
+<td>
+<p>Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
+the image, etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>config</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Config is the GardenletConfiguration used to configure gardenlet.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletStatus">GardenletStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
+</p>
+<p>
+<p>GardenletStatus is the status of a Gardenlet.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>conditions</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.Condition">
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions represents the latest available observations of a Gardenlet&rsquo;s current state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>observedGeneration</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet&rsquo;s
+generation, which is updated on mutation by the API Server.</p>
 </td>
 </tr>
 </tbody>
@@ -888,8 +1197,8 @@ This field is immutable.</p>
 <td>
 <code>gardenlet</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">
-Gardenlet
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">
+GardenletConfig
 </a>
 </em>
 </td>
@@ -1013,8 +1322,8 @@ This field is immutable.</p>
 <td>
 <code>gardenlet</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">
-Gardenlet
+<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenletConfig">
+GardenletConfig
 </a>
 </em>
 </td>

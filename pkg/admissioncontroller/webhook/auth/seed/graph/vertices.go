@@ -52,6 +52,8 @@ const (
 	VertexTypeShoot
 	// VertexTypeShootState is a constant for a 'ShootState' vertex.
 	VertexTypeShootState
+	// VertexTypeGardenlet is a constant for a 'Gardenlet' vertex.
+	VertexTypeGardenlet
 )
 
 var vertexTypes = map[VertexType]string{
@@ -66,6 +68,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeControllerInstallation:    "ControllerInstallation",
 	VertexTypeControllerRegistration:    "ControllerRegistration",
 	VertexTypeExposureClass:             "ExposureClass",
+	VertexTypeGardenlet:                 "Gardenlet",
 	VertexTypeLease:                     "Lease",
 	VertexTypeManagedSeed:               "ManagedSeed",
 	VertexTypeNamespace:                 "Namespace",

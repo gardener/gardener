@@ -1,0 +1,57 @@
+{{- if .Values.selfUpgrade }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardenlet-selfupgrade-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+immutable: true
+data:
+  gardenlet.yaml: |
+    apiVersion: seedmanagement.gardener.cloud/v1alpha1
+    kind: Gardenlet
+    metadata:
+      name: {{ .Values.config.seedConfig.metadata.name }}
+      namespace: garden
+    spec:
+      deployment:
+        helm:
+          ociRepository:
+{{ required ".Values.selfUpgrade.deployment.helm.ociRepository is required" .Values.selfUpgrade.deployment.helm.ociRepository | toYaml | indent 12 }}
+        replicaCount: {{ .Values.replicaCount }}
+        {{- if .Values.revisionHistoryLimit }}
+        revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+        {{- end }}
+        {{- if .Values.resources }}
+        resources:
+          {{- .Values.resources | toYaml | nindent 10 }}
+        {{- end }}
+        {{- if .Values.podAnnotations }}
+        podAnnotations:
+          {{- .Values.podAnnotations | toYaml | nindent 10 }}
+        {{- end }}
+        {{- if .Values.podLabels }}
+        podLabels:
+          {{- .Values.podLabels | toYaml | nindent 10 }}
+        {{- end }}
+        {{- if .Values.additionalVolumes }}
+        additionalVolumes:
+        {{- .Values.additionalVolumes | toYaml | nindent 8 }}
+        {{- end }}
+        {{- if .Values.additionalVolumeMounts }}
+        additionalVolumeMounts:
+        {{- .Values.additionalVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
+        {{- if .Values.env }}
+        env:
+        {{- .Values.env | toYaml | nindent 8 }}
+        {{- end }}
+        vpa: {{ .Values.vpa }}
+      config:
+{{ include "gardenlet.config" . | indent 8 }}
+{{- end }}

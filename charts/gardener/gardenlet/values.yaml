@@ -3,6 +3,7 @@ revisionHistoryLimit: 2
 serviceAccountName: gardenlet
 invalidateServiceAccountToken: true
 image:
+# ref: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet:latest
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
   tag: latest
   pullPolicy: IfNotPresent
@@ -33,7 +34,7 @@ config:
                          # If the kubeconfig is provided inline, the name and namespace fields
                          # are a reference to a secret that will store this bootstrap kubeconfig. If `kubeconfig` is given
                          # then only this kubeconfig will be considered.
-                         # If you already have a boostrap kubeconfig you can reference it with
+                         # If you already have a bootstrap kubeconfig you can reference it with
                          # secretRef.name and secretRef.namespace.
   #   name: gardenlet-kubeconfig-bootstrap
   #   namespace: garden
@@ -77,6 +78,8 @@ config:
     # - production
     bastion:
       concurrentSyncs: 20
+    gardenlet:
+      syncPeriod: 1h
     seed:
       syncPeriod: 1h
     # leaseResyncSeconds: 2
@@ -211,3 +214,9 @@ config:
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
+
+#selfUpgrade:
+#  deployment:
+#    helm:
+#      ociRepository:
+#        ref: <url-to-oci-repository-containing-gardenlet-helm-chart>

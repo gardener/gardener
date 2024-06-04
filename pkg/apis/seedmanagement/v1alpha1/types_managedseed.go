@@ -64,7 +64,7 @@ type ManagedSeedSpec struct {
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	// +optional
-	Gardenlet *Gardenlet `json:"gardenlet,omitempty" protobuf:"bytes,3,opt,name=gardenlet"`
+	Gardenlet *GardenletConfig `json:"gardenlet,omitempty" protobuf:"bytes,3,opt,name=gardenlet"`
 }
 
 // Shoot identifies the Shoot that should be registered as Seed.
@@ -73,8 +73,8 @@ type Shoot struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
-// Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
-type Gardenlet struct {
+// GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+type GardenletConfig struct {
 	// Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 	// the image, etc.
 	// +optional

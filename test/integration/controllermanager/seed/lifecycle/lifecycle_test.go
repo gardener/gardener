@@ -110,7 +110,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Shoot:     &seedmanagementv1alpha1.Shoot{Name: "foo"},
-				Gardenlet: &seedmanagementv1alpha1.Gardenlet{},
+				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{},
 			},
 		}
 

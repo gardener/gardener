@@ -163,6 +163,9 @@ type GardenletControllerConfiguration struct {
 	// ControllerInstallationRequired defines the configuration of the ControllerInstallationRequired controller.
 	// +optional
 	ControllerInstallationRequired *ControllerInstallationRequiredControllerConfiguration `json:"controllerInstallationRequired,omitempty"`
+	// Gardenlet defines the configuration of the Gardenlet controller.
+	// +optional
+	Gardenlet *GardenletObjectControllerConfiguration `json:"gardenlet,omitempty"`
 	// Seed defines the configuration of the Seed controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -388,6 +391,13 @@ type NetworkPolicyControllerConfiguration struct {
 	// the controller.
 	// +optional
 	AdditionalNamespaceSelectors []metav1.LabelSelector `json:"additionalNamespaceSelectors,omitempty"`
+}
+
+// GardenletObjectControllerConfiguration defines the configuration of the Gardenlet controller.
+type GardenletObjectControllerConfiguration struct {
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.

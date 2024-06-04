@@ -17,7 +17,7 @@ import (
 func ForKind(kind schema.GroupVersionKind) any {
 	switch kind {
 	// Group=seedmanagement.gardener.cloud, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):
+	case v1alpha1.SchemeGroupVersion.WithKind("GardenletConfig"):
 		return &seedmanagementv1alpha1.GardenletApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("GardenletDeployment"):
 		return &seedmanagementv1alpha1.GardenletDeploymentApplyConfiguration{}

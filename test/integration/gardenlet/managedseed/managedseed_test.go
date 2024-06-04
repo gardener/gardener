@@ -133,7 +133,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 					Deployment: &seedmanagementv1alpha1.GardenletDeployment{
 						ReplicaCount:         ptr.To[int32](1),
 						RevisionHistoryLimit: ptr.To[int32](1),

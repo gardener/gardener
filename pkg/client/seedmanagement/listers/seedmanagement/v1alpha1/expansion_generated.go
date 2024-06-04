@@ -6,6 +6,14 @@
 
 package v1alpha1
 
+// GardenletListerExpansion allows custom methods to be added to
+// GardenletLister.
+type GardenletListerExpansion interface{}
+
+// GardenletNamespaceListerExpansion allows custom methods to be added to
+// GardenletNamespaceLister.
+type GardenletNamespaceListerExpansion interface{}
+
 // ManagedSeedListerExpansion allows custom methods to be added to
 // ManagedSeedLister.
 type ManagedSeedListerExpansion interface{}

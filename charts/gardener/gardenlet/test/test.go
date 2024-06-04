@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package charttest
+package test
 
 import (
 	"context"
@@ -686,6 +686,11 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			Bastion: &gardenletv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
+			},
+			Gardenlet: &gardenletv1alpha1.GardenletObjectControllerConfiguration{
+				SyncPeriod: &metav1.Duration{
+					Duration: 1 * time.Hour,
+				},
 			},
 			Seed: &gardenletv1alpha1.SeedControllerConfiguration{
 				SyncPeriod: &metav1.Duration{

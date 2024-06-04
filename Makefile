@@ -131,7 +131,7 @@ tidy:
 
 .PHONY: clean
 clean:
-	@hack/clean.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/clean.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 
 .PHONY: add-license-headers
 add-license-headers: $(GO_ADD_LICENSE)
@@ -148,7 +148,7 @@ check-plutono-dashboards:
 .PHONY: check
 check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(YQ) $(VGOPATH) logcheck-symlinks
 	@sed ./.golangci.yaml.in -e "s#<<LOGCHECK_PLUGIN_PATH>>#$(TOOLS_BIN_DIR)#g" > ./.golangci.yaml
-	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@VGOPATH=$(VGOPATH) hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 
 	@echo "> Check $(LOGCHECK_DIR)"
@@ -201,12 +201,12 @@ endif
 
 .PHONY: format
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
-	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./hack
+	@./hack/format.sh ./charts ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
-test: $(REPORT_COLLECTOR) $(PROMTOOL) logcheck-symlinks
-	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
+test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
+	@./hack/test.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
@@ -214,8 +214,8 @@ test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./test/integration/...
 
 .PHONY: test-cov
-test-cov: $(PROMTOOL)
-	@./hack/test-cover.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
+test-cov: $(PROMTOOL) $(HELM)
+	@./hack/test-cover.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 
 .PHONY: test-cov-clean
 test-cov-clean:

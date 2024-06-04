@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/gardenlet/storage"
 	managedseedstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/managedseed/storage"
 	managedseedsetstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/managedseedset/storage"
 )
@@ -35,9 +36,12 @@ func (p StorageProvider) GroupName() string {
 func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
 
+	gardenletStorage := gardenletstore.NewStorage(restOptionsGetter)
 	managedSeedStorage := managedseedstore.NewStorage(restOptionsGetter)
 	managedSeedSetStorage := managedseedsetstore.NewStorage(restOptionsGetter)
 
+	storage["gardenlets"] = gardenletStorage.Gardenlet
+	storage["gardenlets/status"] = gardenletStorage.Status
 	storage["managedseeds"] = managedSeedStorage.ManagedSeed
 	storage["managedseeds/status"] = managedSeedStorage.Status
 	storage["managedseedsets"] = managedSeedSetStorage.ManagedSeedSet

@@ -1,4 +1,4 @@
-# Register Shoot as Seed
+# `ManagedSeed`s: Register Shoot as Seed
 
 An existing shoot can be registered as a seed by creating a `ManagedSeed` resource. This resource contains:
 

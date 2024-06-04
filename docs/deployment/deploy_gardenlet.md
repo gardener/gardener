@@ -1,14 +1,15 @@
 # Deploying Gardenlets
 
-Gardenlets act as decentralized "agents" to manage the shoot clusters of a seed cluster.
-
-To support scalability in an automated way, gardenlets are deployed automatically. However, you can still deploy gardenlets manually to be more flexible, for example, when the shoot clusters that need to be managed by Gardener are behind a firewall. The gardenlet only requires network connectivity from the gardenlet to the Garden cluster (not the other way round), so it can be used to register Kubernetes clusters with no public endpoint.
+Gardenlets act as decentralized agents to manage the shoot clusters of a seed cluster.
 
 ## Procedure
 
-1. First, an initial gardenlet needs to be deployed:
+There are two ways of deploying gardenlets:
 
-   * Deploy it manually if you have special requirements. For more information, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md).
-   * Let the Gardener installer deploy it automatically otherwise.  For more information, see [Automatic Deployment of Gardenlets](deploy_gardenlet_automatically.md).
-
-1. To add additional seed clusters, it is recommended to use regular shoot clusters. You can do this by creating a `ManagedSeed` resource with a `gardenlet` section as described in [Register Shoot as Seed](../operations/managed_seed.md).
+1. Manually install the [Helm chart](../../charts/gardener/gardenlet).
+   After you have deployed the Gardener control plane, you need a dedicated seed cluster (or register the cluster in which the control plane runs).
+   This method is typically needed to get a first seed cluster up (so-called "unmanaged seeds").
+   It may also be needed if you want to register a cluster as seed that resides behind a firewall.
+   For more information, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md).
+2. Create `ManagedSeed` resources to make existing shoot clusters getting registered as seeds.
+   For more information, see [Deploy a gardenlet Automatically](deploy_gardenlet_automatically.md).

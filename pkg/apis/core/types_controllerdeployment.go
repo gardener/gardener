@@ -5,6 +5,8 @@
 package core
 
 import (
+	"strings"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,4 +69,20 @@ type OCIRepository struct {
 	// Digest of the image to pull, takes precedence over tag.
 	// The value should be in the format 'sha256:<HASH>'.
 	Digest *string
+}
+
+// GetURL returns the fully-qualified OCIRepository URL of the artifact.
+func (o *OCIRepository) GetURL() string {
+	var ref string
+
+	switch {
+	case o.Ref != nil:
+		ref = *o.Ref
+	case o.Digest != nil:
+		// when digest is set we ignore the tag
+		ref = *o.Repository + "@" + *o.Digest
+	case o.Tag != nil:
+		ref = *o.Repository + ":" + *o.Tag
+	}
+	return strings.TrimPrefix(ref, "oci://")
 }

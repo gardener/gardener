@@ -472,15 +472,24 @@ var _ = Describe("Util", func() {
 
 	Context("cluster role binding name/service account name/token id/description", func() {
 		var (
-			kind      = "foo"
+			kind      string
 			namespace = "bar"
 			name      = "baz"
 
 			clusterRoleNameWithNamespace = "gardener.cloud:system:seed-bootstrapper:" + namespace + ":" + name
 
-			descriptionWithoutNamespace = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s.", kind, name)
-			descriptionWithNamespace    = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s/%s.", kind, namespace, name)
+			descriptionWithoutNamespace string
+			descriptionWithNamespace    string
 		)
+
+		BeforeEach(func() {
+			kind = "seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource"
+		})
+
+		JustBeforeEach(func() {
+			descriptionWithoutNamespace = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s.", kind, name)
+			descriptionWithNamespace = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s/%s.", kind, namespace, name)
+		})
 
 		Describe("#ClusterRoleBindingName", func() {
 			It("should return the correct name", func() {
@@ -523,16 +532,44 @@ var _ = Describe("Util", func() {
 		})
 
 		Describe("#MetadataFromDescription", func() {
-			It("should return the expected namespace/name from a description (w/o namespace)", func() {
-				resultNamespace, resultName := MetadataFromDescription(descriptionWithoutNamespace, kind)
-				Expect(resultNamespace).To(BeEmpty())
-				Expect(resultName).To(Equal(name))
+			When("kind is 'ManagedSeed'", func() {
+				BeforeEach(func() {
+					kind = "seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource"
+				})
+
+				It("should return the expected namespace/name from a description (w/o namespace)", func() {
+					kind, resultNamespace, resultName := MetadataFromDescription(descriptionWithoutNamespace)
+					Expect(kind).To(Equal("seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource"))
+					Expect(resultNamespace).To(BeEmpty())
+					Expect(resultName).To(Equal(name))
+				})
+
+				It("should return the expected namespace/name from a description (w/ namespace)", func() {
+					kind, resultNamespace, resultName := MetadataFromDescription(descriptionWithNamespace)
+					Expect(kind).To(Equal("seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource"))
+					Expect(resultNamespace).To(Equal(namespace))
+					Expect(resultName).To(Equal(name))
+				})
 			})
 
-			It("should return the expected namespace/name from a description (w/ namespace)", func() {
-				resultNamespace, resultName := MetadataFromDescription(descriptionWithNamespace, kind)
-				Expect(resultNamespace).To(Equal(namespace))
-				Expect(resultName).To(Equal(name))
+			When("kind is 'Gardenlet'", func() {
+				BeforeEach(func() {
+					kind = "seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource"
+				})
+
+				It("should return the expected namespace/name from a description (w/o namespace)", func() {
+					kind, resultNamespace, resultName := MetadataFromDescription(descriptionWithoutNamespace)
+					Expect(kind).To(Equal("seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource"))
+					Expect(resultNamespace).To(BeEmpty())
+					Expect(resultName).To(Equal(name))
+				})
+
+				It("should return the expected namespace/name from a description (w/ namespace)", func() {
+					kind, resultNamespace, resultName := MetadataFromDescription(descriptionWithNamespace)
+					Expect(kind).To(Equal("seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource"))
+					Expect(resultNamespace).To(Equal(namespace))
+					Expect(resultName).To(Equal(name))
+				})
 			})
 		})
 	})

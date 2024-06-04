@@ -52,7 +52,7 @@ func (controllerInstallationStrategy) PrepareForUpdate(_ context.Context, obj, o
 }
 
 func mustIncreaseGeneration(oldControllerInstallation, newControllerInstallation *core.ControllerInstallation) bool {
-	// The ControllerInstallation specification changes.
+	// The specification changes.
 	if !apiequality.Semantic.DeepEqual(oldControllerInstallation.Spec, newControllerInstallation.Spec) {
 		return true
 	}

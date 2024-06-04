@@ -36,11 +36,14 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
+	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -70,11 +73,14 @@ type ReferenceManager struct {
 	quotaLister                gardencorev1beta1listers.QuotaLister
 	controllerDeploymentLister gardencorev1beta1listers.ControllerDeploymentLister
 	exposureClassLister        gardencorev1beta1listers.ExposureClassLister
+	managedSeedLister          seedmanagementv1alpha1listers.ManagedSeedLister
+	gardenletLister            seedmanagementv1alpha1listers.GardenletLister
 	readyFunc                  admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsSeedManagementInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsCoreClientSet(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
@@ -147,6 +153,17 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 		exposureClassInformer.Informer().HasSynced)
 }
 
+// SetSeedManagementInformerFactory gets Lister from SharedInformerFactory.
+func (r *ReferenceManager) SetSeedManagementInformerFactory(f seedmanagementinformers.SharedInformerFactory) {
+	managedSeedInformer := f.Seedmanagement().V1alpha1().ManagedSeeds()
+	r.managedSeedLister = managedSeedInformer.Lister()
+
+	gardenletInformer := f.Seedmanagement().V1alpha1().Gardenlets()
+	r.gardenletLister = gardenletInformer.Lister()
+
+	readyFuncs = append(readyFuncs, managedSeedInformer.Informer().HasSynced, gardenletInformer.Informer().HasSynced)
+}
+
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
 	secretInformer := f.Core().V1().Secrets()
@@ -210,6 +227,12 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.gardenCoreClient == nil {
 		return errors.New("missing gardener core client")
+	}
+	if r.managedSeedLister == nil {
+		return errors.New("missing managed seed lister")
+	}
+	if r.gardenletLister == nil {
+		return errors.New("missing gardenlet lister")
 	}
 	return nil
 }
@@ -496,6 +519,34 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			return apierrors.NewBadRequest("could not convert resource into ControllerRegistration object")
 		}
 		err = r.ensureControllerRegistrationReferences(ctx, controllerRegistration)
+
+	case seedmanagement.Kind("Gardenlet"):
+		gardenlet, ok := a.GetObject().(*seedmanagement.Gardenlet)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Gardenlet object")
+		}
+		if utils.SkipVerification(operation, gardenlet.ObjectMeta) {
+			return nil
+		}
+		if _, err := r.managedSeedLister.ManagedSeeds(gardenlet.Namespace).Get(gardenlet.Name); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether ManagedSeed object exists for Gardenlet %s/%s: %w", gardenlet.Namespace, gardenlet.Name, err)
+		} else if err == nil {
+			return fmt.Errorf("cannot create Gardenlet %s/%s since there is already a ManagedSeed object with the same name", gardenlet.Namespace, gardenlet.Name)
+		}
+
+	case seedmanagement.Kind("ManagedSeed"):
+		managedSeed, ok := a.GetObject().(*seedmanagement.ManagedSeed)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into ManagedSeed object")
+		}
+		if utils.SkipVerification(operation, managedSeed.ObjectMeta) {
+			return nil
+		}
+		if _, err := r.gardenletLister.Gardenlets(managedSeed.Namespace).Get(managedSeed.Name); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether Gardenlet object exists for ManagedSeed %s/%s: %w", managedSeed.Namespace, managedSeed.Name, err)
+		} else if err == nil {
+			return fmt.Errorf("cannot create ManagedSeed %s/%s since there is already a Gardenlet object with the same name", managedSeed.Namespace, managedSeed.Name)
+		}
 	}
 
 	if err != nil {

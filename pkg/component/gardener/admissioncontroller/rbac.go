@@ -44,6 +44,7 @@ func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{seedmanagementv1alpha1.GroupName},
 				Resources: []string{
+					"gardenlets",
 					"managedseeds",
 				},
 				Verbs: []string{"get", "list", "watch"},

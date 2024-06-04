@@ -59,7 +59,7 @@ func RequestKubeconfigWithBootstrapClient(
 		return nil, "", "", fmt.Errorf("unable to update secret %q with bootstrapped kubeconfig: %w", kubeconfigKey.String(), err)
 	}
 
-	log.Info("Deleting boostrap kubeconfig secret from target cluster")
+	log.Info("Deleting bootstrap kubeconfig secret from target cluster")
 	if err := kubernetesutils.DeleteObject(ctx, seedClient, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstrapKubeconfigKey.Name,

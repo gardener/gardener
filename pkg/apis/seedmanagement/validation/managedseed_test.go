@@ -93,7 +93,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				Shoot: &seedmanagement.Shoot{
 					Name: name,
 				},
-				Gardenlet: &seedmanagement.Gardenlet{},
+				Gardenlet: &seedmanagement.GardenletConfig{},
 			},
 			Status: seedmanagement.ManagedSeedStatus{
 				ObservedGeneration: 1,
@@ -218,7 +218,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Deployment: &seedmanagement.GardenletDeployment{
 						Image: &seedmanagement.Image{
 							PullPolicy: ptr.To(corev1.PullIfNotPresent),
@@ -444,7 +444,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       ptr.To(seedmanagement.BootstrapToken),
 					MergeWithParent: ptr.To(true),

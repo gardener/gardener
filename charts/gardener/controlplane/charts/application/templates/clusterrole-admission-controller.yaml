@@ -28,6 +28,7 @@ rules:
 - apiGroups:
   - seedmanagement.gardener.cloud
   resources:
+  - gardenlets
   - managedseeds
   verbs:
   - get

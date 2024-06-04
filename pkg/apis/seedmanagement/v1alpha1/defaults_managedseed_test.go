@@ -40,7 +40,7 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ManagedSeed defaulting", func() {
 		It("should default gardenlet configuration", func() {
-			obj.Spec.Gardenlet = &Gardenlet{}
+			obj.Spec.Gardenlet = &GardenletConfig{}
 
 			SetObjectDefaults_ManagedSeed(obj)
 
@@ -63,7 +63,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default gardenlet configuration, and backup secret reference if backup is specified", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
+			obj.Spec.Gardenlet = &GardenletConfig{
 				Config: runtime.RawExtension{
 					Raw: encode(&gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -113,7 +113,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite already set values for GardenletConfiguration", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
+			obj.Spec.Gardenlet = &GardenletConfig{
 				Config: runtime.RawExtension{
 					Raw: encode(&gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -179,7 +179,7 @@ var _ = Describe("Defaults", func() {
 
 	Describe("GardenletDeployment defaulting", func() {
 		It("should default GardenletDeployment field", func() {
-			obj.Spec.Gardenlet = &Gardenlet{}
+			obj.Spec.Gardenlet = &GardenletConfig{}
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.ReplicaCount).To(Equal(ptr.To[int32](2)))
@@ -189,7 +189,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
+			obj.Spec.Gardenlet = &GardenletConfig{
 				Deployment: &GardenletDeployment{
 					ReplicaCount:         ptr.To[int32](3),
 					RevisionHistoryLimit: ptr.To[int32](3),
@@ -207,7 +207,7 @@ var _ = Describe("Defaults", func() {
 
 	Describe("Image defaulting", func() {
 		It("should default pull policy to IfNotPresent", func() {
-			obj.Spec.Gardenlet = &Gardenlet{}
+			obj.Spec.Gardenlet = &GardenletConfig{}
 			SetObjectDefaults_ManagedSeed(obj)
 
 			Expect(obj.Spec.Gardenlet.Deployment.Image).To(Equal(&Image{
@@ -216,7 +216,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
+			obj.Spec.Gardenlet = &GardenletConfig{
 				Deployment: &GardenletDeployment{
 					Image: &Image{Tag: ptr.To("latest")},
 				}}
@@ -230,7 +230,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite pull policy if tag is not latest", func() {
-			obj.Spec.Gardenlet = &Gardenlet{
+			obj.Spec.Gardenlet = &GardenletConfig{
 				Deployment: &GardenletDeployment{
 					Image: &Image{
 						Tag:        ptr.To("foo"),

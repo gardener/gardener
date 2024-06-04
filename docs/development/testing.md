@@ -391,7 +391,7 @@ stress -ignore "unable to grab random port" -p 16 ./bastion.test
 ## End-to-End (e2e) Tests (Using provider-local)
 
 We run a suite of e2e tests on every pull request and periodically on the `master` branch.
-It uses a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) to boostrap a full installation of Gardener based on the current revision, including [provider-local](../extensions/provider-local.md).
+It uses a [KinD cluster](https://kind.sigs.k8s.io/) and [skaffold](https://skaffold.dev/) to bootstrap a full installation of Gardener based on the current revision, including [provider-local](../extensions/provider-local.md).
 This allows us to run e2e tests in an isolated test environment and fully locally without any infrastructure interaction.
 The tests perform a set of operations on Shoot clusters, e.g. creating, deleting, hibernating and waking up.
 

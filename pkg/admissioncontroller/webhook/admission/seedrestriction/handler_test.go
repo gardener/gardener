@@ -1229,7 +1229,7 @@ var _ = Describe("handler", func() {
 								Data: map[string][]byte{
 									"usage-bootstrap-authentication": []byte("true"),
 									"usage-bootstrap-signing":        []byte("true"),
-									"description":                    []byte("A bootstrap token for the Gardenlet for managed seed " + managedSeedNamespace + "/" + managedSeedName + "."),
+									"description":                    []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.ManagedSeed resource " + managedSeedNamespace + "/" + managedSeedName + "."),
 								},
 							}
 							managedSeed = &seedmanagementv1alpha1.ManagedSeed{
@@ -1499,6 +1499,228 @@ var _ = Describe("handler", func() {
 						})
 					})
 
+					Context("bootstrap token secret for gardenlets", func() {
+						var (
+							secret    *corev1.Secret
+							gardenlet *seedmanagementv1alpha1.Gardenlet
+
+							gardenletNamespace = "glet1ns"
+							gardenletName      = "glet1name"
+						)
+
+						BeforeEach(func() {
+							secret = &corev1.Secret{
+								Type: corev1.SecretTypeBootstrapToken,
+								Data: map[string][]byte{
+									"usage-bootstrap-authentication": []byte("true"),
+									"usage-bootstrap-signing":        []byte("true"),
+									"description":                    []byte("A bootstrap token for the Gardenlet for seedmanagement.gardener.cloud/v1alpha1.Gardenlet resource " + gardenletNamespace + "/" + gardenletName + "."),
+								},
+							}
+							gardenlet = &seedmanagementv1alpha1.Gardenlet{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      gardenletName,
+									Namespace: gardenletNamespace,
+								},
+							}
+
+							request.Name = "bootstrap-token-123456"
+							request.Namespace = "kube-system"
+
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+						})
+
+						It("should return an error if decoding the secret fails", func() {
+							request.Object.Raw = []byte(`{]`)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusBadRequest),
+										Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+									},
+								},
+							}))
+						})
+
+						It("should return an error if the secret type is unexpected", func() {
+							secret.Type = corev1.SecretTypeOpaque
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusUnprocessableEntity),
+										Message: fmt.Sprintf("unexpected secret type: %q", secret.Type),
+									},
+								},
+							}))
+						})
+
+						It("should return an error if the usage-bootstrap-authentication field is unexpected", func() {
+							secret.Data["usage-bootstrap-authentication"] = []byte("false")
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusUnprocessableEntity),
+										Message: "\"usage-bootstrap-authentication\" must be set to 'true'",
+									},
+								},
+							}))
+						})
+
+						It("should return an error if the usage-bootstrap-signing field is unexpected", func() {
+							secret.Data["usage-bootstrap-signing"] = []byte("false")
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusUnprocessableEntity),
+										Message: "\"usage-bootstrap-signing\" must be set to 'true'",
+									},
+								},
+							}))
+						})
+
+						It("should return an error if the auth-extra-groups field is unexpected", func() {
+							secret.Data["auth-extra-groups"] = []byte("foo")
+							objData, err := runtime.Encode(encoder, secret)
+							Expect(err).NotTo(HaveOccurred())
+							request.Object.Raw = objData
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusUnprocessableEntity),
+										Message: "\"auth-extra-groups\" must not be set",
+									},
+								},
+							}))
+						})
+
+						It("should forbid if the Gardenlet does not exist", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: " \"\" not found",
+									},
+								},
+							}))
+						})
+
+						It("should return an error if reading the Gardenlet fails", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).Return(fakeErr)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusInternalServerError),
+										Message: fakeErr.Error(),
+									},
+								},
+							}))
+						})
+
+						It("should return an error if reading the seed fails", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.Gardenlet, _ ...client.GetOption) error {
+								gardenlet.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: gardenletName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusInternalServerError),
+										Message: fakeErr.Error(),
+									},
+								},
+							}))
+						})
+
+						It("should forbid if the seed does exist already", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.Gardenlet, _ ...client.GetOption) error {
+								gardenlet.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: gardenletName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusBadRequest),
+										Message: "gardenlet " + gardenletNamespace + "/" + gardenletName + " is already bootstrapped",
+									},
+								},
+							}))
+						})
+
+						It("should forbid if the seed does not yet exist", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.Gardenlet, _ ...client.GetOption) error {
+								gardenlet.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: gardenletName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: " \"\" not found",
+									},
+								},
+							}))
+						})
+
+						It("should allow if the seed does exist but client cert is expired", func() {
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.Gardenlet, _ ...client.GetOption) error {
+								gardenlet.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: gardenletName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed, _ ...client.GetOption) error {
+								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+								return nil
+							})
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should allow if the seed does exist but the gardenlet is annotated with the renew-kubeconfig annotation", func() {
+							gardenlet.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig}
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenletNamespace, Name: gardenletName}, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.Gardenlet{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.Gardenlet, _ ...client.GetOption) error {
+								gardenlet.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, client.ObjectKey{Name: gardenletName}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+					})
+
 					Context("managed seed secret", func() {
 						var (
 							managedSeed1Namespace    string
@@ -1534,7 +1756,7 @@ var _ = Describe("handler", func() {
 									ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 									Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
-										Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig1,
@@ -1547,7 +1769,7 @@ var _ = Describe("handler", func() {
 									ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed1Namespace},
 									Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot2.Name},
-										Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+										Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig2,
@@ -1612,7 +1834,7 @@ var _ = Describe("handler", func() {
 									Allowed: false,
 									Result: &metav1.Status{
 										Code:    int32(http.StatusInternalServerError),
-										Message: "no gardenlet specified in managedseed: \"\"",
+										Message: "no gardenlet config provided in object: \"\"",
 									},
 								},
 							}))

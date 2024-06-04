@@ -16,6 +16,7 @@ import (
 
 type SeedmanagementV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	GardenletsGetter
 	ManagedSeedsGetter
 	ManagedSeedSetsGetter
 }
@@ -23,6 +24,10 @@ type SeedmanagementV1alpha1Interface interface {
 // SeedmanagementV1alpha1Client is used to interact with features provided by the seedmanagement.gardener.cloud group.
 type SeedmanagementV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *SeedmanagementV1alpha1Client) Gardenlets(namespace string) GardenletInterface {
+	return newGardenlets(c, namespace)
 }
 
 func (c *SeedmanagementV1alpha1Client) ManagedSeeds(namespace string) ManagedSeedInterface {

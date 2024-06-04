@@ -79,6 +79,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/secu
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,AdditionalVolumeMounts
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,AdditionalVolumes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletDeployment,Env
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,GardenletStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,ManagedSeedSetStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,ManagedSeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,KubeAPIServerOpenIDConnect,SigningAlgs

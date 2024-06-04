@@ -17,11 +17,28 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&Gardenlet{}, func(obj interface{}) { SetObjectDefaults_Gardenlet(obj.(*Gardenlet)) })
+	scheme.AddTypeDefaultingFunc(&GardenletList{}, func(obj interface{}) { SetObjectDefaults_GardenletList(obj.(*GardenletList)) })
 	scheme.AddTypeDefaultingFunc(&ManagedSeed{}, func(obj interface{}) { SetObjectDefaults_ManagedSeed(obj.(*ManagedSeed)) })
 	scheme.AddTypeDefaultingFunc(&ManagedSeedList{}, func(obj interface{}) { SetObjectDefaults_ManagedSeedList(obj.(*ManagedSeedList)) })
 	scheme.AddTypeDefaultingFunc(&ManagedSeedSet{}, func(obj interface{}) { SetObjectDefaults_ManagedSeedSet(obj.(*ManagedSeedSet)) })
 	scheme.AddTypeDefaultingFunc(&ManagedSeedSetList{}, func(obj interface{}) { SetObjectDefaults_ManagedSeedSetList(obj.(*ManagedSeedSetList)) })
 	return nil
+}
+
+func SetObjectDefaults_Gardenlet(in *Gardenlet) {
+	SetDefaults_Gardenlet(in)
+	SetDefaults_GardenletDeployment(&in.Spec.Deployment.GardenletDeployment)
+	if in.Spec.Deployment.GardenletDeployment.Image != nil {
+		SetDefaults_Image(in.Spec.Deployment.GardenletDeployment.Image)
+	}
+}
+
+func SetObjectDefaults_GardenletList(in *GardenletList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_Gardenlet(a)
+	}
 }
 
 func SetObjectDefaults_ManagedSeed(in *ManagedSeed) {

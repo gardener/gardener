@@ -56,6 +56,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ControllerInstallationRequired != nil {
 			SetDefaults_ControllerInstallationRequiredControllerConfiguration(in.Controllers.ControllerInstallationRequired)
 		}
+		if in.Controllers.Gardenlet != nil {
+			SetDefaults_GardenletObjectControllerConfiguration(in.Controllers.Gardenlet)
+		}
 		if in.Controllers.Seed != nil {
 			SetDefaults_SeedControllerConfiguration(in.Controllers.Seed)
 		}

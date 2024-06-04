@@ -119,6 +119,8 @@ build:
             - pkg/apiserver/registry/security/rest
             - pkg/apiserver/registry/security/workloadidentity
             - pkg/apiserver/registry/security/workloadidentity/storage
+            - pkg/apiserver/registry/seedmanagement/gardenlet
+            - pkg/apiserver/registry/seedmanagement/gardenlet/storage
             - pkg/apiserver/registry/seedmanagement/managedseed
             - pkg/apiserver/registry/seedmanagement/managedseed/storage
             - pkg/apiserver/registry/seedmanagement/managedseedset
@@ -1187,6 +1189,7 @@ build:
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
             - pkg/gardenlet/controller/controllerinstallation/required
             - pkg/gardenlet/controller/controllerinstallation/utils
+            - pkg/gardenlet/controller/gardenlet
             - pkg/gardenlet/controller/managedseed
             - pkg/gardenlet/controller/networkpolicy
             - pkg/gardenlet/controller/seed
@@ -1264,6 +1267,16 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardenlet
+    - image: local-skaffold/gardenlet/chart
+      custom:
+        dependencies:
+          paths:
+            - charts/gardener/gardenlet
+        buildCommand: |
+          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
+      requires:
+        - image: local-skaffold/gardenlet
+          alias: IMG
     - image: local-skaffold/gardener-resource-manager
       ko:
         dependencies:

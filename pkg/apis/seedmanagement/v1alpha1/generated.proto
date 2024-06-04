@@ -8,6 +8,7 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.seedmanagement.v1alpha1;
 
+import "github.com/gardener/gardener/pkg/apis/core/v1/generated.proto";
 import "github.com/gardener/gardener/pkg/apis/core/v1beta1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
@@ -17,8 +18,23 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1";
 
-// Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+// Gardenlet represents a Gardenlet configuration for an unmanaged seed.
 message Gardenlet {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the Gardenlet.
+  // +optional
+  optional GardenletSpec spec = 2;
+
+  // Most recently observed status of the Gardenlet.
+  // +optional
+  optional GardenletStatus status = 3;
+}
+
+// GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+message GardenletConfig {
   // Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
   // the image, etc.
   // +optional
@@ -87,6 +103,67 @@ message GardenletDeployment {
   // VPA specifies whether to enable VPA for gardenlet. Defaults to true.
   // +optional
   optional bool vpa = 11;
+}
+
+// GardenletHelm is the Helm deployment configuration for gardenlet.
+message GardenletHelm {
+  // OCIRepository defines where to pull the chart.
+  optional github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1;
+}
+
+// GardenletList is a list of Gardenlet objects.
+message GardenletList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of Gardenlets.
+  repeated Gardenlet items = 2;
+}
+
+// GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
+// the image, etc.
+message GardenletSelfDeployment {
+  // GardenletDeployment specifies common gardenlet deployment parameters.
+  // +optional
+  optional GardenletDeployment gardenletDeployment = 1;
+
+  // Helm is the Helm deployment configuration.
+  optional GardenletHelm helm = 2;
+
+  // ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.
+  // +optional
+  optional string imageVectorOverwrite = 3;
+
+  // ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this
+  // gardenlet.
+  // +optional
+  optional string componentImageVectorOverwrite = 4;
+}
+
+// GardenletSpec specifies gardenlet deployment parameters and the configuration used to configure gardenlet.
+message GardenletSpec {
+  // Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
+  // the image, etc.
+  optional GardenletSelfDeployment deployment = 1;
+
+  // Config is the GardenletConfiguration used to configure gardenlet.
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+}
+
+// GardenletStatus is the status of a Gardenlet.
+message GardenletStatus {
+  // Conditions represents the latest available observations of a Gardenlet's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
+
+  // ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's
+  // generation, which is updated on mutation by the API Server.
+  // +optional
+  optional int64 observedGeneration = 2;
 }
 
 // Image specifies container image parameters.
@@ -244,7 +321,7 @@ message ManagedSeedSpec {
   // Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
   // with the given deployment parameters and GardenletConfiguration.
   // +optional
-  optional Gardenlet gardenlet = 3;
+  optional GardenletConfig gardenlet = 3;
 }
 
 // ManagedSeedStatus is the status of a ManagedSeed.

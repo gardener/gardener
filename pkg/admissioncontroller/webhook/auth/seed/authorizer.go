@@ -64,6 +64,7 @@ var (
 	exposureClassResource             = gardencorev1beta1.Resource("exposureclasses")
 	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
+	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource                 = corev1.Resource("namespaces")
 	projectResource                   = gardencorev1beta1.Resource("projects")
@@ -160,6 +161,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case leaseResource:
 			return a.authorizeLease(requestLog, seedName, userType, attrs)
+		case gardenletResource:
+			return a.authorize(requestLog, seedName, graph.VertexTypeGardenlet, attrs,
+				[]string{"update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
+			)
 		case managedSeedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},

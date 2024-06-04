@@ -134,7 +134,7 @@ func (a *actuator) Reconcile(
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
 	if err != nil {
 		return status, false, err
 	}
@@ -159,7 +159,7 @@ func (a *actuator) Reconcile(
 	}
 
 	if ms.Spec.Gardenlet != nil {
-		seed, err := a.getSeed(ctx, ms)
+		seed, err := GetSeed(ctx, a.gardenClient, ms.Name)
 		if err != nil {
 			return status, false, fmt.Errorf("could not read seed %s: %w", ms.Name, err)
 		}
@@ -218,13 +218,13 @@ func (a *actuator) Delete(
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
 	if err != nil {
 		return status, false, false, err
 	}
 
 	// Delete seed if it still exists and is not already deleting
-	seed, err := a.getSeed(ctx, ms)
+	seed, err := GetSeed(ctx, a.gardenClient, ms.Name)
 	if err != nil {
 		return status, false, false, fmt.Errorf("could not get seed %s: %w", ms.Name, err)
 	}
@@ -360,9 +360,10 @@ func (a *actuator) deleteSeed(ctx context.Context, managedSeed *seedmanagementv1
 	return client.IgnoreNotFound(a.gardenClient.Delete(ctx, seed))
 }
 
-func (a *actuator) getSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*gardencorev1beta1.Seed, error) {
+// GetSeed returns the seed with the given name if found. If not, nil is returned.
+func GetSeed(ctx context.Context, gardenClient client.Client, seedName string) (*gardencorev1beta1.Seed, error) {
 	seed := &gardencorev1beta1.Seed{}
-	if err := a.gardenClient.Get(ctx, client.ObjectKey{Name: managedSeed.Name}, seed); err != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -598,17 +599,70 @@ func (a *actuator) prepareGardenletChartValues(
 		}
 	}
 
+	// Get gardenlet chart values
+	return PrepareGardenletChartValues(
+		ctx,
+		log,
+		a.gardenClient,
+		a.gardenConfig,
+		shootClient.Client(),
+		a.recorder,
+		managedSeed,
+		seed,
+		a.vp,
+		bootstrap,
+		ensureGardenletEnvironment(deployment, shoot.Spec.DNS),
+		gardenletConfig,
+		a.gardenNamespaceShoot,
+	)
+}
+
+// PrepareGardenletChartValues prepares the gardenlet chart values based on the config.
+func PrepareGardenletChartValues(
+	ctx context.Context,
+	log logr.Logger,
+	gardenClient client.Client,
+	gardenRESTConfig *rest.Config,
+	targetClusterClient client.Client,
+	recorder record.EventRecorder,
+	obj client.Object,
+	seed *gardencorev1beta1.Seed,
+	vp ValuesHelper,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
+	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
+	gardenNamespaceTargetCluster string,
+) (
+	map[string]any,
+	error,
+) {
 	// Ensure garden client connection is set
 	if gardenletConfig.GardenClientConnection == nil {
 		gardenletConfig.GardenClientConnection = &gardenletv1alpha1.GardenClientConnection{}
 	}
 
 	// Prepare garden client connection
-	var bootstrapKubeconfig string
+	var (
+		bootstrapKubeconfig string
+		err                 error
+	)
+
 	if bootstrap == seedmanagementv1alpha1.BootstrapNone {
-		a.removeBootstrapConfigFromGardenClientConnection(gardenletConfig.GardenClientConnection)
+		removeBootstrapConfigFromGardenClientConnection(gardenletConfig.GardenClientConnection)
 	} else {
-		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, log, shootClient, gardenletConfig.GardenClientConnection, managedSeed, seed, bootstrap)
+		bootstrapKubeconfig, err = prepareGardenClientConnectionWithBootstrap(
+			ctx,
+			log,
+			gardenClient,
+			gardenRESTConfig,
+			targetClusterClient,
+			recorder,
+			obj,
+			gardenletConfig.GardenClientConnection,
+			seed,
+			bootstrap,
+			gardenNamespaceTargetCluster,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -620,11 +674,11 @@ func (a *actuator) prepareGardenletChartValues(
 	}
 
 	// Set the seed name
-	gardenletConfig.SeedConfig.SeedTemplate.Name = managedSeed.Name
+	gardenletConfig.SeedConfig.SeedTemplate.Name = obj.GetName()
 
 	// Get gardenlet chart values
-	return a.vp.GetGardenletChartValues(
-		ensureGardenletEnvironment(deployment, shoot.Spec.DNS),
+	return vp.GetGardenletChartValues(
+		gardenletDeployment,
 		gardenletConfig,
 		bootstrapKubeconfig,
 	)
@@ -664,14 +718,18 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 	return deployment
 }
 
-func (a *actuator) prepareGardenClientConnectionWithBootstrap(
+func prepareGardenClientConnectionWithBootstrap(
 	ctx context.Context,
 	log logr.Logger,
-	shootClient kubernetes.Interface,
+	gardenClient client.Client,
+	gardenRESTConfig *rest.Config,
+	targetClusterClient client.Client,
+	recorder record.EventRecorder,
+	obj client.Object,
 	gcc *gardenletv1alpha1.GardenClientConnection,
-	managedSeed *seedmanagementv1alpha1.ManagedSeed,
 	seed *gardencorev1beta1.Seed,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
+	gardenNamespaceTargetCluster string,
 ) (
 	string,
 	error,
@@ -680,26 +738,26 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigSecretName,
-			Namespace: a.gardenNamespaceShoot,
+			Namespace: gardenNamespaceTargetCluster,
 		}
 	}
 
 	if seed != nil && seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
 		// Check if client certificate is expired. If yes then delete the existing kubeconfig secret to make sure that the
 		// seed can be re-bootstrapped.
-		if err := kubernetesutils.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
+		if err := kubernetesutils.DeleteSecretByReference(ctx, targetClusterClient, gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
-	} else if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+	} else if obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
 		// Also remove the kubeconfig if the renew-kubeconfig operation annotation is set on the ManagedSeed resource.
 		log.Info("Renewing gardenlet kubeconfig secret due to operation annotation")
-		a.recorder.Event(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
+		recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
 
-		if err := kubernetesutils.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
+		if err := kubernetesutils.DeleteSecretByReference(ctx, targetClusterClient, gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
 	} else {
-		seedIsAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, shootClient.Client(), gcc.KubeconfigSecret)
+		seedIsAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, targetClusterClient, gcc.KubeconfigSecret)
 		if err != nil {
 			return "", err
 		}
@@ -716,11 +774,11 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
 			Name:      GardenletDefaultKubeconfigBootstrapSecretName,
-			Namespace: a.gardenNamespaceShoot,
+			Namespace: gardenNamespaceTargetCluster,
 		}
 	}
 
-	return a.createBootstrapKubeconfig(ctx, managedSeed.ObjectMeta, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return createBootstrapKubeconfig(ctx, gardenClient, gardenRESTConfig, obj, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
 // isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
@@ -734,7 +792,7 @@ func isAlreadyBootstrapped(ctx context.Context, c client.Client, s *corev1.Secre
 	return secret != nil, nil
 }
 
-func (a *actuator) removeBootstrapConfigFromGardenClientConnection(gcc *gardenletv1alpha1.GardenClientConnection) {
+func removeBootstrapConfigFromGardenClientConnection(gcc *gardenletv1alpha1.GardenClientConnection) {
 	// Ensure kubeconfig secret and bootstrap kubeconfig secret are not set
 	gcc.KubeconfigSecret = nil
 	gcc.BootstrapKubeconfig = nil
@@ -743,20 +801,28 @@ func (a *actuator) removeBootstrapConfigFromGardenClientConnection(gcc *gardenle
 // createBootstrapKubeconfig creates a kubeconfig for the Garden cluster
 // containing either the token of a service account or a bootstrap token
 // returns the kubeconfig as a string
-func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta metav1.ObjectMeta, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
+func createBootstrapKubeconfig(
+	ctx context.Context,
+	gardenClient client.Client,
+	gardenRESTConfig *rest.Config,
+	obj client.Object,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	address *string,
+	caCert []byte,
+) (string, error) {
 	var (
 		err                 error
 		bootstrapKubeconfig []byte
 	)
 
-	gardenClientRestConfig := gardenerutils.PrepareGardenClientRestConfig(a.gardenConfig, address, caCert)
+	gardenClientRestConfig := gardenerutils.PrepareGardenClientRestConfig(gardenRESTConfig, address, caCert)
 
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:
 		// Create a kubeconfig containing the token of a temporary service account as client credentials
 		var (
-			serviceAccountName      = gardenletbootstraputil.ServiceAccountName(objectMeta.Name)
-			serviceAccountNamespace = objectMeta.Namespace
+			serviceAccountName      = gardenletbootstraputil.ServiceAccountName(obj.GetName())
+			serviceAccountNamespace = obj.GetNamespace()
 		)
 
 		// Create a kubeconfig containing a valid service account token as client credentials
@@ -765,20 +831,30 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 			return "", fmt.Errorf("failed creating Kubernetes client: %w", err)
 		}
 
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient, kubernetesClientSet.CoreV1(), gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
+		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, gardenClient, kubernetesClientSet.CoreV1(), gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}
 
 	case seedmanagementv1alpha1.BootstrapToken:
+		var kind string
+		switch obj.(type) {
+		case *seedmanagementv1alpha1.ManagedSeed:
+			kind = gardenletbootstraputil.KindManagedSeed
+		case *seedmanagementv1alpha1.Gardenlet:
+			kind = gardenletbootstraputil.KindGardenlet
+		default:
+			return "", fmt.Errorf("unknown bootstrap kind for object of type %T", obj)
+		}
+
 		var (
-			tokenID          = gardenletbootstraputil.TokenID(objectMeta)
-			tokenDescription = gardenletbootstraputil.Description(gardenletbootstraputil.KindManagedSeed, objectMeta.Namespace, objectMeta.Name)
+			tokenID          = gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
+			tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
 			tokenValidity    = 24 * time.Hour
 		)
 
 		// Create a kubeconfig containing a valid bootstrap token as client credentials
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient, gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
+		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, gardenClient, gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
 		if err != nil {
 			return "", err
 		}

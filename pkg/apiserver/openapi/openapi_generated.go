@@ -225,7 +225,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentitySpec":                  schema_pkg_apis_security_v1alpha1_WorkloadIdentitySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/security/v1alpha1.WorkloadIdentityStatus":                schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet":                       schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig":                 schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment":             schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm":                   schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletList":                   schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment":         schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec":                   schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus":                 schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                           schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeed":                     schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeed(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedList":                 schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref),
@@ -10114,7 +10120,57 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.",
+				Description: "Gardenlet represents a Gardenlet configuration for an unmanaged seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the Gardenlet.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Most recently observed status of the Gardenlet.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSpec", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"deployment": {
@@ -10277,6 +10333,302 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletHelm(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletHelm is the Helm deployment configuration for gardenlet.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ociRepository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OCIRepository defines where to pull the chart.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"),
+						},
+					},
+				},
+				Required: []string{"ociRepository"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletList is a list of Gardenlet objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of Gardenlets.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas, the image, etc.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"replicaCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReplicaCount is the number of gardenlet replicas. Defaults to 2.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"revisionHistoryLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"serviceAccountName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image is the gardenlet container image.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image"),
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources are the compute resources required by the gardenlet container.",
+							Ref:         ref("k8s.io/api/core/v1.ResourceRequirements"),
+						},
+					},
+					"podLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodLabels are the labels on gardenlet pods.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"podAnnotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodAnnotations are the annotations on gardenlet pods.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"additionalVolumes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdditionalVolumes is the list of additional volumes that should be mounted by gardenlet containers.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.Volume"),
+									},
+								},
+							},
+						},
+					},
+					"additionalVolumeMounts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdditionalVolumeMounts is the list of additional pod volumes to mount into the gardenlet container's filesystem.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.VolumeMount"),
+									},
+								},
+							},
+						},
+					},
+					"env": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Env is the list of environment variables to set in the gardenlet container.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/api/core/v1.EnvVar"),
+									},
+								},
+							},
+						},
+					},
+					"vpa": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"helm": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Helm is the Helm deployment configuration.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm"),
+						},
+					},
+					"imageVectorOverwrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"componentImageVectorOverwrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this gardenlet.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"helm"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletHelm", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletSpec specifies gardenlet deployment parameters and the configuration used to configure gardenlet.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"deployment": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Deployment specifies certain gardenlet deployment parameters, such as the number of replicas, the image, etc.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment"),
+						},
+					},
+					"config": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config is the GardenletConfiguration used to configure gardenlet.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"deployment"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_GardenletStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenletStatus is the status of a Gardenlet.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a Gardenlet's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
 	}
 }
 
@@ -10696,14 +11048,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 					"gardenlet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster with the given deployment parameters and GardenletConfiguration.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"},
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"},
 	}
 }
 

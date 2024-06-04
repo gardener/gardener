@@ -157,7 +157,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-				Gardenlet: &seedmanagementv1alpha1.Gardenlet{
+				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
 					Config: runtime.RawExtension{
 						Raw: gardenletConfigJson,
 					},
