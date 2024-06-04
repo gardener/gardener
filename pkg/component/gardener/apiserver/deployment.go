@@ -98,6 +98,7 @@ func (g *gardenerAPIServer) deployment(
 							"--log-level=" + g.values.LogLevel,
 							"--log-format=" + g.values.LogFormat,
 							fmt.Sprintf("--secure-port=%d", port),
+							"--workload-identity-token-issuer=" + g.values.WorkloadIdentityTokenIssuer,
 						},
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",

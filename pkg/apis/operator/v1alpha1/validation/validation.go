@@ -90,7 +90,7 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	)
 
 	// First domain is immutable.
-	// Keep the first value immutable because components like the Gardener Discovery Server depend on it.
+	// Keep the first value immutable because components like the Gardener Discovery Server and Workload Identity depend on it.
 	if len(oldRuntimeCluster.Ingress.Domains) > 0 && len(newRuntimeCluster.Ingress.Domains) > 0 {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0], newRuntimeCluster.Ingress.Domains[0], fldPath.Child("ingress", "domains").Index(0))...)
 	}
