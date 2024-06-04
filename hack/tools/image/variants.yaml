@@ -4,6 +4,6 @@
 # - https://github.com/gardener/ci-infra/blob/master/images/krte
 variants:
   "1.21":
-    image: golang:1.21.10-bookworm
+    image: golang:1.21.11-bookworm
   "1.22":
-    image: golang:1.22.3-bookworm
+    image: golang:1.22.4-bookworm
