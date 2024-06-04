@@ -1124,7 +1124,6 @@ build:
             - pkg/component/observability/monitoring/prometheus/garden
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/auditlog.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/etcd.yaml
-            - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/garden.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/metering-meta.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/recording.yaml
             - pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/seed.yaml
