@@ -7,5 +7,5 @@ generatorOptions:
 secretGenerator:
 - files:
   - kubeconfig
-  name: seed-local-operator
+  name: seed-local
   namespace: garden
