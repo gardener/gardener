@@ -875,7 +875,6 @@ namespace: kube-system
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-			mrSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
 			hvpa := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
@@ -884,8 +883,8 @@ namespace: kube-system
 			pdb := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+
 			Expect(c.Create(ctx, mr)).To(Succeed())
-			Expect(c.Create(ctx, mrSecret)).To(Succeed())
 			Expect(c.Create(ctx, vpa)).To(Succeed())
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, service)).To(Succeed())
@@ -906,7 +905,6 @@ namespace: kube-system
 			Expect(kubeControllerManager.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(mrSecret), mrSecret)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(service), service)).To(BeNotFoundError())

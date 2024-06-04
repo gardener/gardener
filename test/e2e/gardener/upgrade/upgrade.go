@@ -7,22 +7,15 @@ package upgrade
 import (
 	"context"
 	"os"
-	"strings"
 	"time"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
-	coordinationv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -37,66 +30,6 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		gardenerCurrentGitVersion  = os.Getenv("GARDENER_NEXT_RELEASE")
 		projectNamespace           = "garden-local"
 	)
-
-	// We must not set the node CIDR in the pre-upgrade phase of the upgrade tests because it will not be handled
-	// by the Infrastructure and Worker controllers until https://github.com/gardener/gardener/pull/9752 is released
-	// (v1.96). Hence, we set it for upgrade tests from v1.95 in the post-upgrade phase.
-	// TODO(timebertt): drop this after v1.96 has been released
-	tmpPostUpgradeMigration := func(ctx context.Context, f *framework.ShootFramework) {
-		GinkgoHelper()
-
-		if !strings.HasPrefix(gardenerPreviousVersion, "v1.95.") {
-			Skip("Only relevant for upgrade tests from v1.95")
-		}
-
-		if v1beta1helper.IsWorkerless(f.Shoot) {
-			Skip("Not relevant for workerless shoots")
-		}
-
-		By("Configuring shoot nodes CIDR and reconciling Infrastructure")
-		// In the new gardener version, the VPN connection only works if the nodes CIDR is specified.
-		// Otherwise, communication with the machine pods will not be allowed anymore because we dropped the respective
-		// NetworkPolicies.
-		patch := client.MergeFrom(f.Shoot.DeepCopy())
-
-		// Add shoot node CIDR which was not specified in the pre-upgrade phase.
-		f.Shoot.Spec.Networking.Nodes = ptr.To("10.10.0.0/16")
-
-		// reconcile the Infrastructure so that the new dedicated IPPools are created by provider-local
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)
-		Expect(f.GardenClient.Client().Patch(ctx, f.Shoot, patch)).To(Succeed())
-
-		By("Waiting until MachineClass is reconciled")
-		// We need to wait until the Worker controller adds the IPPool name in the MachineClass, before recreating the
-		// machines. Otherwise, they won't get an IP address from the nodes CIDR.
-		Eventually(ctx, func(g Gomega) {
-			machineClassList := &machinev1alpha1.MachineClassList{}
-			g.Expect(f.SeedClient.Client().List(ctx, machineClassList, client.InNamespace(f.Shoot.Status.TechnicalID))).To(Succeed())
-
-			g.Expect(machineClassList.Items).NotTo(BeEmpty())
-			machineClass := machineClassList.Items[0]
-			g.Expect(string(machineClass.ProviderSpec.Raw)).To(ContainSubstring("ipPoolNameV4"))
-		}).WithTimeout(10 * time.Minute).WithPolling(10 * time.Second).Should(Succeed())
-
-		By("Recreating all machines")
-		// recreate all machines so that they get an IP address from the new IPPool, i.e., from the specified node CIDR
-		Expect(
-			f.SeedClient.Client().DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(f.Shoot.Status.TechnicalID)),
-		).To(Succeed())
-		Expect(
-			f.SeedClient.Client().DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(f.Shoot.Status.TechnicalID), client.MatchingLabels{"app": "machine"}),
-		).To(Succeed())
-
-		if !v1beta1helper.HibernationIsEnabled(f.Shoot) {
-			// dependency-watchdog (in its newest form) scales down controllers for single-node clusters too fast (e.g., if
-			// the node lease is expired). e2e test shoots are single-node clusters, so we need to clean up the orphaned lease
-			// from the previous step.
-			Expect(f.ShootClient.Client().DeleteAllOf(ctx, &coordinationv1.Lease{}, client.InNamespace("kube-node-lease"))).To(Succeed())
-		}
-
-		By("Waiting for shoot to get healthy")
-		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
-	}
 
 	test_e2e_upgrade := func(shoot *gardencorev1beta1.Shoot) {
 		var (
@@ -227,10 +160,6 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("post-upgrade migration steps for shoot nodes CIDR", func() {
-				tmpPostUpgradeMigration(ctx, f.ShootFramework)
-			})
-
 			It("should be able to upgrade a non-HA shoot which was created in previous gardener release to HA with failure tolerance type '"+os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE")+"'", func() {
 				highavailability.UpgradeAndVerify(ctx, f.ShootFramework, getFailureToleranceType())
 			})
@@ -297,10 +226,6 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(f.GetShoot(ctx, f.Shoot)).To(Succeed())
 				f.ShootFramework, err = f.NewShootFramework(ctx, f.Shoot)
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("post-upgrade migration steps for shoot nodes CIDR", func() {
-				tmpPostUpgradeMigration(ctx, f.ShootFramework)
 			})
 
 			It("should be able to wake up a shoot which was hibernated in previous gardener release", func() {

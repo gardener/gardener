@@ -5,7 +5,6 @@
 package apiserver
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,11 +18,6 @@ const ManagedResourceName = "shoot-core-kube-apiserver"
 
 func (k *kubeAPIServer) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceName, Namespace: k.namespace}}
-}
-
-func (k *kubeAPIServer) emptyManagedResourceSecret() *corev1.Secret {
-	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
 }
 
 func (k *kubeAPIServer) computeShootResourcesData() (map[string][]byte, error) {

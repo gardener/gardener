@@ -8,10 +8,8 @@ import (
 	"context"
 	"net"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -79,7 +77,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: &gardencorev1beta1.Networking{
-				Type: ptr.To("calico"),
+				Type:  ptr.To("calico"),
+				Nodes: ptr.To("10.10.0.0/16"),
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
@@ -110,17 +109,6 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				},
 			},
 		},
-	}
-
-	// We must not set the node CIDR in the pre-upgrade phase of the upgrade tests because it will not be handled
-	// by the Infrastructure and Worker controllers until https://github.com/gardener/gardener/pull/9752 is released
-	// (v1.96). Hence, we set it for upgrade tests from v1.95 in the post-upgrade phase.
-	// TODO(timebertt): drop this after v1.96 has been released
-	setNodeCIDR := !(ginkgo.Label("pre-upgrade").MatchesLabelFilter(ginkgo.GinkgoLabelFilter()) &&
-		strings.HasPrefix(os.Getenv("GARDENER_PREVIOUS_VERSION"), "v1.95."))
-
-	if setNodeCIDR {
-		shoot.Spec.Networking.Nodes = ptr.To("10.10.0.0/16")
 	}
 
 	if os.Getenv("IPFAMILY") == "ipv6" {

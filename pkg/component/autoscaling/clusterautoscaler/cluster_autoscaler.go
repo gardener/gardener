@@ -368,7 +368,6 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 		ctx,
 		c.client,
 		c.emptyManagedResource(),
-		c.emptyManagedResourceSecret(),
 		c.emptyVPA(),
 		c.emptyPodDisruptionBudget(),
 		c.emptyDeployment(),
@@ -426,11 +425,6 @@ func (c *clusterAutoscaler) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
 
 func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceTargetName, Namespace: c.namespace}}
-}
-
-func (c *clusterAutoscaler) emptyManagedResourceSecret() *corev1.Secret {
-	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + managedResourceTargetName, Namespace: c.namespace}}
 }
 
 func (c *clusterAutoscaler) computeCommand() []string {

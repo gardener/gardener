@@ -839,23 +839,7 @@ manifests:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind/skaffold
 deploy:
-  kubectl:
-    hooks:
-      before:
-        - host:
-            command:
-              # We need to wait for the new ControllerDeployment API to be available before we can deploy provider-local
-              # using the new ControllerDeployment in the v1 API version. Otherwise, the upgrade tests will fail when
-              # upgrading to the new version.
-              # TODO(timebertt): drop this after v1.96 has been released
-              - bash
-              - -ec
-              - |
-                until kubectl get controllerdeployments.v1.core.gardener.cloud >/dev/null; do 
-                  echo "Waiting for controllerdeployments.v1.core.gardener.cloud to be available..."
-                  sleep 5
-                done
-                echo "controllerdeployments.v1.core.gardener.cloud available"
+  kubectl: {}
 profiles:
   - name: ipv6
     activation:

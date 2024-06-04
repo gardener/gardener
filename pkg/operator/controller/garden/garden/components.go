@@ -63,7 +63,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
@@ -1235,15 +1234,6 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
-		// TODO(rfranzke): Remove this after v1.95 has been released.
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "garden-prometheus",
-			OldSubPath:      ptr.To("/"),
-			PVCNames: []string{
-				"prometheus-db-garden-prometheus-0",
-				"prometheus-db-garden-prometheus-1",
-			},
-		},
 	})
 }
 
@@ -1281,15 +1271,6 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 		Cortex: &prometheus.CortexValues{
 			Image:         imageCortex.String(),
 			CacheValidity: 7 * 24 * time.Hour, // 1 week
-		},
-		// TODO(rfranzke): Remove this after v1.96 has been released.
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "availability-prometheus",
-			OldSubPath:      ptr.To("/"),
-			PVCNames: []string{
-				"prometheus-availability-db-availability-prometheus-0",
-				"prometheus-availability-db-availability-prometheus-1",
-			},
 		},
 	})
 }

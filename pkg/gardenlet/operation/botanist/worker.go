@@ -19,13 +19,11 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -223,7 +221,7 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel2()
 
-	if err := retry.Until(timeoutCtx2, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
+	return retry.Until(timeoutCtx2, IntervalWaitOperatingSystemConfigUpdated, func(ctx context.Context) (done bool, err error) {
 		workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, b.ShootClientSet.Client())
 		if err != nil {
 			return retry.SevereError(err)
@@ -239,33 +237,5 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 		}
 
 		return retry.Ok()
-	}); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Drop this code after Gardener v1.95 has been released.
-	{
-		b.Logger.Info("Removing no longer required resources related to legacy cloud-config-downloader")
-
-		for _, obj := range []client.Object{
-			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-cloud-config-execution", Namespace: b.Shoot.SeedNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.SecretNamePrefixShootAccess + "cloud-config-downloader", Namespace: b.Shoot.SeedNamespace}},
-		} {
-			if err := b.SeedClientSet.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("failed to delete object %s: %w", client.ObjectKeyFromObject(obj), err)
-			}
-		}
-
-		if err := b.SeedClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{SecretLabelKeyManagedResource: "shoot-cloud-config-execution"}); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to delete cloud-config-execution related secrets: %w", err)
-		}
-
-		if b.ShootClientSet != nil {
-			if err := b.ShootClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: metav1.NamespaceSystem}}); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("failed to delete cloud-config-downloader secret in shoot: %w", err)
-			}
-		}
-	}
-
-	return nil
+	})
 }

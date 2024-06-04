@@ -3866,13 +3866,11 @@ rules:
 			Expect(c.Create(ctx, deployment)).To(Succeed())
 			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
-			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 		})
 
@@ -3880,7 +3878,6 @@ rules:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 		})
 

@@ -601,13 +601,11 @@ subjects:
 			Expect(fakeClient.Create(ctx, vpa)).To(Succeed())
 			Expect(fakeClient.Create(ctx, prometheusRule)).To(Succeed())
 			Expect(fakeClient.Create(ctx, serviceMonitor)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(mcm.Destroy(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), &monitoringv1.PrometheusRule{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())

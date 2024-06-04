@@ -74,14 +74,6 @@ type OperatingSystemConfigSpec struct {
 	// gardener-node-agent already running on a bootstrapped VM.
 	// This field is immutable.
 	Purpose OperatingSystemConfigPurpose `json:"purpose"`
-	// ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
-	// are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
-	// the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
-	// "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
-	// Deprecated: This field is deprecated and has no further usage.
-	// TODO(rfranzke): Remove this field after v1.95 got released.
-	// +optional
-	ReloadConfigFilePath *string `json:"reloadConfigFilePath,omitempty"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -209,25 +201,6 @@ type OperatingSystemConfigStatus struct {
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
-	// Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
-	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
-	// in the .spec.reloadConfigFilePath field.
-	// Deprecated: This field is deprecated and has no further usage.
-	// TODO(rfranzke): Remove this field after v1.95 got released.
-	// +optional
-	Command *string `json:"command,omitempty"`
-	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
-	// restarted when a new version has been downloaded.
-	// Deprecated: This field is deprecated and has no further usage.
-	// TODO(rfranzke): Remove this field after v1.95 got released.
-	// +optional
-	Units []string `json:"units,omitempty"`
-	// Files is a list of file paths that are part of the generated Cloud Config and shall be
-	// written to the host's file system.
-	// Deprecated: This field is deprecated and has no further usage.
-	// TODO(rfranzke): Remove this field after v1.95 got released.
-	// +optional
-	Files []string `json:"files,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system

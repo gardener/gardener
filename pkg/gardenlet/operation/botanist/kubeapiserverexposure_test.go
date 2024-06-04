@@ -79,7 +79,6 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			gateway         *istionetworkingv1beta1.Gateway
 			virtualService  *istionetworkingv1beta1.VirtualService
 			destinationRule *istionetworkingv1beta1.DestinationRule
-			ingress         *networkingv1.Ingress
 			secret          *corev1.Secret
 		)
 
@@ -128,13 +127,6 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				},
 			}
 
-			ingress = &networkingv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kube-apiserver",
-					Namespace: namespace,
-				},
-			}
-
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "wildcard-secret",
@@ -153,7 +145,6 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualService)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule), destinationRule)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
 		})
 
 		It("should not create the ingress if there is no wildcard certificate", func() {
@@ -162,20 +153,6 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualService)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule), destinationRule)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
-		})
-
-		It("should delete an existing ingress if there is no wildcard certificate", func() {
-			Expect(c.Create(ctx, gateway)).To(Succeed())
-			Expect(c.Create(ctx, virtualService)).To(Succeed())
-			Expect(c.Create(ctx, destinationRule)).To(Succeed())
-			Expect(c.Create(ctx, ingress)).To(Succeed())
-			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress = botanist.DefaultKubeAPIServerIngress()
-			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualService)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule), destinationRule)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
 		})
 	})
 })
