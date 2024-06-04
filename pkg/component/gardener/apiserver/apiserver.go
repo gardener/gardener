@@ -62,6 +62,8 @@ type Values struct {
 	LogFormat string
 	// TopologyAwareRoutingEnabled specifies where the topology-aware feature is enabled.
 	TopologyAwareRoutingEnabled bool
+	// WorkloadIdentityTokenIssuer is the issuer identifier of the workload identity tokens set in the 'iss' claim.
+	WorkloadIdentityTokenIssuer string
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.

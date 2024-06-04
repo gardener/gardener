@@ -56,6 +56,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		namespace                        = "some-namespace"
 		image                            = "gapi-image"
 		clusterIdentity                  = "cluster-id"
+		workloadIdentityIssuer           = "https://issuer.gardener.cloud.local"
 		logLevel                         = "log-level"
 		logFormat                        = "log-format"
 		replicas                   int32 = 1337
@@ -138,6 +139,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			LogFormat:                   logFormat,
 			LogLevel:                    logLevel,
 			TopologyAwareRoutingEnabled: true,
+			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
@@ -578,6 +580,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"--log-level=" + logLevel,
 								"--log-format=" + logFormat,
 								"--secure-port=8443",
+								"--workload-identity-token-issuer=" + workloadIdentityIssuer,
 								"--http2-max-streams-per-connection=1000",
 								"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
 								"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",

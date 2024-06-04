@@ -36,7 +36,8 @@ func NewGardenerAPIServer(
 	autoscalingConfig apiserver.AutoscalingConfig,
 	auditWebhookConfig *apiserver.AuditWebhook,
 	topologyAwareRoutingEnabled bool,
-	clusterIdentity string,
+	clusterIdentity,
+	workloadIdentityTokenIssuer string,
 ) (
 	gardenerapiserver.Interface,
 	error,
@@ -102,6 +103,7 @@ func NewGardenerAPIServer(
 			LogLevel:                    logLevel,
 			LogFormat:                   logger.FormatJSON,
 			TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
+			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
 }

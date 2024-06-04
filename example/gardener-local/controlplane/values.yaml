@@ -163,6 +163,9 @@ global:
     resources: {}
     podLabels:
       networking.resources.gardener.cloud/to-all-webhook-targets: allowed
+    workloadIdentity:
+      token:
+        issuer: https://issuer.gardener.cloud.local
 
   # Gardener admission controller configuration values
   admission:

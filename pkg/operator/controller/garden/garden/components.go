@@ -947,6 +947,8 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		}
 	}
 
+	workloadIdentityTokenIssuer := "https://" + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/garden/workload-identity/issuer"
+
 	return sharedcomponent.NewGardenerAPIServer(
 		ctx,
 		r.RuntimeClientSet.Client(),
@@ -959,6 +961,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		auditWebhookConfig,
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
+		workloadIdentityTokenIssuer,
 	)
 }
 

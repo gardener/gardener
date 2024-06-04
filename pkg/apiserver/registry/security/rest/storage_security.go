@@ -5,6 +5,8 @@
 package rest
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -18,7 +20,11 @@ import (
 )
 
 // StorageProvider is an empty struct.
-type StorageProvider struct{}
+type StorageProvider struct {
+	WorkloadIdentityTokenIssuer        string
+	WorkloadIdentityTokenMinExpiration time.Duration
+	WorkloadIdentityTokenMaxExpiration time.Duration
+}
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 Garden storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
@@ -38,8 +44,14 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	credentialsBindingStorage := credentialsbindingstore.NewStorage(restOptionsGetter)
 	storage["credentialsbindings"] = credentialsBindingStorage.CredentialsBinding
 
-	workloadIdentityStorage := workloadidentitystore.NewStorage(restOptionsGetter)
+	workloadIdentityStorage := workloadidentitystore.NewStorage(
+		restOptionsGetter,
+		p.WorkloadIdentityTokenIssuer,
+		p.WorkloadIdentityTokenMinExpiration,
+		p.WorkloadIdentityTokenMaxExpiration,
+	)
 	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
+	storage["workloadidentities/token"] = workloadIdentityStorage.TokenRequest
 
 	return storage
 }

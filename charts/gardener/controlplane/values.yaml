@@ -279,6 +279,11 @@ global:
  #      truncateMaxBatchSize: 10485760
  #      truncateMaxEventSize: 102400
  #      version: audit.k8s.io/v1
+    workloadIdentity:
+      token:
+        # issuer: https://issuer.gardener.cloud
+        minExpiration: 1h
+        maxExpiration: 48h
   # Gardener admission controller configuration values
   admission:
     enabled: true

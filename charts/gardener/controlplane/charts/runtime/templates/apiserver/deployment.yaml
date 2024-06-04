@@ -270,6 +270,11 @@ spec:
         - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
         {{- end }}
         {{- include "gardener-apiserver.watchCacheSizes" . | indent 8 }}
+        {{- if .Values.global.apiserver.workloadIdentity.token.issuer }}
+        - --workload-identity-token-issuer={{ .Values.global.apiserver.workloadIdentity.token.issuer }}
+        {{- end }}
+        - --workload-identity-token-min-expiration={{ .Values.global.apiserver.workloadIdentity.token.minExpiration }}
+        - --workload-identity-token-max-expiration={{ .Values.global.apiserver.workloadIdentity.token.maxExpiration }}
         - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
         - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
         - --v={{ .Values.global.apiserver.logVerbosity | default "2"  }}
