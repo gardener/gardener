@@ -67,7 +67,7 @@ If uncertain that these prerequisites are met, please contact your Gardener Admi
 
 ### Enablement
 
-If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer=managed`. Mind that once enabled, this feature cannot be disabled. After the shoot is reconciled, you can retrieve the new shoot service account issuer value from the shoot's status. A sample query that will retrieve the managed issuer looks like this:
+If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer: managed`. Mind that once enabled, this feature cannot be disabled. After the shoot is reconciled, you can retrieve the new shoot service account issuer value from the shoot's status. A sample query that will retrieve the managed issuer looks like this:
 
 ```bash
 kubectl -n my-project get shoot my-shoot -o jsonpath='{.status.advertisedAddresses[?(@.name=="service-account-issuer")].url}'
@@ -79,7 +79,7 @@ Mind that this annotation is incompatible with the `.spec.kubernetes.kubeAPIServ
 
 > [!CAUTION]
 > If you change from the default issuer to a managed issuer, all previously issued tokens will still be valid/accepted.
-> However, if you change from a custom `issuer` `A` to a managed issuer, then you have to add `A` to the `acceptedIssuers` so that previously issued tokens are not invalidated.
+> However, if you change from a custom `issuer` `A` to a managed issuer, then you have to add `A` to the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers` so that previously issued tokens are not invalidated.
 > Otherwise, the control plane components as well as system components and your workload pods might fail.
 > You can remove `A` from the `acceptedIssuers` when all currently active tokens have been issued solely by the managed issuer.
 > This can be ensured by using [projected token volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) with a short validity, or by rolling out all pods.
