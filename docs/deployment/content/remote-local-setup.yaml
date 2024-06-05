@@ -1,12 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: remote-local-setup
   labels: {component: remote-local-setup}
 spec:
   selector:
     matchLabels: {component: remote-local-setup}
-  strategy: {type: Recreate}
   template:
     metadata:
       labels: {component: remote-local-setup}
@@ -55,7 +54,7 @@ spec:
             set -g pane-border-status top
             set -g pane-border-format " #{pane_index} #{pane_title} - #{pane_current_command} "
           EOF
-          git clone -q https://github.com/gardener/gardener.git
+          [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener.git
           dockerd-entrypoint.sh &
           until docker ps >/dev/null 2>&1; do sleep 1; done
           tmux new -d -s gardener -n gardener
@@ -91,7 +90,16 @@ spec:
         # https://github.com/kubernetes/test-infra/blob/dcf27e157932c3e8680be4ae6cb8a4e2c7acf8cf/config/prow/config.yaml#L978-L988
         # https://github.com/gardener/ci-infra/blob/dff565bced0f386dd1acb0743beb3831dae6c10d/config/prow/config.yaml#L288-L298
         - {name: cgroup,  mountPath: /sys/fs/cgroup}
+        - {name: home,    mountPath: /root}
         - {name: modules, mountPath: /lib/modules, readOnly: true}
       volumes:
       - {name: cgroup,  hostPath: {type: Directory, path: /sys/fs/cgroup}}
       - {name: modules, hostPath: {type: Directory, path: /lib/modules}}
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata: {name: home}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: {requests: {storage: 80Gi}}
+      volumeMode: Filesystem

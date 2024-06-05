@@ -21,7 +21,7 @@ When deploying Gardener on your local machine you might face several limitations
 
 In these cases, you might want to check out one of the following options that run the setup described in this guide elsewhere for circumventing these limitations:
 
-- [remote local setup](../development/getting_started_locally.md#remote-local-setup): deploy on a remote pod for more compute resources
+- [remote local setup](#remote-local-setup): deploy on a remote pod for more compute resources
 - [dev box on Google Cloud](https://github.com/gardener-community/dev-box-gcp): deploy on a Google Cloud machine for more compute resource and/or simple IPv4/IPv6 dual-stack networking
 
 ## Prerequisites
@@ -376,7 +376,7 @@ aka "local setup", in a "remote" K8s pod.
 
 ```shell
 k apply -f docs/deployment/content/remote-local-setup.yaml
-k exec -it deployment/remote-local-setup -- sh
+k exec -it remote-local-setup-0 -- sh
 
 tmux -u a
 ```
@@ -391,7 +391,7 @@ To access Plutono, Prometheus or other components in a browser, two port forward
 The port forward from the laptop to the pod:
 
 ```shell
-k port-forward deployment/remote-local-setup 3000
+k port-forward remote-local-setup-0 3000
 ```
 
 The port forward in the remote-local-setup pod to the respective component:
