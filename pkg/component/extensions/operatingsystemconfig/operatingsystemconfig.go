@@ -68,6 +68,10 @@ var TimeNow = time.Now
 // Interface is an interface for managing OperatingSystemConfigs.
 type Interface interface {
 	component.DeployMigrateWaiter
+	// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
+	// secret.
+	// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
+	MigrateWorkerPoolHashes(context.Context) error
 	// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
@@ -225,7 +229,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	if err := o.updateHashVersioningSecret(ctx); err != nil {
+	if err := o.updateHashVersioningSecret(ctx, false); err != nil {
 		return err
 	}
 
@@ -242,6 +246,12 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
+// secret.
+func (o *operatingSystemConfig) MigrateWorkerPoolHashes(ctx context.Context) error {
+	return o.updateHashVersioningSecret(ctx, true)
 }
 
 type poolHash struct {
@@ -287,14 +297,26 @@ func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
 	return nil
 }
 
-func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) error {
+// TODO(MichaelEischer) Remove migrateOnly parameter once version 1.99 is released
+func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, migrateOnly bool) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
 	}
+	if migrateOnly {
+		// do not create the secret if it does not exist yet.
+		if err := o.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
 		workerPoolNameToHashEntry, migrated, err := decodePoolHashes(secret)
 		if err != nil {
 			return err
+		}
+
+		if migrateOnly && !migrated {
+			return nil
 		}
 
 		var pools poolHash

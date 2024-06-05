@@ -129,6 +129,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.EnsureShootClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+		// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
+		migrateOperatingSystemConfigPoolHashes = g.Add(flow.Task{
+			Name:         "Applying inital rollout migration for operating system config hash calculation",
+			Fn:           flow.TaskFn(botanist.MigrateOperatingSystemConfigWorkerPoolHashes).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -541,7 +548,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(migrateOperatingSystemConfigPoolHashes, deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name: "Waiting until operating system configurations for worker nodes have been reconciled",

@@ -92,6 +92,13 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	), nil
 }
 
+// MigrateOperatingSystemConfigWorkerPoolHashes performs migration steps for the initial rollout of the
+// operating system config hash calculation.
+// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
+func (b *Botanist) MigrateOperatingSystemConfigWorkerPoolHashes(ctx context.Context) error {
+	return b.Shoot.Components.Extensions.OperatingSystemConfig.MigrateWorkerPoolHashes(ctx)
+}
+
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
