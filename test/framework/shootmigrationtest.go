@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,6 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/test/utils/access"
 )
@@ -427,6 +429,16 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 		return fmt.Errorf("the following object(s) still exists in the source seed %v", leakedObjects)
 	}
 	return nil
+}
+
+// MarkOSCSecret marks the operating system config pool hashes secret to verify that it is correctly migrated
+func (t ShootMigrationTest) MarkOSCSecret(ctx context.Context) error {
+	secret := &corev1.Secret{}
+	if err := t.SourceSeedClient.Client().Get(ctx, types.NamespacedName{Namespace: t.SeedShootNamespace, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, secret); err != nil {
+		return err
+	}
+	metav1.SetMetaDataLabel(&secret.ObjectMeta, "gardener.cloud/custom-test-annotation", "test")
+	return t.SourceSeedClient.Client().Update(ctx, secret)
 }
 
 // CreateSecretAndServiceAccount creates test secret and service account

@@ -5,6 +5,7 @@
 package operatingsystemconfig
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -12,10 +13,12 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -50,7 +53,14 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
 	// of an OperatingSystemConfig resource.
 	DefaultTimeout = 3 * time.Minute
+	// WorkerPoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
+	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes"
+	// poolHashesDataKey is the key in the data of the WorkerPoolHashesSecretName used to store the calculated hashes.
+	poolHashesDataKey = "pools"
 )
+
+// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
+var LatestHashVersion = 1
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
@@ -58,6 +68,10 @@ var TimeNow = time.Now
 // Interface is an interface for managing OperatingSystemConfigs.
 type Interface interface {
 	component.DeployMigrateWaiter
+	// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
+	// secret.
+	// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
+	MigrateWorkerPoolHashes(context.Context) error
 	// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
@@ -68,9 +82,9 @@ type Interface interface {
 	SetCABundle(*string)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
-	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
+	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
 	// containing both the init and the original operating system config data.
-	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
+	WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -144,11 +158,11 @@ func New(
 		waitTimeout:         waitTimeout,
 	}
 
-	osc.workerNameToOSCs = make(map[string]*OperatingSystemConfigs, len(values.Workers))
+	osc.workerPoolNameToOSCs = make(map[string]*OperatingSystemConfigs, len(values.Workers))
 	for _, worker := range values.Workers {
-		osc.workerNameToOSCs[worker.Name] = &OperatingSystemConfigs{}
+		osc.workerPoolNameToOSCs[worker.Name] = &OperatingSystemConfigs{}
 	}
-	osc.oscs = make(map[string]*extensionsv1alpha1.OperatingSystemConfig, len(osc.workerNameToOSCs)*2)
+	osc.oscs = make(map[string]*extensionsv1alpha1.OperatingSystemConfig, len(osc.workerPoolNameToOSCs)*2)
 
 	return osc
 }
@@ -163,9 +177,10 @@ type operatingSystemConfig struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	lock             sync.Mutex
-	workerNameToOSCs map[string]*OperatingSystemConfigs
-	oscs             map[string]*extensionsv1alpha1.OperatingSystemConfig
+	lock                        sync.Mutex
+	workerPoolNameToOSCs        map[string]*OperatingSystemConfigs
+	oscs                        map[string]*extensionsv1alpha1.OperatingSystemConfig
+	workerPoolNameToHashVersion map[string]int
 }
 
 // OperatingSystemConfigs contains operating system configs for the init script as well as for the original config.
@@ -214,23 +229,216 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d, err := o.newDeployer(osc, worker, purpose)
+	if err := o.updateHashVersioningSecret(ctx, false); err != nil {
+		return err
+	}
+
+	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(_ context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+		d, err := o.newDeployer(hashVersion, osc, worker, purpose)
 		if err != nil {
 			return err
 		}
 
 		return reconcileFn(d)
 	})
+	if err != nil {
+		return err
+	}
 
 	return flow.Parallel(fns...)(ctx)
 }
 
+// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
+// secret.
+func (o *operatingSystemConfig) MigrateWorkerPoolHashes(ctx context.Context) error {
+	return o.updateHashVersioningSecret(ctx, true)
+}
+
+type poolHash struct {
+	Pools    []poolHashEntry `yaml:"pools"`
+	Migrated *bool           `yaml:"migrated,omitempty"`
+}
+
+type poolHashEntry struct {
+	Name                string         `yaml:"name"`
+	CurrentVersion      int            `yaml:"currentVersion"`
+	HashVersionToOSCKey map[int]string `yaml:"hashVersionToOSCKey"`
+}
+
+func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, error) {
+	var pools poolHash
+
+	versions := secret.Data[poolHashesDataKey]
+	if len(versions) > 0 {
+		if err := yaml.NewDecoder(bytes.NewReader(versions)).Decode(&pools); err != nil {
+			return nil, false, err
+		}
+	}
+
+	workerPoolNameToHashEntry := make(map[string]poolHashEntry)
+	for _, entry := range pools.Pools {
+		workerPoolNameToHashEntry[entry.Name] = entry
+	}
+
+	return workerPoolNameToHashEntry, ptr.Deref(pools.Migrated, false), nil
+}
+
+func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	if err := enc.Encode(&pools); err != nil {
+		return err
+	}
+
+	if secret.Data == nil {
+		secret.Data = map[string][]byte{}
+	}
+	secret.Data[poolHashesDataKey] = buf.Bytes()
+	return nil
+}
+
+// TODO(MichaelEischer) Remove migrateOnly parameter once version 1.99 is released
+func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, migrateOnly bool) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
+	}
+	if migrateOnly {
+		// do not create the secret if it does not exist yet.
+		if err := o.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
+		workerPoolNameToHashEntry, migrated, err := decodePoolHashes(secret)
+		if err != nil {
+			return err
+		}
+
+		if migrateOnly && !migrated {
+			return nil
+		}
+
+		var pools poolHash
+		for _, worker := range o.values.Workers {
+			if worker.Machine.Image == nil {
+				continue
+			}
+
+			workerHash, ok := workerPoolNameToHashEntry[worker.Name]
+			if !ok {
+				workerHash.Name = worker.Name
+				if migrated {
+					workerHash.CurrentVersion = 1
+				} else {
+					workerHash.CurrentVersion = LatestHashVersion
+				}
+			}
+
+			// check if hashes still match
+			hashHasChanged := false
+			for version, hash := range workerHash.HashVersionToOSCKey {
+				expectedHash, err := o.calculateKeyForVersion(version, &worker)
+				if err != nil {
+					return err
+				}
+				if hash != expectedHash {
+					hashHasChanged = true
+					break
+				}
+			}
+
+			if hashHasChanged {
+				workerHash.CurrentVersion = LatestHashVersion
+			}
+
+			// calculate expected hashes
+			currentHash, err := o.calculateKeyForVersion(workerHash.CurrentVersion, &worker)
+			if err != nil {
+				return err
+			}
+			latestHash, err := o.calculateKeyForVersion(LatestHashVersion, &worker)
+			if err != nil {
+				return err
+			}
+
+			// rebuild hashes
+			clear(workerHash.HashVersionToOSCKey)
+			if workerHash.HashVersionToOSCKey == nil {
+				workerHash.HashVersionToOSCKey = map[int]string{}
+			}
+			workerHash.HashVersionToOSCKey[workerHash.CurrentVersion] = currentHash
+			workerHash.HashVersionToOSCKey[LatestHashVersion] = latestHash
+
+			// update secret
+			workerPoolNameToHashEntry[worker.Name] = workerHash
+
+			pools.Pools = append(pools.Pools, workerHash)
+		}
+
+		if err := encodePoolHashes(&pools, secret); err != nil {
+			return err
+		}
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyPersist, "true")
+		secret.Type = corev1.SecretTypeOpaque
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	workerPoolNameToHashEntry, _, err := decodePoolHashes(secret)
+	if err != nil {
+		return err
+	}
+
+	o.workerPoolNameToHashVersion = make(map[string]int, len(workerPoolNameToHashEntry))
+	for name, entry := range workerPoolNameToHashEntry {
+		o.workerPoolNameToHashVersion[name] = entry.CurrentVersion
+	}
+
+	return nil
+}
+
+func (o *operatingSystemConfig) hashVersion(workerPoolName string) (int, error) {
+	// updateHashVersioningSecret() is currently always called before this method
+	// thus just implement a sanity check instead of querying the hash version secret
+	if o.workerPoolNameToHashVersion == nil {
+		return 0, fmt.Errorf("hash version not yet synced")
+	}
+
+	if version, ok := o.workerPoolNameToHashVersion[workerPoolName]; ok {
+		return version, nil
+	}
+	return 0, fmt.Errorf("no version available for %v", workerPoolName)
+}
+
+// CreateMigrationSecret creates a pool-hash secret for initially deploying the
+// pool hash secret into a shoot (namespace).
+func CreateMigrationSecret(namespace string) (*corev1.Secret, error) {
+	pools := poolHash{
+		Migrated: ptr.To(true),
+	}
+
+	var buf bytes.Buffer
+	if err := yaml.NewEncoder(&buf).Encode(&pools); err != nil {
+		return nil, err
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: WorkerPoolHashesSecretName},
+		Type:       corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			poolHashesDataKey: buf.Bytes(),
+		},
+	}, nil
+}
+
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
-// containing the cloud-config and stores its data which can later be retrieved with the WorkerNameToOperatingSystemConfigsMap
+// containing the cloud-config and stores its data which can later be retrieved with the WorkerPoolNameToOperatingSystemConfigsMap
 // method.
 func (o *operatingSystemConfig) Wait(ctx context.Context) error {
-	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		return extensions.WaitUntilExtensionObjectReady(ctx,
 			o.client,
 			o.log,
@@ -249,11 +457,10 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					return err
 				}
 
-				kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+				oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
 				if err != nil {
 					return err
 				}
-				oscKey := Key(worker.Name, kubernetesVersion, worker.CRI)
 
 				data := Data{
 					Object:                      osc,
@@ -267,9 +474,9 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 				switch purpose {
 				case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-					o.workerNameToOSCs[worker.Name].Init = data
+					o.workerPoolNameToOSCs[worker.Name].Init = data
 				case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-					o.workerNameToOSCs[worker.Name].Original = data
+					o.workerPoolNameToOSCs[worker.Name].Original = data
 				default:
 					return fmt.Errorf("unknown purpose %q", purpose)
 				}
@@ -278,6 +485,9 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 			},
 		)
 	})
+	if err != nil {
+		return err
+	}
 
 	return flow.ParallelExitOnError(fns...)(ctx)
 }
@@ -309,7 +519,14 @@ func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes all the OperatingSystemConfig resources.
 func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
-	return o.deleteOperatingSystemConfigResources(ctx, sets.New[string]())
+	if err := o.deleteOperatingSystemConfigResources(ctx, sets.New[string]()); err != nil {
+		return err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
+	}
+	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
 }
 
 func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.Set[string]) error {
@@ -373,36 +590,46 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			continue
 		}
 
+		version, err := o.hashVersion(worker.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		for _, purpose := range []extensionsv1alpha1.OperatingSystemConfigPurpose{
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			oscKey, err := o.calculateKeyForVersion(version, &worker)
 			if err != nil {
 				return nil, err
 			}
-			wantedOSCNames.Insert(Key(worker.Name, kubernetesVersion, worker.CRI) + keySuffix(worker.Machine.Image.Name, purpose))
+			wantedOSCNames.Insert(oscKey + keySuffix(worker.Machine.Image.Name, purpose))
 		}
 	}
 
 	return wantedOSCNames, nil
 }
 
-func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) error {
+func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) error {
 	for _, worker := range o.values.Workers {
 		if worker.Machine.Image == nil {
 			continue
+		}
+
+		version, err := o.hashVersion(worker.Name)
+		if err != nil {
+			return err
 		}
 
 		for _, purpose := range []extensionsv1alpha1.OperatingSystemConfigPurpose{
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			oscKey, err := o.calculateKeyForVersion(version, &worker)
 			if err != nil {
 				return err
 			}
-			oscName := Key(worker.Name, kubernetesVersion, worker.CRI) + keySuffix(worker.Machine.Image.Name, purpose)
+			oscName := oscKey + keySuffix(worker.Machine.Image.Name, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -416,7 +643,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 				o.oscs[oscName] = osc
 			}
 
-			if err := fn(osc, worker, purpose); err != nil {
+			if err := fn(version, osc, worker, purpose); err != nil {
 				return err
 			}
 		}
@@ -425,17 +652,17 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 	return nil
 }
 
-func (o *operatingSystemConfig) forEachWorkerPoolAndPurposeTaskFn(fn func(context.Context, *extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) []flow.TaskFn {
+func (o *operatingSystemConfig) forEachWorkerPoolAndPurposeTaskFn(fn func(context.Context, int, *extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) ([]flow.TaskFn, error) {
 	var fns []flow.TaskFn
 
-	_ = o.forEachWorkerPoolAndPurpose(func(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+	err := o.forEachWorkerPoolAndPurpose(func(version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		fns = append(fns, func(ctx context.Context) error {
-			return fn(ctx, osc, worker, purpose)
+			return fn(ctx, version, osc, worker, purpose)
 		})
 		return nil
 	})
 
-	return fns
+	return fns, err
 }
 
 // SetAPIServerURL sets the APIServerURL value.
@@ -453,13 +680,13 @@ func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
 }
 
-// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
+// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
 // containing both the init script and the original config.
-func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
-	return o.workerNameToOSCs
+func (o *operatingSystemConfig) WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
+	return o.workerPoolNameToOSCs
 }
 
-func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
+func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
 	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
@@ -507,12 +734,17 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
 	}
 
+	oscKey, err := o.calculateKeyForVersion(version, &worker)
+	if err != nil {
+		return deployer{}, err
+	}
+
 	return deployer{
 		client:                  o.client,
 		osc:                     osc,
 		worker:                  worker,
 		purpose:                 purpose,
-		key:                     Key(worker.Name, kubernetesVersion, worker.CRI),
+		key:                     oscKey,
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterCASecretName:     clusterCASecret.Name,
@@ -696,9 +928,30 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
+func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gardencorev1beta1.Worker) (string, error) {
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+	if err != nil {
+		return "", err
+	}
+
+	return CalculateKeyForVersion(version, kubernetesVersion, worker)
+}
+
+// CalculateKeyForVersion is exposed for testing purposes only
+var CalculateKeyForVersion = calculateKeyForVersion
+
+func calculateKeyForVersion(oscVersion int, kubernetesVersion *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+	switch oscVersion {
+	case 1:
+		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
+	default:
+		return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+	}
+}
+
+// KeyV1 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
 // configuration.
-func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
+func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
@@ -712,7 +965,7 @@ func Key(workerName string, kubernetesVersion *semver.Version, criConfig *garden
 		criName = criConfig.Name
 	}
 
-	return fmt.Sprintf("gardener-node-agent-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
+	return fmt.Sprintf("gardener-node-agent-%s-%s", workerPoolName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {

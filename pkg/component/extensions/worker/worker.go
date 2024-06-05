@@ -49,7 +49,7 @@ type Interface interface {
 	component.DeployMigrateWaiter
 	SetSSHPublicKey([]byte)
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
-	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
+	SetWorkerPoolNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
 	WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx context.Context) error
 }
@@ -75,8 +75,8 @@ type Values struct {
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
 	// the Worker reconciliation.
 	InfrastructureProviderStatus *runtime.RawExtension
-	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
-	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
+	// WorkerPoolNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
+	WorkerPoolNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
 }
@@ -166,7 +166,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
-		oscConfig, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]
+		oscConfig, ok := w.values.WorkerPoolNameToOperatingSystemConfigsMap[workerPool.Name]
 		if !ok {
 			return nil, fmt.Errorf("missing operating system config for worker pool %v", workerPool.Name)
 		}
@@ -385,9 +385,9 @@ func (w *worker) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
 	w.values.InfrastructureProviderStatus = status
 }
 
-// SetWorkerNameToOperatingSystemConfigsMap sets the operating system config maps in the values.
-func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
-	w.values.WorkerNameToOperatingSystemConfigsMap = maps
+// SetWorkerPoolNameToOperatingSystemConfigsMap sets the operating system config maps in the values.
+func (w *worker) SetWorkerPoolNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+	w.values.WorkerPoolNameToOperatingSystemConfigsMap = maps
 }
 
 // MachineDeployments returns the generated machine deployments of the Worker.

@@ -62,7 +62,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
-	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
+	b.Shoot.Components.Extensions.Worker.SetWorkerPoolNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap())
 
 	if b.IsRestorePhase() {
 		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.Shoot.GetShootState())
@@ -191,7 +191,7 @@ func nodeUsesOutdatedGardenerNodeAgentSecret(node corev1.Node, gardenerNodeAgent
 		criConfig = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName(v)}
 	}
 
-	return operatingsystemconfig.Key(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
+	return operatingsystemconfig.KeyV1(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
 }
 
 // exposed for testing

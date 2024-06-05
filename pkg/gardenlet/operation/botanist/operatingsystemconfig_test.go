@@ -192,12 +192,12 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			worker1Name            = "worker1"
 			worker1OriginalContent = "w1content"
-			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion), nil)
+			worker1Key             = operatingsystemconfig.KeyV1(worker1Name, semver.MustParse(kubernetesVersion), nil)
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
 			worker2KubernetesVersion     = "4.5.6"
-			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
+			worker2Key                   = operatingsystemconfig.KeyV1(worker2Name, semver.MustParse(worker2KubernetesVersion), nil)
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
@@ -269,14 +269,14 @@ var _ = Describe("operatingsystemconfig", func() {
 			})
 
 			It("should fail because the operating system config maps for a worker pool are not available", func() {
-				operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(nil)
+				operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(nil)
 
 				Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx)).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
 			})
 
 			When("operating system config maps are available", func() {
 				BeforeEach(func() {
-					operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+					operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
 				})
 
 				It("should fail because the secret data generation function fails", func() {

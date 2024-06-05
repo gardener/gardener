@@ -63,9 +63,8 @@ var _ = Describe("Shoot State controller tests", func() {
 				Name:      "some-secret",
 				Namespace: seedNamespace.Name,
 				Labels: map[string]string{
-					testID:       testRunID,
-					"managed-by": "secrets-manager",
-					"persist":    "true",
+					testID:    testRunID,
+					"persist": "true",
 				},
 			},
 		}
