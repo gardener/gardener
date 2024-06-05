@@ -1,12 +1,23 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "description": "Vali logs panel with prometheus variables",
   "editable": true,
   "gnetId": 12019,
   "graphTooltip": 0,
-  "iteration": 1598257551684,
+  "id": 4,
+  "iteration": 1717577367954,
   "links": [],
   "panels": [
     {
@@ -21,9 +32,7 @@
       "datasource": "prometheus",
       "description": "Nodes which have status \"Ready\"",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -74,7 +83,7 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "seed:kube_node_status_condition:sum_by_condition{condition=\"Ready\", instance=\"10.223.131.28:9090\", job=\"prometheus\", status=\"true\"}",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "seed:kube_node_status_condition:sum_by_condition{condition=\"Ready\",status=\"true\"}",
@@ -113,9 +122,7 @@
       "datasource": "prometheus",
       "description": "Nodes which do not have status \"Ready\"",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "short",
@@ -204,9 +211,7 @@
       "datasource": "prometheus",
       "description": "CPU  utilisation of all nodes.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -298,9 +303,7 @@
       "datasource": "prometheus",
       "description": "Memory  utilisation of all nodes.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -392,9 +395,7 @@
       "datasource": "prometheus",
       "description": "CPU  requests commitment of all pods.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -448,7 +449,7 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "{instance=\"10.223.131.28:9090\", job=\"prometheus\"}",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "seed:kube_pod_container_resource_requests_cpu_cores:sum / seed:kube_node_status_allocatable_cpu_cores:sum",
@@ -486,9 +487,7 @@
       "datasource": "prometheus",
       "description": "Memory  requests commitment of all pods.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -542,7 +541,7 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "{instance=\"10.223.131.28:9090\", job=\"prometheus\"}",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "seed:kube_pod_container_resource_requests_memory_bytes:sum / seed:kube_node_status_allocatable_memory_bytes:sum",
@@ -580,9 +579,7 @@
       "datasource": "prometheus",
       "description": "CPU  limits commitment of all pods.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -674,9 +671,7 @@
       "datasource": "prometheus",
       "description": "Memory  limits commitment of all pods.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "percentunit",
@@ -730,7 +725,7 @@
         "ymax": null,
         "ymin": null
       },
-      "tableColumn": "{instance=\"10.223.131.28:9090\", job=\"prometheus\"}",
+      "tableColumn": "",
       "targets": [
         {
           "expr": "seed:kube_pod_container_resource_limits_memory_bytes:sum / seed:kube_node_status_allocatable_memory_bytes:sum",
@@ -764,7 +759,7 @@
       "datasource": "vali",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "links": []
         },
         "overrides": []
       },
@@ -791,9 +786,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.30",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -811,7 +807,6 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -851,9 +846,7 @@
     {
       "datasource": "vali",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "gridPos": {
@@ -865,6 +858,7 @@
       "id": 43,
       "maxDataPoints": "",
       "options": {
+        "dedupStrategy": "none",
         "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
@@ -882,7 +876,7 @@
       "type": "logs"
     }
   ],
-  "schemaVersion": 25,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -890,12 +884,14 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "containerd",
           "value": "containerd"
         },
         "datasource": "vali",
         "definition": "label_values(systemd_component)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Unit",
@@ -919,6 +915,8 @@
           "text": "",
           "value": ""
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "label": null,
         "name": "search",
