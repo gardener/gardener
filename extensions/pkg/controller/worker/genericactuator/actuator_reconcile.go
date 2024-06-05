@@ -46,12 +46,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
 	}
 
-	// Get the list of all existing machine deployments.
-	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
-	}
-
 	// Generate the desired machine deployments.
 	log.Info("Generating machine deployments")
 	wantedMachineDeployments, err := workerDelegate.GenerateMachineDeployments(ctx)
@@ -81,9 +75,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to update the machine image status: %w", err)
 	}
 
-	existingMachineDeploymentNames := sets.Set[string]{}
-	for _, deployment := range existingMachineDeployments.Items {
-		existingMachineDeploymentNames.Insert(deployment.Name)
+	// Get the list of all existing machine deployments.
+	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		return err
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
@@ -97,7 +92,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Wait until all generated machine deployments are healthy/available.
-	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, log, cluster, worker, existingMachineDeploymentNames, existingMachineClassNames, wantedMachineDeployments); err != nil {
+	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, log, cluster, worker, existingMachineDeployments, existingMachineClassNames, wantedMachineDeployments); err != nil {
 		// check if the machine-controller-manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
@@ -292,7 +287,12 @@ func deployMachineDeployments(
 
 // waitUntilWantedMachineDeploymentsAvailable waits until all the desired <machineDeployments> were marked as healthy /
 // available by the machine-controller-manager. It polls the status every 5 seconds.
-func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.Set[string], alreadyExistingMachineClassNames sets.Set[string], wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
+func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, alreadyExistingMachineClassNames sets.Set[string], wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
+	alreadyExistingMachineDeploymentNames := sets.Set[string]{}
+	for _, deployment := range existingMachineDeployments.Items {
+		alreadyExistingMachineDeploymentNames.Insert(deployment.Name)
+	}
+
 	log.Info("Waiting until wanted machine deployments are available")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
