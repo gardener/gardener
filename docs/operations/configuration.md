@@ -79,7 +79,7 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
   * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured.
     > [!CAUTION]
     > [Gardener Operator](../concepts/operator.md) manages this field automatically if Gardener Discovery Server is enabled and as of now does not provide a way to change the default value of it.
-    > It calculates it based on the first ingress domain for the runtime Garden cluster. The domain is prefixed with "discovery." following the formula `discovery.{garden.spec.runtimeCluster.ingress.domains[0]}`.
+    > It calculates it based on the first ingress domain for the runtime Garden cluster. The domain is prefixed with "discovery." using the formula `discovery.{garden.spec.runtimeCluster.ingress.domains[0]}`.
     > If you are not yet using Gardener Operator, but plan to enable the `ShootManagedIssuer` feature gate it is **EXTREMELY** important to follow the same convention as Gardener Operator
     > so that during migration to Gardener Operator the `hostname` can stay the same and avoid disruptions for shoots that already have a managed service account issuer.
 
