@@ -46,12 +46,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("pre worker reconciliation hook failed: %w", err)
 	}
 
-	// Get the list of all existing machine deployments.
-	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
-	}
-
 	// Generate the desired machine deployments.
 	log.Info("Generating machine deployments")
 	wantedMachineDeployments, err := workerDelegate.GenerateMachineDeployments(ctx)
@@ -79,6 +73,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// Update the machine images in the worker provider status.
 	if err := workerDelegate.UpdateMachineImagesStatus(ctx); err != nil {
 		return fmt.Errorf("failed to update the machine image status: %w", err)
+	}
+
+	// Get the list of all existing machine deployments.
+	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := a.seedClient.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		return err
 	}
 
 	existingMachineDeploymentNames := sets.Set[string]{}
