@@ -46,19 +46,6 @@ config:
     IPv6SingleStack: true
     ShootManagedIssuer: true
   etcdConfig:
-    etcdController:
-      workers: 3
-    custodianController:
-      workers: 3
-    backupCompactionController:
-      workers: 3
-      enableBackupCompaction: true
-      eventsThreshold: 20
-      activeDeadlineDuration: "1h"
-      metricsScrapeWaitDuration: "30s"
-    backupLeaderElection:
-      reelectionPeriod: 5s
-      etcdConnectionTimeout: 5s
     featureGates:
       UseEtcdWrapper: true
   logging:
