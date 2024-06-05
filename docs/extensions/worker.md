@@ -70,6 +70,7 @@ spec:
     machineImage:
       name: coreos
       version: 1967.5.0
+    nodeAgentSecretName: gardener-node-agent-ee46034b8269353b
     nodeTemplate:
       capacity:
         cpu: 2
@@ -269,7 +270,8 @@ for the second availability zone `eu-west-1c`.
 
 Another convention is the 5-letter hash at the end of the machine class names.
 Most controllers compute a checksum out of the specification of the machine class.
-This helps to trigger a rolling update of the worker nodes if, for example, the machine image version changes.
+Any change to the `nodeAgentSecretName` field must result in a change of the machine class name.
+The checksum in the machine class name helps to trigger a rolling update of the worker nodes if, for example, the machine image version changes.
 In this case, a new checksum will be generated which results in the creation of a new machine class.
 The `MachineDeployment`'s machine class reference (`.spec.template.spec.class.name`) is updated, which triggers the rolling update process in the machine-controller-manager.
 However, all of this is only a convention that eases writing the controller, but you can do it completely differently if you desire - as long as you make sure that the described behaviours are implemented correctly.
