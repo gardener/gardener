@@ -1016,6 +1016,7 @@ func KeyV2(
 	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 
 	data := []string{
+		worker.Name,
 		kubernetesMajorMinorVersion,
 		worker.Machine.Type,
 		worker.Machine.Image.Name + *worker.Machine.Image.Version,
