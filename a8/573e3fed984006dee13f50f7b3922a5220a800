@@ -1,0 +1,6 @@
+meta:
+  data:
+    checked_at: 1717679275322
+    prs:
+    - 9929
+  type: gardener.cloud/release-notes-metadata/v1
