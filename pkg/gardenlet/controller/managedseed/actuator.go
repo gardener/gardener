@@ -556,7 +556,7 @@ func (a *actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	if shoot.Spec.SecretBindingName == nil && shoot.Spec.CredentialsBindingName == nil {
-		return nil, fmt.Errorf("secretbinding name and credentialsbinding name are both nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
+		return nil, fmt.Errorf("both secretBindingName and credentialsBindingName are nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
 	}
 	if shoot.Spec.SecretBindingName != nil {
 		shootSecretBinding := &gardencorev1beta1.SecretBinding{}
@@ -578,8 +578,8 @@ func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.
 			Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
 		},
 	}
-	err := a.gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-	return secret, err
+
+	return secret, a.gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 }
 
 func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {

@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -476,7 +475,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 		secretRef.Name = *primaryProvider.SecretName
 		secretRef.Namespace = shoot.Namespace
 	} else if shoot.Spec.SecretBindingName != nil {
-		secretBinding, err := v.getSecretBinding(shoot.Namespace, *shoot.Spec.SecretBindingName)
+		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("secret binding %s/%s not found", shoot.Namespace, *shoot.Spec.SecretBindingName)
@@ -486,7 +485,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 		secretRef = secretBinding.SecretRef
 	} else if shoot.Spec.CredentialsBindingName != nil {
 		// TODO(dimityrmirchev): This code should eventually handle references to workload identity
-		credentialsBinding, err := v.getCredentialsBinding(shoot.Namespace, *shoot.Spec.CredentialsBindingName)
+		credentialsBinding, err := v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("credentials binding %s/%s not found", shoot.Namespace, *shoot.Spec.CredentialsBindingName)
@@ -509,7 +508,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 
 func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Get all default domain secrets in the garden namespace
-	defaultDomainSecrets, err := v.getSecrets(v1beta1constants.GardenNamespace, labels.SelectorFromValidatedSet(map[string]string{
+	defaultDomainSecrets, err := v.secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.SelectorFromValidatedSet(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 	}))
 	if err != nil {
@@ -546,16 +545,4 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	}
 
 	return shoot, err
-}
-
-func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencorev1beta1.SecretBinding, error) {
-	return v.secretBindingLister.SecretBindings(namespace).Get(name)
-}
-
-func (v *ManagedSeed) getCredentialsBinding(namespace, name string) (*securityv1alpha1.CredentialsBinding, error) {
-	return v.credentialsBindingLister.CredentialsBindings(namespace).Get(name)
-}
-
-func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {
-	return v.secretLister.Secrets(namespace).List(selector)
 }

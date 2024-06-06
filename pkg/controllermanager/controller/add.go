@@ -64,6 +64,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		return fmt.Errorf("failed adding ControllerRegistration controller: %w", err)
 	}
 
+	if err := (&credentialsbinding.Reconciler{
+		Config: *cfg.Controllers.CredentialsBinding,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding CredentialsBinding controller: %w", err)
+	}
+
 	if config := cfg.Controllers.Event; config != nil {
 		if err := (&event.Reconciler{
 			Config: *config,
@@ -98,12 +104,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		Config: *cfg.Controllers.SecretBinding,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
-	}
-
-	if err := (&credentialsbinding.Reconciler{
-		Config: *cfg.Controllers.CredentialsBinding,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding CredentialsBinding controller: %w", err)
 	}
 
 	if err := seed.AddToManager(ctx, mgr, *cfg); err != nil {

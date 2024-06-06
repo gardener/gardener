@@ -12,6 +12,8 @@ controllers:
     concurrentSyncs: 5
   secretBinding:
     concurrentSyncs: 5
+  credentialsBinding:
+    concurrentSyncs: 5
   seed:
     concurrentSyncs: 5
     syncPeriod: 10s

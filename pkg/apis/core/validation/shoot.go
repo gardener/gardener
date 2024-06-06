@@ -324,7 +324,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfileName"))...)
-	// allow removing the value of secretbindingName when
+	// allow removing the value of SecretBindingName when
 	// old secret binding existed, but new is set to nil
 	// and new credentials binding also exists
 	if !(oldSpec.SecretBindingName != nil &&
