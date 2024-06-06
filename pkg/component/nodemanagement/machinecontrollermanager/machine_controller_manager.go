@@ -371,9 +371,10 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"mcm_machine_set_status_fully_labelled_replicas",
 						"mcm_machine_set_status_replicas",
 						"mcm_machine_set_status_ready_replicas",
+						// Machine related metrics
+						"mcm_machine_stale_machines_total",
 						// misc metrics
 						"mcm_misc_scrape_failure_total",
-						"mcm_machine_controller_frozen",
 						"process_max_fds",
 						"process_open_fds",
 						// workqueue related metrics
@@ -398,7 +399,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 					}},
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						// Machine related metrics
-						"mcm_machine_stale_machines_total",
 						"mcm_machine_items_total",
 						"mcm_machine_current_status_phase",
 						"mcm_machine_info",
@@ -413,6 +413,22 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"mcm_cloud_api_driver_request_duration_seconds_count",
 						"mcm_cloud_api_driver_request_duration_seconds_bucket",
 						"mcm_cloud_api_driver_request_failed_total",
+						// misc metrics
+						"mcm_machine_controller_frozen",
+						"process_max_fds",
+						"process_open_fds",
+						// workqueue related metrics
+						"mcm_workqueue_adds_total",
+						"mcm_workqueue_depth",
+						"mcm_workqueue_queue_duration_seconds_bucket",
+						"mcm_workqueue_queue_duration_seconds_sum",
+						"mcm_workqueue_queue_duration_seconds_count",
+						"mcm_workqueue_work_duration_seconds_bucket",
+						"mcm_workqueue_work_duration_seconds_sum",
+						"mcm_workqueue_work_duration_seconds_count",
+						"mcm_workqueue_unfinished_work_seconds",
+						"mcm_workqueue_longest_running_processor_seconds",
+						"mcm_workqueue_retries_total",
 					),
 				},
 			},
