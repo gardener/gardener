@@ -21,7 +21,11 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		return nil, err
 	}
 
-	imageVPNSeedServer, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageNameVpnSeedServer := imagevector.ImageNameVpnSeedServer
+	if b.Shoot.VPNDisableRewrite {
+		imageNameVpnSeedServer = imagevector.ImageNameOldVpnSeedServer
+	}
+	imageVPNSeedServer, err := imagevector.ImageVector().FindImage(imageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +44,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+		DisableRewrite:                       b.Shoot.VPNDisableRewrite,
 	}
 
 	if b.ShootUsesDNS() {

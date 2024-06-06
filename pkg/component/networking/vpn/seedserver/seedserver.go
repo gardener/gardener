@@ -128,6 +128,9 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
+	// TODO (MartinWeindel) remove after Oct 2024
+	// DisableRewrite disable VPN go-rewrite
+	DisableRewrite bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -523,6 +526,65 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			Name: volumeNameStatusDir,
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+
+	if v.values.HighAvailabilityEnabled && v.values.DisableRewrite {
+		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
+		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+			Name:            "openvpn-exporter",
+			Image:           v.values.ImageVPNSeedServer,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command: []string{
+				"/openvpn-exporter",
+				"-openvpn.status_paths",
+				statusPath,
+				"-web.listen-address",
+				fmt.Sprintf(":%d", MetricsPort),
+			},
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          metricsPortName,
+					ContainerPort: MetricsPort,
+					Protocol:      corev1.ProtocolTCP,
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{
+						"all",
+					},
+				},
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt32(MetricsPort),
+					},
+				},
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt32(MetricsPort),
+					},
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeNameStatusDir,
+					MountPath: volumeMountPathStatusDir,
+				},
 			},
 		})
 	}

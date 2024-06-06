@@ -646,6 +646,18 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			},
 		},
 	}...)
+	if k.values.VPN.DisableRewrite {
+		container.Args = nil
+		container.Env = append(container.Env,
+			corev1.EnvVar{
+				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+				Value: "true",
+			},
+			corev1.EnvVar{
+				Name:  "CONFIGURE_BONDING",
+				Value: "true",
+			})
+	}
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 		Name:      volumeNameAPIServerAccess,
@@ -827,6 +839,13 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 	}
+	if k.values.VPN.DisableRewrite {
+		container.Command = nil
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+			Value: "true",
+		})
+	}
 	return container
 }
 
@@ -878,6 +897,13 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		},
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+	}
+	if k.values.VPN.DisableRewrite {
+		container.Args = []string{"/path-controller.sh"}
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+			Value: "true",
+		})
 	}
 	return container
 }
