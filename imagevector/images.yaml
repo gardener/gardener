@@ -398,7 +398,7 @@ images:
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
-  tag: "1.23.0"
+  tag: "1.23.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
