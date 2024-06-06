@@ -951,7 +951,7 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 	if err != nil {
 		return "", err
 	}
-	kubeletConfiguration := v1beta1helper.CalcluateEffectiveKubeletConfiguation(o.values.KubeletConfig, worker.Kubernetes)
+	kubeletConfiguration := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
 
 	return CalculateKeyForVersion(version, kubernetesVersion, o.values, worker, kubeletConfiguration)
 }

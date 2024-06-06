@@ -1162,9 +1162,9 @@ func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, wo
 	return controlPlaneVersion, nil
 }
 
-// CalcluateEffectiveKubeletConfiguation if a shoot has a kubelet configuration specified for the worker group, return this,
-// otherwise the shoot kubelet configuration
-func CalcluateEffectiveKubeletConfiguation(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes) *gardencorev1beta1.KubeletConfig {
+// CalculateEffectiveKubeletConfiguration returns the worker group specific kubelet configuration if available.
+// Otherwise the shoot kubelet configuration is returned
+func CalculateEffectiveKubeletConfiguration(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes) *gardencorev1beta1.KubeletConfig {
 	if workerKubernetes != nil && workerKubernetes.Kubelet != nil {
 		return workerKubernetes.Kubelet
 	}

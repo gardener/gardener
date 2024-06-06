@@ -2616,9 +2616,9 @@ var _ = Describe("Helper", func() {
 			MaxPods: ptr.To(int32(100)),
 		}
 	)
-	DescribeTable("#CalcluateEffectiveKubeletConfiguation",
+	DescribeTable("#CalculateEffectiveKubeletConfiguration",
 		func(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *gardencorev1beta1.KubeletConfig) {
-			res := CalcluateEffectiveKubeletConfiguation(shootKubelet, workerKubernetes)
+			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
 			Expect(res).To(Equal(expectedRes))
 		},
 
