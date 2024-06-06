@@ -480,17 +480,19 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default fields that are set", func() {
-			obj = &ControllerManagerConfiguration{
-				Controllers: ControllerManagerControllerConfiguration{
-					CredentialsBinding: &CredentialsBindingControllerConfiguration{
-						ConcurrentSyncs: ptr.To(10),
+			for i := 10; i <= 11; i++ {
+				obj = &ControllerManagerConfiguration{
+					Controllers: ControllerManagerControllerConfiguration{
+						CredentialsBinding: &CredentialsBindingControllerConfiguration{
+							ConcurrentSyncs: ptr.To(i),
+						},
 					},
-				},
-			}
-			expected := obj.Controllers.CredentialsBinding.DeepCopy()
-			SetObjectDefaults_ControllerManagerConfiguration(obj)
+				}
+				expected := obj.Controllers.CredentialsBinding.DeepCopy()
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-			Expect(obj.Controllers.CredentialsBinding).To(Equal(expected))
+				Expect(obj.Controllers.CredentialsBinding).To(Equal(expected))
+			}
 		})
 	})
 
