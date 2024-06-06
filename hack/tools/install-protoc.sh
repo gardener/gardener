@@ -12,14 +12,14 @@ TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/bin}
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-protoc_zip=protoc-v"$PROTOC_VERSION"-"$os"-"$arch".zip
+protoc_zip=protoc-"$PROTOC_VERSION"-"$os"-"$arch".zip
 
 if [[ $os == "darwin" ]]; then
-  url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-universal_binary.zip"
+  url="https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/protoc-${PROTOC_VERSION#v}-osx-universal_binary.zip"
 elif [[ $os == "linux" && $arch == "amd64" ]]; then
-  url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+  url="https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/protoc-${PROTOC_VERSION#v}-linux-x86_64.zip"
 elif [[ $os == "linux" && $arch == "arm64" ]]; then
-  url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-aarch_64.zip"
+  url="https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/protoc-${PROTOC_VERSION#v}-linux-aarch_64.zip"
 else
   if ! command -v protoc &>/dev/null; then
     echo "Unable to automatically install protoc for ${os}/${arch}. Please install it yourself and retry."
