@@ -27,7 +27,7 @@ import (
 
 type managedResourceObjectsMatcher struct {
 	ctx               context.Context
-	cl                client.Client
+	client            client.Client
 	decoder           runtime.Decoder
 	expectedObjects   map[string]client.Object
 	extraObjectsCheck bool
@@ -94,12 +94,12 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 			},
 		}
 
-		if err := m.cl.Get(m.ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		if err := m.client.Get(m.ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return false, fmt.Errorf("error when retrieving managed resource secret: %w", err)
 		}
 
 		for dataKey, dataValue := range secret.Data {
-			if err := extractObjects(dataKey, dataValue, m.decoder, m.cl.Scheme(), availableObjects); err != nil {
+			if err := extractObjects(dataKey, dataValue, m.decoder, m.client.Scheme(), availableObjects); err != nil {
 				return false, err
 			}
 		}

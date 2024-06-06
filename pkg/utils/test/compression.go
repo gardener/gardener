@@ -20,8 +20,7 @@ func BrotliCompression(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	w := brotli.NewWriter(&buf)
 
-	_, err := w.Write(data)
-	if err != nil {
+	if _, err := w.Write(data); err != nil {
 		return nil, err
 	}
 
@@ -34,12 +33,7 @@ func BrotliCompression(data []byte) ([]byte, error) {
 
 // BrotliDecompression decompressed the passed data with the Brotli compression algorithm.
 func BrotliDecompression(data []byte) ([]byte, error) {
-	decompressedData, err := io.ReadAll(brotli.NewReader(bytes.NewBuffer(data)))
-	if err != nil {
-		return nil, err
-	}
-
-	return decompressedData, nil
+	return io.ReadAll(brotli.NewReader(bytes.NewBuffer(data)))
 }
 
 // ExtractManifestsFromManagedResourceData extracts the compressed resources from the given data,
@@ -57,10 +51,10 @@ func ExtractManifestsFromManagedResourceData(data map[string][]byte) ([]string, 
 
 	var manifests []string
 	for _, manifest := range strings.Split(string(uncompressedData), "---\n") {
-		if manifest == "" {
-			continue
+		if manifest != "" {
+			manifests = append(manifests, manifest)
 		}
-		manifests = append(manifests, manifest)
+		continue
 	}
 
 	return manifests, nil

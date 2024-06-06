@@ -123,13 +123,13 @@ func ShareSameReferenceAs(expected any) types.GomegaMatcher {
 // NewManagedResourceContainsObjectsMatcher returns a function for a matcher that checks
 // if the given objects are handled by the given managed resource.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceContainsObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
+func NewManagedResourceContainsObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
 		return &managedResourceObjectsMatcher{
 			ctx:             context.Background(),
-			cl:              cl,
-			decoder:         serializer.NewCodecFactory(cl.Scheme()).UniversalDeserializer(),
-			expectedObjects: expectedObjects(objs, cl.Scheme()),
+			client:          c,
+			decoder:         serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
+			expectedObjects: expectedObjects(objs, c.Scheme()),
 		}
 	}
 }
@@ -138,13 +138,13 @@ func NewManagedResourceContainsObjectsMatcher(cl client.Client) func(...client.O
 // if the exact list of given objects are handled by the given managed resource.
 // Any extra objects found through the ManagedResource let the matcher fail.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceConsistOfObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
+func NewManagedResourceConsistOfObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
 		return &managedResourceObjectsMatcher{
 			ctx:               context.Background(),
-			cl:                cl,
-			decoder:           serializer.NewCodecFactory(cl.Scheme()).UniversalDeserializer(),
-			expectedObjects:   expectedObjects(objs, cl.Scheme()),
+			client:            c,
+			decoder:           serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
+			expectedObjects:   expectedObjects(objs, c.Scheme()),
 			extraObjectsCheck: true,
 		}
 	}

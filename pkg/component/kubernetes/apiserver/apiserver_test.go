@@ -118,7 +118,6 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapAuditPolicy       *corev1.ConfigMap
 		configMapEgressSelector    *corev1.ConfigMap
 		managedResource            *resourcesv1alpha1.ManagedResource
-		managedResourceSecret      *corev1.Secret
 
 		values Values
 	)
@@ -202,12 +201,6 @@ var _ = Describe("KubeAPIServer", func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-kube-apiserver",
-				Namespace: namespace,
-			},
-		}
-		managedResourceSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-shoot-core-kube-apiserver",
 				Namespace: namespace,
 			},
 		}

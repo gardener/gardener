@@ -147,22 +147,21 @@ func (r *Registry) SerializedObjects() (map[string][]byte, error) {
 		buf bytes.Buffer
 		w   = brotli.NewWriter(&buf)
 	)
-	for i, objectKey := range objectKeys {
-		if i > 0 {
-			_, err := w.Write([]byte("---\n"))
-			if err != nil {
-				return nil, err
-			}
-		}
 
-		_, err := w.Write(r.nameToObject[objectKey].serialization)
-		if err != nil {
+	for i, objectKey := range objectKeys {
+		if _, err := w.Write(r.nameToObject[objectKey].serialization); err != nil {
 			return nil, err
 		}
 
+		// Some manifests don't end with a new line, add it here.
 		if !bytes.HasSuffix(r.nameToObject[objectKey].serialization, []byte("\n")) {
-			_, err := w.Write([]byte("\n"))
-			if err != nil {
+			if _, err := w.Write([]byte("\n")); err != nil {
+				return nil, err
+			}
+		}
+		// Add separator for manifests at the end, before next manifest.
+		if !bytes.HasSuffix(r.nameToObject[objectKey].serialization, []byte("---\n")) && i < len(objectKeys)-1 {
+			if _, err := w.Write([]byte("---\n")); err != nil {
 				return nil, err
 			}
 		}
