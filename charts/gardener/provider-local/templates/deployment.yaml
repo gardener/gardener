@@ -39,7 +39,7 @@ spec:
         {{- end }}
 {{ include "labels" . | indent 8 }}
     spec:
-      priorityClassName: gardener-system-900
+      priorityClassName: {{ .Values.priorityClassName }}
       serviceAccountName: {{ include "name" . }}
       containers:
       - name: {{ include "name" . }}

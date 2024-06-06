@@ -2,6 +2,7 @@ image: local-skaffold/gardener-extension-provider-local:latest
 imagePullPolicy: IfNotPresent
 
 replicaCount: 1
+priorityClassName: gardener-system-900
 
 #podLabels: {}
 
