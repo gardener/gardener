@@ -1,0 +1,33 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: garden
+manifests:
+  rawYaml:
+    - example/operator/20-garden.yaml
+deploy:
+  statusCheck: false # enabled status check would watch all deployments in the garden namespace
+  kubectl:
+    hooks:
+      after:
+        - host:
+            command:
+              - bash
+              - -ec
+              - hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable VirtualComponentsHealthy
+        - host:
+            command:
+              - bash
+              - -ec
+              - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: garden-config
+manifests:
+  rawYaml:
+    - example/00-namespace-garden.yaml
+    - example/gardener-local/controlplane/domain-secrets.yaml
+deploy:
+  kubectl: {}

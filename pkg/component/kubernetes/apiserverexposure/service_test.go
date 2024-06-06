@@ -121,7 +121,6 @@ var _ = Describe("#Service", func() {
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPFunc,
 			ingressIPFunc,
-			"",
 		)
 	})
 
@@ -199,7 +198,6 @@ var _ = Describe("#Service", func() {
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
 					ingressIPFunc,
-					"",
 				)
 
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
@@ -221,53 +219,6 @@ var _ = Describe("#Service", func() {
 				}
 				expected.Spec.Type = corev1.ServiceTypeClusterIP
 				Expect(actual).To(DeepEqual(expected))
-			})
-		})
-
-		Context("when cluster IP is provided", func() {
-			clusterIP := "1.2.3.4"
-
-			JustBeforeEach(func() {
-				defaultDepWaiter = NewService(
-					log,
-					c,
-					namespace,
-					&ServiceValues{
-						AnnotationsFunc: func() map[string]string { return nil },
-						NamePrefix:      namePrefix,
-					},
-					func() client.ObjectKey { return sniServiceObjKey },
-					&retryfake.Ops{MaxAttempts: 1},
-					clusterIPFunc,
-					ingressIPFunc,
-					clusterIP,
-				)
-			})
-
-			Context("when cluster IP is already set", func() {
-				It("should not change existing cluster IP", func() {
-					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-					actual := &corev1.Service{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
-
-					Expect(actual.Spec.ClusterIP).To(Equal(expected.Spec.ClusterIP))
-				})
-			})
-
-			Context("when cluster IP is not yet set", func() {
-				JustBeforeEach(func() {
-					Expect(c.Delete(ctx, expected)).To(Succeed())
-				})
-
-				It("should successfully deploy with expected clusterIP", func() {
-					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-					actual := &corev1.Service{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
-
-					Expect(actual.Spec.ClusterIP).To(Equal(clusterIP))
-				})
 			})
 		})
 	})

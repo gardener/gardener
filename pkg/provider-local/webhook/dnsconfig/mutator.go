@@ -49,6 +49,10 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 		podMeta = &obj.ObjectMeta
 		podSpec = &obj.Spec
 
+		if newObj.GetLabels()["app"] == "machine" && newObj.GetLabels()["machine-provider"] == "local" {
+			metav1.SetMetaDataLabel(podMeta, "networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443", v1beta1constants.LabelNetworkPolicyAllowed)
+		}
+
 	case *appsv1.Deployment:
 		podMeta = &obj.Spec.Template.ObjectMeta
 		podSpec = &obj.Spec.Template.Spec

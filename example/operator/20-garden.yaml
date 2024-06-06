@@ -148,8 +148,9 @@ spec:
     #   certificateSigningDuration: 48h
     gardener:
       clusterIdentity: local
-    # gardenerAPIServer:
-    #   admissionPlugins:
+      gardenerAPIServer:
+        admissionPlugins:
+        - name: ShootVPAEnabledByDefault
     #   - name: ShootDNSRewriting
     #     disabled: false
     #     config:

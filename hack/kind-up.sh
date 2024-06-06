@@ -85,6 +85,7 @@ setup_kind_network() {
 }
 
 setup_loopback_device() {
+  LOOPBACK_IP_ADDRESSES=$1
   if ! command -v ip &>/dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
       echo "'ip' command not found. Please install 'ip' command, refer https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#installing-iproute2" 1>&2
@@ -94,10 +95,6 @@ setup_loopback_device() {
     return
   fi
   LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
-  LOOPBACK_IP_ADDRESSES=(127.0.0.10 127.0.0.11 127.0.0.12)
-  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
-    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
-  fi
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
   for address in "${LOOPBACK_IP_ADDRESSES[@]}"; do
     if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
@@ -230,7 +227,17 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-registry"
 
 if [[ "$MULTI_ZONAL" == "true" ]]; then
-  setup_loopback_device
+  LOOPBACK_IP_ADDRESSES=(127.0.0.10 127.0.0.11 127.0.0.12)
+  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
+  fi
+  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
+elif [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
+  LOOPBACK_IP_ADDRESSES=(127.0.0.3)
+  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::3)
+  fi
+  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 fi
 
 setup_kind_network
@@ -344,6 +351,7 @@ kubectl -n kube-system get configmap coredns -ojson | \
     hosts {\n\
       $garden_cluster_ip garden.local.gardener.cloud\n\
       $garden_cluster_ip gardener.virtual-garden.local.gardener.cloud\n\
+      $garden_cluster_ip api.virtual-garden.local.gardener.cloud\n\
       $garden_cluster_ip dashboard.ingress.runtime-garden.local.gardener.cloud\n\
       fallthrough\n\
     }\

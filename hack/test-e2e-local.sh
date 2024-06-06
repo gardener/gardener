@@ -8,6 +8,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+TYPE="default"
+if [[ "$1" == "operator" ]] || [[ "$1" == "operator-seed" ]]; then
+  TYPE="$1"
+  # shift that "operator" flag is removed from ginkgo cli parameters
+  shift
+fi
+
 echo "> E2E Tests"
 
 source "$(dirname "$0")/test-e2e-local.env"
@@ -28,9 +35,28 @@ local_address="127.0.0.1"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address="::1"
 fi
+local_address_operator="127.0.0.3"
+if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
+  local_address_operator="::3"
+fi
 
+# If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
+if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
+  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    printf "\n$local_address_operator api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address_operator plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
+  else
+    if ! grep -q -x "$local_address_operator api.virtual-garden.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
+    if ! grep -q -x "$local_address_operator plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for the plutono is missing in /etc/hosts. To access the plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
+  fi
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
-if [[ "$1" != "operator" ]]; then
+else
   seed_name="local"
   if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]]; then
     seed_name="local-ha-single-zone"
@@ -103,21 +129,21 @@ if [[ "$1" != "operator" ]]; then
       exit 1
     fi
   fi
-# If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
-else
+fi
+
+# If we are running the gardener-operator-seed tests then we have to make e2e-managedseed apiserver domain accessible and finally create the garden.
+if [[ "$TYPE" == "operator-seed" ]]; then
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
-    printf "\n$local_address api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n$local_address plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
+    printf "\n$local_address api.e2e-managedseed.garden.external.local.gardener.cloud\n$local_address api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
-    if ! grep -q -x "$local_address api.virtual-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
-      exit 1
-    fi
-    if ! grep -q -x "$local_address plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for the plutono is missing in /etc/hosts. To access the plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+    if ! grep -q -x "$local_address api.e2e-managedseed.garden.external.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for the e2e-managedseed kube-apiserver is missing in /etc/hosts. To access the e2e-managedseed kube-apiserver and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi
   fi
+  # /etc/hosts must be updated before garden can be created
+  echo "> Deploying Garden and Soil"
+  make operator-seed-up
 fi
 
 GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags --v --show-node-events "$@"

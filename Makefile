@@ -250,19 +250,23 @@ test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kin
 kind2-ha-single-zone-up kind2-ha-single-zone-down gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL2_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
-kind-operator-up kind-operator-down operator-up operator-dev operator-debug operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+kind-operator-up kind-operator-down operator%up operator-dev operator-debug operator%down test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+operator-seed-% test-e2e-local-operator-seed: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/example/operator/virtual-garden/kubeconfig
+test-e2e-local-operator-seed: export KUBECONFIG = $(VIRTUAL_GARDEN_KUBECONFIG)
 # CLUSTER_NAME
 kind-up kind-down: export CLUSTER_NAME = gardener-local
 kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
 kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_NAME = gardener-local-ha-single-zone
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_NAME = gardener-local2-ha-single-zone
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_NAME = gardener-local-ha-multi-zone
+kind-operator-up kind-operator-down: export CLUSTER_NAME = gardener-operator-local
 # KIND_KUBECONFIG
 kind-up kind-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
 kind-ha-single-zone-up kind-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
 kind2-ha-single-zone-up kind2-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
 kind-ha-multi-zone-up kind-ha-multi-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
+kind-operator-up kind-operator-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-operator/base/kubeconfig
 # CLUSTER_VALUES
 kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
@@ -296,28 +300,28 @@ kind-extensions-clean:
 
 kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
-		--cluster-name gardener-operator-local \
-		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig \
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG) \
 		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
 		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
 	./hack/kind-down.sh \
-		--cluster-name gardener-operator-local \
-		--path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig
+		--cluster-name $(CLUSTER_NAME) \
+		--path-kubeconfig $(KIND_KUBECONFIG)
 	# We need root privileges to clean the backup bucket directory, see https://github.com/gardener/gardener/issues/6752
 	docker run --user root:root -v $(REPO_ROOT)/dev/local-backupbuckets:/dev/local-backupbuckets alpine rm -rf /dev/local-backupbuckets/gardener-operator
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export GARDENER_VERSION = $(VERSION)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SKAFFOLD_PUSH = true
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export GARDENER_VERSION = $(VERSION)
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
 # skaffold dev and debug clean up deployed modules by default, disable this
 gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_CLEANUP = false
 # skaffold dev triggers new builds and deployments immediately on file changes by default,
@@ -381,6 +385,15 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL) $(KO)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete
 
+operator-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
+	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
+	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
+	$(SKAFFOLD) run -m provider-local -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
+	$(SKAFFOLD) run -m gardenlet -p operator -f=skaffold.yaml
+
+operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
+
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
 test-e2e-local-workerless: $(GINKGO)
@@ -397,6 +410,8 @@ test-e2e-local-ha-multi-zone: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=zone ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && upgrade-to-zone)" ./test/e2e/gardener/...
 test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
+test-e2e-local-operator-seed: $(GINKGO)
+	./hack/test-e2e-local.sh operator-seed --procs=$(PARALLEL_E2E_TESTS) --label-filter="default && ManagedSeed" ./test/e2e/gardener/...
 
 test-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
@@ -420,6 +435,8 @@ ci-e2e-kind-ha-multi-zone: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-ha-multi-zone.sh
 ci-e2e-kind-operator: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-operator.sh
+ci-e2e-kind-operator-seed: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-operator-seed.sh
 
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE="" GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
