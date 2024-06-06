@@ -94,8 +94,8 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
-	// TODO (MartinWeindel) remove after Oct 2024
 	// DisableRewrite disable VPN go-rewrite
+	// TODO (MartinWeindel) remove after Oct 2024
 	DisableRewrite bool
 }
 
@@ -896,12 +896,14 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			corev1.EnvVar{
 				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
 				Value: "true",
-			},
-			corev1.EnvVar{
-				Name:  "CONFIGURE_BONDING",
-				Value: "true",
-			},
-		)
+			})
+		if v.values.HighAvailabilityEnabled {
+			container.Env = append(container.Env,
+				corev1.EnvVar{
+					Name:  "CONFIGURE_BONDING",
+					Value: "true",
+				})
+		}
 	}
 	return []corev1.Container{container}
 }

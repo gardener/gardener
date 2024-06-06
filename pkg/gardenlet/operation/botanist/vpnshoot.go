@@ -14,7 +14,11 @@ import (
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	nameVpnShootClient := imagevector.ImageNameVpnShootClient
+	if b.Shoot.VPNDisableRewrite {
+		nameVpnShootClient = imagevector.ImageNameOldVpnShootClient
+	}
+	image, err := imagevector.ImageVector().FindImage(nameVpnShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

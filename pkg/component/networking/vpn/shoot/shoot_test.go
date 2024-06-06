@@ -588,20 +588,6 @@ spec:
 					volumes = volumesFor(secretNameClients, secretNameCA, secretNameTLSAuth, highAvailable)
 				)
 
-				if disableRewrite {
-					initContainer.Args = nil
-					initContainer.Env = append(initContainer.Env,
-						corev1.EnvVar{
-							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-							Value: "true",
-						},
-						corev1.EnvVar{
-							Name:  "CONFIGURE_BONDING",
-							Value: "true",
-						},
-					)
-				}
-
 				for _, item := range secretNameClients {
 					annotations[references.AnnotationKey(references.KindSecret, item)] = item
 				}
@@ -669,6 +655,23 @@ spec:
 						},
 					}...)
 				}
+				if disableRewrite {
+					initContainer.Args = nil
+					initContainer.Env = append(initContainer.Env,
+						corev1.EnvVar{
+							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+							Value: "true",
+						})
+					if highAvailable {
+						initContainer.Env = append(initContainer.Env,
+							corev1.EnvVar{
+								Name:  "CONFIGURE_BONDING",
+								Value: "true",
+							},
+						)
+					}
+				}
+
 				obj.Spec.InitContainers = []corev1.Container{initContainer}
 
 				return obj
@@ -867,7 +870,7 @@ spec:
 					values.DisableRewrite = true
 				})
 
-				FIt("should successfully deploy all resources", func() {
+				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
 
 					var (
@@ -920,6 +923,40 @@ spec:
 					It("should successfully deploy all resources", func() {
 						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__vpn-shoot.yaml"])).To(Equal(pdbYAMLFor(true)))
 					})
+				})
+
+				AfterEach(func() {
+					values.HighAvailabilityEnabled = false
+				})
+			})
+
+			Context("w/ VPA and high availability and disabled Go rewrite", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.HighAvailabilityEnabled = true
+					values.HighAvailabilityNumberOfSeedServers = 3
+					values.HighAvailabilityNumberOfShootClients = 2
+					values.DisableRewrite = true
+				})
+
+				JustBeforeEach(func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaHAYAML))
+
+					var (
+						secretNameClient0 = expectVPNShootSecret(managedResourceSecret.Data, "-0")
+						secretNameClient1 = expectVPNShootSecret(managedResourceSecret.Data, "-1")
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+					)
+
+					statefulSet := &appsv1.StatefulSet{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["statefulset__kube-system__vpn-shoot.yaml"], statefulSet)).To(Succeed())
+					expected := statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth)
+					Expect(statefulSet).To(DeepEqual(expected))
+				})
+
+				It("should successfully deploy all resources", func() {
+					// nothing to check additionally
 				})
 
 				AfterEach(func() {

@@ -128,8 +128,8 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
-	// TODO (MartinWeindel) remove after Oct 2024
 	// DisableRewrite disable VPN go-rewrite
+	// TODO (MartinWeindel) remove after Oct 2024
 	DisableRewrite bool
 }
 
@@ -515,7 +515,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			}...)
 		template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
 			Name:          metricsPortName,
-			ContainerPort: MetricsPort,
+			ContainerPort: metricsPort,
 			Protocol:      corev1.ProtocolTCP,
 		})
 		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
@@ -541,12 +541,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				"-openvpn.status_paths",
 				statusPath,
 				"-web.listen-address",
-				fmt.Sprintf(":%d", MetricsPort),
+				fmt.Sprintf(":%d", metricsPort),
 			},
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          metricsPortName,
-					ContainerPort: MetricsPort,
+					ContainerPort: metricsPort,
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
@@ -560,14 +560,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(MetricsPort),
+						Port: intstr.FromInt32(metricsPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(MetricsPort),
+						Port: intstr.FromInt32(metricsPort),
 					},
 				},
 			},
