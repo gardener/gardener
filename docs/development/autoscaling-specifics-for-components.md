@@ -25,7 +25,8 @@ However, there are two supported autoscaling modes for the Garden or Shoot clust
 
    The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate). 
 
-Note: starting with release 1.96, the `VPAForETCD` feature gate is enabled by default.
+> [!NOTE]
+> Starting with release `v1.97`, the `VPAForETCD` feature gate is enabled by default.
 
 For both of the autoscaling modes downscaling is handled more pessimistically to prevent many subsequent etcd restarts. Thus, for `production` and `infrastructure` Shoot clusters (or all Garden clusters), downscaling is deactivated for the main etcd. For all other Shoot clusters, lower advertised requests/limits are only applied during the Shoot's maintenance time window.
 
