@@ -84,9 +84,6 @@ spec:
                                     description: Tag is the image tag to pull.
                                     type: string
                                 type: object
-                              values:
-                                description: Values are the chart values.
-                                x-kubernetes-preserve-unknown-fields: true
                             type: object
                         type: object
                       runtime:
@@ -119,92 +116,53 @@ spec:
                                     description: Tag is the image tag to pull.
                                     type: string
                                 type: object
-                              values:
-                                description: Values are the chart values.
-                                x-kubernetes-preserve-unknown-fields: true
                             type: object
                         type: object
+                      values:
+                        description: Values are the deployment values. The values
+                          will be applied to both admission deployments.
+                        x-kubernetes-preserve-unknown-fields: true
                     type: object
                   extension:
                     description: ExtensionDeployment contains deployment configuration
                       an extension.
                     properties:
-                      garden:
-                        description: |-
-                          GardenDeployment is the deployment configuration for the extension deployment in the garden cluster.
-                          It controls the creation of the ControllerDeployment created in the garden virtual cluster and control how the
-                          extensions operate in a seed cluster.
+                      helm:
+                        description: Helm contains the specification for a Helm deployment.
                         properties:
-                          helm:
-                            description: Helm contains the specification for a Helm
-                              deployment.
+                          ociRepository:
+                            description: OCIRepository defines where to pull the chart.
                             properties:
-                              ociRepository:
-                                description: OCIRepository defines where to pull the
-                                  chart.
-                                properties:
-                                  digest:
-                                    description: |-
-                                      Digest of the image to pull, takes precedence over tag.
-                                      The value should be in the format 'sha256:<HASH>'.
-                                    type: string
-                                  ref:
-                                    description: Ref is the full artifact Ref and
-                                      takes precedence over all other fields.
-                                    type: string
-                                  repository:
-                                    description: Repository is a reference to an OCI
-                                      artifact repository.
-                                    type: string
-                                  tag:
-                                    description: Tag is the image tag to pull.
-                                    type: string
-                                type: object
-                              values:
-                                description: Values are the chart values.
-                                x-kubernetes-preserve-unknown-fields: true
+                              digest:
+                                description: |-
+                                  Digest of the image to pull, takes precedence over tag.
+                                  The value should be in the format 'sha256:<HASH>'.
+                                type: string
+                              ref:
+                                description: Ref is the full artifact Ref and takes
+                                  precedence over all other fields.
+                                type: string
+                              repository:
+                                description: Repository is a reference to an OCI artifact
+                                  repository.
+                                type: string
+                              tag:
+                                description: Tag is the image tag to pull.
+                                type: string
                             type: object
                         type: object
                       policy:
                         description: Policy controls how the controller is deployed.
                           It defaults to 'OnDemand'.
                         type: string
-                      runtime:
-                        description: |-
-                          RuntimeDeployment is the deployment configuration for the extension in the runtime cluster.
-                          The deployment controls the extension behavior for the purpose of managing infrastructure resources
-                          of the runtime cluster.
-                        properties:
-                          helm:
-                            description: Helm contains the specification for a Helm
-                              deployment.
-                            properties:
-                              ociRepository:
-                                description: OCIRepository defines where to pull the
-                                  chart.
-                                properties:
-                                  digest:
-                                    description: |-
-                                      Digest of the image to pull, takes precedence over tag.
-                                      The value should be in the format 'sha256:<HASH>'.
-                                    type: string
-                                  ref:
-                                    description: Ref is the full artifact Ref and
-                                      takes precedence over all other fields.
-                                    type: string
-                                  repository:
-                                    description: Repository is a reference to an OCI
-                                      artifact repository.
-                                    type: string
-                                  tag:
-                                    description: Tag is the image tag to pull.
-                                    type: string
-                                type: object
-                              values:
-                                description: Values are the chart values.
-                                x-kubernetes-preserve-unknown-fields: true
-                            type: object
-                        type: object
+                      runtimeValues:
+                        description: RuntimeValues are the deployment values for the
+                          extension deployment running in the runtime cluster.
+                        x-kubernetes-preserve-unknown-fields: true
+                      values:
+                        description: Values are the deployment values used in the
+                          creation of the ControllerDeployment in the garden cluster.
+                        x-kubernetes-preserve-unknown-fields: true
                     type: object
                 type: object
               resources:
@@ -267,9 +225,6 @@ spec:
                   - type
                   type: object
                 type: array
-              version:
-                description: V
-                type: string
             type: object
           status:
             description: Status contains the status of this extension.

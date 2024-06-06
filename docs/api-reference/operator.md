@@ -57,6 +57,18 @@ DeploymentSpec
 installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Values are the deployment values. The values will be applied to both admission deployments.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.AuditWebhook">AuditWebhook
@@ -660,6 +672,8 @@ string
 <a href="#operator.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>)
 </p>
 <p>
+<p>Deployment specifies how an extension can be installed for a gardener landscape. It includes the specification
+for installing an extension and/or an admission controller.</p>
 </p>
 <table>
 <thead>
@@ -721,8 +735,8 @@ AdmissionDeploymentSpec
 <td>
 <code>helm</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.Helm">
-Helm
+<a href="#operator.gardener.cloud/v1alpha1.ExtensionHelm">
+ExtensionHelm
 </a>
 </em>
 </td>
@@ -928,17 +942,6 @@ Deployment
 <p>Deployment contains deployment configuration for an extension and it&rsquo;s admission controller.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>V</p>
-</td>
-</tr>
 </table>
 </td>
 </tr>
@@ -964,7 +967,9 @@ ExtensionStatus
 <a href="#operator.gardener.cloud/v1alpha1.Deployment">Deployment</a>)
 </p>
 <p>
-<p>ExtensionDeploymentSpec contains the deployment specification for an extension.</p>
+<p>ExtensionDeploymentSpec specifies how to install the extension in a gardener landscape. The installation is split into two parts:
+- installing the extension in the garden cluster by creating the ControllerRegistration and ControllerDeployment.
+- installing the extension in the runtime cluster (if necessary).</p>
 </p>
 <table>
 <thead>
@@ -976,7 +981,7 @@ ExtensionStatus
 <tbody>
 <tr>
 <td>
-<code>runtime</code></br>
+<code>DeploymentSpec</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -984,26 +989,35 @@ DeploymentSpec
 </em>
 </td>
 <td>
+<p>
+(Members of <code>DeploymentSpec</code> are embedded into this type.)
+</p>
 <em>(Optional)</em>
-<p>RuntimeDeployment is the deployment configuration for the extension in the runtime cluster.
-The deployment controls the extension behavior for the purpose of managing infrastructure resources
-of the runtime cluster.</p>
+<p>DeploymentSpec is the deployment configuration for the extension.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>garden</code></br>
+<code>values</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
-DeploymentSpec
-</a>
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>GardenDeployment is the deployment configuration for the extension deployment in the garden cluster.
-It controls the creation of the ControllerDeployment created in the garden virtual cluster and control how the
-extensions operate in a seed cluster.</p>
+<p>Values are the deployment values used in the creation of the ControllerDeployment in the garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>runtimeValues</code></br>
+<em>
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RuntimeValues are the deployment values for the extension deployment running in the runtime cluster.</p>
 </td>
 </tr>
 <tr>
@@ -1016,6 +1030,37 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentPolicy
 <td>
 <em>(Optional)</em>
 <p>Policy controls how the controller is deployed. It defaults to &lsquo;OnDemand&rsquo;.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ExtensionHelm">ExtensionHelm
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">DeploymentSpec</a>)
+</p>
+<p>
+<p>ExtensionHelm is the configuration for a helm deployment.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ociRepository</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OCIRepository defines where to pull the chart.</p>
 </td>
 </tr>
 </tbody>
@@ -1062,17 +1107,6 @@ Deployment
 <td>
 <em>(Optional)</em>
 <p>Deployment contains deployment configuration for an extension and it&rsquo;s admission controller.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>V</p>
 </td>
 </tr>
 </tbody>
@@ -1907,49 +1941,6 @@ string
 </td>
 <td>
 <p>Resource is the resource name.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.Helm">Helm
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">DeploymentSpec</a>)
-</p>
-<p>
-<p>Helm is the Helm deployment configuration.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>ociRepository</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>OCIRepository defines where to pull the chart.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>values</code></br>
-<em>
-k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Values are the chart values.</p>
 </td>
 </tr>
 </tbody>

@@ -52,6 +52,8 @@ type ExtensionSpec struct {
 	Deployment *Deployment `json:"deployment,omitempty"`
 }
 
+// Deployment specifies how an extension can be installed for a gardener landscape. It includes the specification
+// for installing an extension and/or an admission controller.
 type Deployment struct {
 	// ExtensionDeployment contains deployment configuration an extension.
 	// +optional
@@ -61,18 +63,22 @@ type Deployment struct {
 	AdmissionDeployment *AdmissionDeploymentSpec `json:"admission,omitempty"`
 }
 
-// ExtensionDeploymentSpec contains the deployment specification for an extension.
+// ExtensionDeploymentSpec specifies how to install the extension in a gardener landscape. The installation is split into two parts:
+// - installing the extension in the garden cluster by creating the ControllerRegistration and ControllerDeployment.
+// - installing the extension in the runtime cluster (if necessary).
 type ExtensionDeploymentSpec struct {
-	// RuntimeDeployment is the deployment configuration for the extension in the runtime cluster.
-	// The deployment controls the extension behavior for the purpose of managing infrastructure resources
-	// of the runtime cluster.
+	// DeploymentSpec is the deployment configuration for the extension.
 	// +optional
-	RuntimeDeployment *DeploymentSpec `json:"runtime,omitempty"`
-	// GardenDeployment is the deployment configuration for the extension deployment in the garden cluster.
-	// It controls the creation of the ControllerDeployment created in the garden virtual cluster and control how the
-	// extensions operate in a seed cluster.
+	DeploymentSpec `json:",inline"`
+
+	// Values are the deployment values used in the creation of the ControllerDeployment in the garden cluster.
 	// +optional
-	GardenDeployment *DeploymentSpec `json:"garden,omitempty"`
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
+
+	// RuntimeValues are the deployment values for the extension deployment running in the runtime cluster.
+	// +optional
+	RuntimeValues *apiextensionsv1.JSON `json:"runtimeValues,omitempty"`
+
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
@@ -88,22 +94,23 @@ type AdmissionDeploymentSpec struct {
 	// installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
 	// +optional
 	GardenDeployment *DeploymentSpec `json:"garden,omitempty"`
+
+	// Values are the deployment values. The values will be applied to both admission deployments.
+	// +optional
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }
 
 // DeploymentSpec is the specification for the deployment of a component.
 type DeploymentSpec struct {
 	// Helm contains the specification for a Helm deployment.
-	Helm *Helm `json:"helm,omitempty"`
+	Helm *ExtensionHelm `json:"helm,omitempty"`
 }
 
-// Helm is the Helm deployment configuration.
-type Helm struct {
+// ExtensionHelm is the configuration for a helm deployment.
+type ExtensionHelm struct {
 	// OCIRepository defines where to pull the chart.
 	// +optional
 	OCIRepository *gardencorev1.OCIRepository `json:"ociRepository,omitempty"`
-	// Values are the chart values.
-	// +optional
-	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }
 
 // ExtensionStatus is the status of a Gardener extension.

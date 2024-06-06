@@ -13,21 +13,16 @@ metadata:
 #    workerlessSupported: true|false # only valid if kind=Extension
 #  deployment:
 #    admission:
+#      values: {}
 #      runtime:
 #        helm:
 #          ociRepository: {}
-#          values: {}
 #      garden:
 #        helm:
 #          ociRepository: {}
-#          values: {}
 #    extension:
-#      runtime:
-#        helm:
-#          ociRepository: {}
-#          values: {}
-#      garden:
-#        helm:
-#          ociRepository: {}
-#          values: {}
+#      values: {}
+#      runtimeValues: {}
+#      helm:
+#        ociRepository: {}
 #      policy: OnDemand|Always
