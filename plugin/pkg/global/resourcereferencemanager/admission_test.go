@@ -184,7 +184,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			coreCredentialsBinding = security.CredentialsBinding{
+			securityCredentialsBinding = security.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       credentialsBindingName,
 					Namespace:  namespace,
@@ -593,7 +593,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -612,7 +612,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -626,7 +626,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -638,7 +638,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -649,7 +649,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -661,7 +661,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -687,16 +687,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := coreCredentialsBinding.Quotas
+				quotaRefList := securityCredentialsBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				coreCredentialsBinding.Quotas = quotaRefList
+				securityCredentialsBinding.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -722,16 +722,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := coreCredentialsBinding.Quotas
+				quotaRefList := securityCredentialsBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				coreCredentialsBinding.Quotas = quotaRefList
+				securityCredentialsBinding.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), coreCredentialsBinding.Namespace, coreCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 

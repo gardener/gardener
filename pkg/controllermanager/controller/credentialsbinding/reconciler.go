@@ -92,20 +92,18 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 		}
 	}
 
-	if len(credentialsBinding.Quotas) != 0 {
-		for _, objRef := range credentialsBinding.Quotas {
-			quota := &gardencorev1beta1.Quota{}
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, quota); err != nil {
-				return reconcile.Result{}, err
-			}
+	for _, objRef := range credentialsBinding.Quotas {
+		quota := &gardencorev1beta1.Quota{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, quota); err != nil {
+			return reconcile.Result{}, err
+		}
 
-			// Add 'referred by a credentials binding' label
-			if !metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
-				patch := client.MergeFrom(quota.DeepCopy())
-				metav1.SetMetaDataLabel(&quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference, "true")
-				if err := r.Client.Patch(ctx, quota, patch); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to add referred label to the quota referenced in CredentialsBinding, quota: %s , namespace: %s : %w", quota.Name, quota.Namespace, err)
-				}
+		// Add 'referred by a credentials binding' label
+		if !metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
+			patch := client.MergeFrom(quota.DeepCopy())
+			metav1.SetMetaDataLabel(&quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference, "true")
+			if err := r.Client.Patch(ctx, quota, patch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to add referred label to the quota referenced in CredentialsBinding, quota: %s , namespace: %s : %w", quota.Name, quota.Namespace, err)
 			}
 		}
 	}
@@ -172,18 +170,16 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 		}
 
 		// Remove finalizer from CredentialsBinding
-		if controllerutil.ContainsFinalizer(credentialsBinding, gardencorev1beta1.GardenerName) {
-			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.Client, credentialsBinding, gardencorev1beta1.GardenerName); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-			}
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, credentialsBinding, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 
 		return reconcile.Result{}, nil
 	}
 
 	message := fmt.Sprintf("Cannot delete CredentialsBinding, because the following Shoots are still referencing it: %+v", associatedShoots)
-	r.Recorder.Event(credentialsBinding, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+	r.Recorder.Event(credentialsBinding, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, message)
 	return reconcile.Result{}, errors.New(message)
 }
 
@@ -199,7 +195,10 @@ func (r *Reconciler) mayReleaseCredentials(ctx context.Context, binding *securit
 		if cb.Namespace == binding.Namespace && cb.Name == binding.Name {
 			continue
 		}
-		if cb.CredentialsRef.Namespace == binding.CredentialsRef.Namespace && cb.CredentialsRef.Name == binding.CredentialsRef.Name {
+		if cb.CredentialsRef.APIVersion == binding.CredentialsRef.APIVersion &&
+			cb.CredentialsRef.Kind == binding.CredentialsRef.Kind &&
+			cb.CredentialsRef.Namespace == binding.CredentialsRef.Namespace &&
+			cb.CredentialsRef.Name == binding.CredentialsRef.Name {
 			return false, nil
 		}
 	}
@@ -224,7 +223,7 @@ func (r *Reconciler) removeLabelFromQuotas(ctx context.Context, binding *securit
 			return err
 		}
 
-		// Remove 'referred by a secret binding' label
+		// Remove 'referred by a credentials binding' label
 		if metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
 			patch := client.MergeFromWithOptions(quota.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			delete(quota.ObjectMeta.Labels, v1beta1constants.LabelCredentialsBindingReference)

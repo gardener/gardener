@@ -619,14 +619,20 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 	)
 	switch attributes.GetKind().GroupKind() {
 	case core.Kind("SecretBinding"):
-		b := binding.(*core.SecretBinding)
+		b, ok := binding.(*core.SecretBinding)
+		if !ok {
+			return errors.New("failed to convert binding to SecretBinding")
+		}
 		quotas = b.Quotas
 		secretNamespace = b.SecretRef.Namespace
 		secretName = b.SecretRef.Name
 	case security.Kind("CredentialsBinding"):
 		// TODO(dimityrmirchev): This code should eventually handle
 		// references to Workload Identity
-		b := binding.(*security.CredentialsBinding)
+		b, ok := binding.(*security.CredentialsBinding)
+		if !ok {
+			return errors.New("failed to convert binding to CredentialsBinding")
+		}
 		quotas = b.Quotas
 		secretNamespace = b.CredentialsRef.Namespace
 		secretName = b.CredentialsRef.Name
