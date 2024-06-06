@@ -224,7 +224,7 @@ spec:
                       type: string
                     nodeAgentSecretName:
                       description: |-
-                        NodeAgentSecretName is a hash of selected aspects of the OperatingSystemConfig. If the hash changes, then the
+                        NodeAgentSecretName is uniquely identifying selected aspects of the OperatingSystemConfig. If it changes, then the
                         worker pool must be rolled.
                       type: string
                     nodeTemplate:

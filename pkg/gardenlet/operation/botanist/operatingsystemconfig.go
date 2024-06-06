@@ -111,11 +111,9 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]))
 
 	shoot := b.Shoot.GetInfo()
-	var credRotStatus *gardencorev1beta1.ShootCredentialsRotation
-	if shoot != nil && shoot.Status.Credentials != nil {
-		credRotStatus = shoot.Status.Credentials.Rotation
+	if shoot.Status.Credentials != nil {
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCredentialsRotationStatus(shoot.Status.Credentials.Rotation)
 	}
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCredentialsRotationStatus(credRotStatus)
 
 	if v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()) {
 		sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)

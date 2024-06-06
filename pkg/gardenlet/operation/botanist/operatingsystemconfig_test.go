@@ -124,7 +124,6 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
-				operatingSystemConfig.EXPECT().SetCredentialsRotationStatus(gomock.AssignableToTypeOf(&gardencorev1beta1.ShootCredentialsRotation{}))
 			})
 
 			It("should deploy successfully (only CloudProfile CA)", func() {
@@ -163,7 +162,6 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
-				operatingSystemConfig.EXPECT().SetCredentialsRotationStatus(gomock.AssignableToTypeOf(&gardencorev1beta1.ShootCredentialsRotation{}))
 
 				shoot := botanist.Shoot.GetInfo()
 				shoot.Status = gardencorev1beta1.ShootStatus{

@@ -226,7 +226,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		}
 
 		var nodeAgentSecretName *string
-		if oscConfig.Init.IncludeHashInWorker {
+		if oscConfig.Init.IncludeSecretNameInWorkerPool {
 			nodeAgentSecretName = &oscConfig.Init.GardenerNodeAgentSecretName
 		}
 

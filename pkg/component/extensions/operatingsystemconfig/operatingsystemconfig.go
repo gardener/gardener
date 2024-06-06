@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +63,7 @@ const (
 // LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
 var LatestHashVersion = func() int {
 	// WorkerPoolHash is behind feature gate as extensions must be updated first
-	if features.DefaultFeatureGate.Enabled(features.WorkerPoolHashWithNodeAgentSecret) {
+	if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
 		return 2
 	}
 	return 1
@@ -210,8 +209,8 @@ type Data struct {
 	// Content is the actual cloud-config user data.
 	// TODO(rfranzke): Remove this Content field after v1.100 is released.
 	Content string
-	// IncludeHashInWorker state whether the WorkerPool definition must include the GardenerNodeAgentSecretName
-	IncludeHashInWorker bool
+	// IncludeSecretNameInWorkerPool states whether a extensionsv1alpha1.WorkerPool must include the GardenerNodeAgentSecretName
+	IncludeSecretNameInWorkerPool bool
 	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
 	GardenerNodeAgentSecretName string
 	// SecretName is the name of a secret storing the actual cloud-config user data.
@@ -477,11 +476,11 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 				}
 
 				data := Data{
-					Object:                      osc,
-					Content:                     string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
-					IncludeHashInWorker:         hashVersion > 1,
-					GardenerNodeAgentSecretName: oscKey,
-					SecretName:                  &secret.Name,
+					Object:                        osc,
+					Content:                       string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+					IncludeSecretNameInWorkerPool: hashVersion > 1,
+					GardenerNodeAgentSecretName:   oscKey,
+					SecretName:                    &secret.Name,
 				}
 
 				o.lock.Lock()
@@ -961,7 +960,7 @@ func (o *operatingSystemConfig) calculateKeyForVersion(version int, worker *gard
 var CalculateKeyForVersion = calculateKeyForVersion
 
 func calculateKeyForVersion(
-	oscVersion int,
+	version int,
 	kubernetesVersion *semver.Version,
 	values *Values,
 	worker *gardencorev1beta1.Worker,
@@ -970,14 +969,14 @@ func calculateKeyForVersion(
 	string,
 	error,
 ) {
-	switch oscVersion {
+	switch version {
 	case 1:
 		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
 		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
 	default:
-		return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+		return "", fmt.Errorf("unsupported osc key hash version %v", version)
 	}
 }
 
@@ -1000,8 +999,9 @@ func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *
 	return fmt.Sprintf("gardener-node-agent-%s-%s", workerPoolName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
-// KeyV2 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
-// configuration.
+// KeyV2 returns the key that can be used as secret name based on the provided worker name,
+// Kubernetes version, machine type, image, worker volume, CRI, credentials rotation, node local dns
+// and kubelet configuration.
 func KeyV2(
 	kubernetesVersion *semver.Version,
 	credentialsRotation *gardencorev1beta1.ShootCredentialsRotation,
@@ -1050,11 +1050,13 @@ func KeyV2(
 			data = append(data, fmt.Sprintf("%s-%s-%s-%s", kubeReserved.CPU, kubeReserved.Memory, kubeReserved.PID, kubeReserved.EphemeralStorage))
 		}
 		if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
-			parts := make([]string, 0, 5)
-			for _, value := range []*string{eviction.ImageFSAvailable, eviction.ImageFSInodesFree, eviction.MemoryAvailable, eviction.NodeFSAvailable, eviction.NodeFSInodesFree} {
-				parts = append(parts, ptr.Deref(value, ""))
-			}
-			data = append(data, strings.Join(parts, "-"))
+			data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+				ptr.Deref(eviction.ImageFSAvailable, ""),
+				ptr.Deref(eviction.ImageFSInodesFree, ""),
+				ptr.Deref(eviction.MemoryAvailable, ""),
+				ptr.Deref(eviction.NodeFSAvailable, ""),
+				ptr.Deref(eviction.NodeFSInodesFree, ""),
+			))
 		}
 		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
 			data = append(data, *policy)
