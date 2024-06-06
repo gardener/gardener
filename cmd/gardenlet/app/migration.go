@@ -44,7 +44,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 	return nil
 }
 
-// TODO(timuthy): Remove after v1.96 was released.
+// TODO(timuthy): Remove after v1.97 was released.
 // updateGardenerResourceManager updates all GRM deployments in a seed cluster,
 // in order to roll out the Brotli compression support added in Gardener v1.96.
 func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl client.Client) error {
@@ -60,8 +60,7 @@ func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl clie
 	}
 
 	fns := make([]flow.TaskFn, 0, len(grmDeployments.Items))
-	for _, deployment := range grmDeployments.Items {
-		grmDeployment := deployment
+	for _, grmDeployment := range grmDeployments.Items {
 		if len(grmDeployment.Spec.Template.Spec.Containers) != 1 {
 			log.Info("Skipping migrated Gardener-Resource-Manager deployment because of missing container", "deployment", client.ObjectKeyFromObject(&grmDeployment))
 			continue

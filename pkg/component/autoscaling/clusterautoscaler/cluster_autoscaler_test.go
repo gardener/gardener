@@ -111,7 +111,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		serviceName                      = "cluster-autoscaler"
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
-		managedResourceSecretName        = "managedresource-shoot-core-cluster-autoscaler"
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
