@@ -7,15 +7,18 @@ package upgrade
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -99,6 +102,25 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(job), job)).To(Succeed())
 				Expect(job.Status.Failed).Should(BeZero())
 				Expect(seedClient.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground))).To(Succeed())
+			})
+
+			// Verify that the hash version in the operating system config remains at version 1
+			// when upgrading from Gardener v1.96.
+			// TODO(MichaelEischer): drop this check after v1.97 has been released.
+			It("verify that old shoots use operating system config hash version 1 after gardener upgrade", func() {
+				if !strings.HasPrefix(gardenerPreviousVersion, "v1.96.") {
+					Skip("test only relevant for upgrade from Gardener v1.96")
+				}
+
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      operatingsystemconfig.WorkerPoolHashesSecretName,
+						Namespace: f.ShootFramework.ShootSeedNamespace(),
+					},
+				}
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				data := secret.Data["pools"]
+				Expect(data).To(ContainSubstring("currentVersion: 1"))
 			})
 
 			It("should be able to delete a shoot which was created in previous release", func() {
