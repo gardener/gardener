@@ -14,7 +14,7 @@ Resource Types:
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>)
+<a href="#operator.gardener.cloud/v1alpha1.Deployment">Deployment</a>)
 </p>
 <p>
 <p>AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.</p>
@@ -29,7 +29,7 @@ Resource Types:
 <tbody>
 <tr>
 <td>
-<code>runtimeDeployment</code></br>
+<code>runtime</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -44,7 +44,7 @@ is responsible for creating the admission controller in the runtime cluster.</p>
 </tr>
 <tr>
 <td>
-<code>gardenDeployment</code></br>
+<code>garden</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -653,6 +653,52 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.Deployment">Deployment
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>extension</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ExtensionDeploymentSpec">
+ExtensionDeploymentSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtensionDeployment contains deployment configuration an extension.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>admission</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AdmissionDeploymentSpec">
+AdmissionDeploymentSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionDeployment contains deployment configuration for an admission controller.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.DeploymentSpec">DeploymentSpec
 </h3>
 <p>
@@ -870,30 +916,27 @@ ExtensionSpec
 </tr>
 <tr>
 <td>
-<code>extensionDeployment</code></br>
+<code>deployment</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.ExtensionDeploymentSpec">
-ExtensionDeploymentSpec
+<a href="#operator.gardener.cloud/v1alpha1.Deployment">
+Deployment
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExtensionDeployment contains deployment configuration for the admission and extension concept.</p>
+<p>Deployment contains deployment configuration for an extension and it&rsquo;s admission controller.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>admissionDeployment</code></br>
+<code>version</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.AdmissionDeploymentSpec">
-AdmissionDeploymentSpec
-</a>
+string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>AdmissionDeployment contains deployment configuration for the admission and extension concept.</p>
+<p>V</p>
 </td>
 </tr>
 </table>
@@ -918,7 +961,7 @@ ExtensionStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>)
+<a href="#operator.gardener.cloud/v1alpha1.Deployment">Deployment</a>)
 </p>
 <p>
 <p>ExtensionDeploymentSpec contains the deployment specification for an extension.</p>
@@ -933,7 +976,7 @@ ExtensionStatus
 <tbody>
 <tr>
 <td>
-<code>runtimeDeployment</code></br>
+<code>runtime</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -949,7 +992,7 @@ of the runtime cluster.</p>
 </tr>
 <tr>
 <td>
-<code>gardenDeployment</code></br>
+<code>garden</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -1009,30 +1052,27 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentPolicy
 </tr>
 <tr>
 <td>
-<code>extensionDeployment</code></br>
+<code>deployment</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.ExtensionDeploymentSpec">
-ExtensionDeploymentSpec
+<a href="#operator.gardener.cloud/v1alpha1.Deployment">
+Deployment
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExtensionDeployment contains deployment configuration for the admission and extension concept.</p>
+<p>Deployment contains deployment configuration for an extension and it&rsquo;s admission controller.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>admissionDeployment</code></br>
+<code>version</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.AdmissionDeploymentSpec">
-AdmissionDeploymentSpec
-</a>
+string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>AdmissionDeployment contains deployment configuration for the admission and extension concept.</p>
+<p>V</p>
 </td>
 </tr>
 </tbody>

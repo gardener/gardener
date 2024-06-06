@@ -11,15 +11,23 @@ metadata:
 #    reconcileTimeout: 30s # only valid if kind=Extension
 #    lifecycle: {}
 #    workerlessSupported: true|false # only valid if kind=Extension
-#  admissionDeployment:
-#  extensionDeployment:
-#    runtimeDeployment:
-#      helm:
-#        ociRepository: {}
-#        values: {}
-#    gardenDeployment:
-#      helm:
-#        ociRepository: {}
-#        values: {}
-#    policy: OnDemand|Always
-#    annotations: {}
+#  deployment:
+#    admission:
+#      runtime:
+#        helm:
+#          ociRepository: {}
+#          values: {}
+#      garden:
+#        helm:
+#          ociRepository: {}
+#          values: {}
+#    extension:
+#      runtime:
+#        helm:
+#          ociRepository: {}
+#          values: {}
+#      garden:
+#        helm:
+#          ociRepository: {}
+#          values: {}
+#      policy: OnDemand|Always

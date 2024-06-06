@@ -47,12 +47,18 @@ type ExtensionSpec struct {
 	// (aws-route53, gcp).
 	// +optional
 	Resources []gardencorev1beta1.ControllerResource `json:"resources,omitempty"`
-	// ExtensionDeployment contains deployment configuration for the admission and extension concept.
+	// Deployment contains deployment configuration for an extension and it's admission controller.
 	// +optional
-	ExtensionDeployment *ExtensionDeploymentSpec `json:"extensionDeployment,omitempty"`
-	// AdmissionDeployment contains deployment configuration for the admission and extension concept.
+	Deployment *Deployment `json:"deployment,omitempty"`
+}
+
+type Deployment struct {
+	// ExtensionDeployment contains deployment configuration an extension.
 	// +optional
-	AdmissionDeployment *AdmissionDeploymentSpec `json:"admissionDeployment,omitempty"`
+	ExtensionDeployment *ExtensionDeploymentSpec `json:"extension,omitempty"`
+	// AdmissionDeployment contains deployment configuration for an admission controller.
+	// +optional
+	AdmissionDeployment *AdmissionDeploymentSpec `json:"admission,omitempty"`
 }
 
 // ExtensionDeploymentSpec contains the deployment specification for an extension.
@@ -61,12 +67,12 @@ type ExtensionDeploymentSpec struct {
 	// The deployment controls the extension behavior for the purpose of managing infrastructure resources
 	// of the runtime cluster.
 	// +optional
-	RuntimeDeployment *DeploymentSpec `json:"runtimeDeployment,omitempty"`
+	RuntimeDeployment *DeploymentSpec `json:"runtime,omitempty"`
 	// GardenDeployment is the deployment configuration for the extension deployment in the garden cluster.
 	// It controls the creation of the ControllerDeployment created in the garden virtual cluster and control how the
 	// extensions operate in a seed cluster.
 	// +optional
-	GardenDeployment *DeploymentSpec `json:"gardenDeployment,omitempty"`
+	GardenDeployment *DeploymentSpec `json:"garden,omitempty"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
@@ -77,11 +83,11 @@ type AdmissionDeploymentSpec struct {
 	// RuntimeDeployment is the deployment configuration for the admission in the runtime cluster. The runtime deployment
 	// is responsible for creating the admission controller in the runtime cluster.
 	// +optional
-	RuntimeDeployment *DeploymentSpec `json:"runtimeDeployment,omitempty"`
+	RuntimeDeployment *DeploymentSpec `json:"runtime,omitempty"`
 	// GardenDeployment is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
 	// installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
 	// +optional
-	GardenDeployment *DeploymentSpec `json:"gardenDeployment,omitempty"`
+	GardenDeployment *DeploymentSpec `json:"garden,omitempty"`
 }
 
 // DeploymentSpec is the specification for the deployment of a component.
