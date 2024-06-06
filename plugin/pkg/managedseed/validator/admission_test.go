@@ -403,7 +403,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -424,7 +424,7 @@ var _ = Describe("ManagedSeed", func() {
 					Type:      "type",
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
-				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.Gardenlet{
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -453,7 +453,7 @@ var _ = Describe("ManagedSeed", func() {
 				}
 				shoot.Spec.SecretBindingName = ptr.To(secretBinding.Name)
 
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -474,7 +474,7 @@ var _ = Describe("ManagedSeed", func() {
 					Type:      "type",
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
-				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.Gardenlet{
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -502,7 +502,7 @@ var _ = Describe("ManagedSeed", func() {
 				}
 				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
 
-				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
@@ -523,7 +523,7 @@ var _ = Describe("ManagedSeed", func() {
 					Type:      "type",
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
-				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.Gardenlet{
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
