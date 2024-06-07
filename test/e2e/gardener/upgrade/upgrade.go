@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
@@ -112,6 +113,15 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 					Skip("test only relevant for upgrade from Gardener v1.96")
 				}
 
+				By("Reconcile once")
+				ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+				defer cancel()
+				Expect(f.GardenerFramework.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
+					shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+					return nil
+				})).To(Succeed())
+
+				By("Verify secret")
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      operatingsystemconfig.WorkerPoolHashesSecretName,
