@@ -1068,7 +1068,7 @@ func KeyV2(
 		result += utils.ComputeSHA256Hex([]byte(v))
 	}
 
-	return fmt.Sprintf("gardener-node-agent-%s", utils.ComputeSHA256Hex([]byte(result))[:16])
+	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result))[:16])
 }
 
 func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
