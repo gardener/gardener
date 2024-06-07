@@ -1408,6 +1408,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 				p.Taints = []corev1.Taint{{Key: "foo"}}
 			})
 
+			It("when changing name", func() {
+				p.Name = "different-name"
+			})
+
 			It("when changing zones", func() {
 				p.Zones = []string{"1"}
 			})
@@ -1434,10 +1438,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
-			})
-
-			It("when changing name", func() {
-				p.Name = "different-name"
 			})
 
 			It("when changing machine type", func() {
