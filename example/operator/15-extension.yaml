@@ -14,15 +14,15 @@ metadata:
 #  deployment:
 #    admission:
 #      values: {}
-#      runtime:
+#      runtimeCluster:
 #        helm:
 #          ociRepository: {}
-#      garden:
+#      virtualCluster:
 #        helm:
 #          ociRepository: {}
 #    extension:
 #      values: {}
-#      runtimeValues: {}
+#      runtimeClusterValues: {}
 #      helm:
 #        ociRepository: {}
 #      policy: OnDemand|Always

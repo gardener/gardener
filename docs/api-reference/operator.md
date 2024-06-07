@@ -29,7 +29,7 @@ Resource Types:
 <tbody>
 <tr>
 <td>
-<code>runtime</code></br>
+<code>runtimeCluster</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -38,13 +38,13 @@ DeploymentSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>RuntimeDeployment is the deployment configuration for the admission in the runtime cluster. The runtime deployment
+<p>RuntimeCluster is the deployment configuration for the admission in the runtime cluster. The runtime deployment
 is responsible for creating the admission controller in the runtime cluster.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>garden</code></br>
+<code>virtualCluster</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.DeploymentSpec">
 DeploymentSpec
@@ -53,7 +53,7 @@ DeploymentSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>GardenDeployment is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
+<p>VirtualCluster is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
 installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.</p>
 </td>
 </tr>
@@ -1010,14 +1010,14 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </tr>
 <tr>
 <td>
-<code>runtimeValues</code></br>
+<code>runtimeClusterValues</code></br>
 <em>
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RuntimeValues are the deployment values for the extension deployment running in the runtime cluster.</p>
+<p>RuntimeClusterValues are the deployment values for the extension deployment running in the runtime cluster.</p>
 </td>
 </tr>
 <tr>

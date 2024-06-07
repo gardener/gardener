@@ -75,9 +75,9 @@ type ExtensionDeploymentSpec struct {
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 
-	// RuntimeValues are the deployment values for the extension deployment running in the runtime cluster.
+	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime cluster.
 	// +optional
-	RuntimeValues *apiextensionsv1.JSON `json:"runtimeValues,omitempty"`
+	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
 
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
@@ -86,14 +86,14 @@ type ExtensionDeploymentSpec struct {
 
 // AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.
 type AdmissionDeploymentSpec struct {
-	// RuntimeDeployment is the deployment configuration for the admission in the runtime cluster. The runtime deployment
+	// RuntimeCluster is the deployment configuration for the admission in the runtime cluster. The runtime deployment
 	// is responsible for creating the admission controller in the runtime cluster.
 	// +optional
-	RuntimeDeployment *DeploymentSpec `json:"runtime,omitempty"`
-	// GardenDeployment is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
+	RuntimeCluster *DeploymentSpec `json:"runtimeCluster,omitempty"`
+	// VirtualCluster is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
 	// installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
 	// +optional
-	GardenDeployment *DeploymentSpec `json:"garden,omitempty"`
+	VirtualCluster *DeploymentSpec `json:"virtualCluster,omitempty"`
 
 	// Values are the deployment values. The values will be applied to both admission deployments.
 	// +optional

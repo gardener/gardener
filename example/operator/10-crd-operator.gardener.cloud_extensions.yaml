@@ -54,41 +54,9 @@ spec:
                     description: AdmissionDeployment contains deployment configuration
                       for an admission controller.
                     properties:
-                      garden:
+                      runtimeCluster:
                         description: |-
-                          GardenDeployment is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
-                          installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
-                        properties:
-                          helm:
-                            description: Helm contains the specification for a Helm
-                              deployment.
-                            properties:
-                              ociRepository:
-                                description: OCIRepository defines where to pull the
-                                  chart.
-                                properties:
-                                  digest:
-                                    description: |-
-                                      Digest of the image to pull, takes precedence over tag.
-                                      The value should be in the format 'sha256:<HASH>'.
-                                    type: string
-                                  ref:
-                                    description: Ref is the full artifact Ref and
-                                      takes precedence over all other fields.
-                                    type: string
-                                  repository:
-                                    description: Repository is a reference to an OCI
-                                      artifact repository.
-                                    type: string
-                                  tag:
-                                    description: Tag is the image tag to pull.
-                                    type: string
-                                type: object
-                            type: object
-                        type: object
-                      runtime:
-                        description: |-
-                          RuntimeDeployment is the deployment configuration for the admission in the runtime cluster. The runtime deployment
+                          RuntimeCluster is the deployment configuration for the admission in the runtime cluster. The runtime deployment
                           is responsible for creating the admission controller in the runtime cluster.
                         properties:
                           helm:
@@ -122,6 +90,38 @@ spec:
                         description: Values are the deployment values. The values
                           will be applied to both admission deployments.
                         x-kubernetes-preserve-unknown-fields: true
+                      virtualCluster:
+                        description: |-
+                          VirtualCluster is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
+                          installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
+                        properties:
+                          helm:
+                            description: Helm contains the specification for a Helm
+                              deployment.
+                            properties:
+                              ociRepository:
+                                description: OCIRepository defines where to pull the
+                                  chart.
+                                properties:
+                                  digest:
+                                    description: |-
+                                      Digest of the image to pull, takes precedence over tag.
+                                      The value should be in the format 'sha256:<HASH>'.
+                                    type: string
+                                  ref:
+                                    description: Ref is the full artifact Ref and
+                                      takes precedence over all other fields.
+                                    type: string
+                                  repository:
+                                    description: Repository is a reference to an OCI
+                                      artifact repository.
+                                    type: string
+                                  tag:
+                                    description: Tag is the image tag to pull.
+                                    type: string
+                                type: object
+                            type: object
+                        type: object
                     type: object
                   extension:
                     description: ExtensionDeployment contains deployment configuration
@@ -155,9 +155,9 @@ spec:
                         description: Policy controls how the controller is deployed.
                           It defaults to 'OnDemand'.
                         type: string
-                      runtimeValues:
-                        description: RuntimeValues are the deployment values for the
-                          extension deployment running in the runtime cluster.
+                      runtimeClusterValues:
+                        description: RuntimeClusterValues are the deployment values
+                          for the extension deployment running in the runtime cluster.
                         x-kubernetes-preserve-unknown-fields: true
                       values:
                         description: Values are the deployment values used in the
