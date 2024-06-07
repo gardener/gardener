@@ -617,7 +617,7 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			if err != nil {
 				return nil, err
 			}
-			wantedOSCNames.Insert(oscKey + keySuffix(worker.Machine.Image.Name, purpose))
+			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image.Name, purpose))
 		}
 	}
 
@@ -643,7 +643,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extens
 			if err != nil {
 				return err
 			}
-			oscName := oscKey + keySuffix(worker.Machine.Image.Name, purpose)
+			oscName := oscKey + keySuffix(version, worker.Machine.Image.Name, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -1071,12 +1071,17 @@ func KeyV2(
 	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result))[:16])
 }
 
-func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+func keySuffix(version int, machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+	imagePrefix := ""
+	if version == 1 {
+		imagePrefix = "-" + machineImageName
+	}
+
 	switch purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return "-" + machineImageName + "-init"
+		return imagePrefix + "-init"
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		return "-" + machineImageName + "-original"
+		return imagePrefix + "-original"
 	}
 	return ""
 }
