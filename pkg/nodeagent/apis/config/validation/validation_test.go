@@ -120,17 +120,6 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 			))
 		})
 
-		It("should fail because gardener-node-agent access token config is missing", func() {
-			config.Controllers.Token.SyncConfigs = nil
-
-			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("controllers.token.syncConfigs"),
-				})),
-			))
-		})
-
 		It("should fail because sync period is too small", func() {
 			config.Controllers.Token.SyncPeriod.Duration = 10 * time.Second
 
