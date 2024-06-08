@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -139,6 +140,7 @@ func ComponentConfig(
 				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
 		},
+		FeatureGates: map[string]bool{string(features.NodeAgentAuthorizer): features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)},
 	}
 }
 

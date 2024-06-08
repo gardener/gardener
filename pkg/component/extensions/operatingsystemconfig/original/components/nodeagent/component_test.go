@@ -132,6 +132,7 @@ WantedBy=multi-user.target`))
 						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 				},
+				FeatureGates: map[string]bool{"NodeAgentAuthorizer": false},
 			}))
 		})
 	})
@@ -164,6 +165,8 @@ controllers:
     - path: /var/lib/valitail/auth-token
       secretName: gardener-valitail
     syncPeriod: 12h0m0s
+featureGates:
+  NodeAgentAuthorizer: false
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
