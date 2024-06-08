@@ -236,12 +236,14 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
-	if err := gardenerutils.
-		NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
-		WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).
-		WithTokenExpirationDuration("720h").
-		Reconcile(ctx, o.client); err != nil {
-		return err
+	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		if err := gardenerutils.
+			NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
+			WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).
+			WithTokenExpirationDuration("720h").
+			Reconcile(ctx, o.client); err != nil {
+			return err
+		}
 	}
 
 	if err := o.updateHashVersioningSecret(ctx); err != nil {
