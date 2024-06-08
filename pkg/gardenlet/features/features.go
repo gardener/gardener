@@ -28,5 +28,6 @@ func GetFeatures() []featuregate.Feature {
 		features.VPAAndHPAForAPIServer,
 		features.NewWorkerPoolHash,
 		features.NewVPN,
+		features.NodeAgentAuthorizer,
 	}
 }

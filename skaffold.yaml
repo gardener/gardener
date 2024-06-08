@@ -723,6 +723,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/extensions
+            - pkg/features
             - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
