@@ -28,6 +28,10 @@ const (
 	TokenFilePath = CredentialsDir + "/token"
 	// ConfigFilePath is the file path on the worker node that contains the configuration of the gardener-node-agent.
 	ConfigFilePath = BaseDir + "/config.yaml"
+	// KubeconfigFilePath is the file path on the worker node that contains the kubeconfig of the gardener-node-agent
+	KubeconfigFilePath = CredentialsDir + "/kubeconfig"
+	// MachineNameFilePath is the file path on the worker node that contains the machine name where gardener-node-agent runs
+	MachineNameFilePath = CredentialsDir + "/machine-name"
 
 	// UnitName is the name of the gardener-node-agent systemd service.
 	UnitName = "gardener-node-agent.service"
