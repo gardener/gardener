@@ -1502,6 +1502,7 @@ build:
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
             - pkg/nodeagent/controller
+            - pkg/nodeagent/controller/certificate
             - pkg/nodeagent/controller/healthcheck
             - pkg/nodeagent/controller/hostnamecheck
             - pkg/nodeagent/controller/lease
@@ -1522,6 +1523,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/certificatesigningrequest
             - pkg/utils/kubernetes/health
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
