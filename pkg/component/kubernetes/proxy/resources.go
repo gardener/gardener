@@ -35,8 +35,9 @@ const (
 	// ConfigNamePrefix is the prefix for the name of the kube-proxy ConfigMap.
 	ConfigNamePrefix = "kube-proxy-config"
 
-	containerName = "kube-proxy"
-	serviceName   = "kube-proxy"
+	containerName             = "kube-proxy"
+	containerNameConntrackFix = "conntrack-fix"
+	serviceName               = "kube-proxy"
 
 	portNameMetrics = "metrics"
 	portMetrics     = 10249
@@ -250,7 +251,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 							k.getKubeProxyContainer(k8sGreaterEqual129, pool.Image, false),
 							{
 								// sidecar container with fix for conntrack
-								Name:            "conntrack-fix",
+								Name:            containerNameConntrackFix,
 								Image:           k.values.ImageAlpine,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
@@ -400,14 +401,20 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 					UpdateMode: &vpaUpdateMode,
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("10G"),
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: containerName,
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("4"),
+								corev1.ResourceMemory: resource.MustParse("10G"),
+							},
+							ControlledValues: &controlledValues,
 						},
-						ControlledValues: &controlledValues,
-					}},
+						{
+							ContainerName: containerNameConntrackFix,
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
+					},
 				},
 			},
 		}
