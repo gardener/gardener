@@ -471,6 +471,7 @@ A pod is considered stale when:
 
 - it was terminated with reason `Evicted`.
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
+- it was terminated with reason `NodeAffinity`.
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
 
 #### ["State" Reconciler](../../pkg/gardenlet/controller/shoot/state)
