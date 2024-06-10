@@ -143,6 +143,7 @@ var _ = Describe("VPA", func() {
 		deploymentAdmissionControllerFor       func(bool) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceMonitorAdmissionController      *monitoringv1.ServiceMonitor
 
 		clusterRoleGeneralActor               *rbacv1.ClusterRole
 		clusterRoleBindingGeneralActor        *rbacv1.ClusterRoleBinding
@@ -817,21 +818,42 @@ var _ = Describe("VPA", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-webhook",
 					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "vpa-admission-controller",
+						"gardener.cloud/role": "vpa",
+					},
 				},
 				Spec: corev1.ServiceSpec{
 					Selector: map[string]string{"app": "vpa-admission-controller"},
-					Ports: []corev1.ServicePort{{
-						Port:       443,
-						TargetPort: intstr.FromInt32(10250),
-					}},
+					Ports: []corev1.ServicePort{
+						{
+							Name:        "metrics",
+							Protocol:    "TCP",
+							AppProtocol: nil,
+							Port:        8944,
+							TargetPort:  intstr.FromInt32(8944),
+							NodePort:    0,
+						},
+						{
+							Name:        "server",
+							Protocol:    "",
+							AppProtocol: nil,
+							Port:        443,
+							TargetPort:  intstr.FromInt32(10250),
+							NodePort:    0,
+						},
+					},
 				},
 			}
 
 			if clusterType == "seed" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
 			}
 			if clusterType == "shoot" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/pod-label-selector-namespace-alias", "all-shoots")
 			}
 
 			if topologyAwareRoutingEnabled {
@@ -904,6 +926,7 @@ var _ = Describe("VPA", func() {
 										ContainerPort: 8944,
 									},
 									{
+										Name:          "server",
 										ContainerPort: 10250,
 									},
 								},
@@ -1014,6 +1037,45 @@ var _ = Describe("VPA", func() {
 						},
 					},
 				},
+			},
+		}
+		serviceMonitorAdmissionController = &monitoringv1.ServiceMonitor{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "monitoring.coreos.com/v1",
+				Kind:       "ServiceMonitor",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-vpa-admission-controller",
+				Namespace: namespace,
+				Labels:    map[string]string{"prometheus": "seed"},
+			},
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":                 "vpa-admission-controller",
+						"gardener.cloud/role": "vpa",
+					},
+				},
+				NamespaceSelector: monitoringv1.NamespaceSelector{Any: false},
+				Endpoints: []monitoringv1.Endpoint{{
+					Port: "metrics",
+					RelabelConfigs: []monitoringv1.RelabelConfig{
+						{
+							Action:      "replace",
+							Replacement: ptr.To("vpa-admission-controller"),
+							TargetLabel: "job",
+						},
+						{
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+							Regex:        "metrics",
+							Action:       "keep",
+						},
+						{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+						},
+					},
+				}},
 			},
 		}
 
@@ -1311,6 +1373,7 @@ var _ = Describe("VPA", func() {
 						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
 						deploymentAdmissionController,
 						vpaAdmissionController,
+						serviceMonitorAdmissionController,
 					)
 
 					By("Verify general resources")

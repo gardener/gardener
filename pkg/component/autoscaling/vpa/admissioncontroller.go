@@ -7,6 +7,7 @@ package vpa
 import (
 	"fmt"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	vpaconstants "github.com/gardener/gardener/pkg/component/autoscaling/vpa/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,6 +35,7 @@ import (
 const (
 	admissionController                  = "vpa-admission-controller"
 	admissionControllerServicePort int32 = 443
+	admissionControllerMetricsPort int32 = 8944
 
 	volumeMountPathCertificates = "/etc/tls-certs"
 	volumeNameCertificates      = "vpa-tls-certs"
@@ -59,6 +62,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 		deployment          = v.emptyDeployment(admissionController)
 		podDisruptionBudget = v.emptyPodDisruptionBudget(admissionController)
 		vpa                 = v.emptyVerticalPodAutoscaler(admissionController)
+		serviceMonitor      = v.emptyServiceMonitor(admissionController)
 	)
 
 	configs := component.ResourceConfigs{
@@ -68,6 +72,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerService(service) }},
 		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerVPA(vpa, deployment) }},
+		{Obj: serviceMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileAdmissionControllerServiceMonitor(serviceMonitor) }},
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
@@ -140,21 +145,40 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}))
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     ptr.To(intstr.FromInt32(vpaconstants.AdmissionControllerPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}))
+		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 	}
 
 	service.Spec.Selector = getAppLabel(admissionController)
 	desiredPorts := []corev1.ServicePort{
 		{
+			Name:       metricsPortName,
+			Port:       admissionControllerMetricsPort,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.FromInt32(admissionControllerMetricsPort),
+		},
+		{
+			Name:       serverPortName,
 			Port:       admissionControllerServicePort,
 			TargetPort: intstr.FromInt32(vpaconstants.AdmissionControllerPort),
 		},
 	}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
+	for label, value := range getAllLabels(admissionController) {
+		metav1.SetMetaDataLabel(&service.ObjectMeta, label, value)
+	}
 }
 
 func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
@@ -203,9 +227,10 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          metricsPortName,
-							ContainerPort: 8944,
+							ContainerPort: admissionControllerMetricsPort,
 						},
 						{
+							Name:          serverPortName,
 							ContainerPort: vpaconstants.AdmissionControllerPort,
 						},
 					},
@@ -305,4 +330,30 @@ func (v *vpa) computeAdmissionControllerCommands() []string {
 	}
 
 	return out
+}
+
+func (v *vpa) reconcileAdmissionControllerServiceMonitor(serviceMonitor *monitoringv1.ServiceMonitor) {
+	serviceMonitor.Labels = monitoringutils.Labels(v.getPrometheusLabel())
+	serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+		Selector: metav1.LabelSelector{MatchLabels: getAllLabels(admissionController)},
+		Endpoints: []monitoringv1.Endpoint{{
+			Port: metricsPortName,
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					Action:      "replace",
+					Replacement: ptr.To(admissionController),
+					TargetLabel: "job",
+				},
+				{
+					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+					Regex:        metricsPortName,
+					Action:       "keep",
+				},
+				{
+					Action: "labelmap",
+					Regex:  `__meta_kubernetes_pod_label_(.+)`,
+				},
+			},
+		}},
+	}
 }

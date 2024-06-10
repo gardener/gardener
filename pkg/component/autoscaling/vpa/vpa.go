@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	vpaconstants "github.com/gardener/gardener/pkg/component/autoscaling/vpa/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -231,6 +232,10 @@ func (v *vpa) emptyPodMonitor(name string) *monitoringv1.PodMonitor {
 	return &monitoringv1.PodMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, seed.Label)}
 }
 
+func (v *vpa) emptyServiceMonitor(name string) *monitoringv1.ServiceMonitor {
+	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, v.getPrometheusLabel())}
+}
+
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
@@ -306,4 +311,11 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gardenerutils.SecretNamePrefixShootAccess+deployment.Name))
 	}
+}
+
+func (v *vpa) getPrometheusLabel() string {
+	if v.values.ClusterType == component.ClusterTypeSeed {
+		return seed.Label
+	}
+	return shoot.Label
 }
