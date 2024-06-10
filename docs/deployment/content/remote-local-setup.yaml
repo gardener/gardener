@@ -13,7 +13,7 @@ spec:
       terminationGracePeriodSeconds: 1
       containers:
       - name: dev
-        image: docker:24.0.3-dind
+        image: docker:26-dind
         command:
         - /bin/sh
         - -c
