@@ -281,7 +281,7 @@ func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 	// setup secure http client
 	certPool := x509.NewCertPool()
 	certPool.AppendCertsFromPEM(g.caCert.CertificatePEM)
-	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool}}}
+	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool, MinVersion: tls.VersionTLS12}}}
 
 	healthCheckURL := g.listenURL
 	healthCheckURL.Path = g.HealthCheckEndpoint

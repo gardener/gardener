@@ -30,7 +30,8 @@ func SnapshotEtcd(ctx context.Context, secretsManager secretsmanager.Interface, 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs: caCerts,
+				RootCAs:    caCerts,
+				MinVersion: tls.VersionTLS12,
 			},
 		},
 	}
