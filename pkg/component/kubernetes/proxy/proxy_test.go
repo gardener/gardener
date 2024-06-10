@@ -762,11 +762,13 @@ metadata:
 spec:
   resourcePolicy:
     containerPolicies:
-    - containerName: '*'
+    - containerName: kube-proxy
       controlledValues: RequestsOnly
       maxAllowed:
         cpu: "4"
         memory: 10G
+    - containerName: conntrack-fix
+      mode: "Off"
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
