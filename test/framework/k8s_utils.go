@@ -377,7 +377,7 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(downloadPath, []byte(kubeconfig), 0755)
+	err = os.WriteFile(downloadPath, []byte(kubeconfig), 0600)
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func DownloadAdminKubeconfigForShoot(ctx context.Context, client kubernetes.Inte
 		return err
 	}
 
-	err = os.WriteFile(downloadPath, kubeconfig, 0755)
+	err = os.WriteFile(downloadPath, kubeconfig, 0600)
 	if err != nil {
 		return err
 	}
