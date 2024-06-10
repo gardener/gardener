@@ -36,7 +36,7 @@ import (
 
 const (
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
-	SecretNameUserKubeconfig = "user-kubeconfig"
+	SecretNameUserKubeconfig = "user-kubeconfig" // #nosec G101 -- No credential.
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
 	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)

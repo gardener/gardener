@@ -37,10 +37,10 @@ const (
 
 	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
 	// .gardenClientConnection.KubeconfigSecret.Name
-	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig"
+	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig" // #nosec G101 -- No credential.
 	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
 	// .gardenClientConnection.BootstrapKubeconfig.Name
-	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap"
+	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap" // #nosec G101 -- No credential.
 )
 
 // AddToManager adds Reconciler to the given manager.

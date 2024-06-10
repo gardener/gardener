@@ -243,7 +243,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 })
 
 const (
-	gardenletKubeconfigSecretName      = "gardenlet-kubeconfig"
+	gardenletKubeconfigSecretName      = "gardenlet-kubeconfig" // #nosec G101 -- No credential.
 	gardenletKubeconfigSecretNamespace = "garden"
 )
 

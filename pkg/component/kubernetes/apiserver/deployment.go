@@ -37,10 +37,10 @@ import (
 
 const (
 	secretNameServerCert             = "kube-apiserver"
-	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
-	secretNameKubeAggregator         = "kube-aggregator"
-	secretNameHTTPProxy              = "kube-apiserver-http-proxy"
-	secretNameHAVPNSeedClient        = "vpn-seed-client"
+	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"    // #nosec G101 -- No credential.
+	secretNameKubeAggregator         = "kube-aggregator"           // #nosec G101 -- No credential.
+	secretNameHTTPProxy              = "kube-apiserver-http-proxy" // #nosec G101 -- No credential.
+	secretNameHAVPNSeedClient        = "vpn-seed-client"           // #nosec G101 -- No credential.
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer     = "kube-apiserver"
@@ -84,8 +84,8 @@ const (
 	volumeMountPathOIDCCABundle                    = "/srv/kubernetes/oidc"
 	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
 	volumeMountPathServiceAccountKeyBundle         = "/srv/kubernetes/service-account-key-bundle"
-	volumeMountPathStaticToken                     = "/srv/kubernetes/token"
-	volumeMountPathPrefixTLSSNISecret              = "/srv/kubernetes/tls-sni/"
+	volumeMountPathStaticToken                     = "/srv/kubernetes/token"    // #nosec G101 -- No credential.
+	volumeMountPathPrefixTLSSNISecret              = "/srv/kubernetes/tls-sni/" // #nosec G101 -- No credential.
 	volumeMountPathVPNSeedClient                   = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"

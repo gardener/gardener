@@ -28,17 +28,17 @@ import (
 
 const (
 	// SecretStaticTokenName is a constant for the name of the static-token secret.
-	SecretStaticTokenName = "kube-apiserver-static-token"
+	SecretStaticTokenName = "kube-apiserver-static-token" // #nosec G101 -- No credential.
 
-	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle"
+	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle" // #nosec G101 -- No credential.
 	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
 
-	secretAuditWebhookKubeconfigNamePrefix          = "kube-apiserver-audit-webhook-kubeconfig"
-	secretAuthenticationWebhookKubeconfigNamePrefix = "kube-apiserver-authentication-webhook-kubeconfig"
-	secretAuthorizationWebhookKubeconfigNamePrefix  = "kube-apiserver-authorization-webhook-kubeconfig"
+	secretAuditWebhookKubeconfigNamePrefix          = "kube-apiserver-audit-webhook-kubeconfig"          // #nosec G101 -- No credential.
+	secretAuthenticationWebhookKubeconfigNamePrefix = "kube-apiserver-authentication-webhook-kubeconfig" // #nosec G101 -- No credential.
+	secretAuthorizationWebhookKubeconfigNamePrefix  = "kube-apiserver-authorization-webhook-kubeconfig"  // #nosec G101 -- No credential.
 
 	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
-	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs"
+	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs" // #nosec G101 -- No credential.
 
 	userNameClusterAdmin = "system:cluster-admin"
 	userNameHealthCheck  = "health-check"

@@ -55,7 +55,7 @@ const (
 	volumeNameAdmissionConfiguration          = "admission-config"
 	volumeNameAdmissionKubeconfigSecrets      = "admission-kubeconfigs"
 	volumeMountPathAdmissionConfiguration     = "/etc/kubernetes/admission"
-	volumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs"
+	volumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs" // #nosec G101 -- No credential.
 )
 
 // ReconcileSecretAdmissionKubeconfigs reconciles the secret containing the kubeconfig for admission plugins.
