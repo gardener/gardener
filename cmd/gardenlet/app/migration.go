@@ -23,11 +23,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.Cluster) error {
-	log.Info("Updating required Gardener-Resource-Manager deployments")
+	log.Info("Updating required Gardener-Resource-Manager deployments for managed resource compression support")
 	if err := updateGardenerResourceManager(ctx, log, g.mgr.GetClient()); err != nil {
 		return err
 	}
@@ -55,26 +56,38 @@ func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl clie
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	grmDeployments := &appsv1.DeploymentList{}
-	if err := cl.List(ctx, grmDeployments, client.MatchingLabels(map[string]string{"app": "gardener-resource-manager"})); err != nil {
+	if err := cl.List(ctx, grmDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager})); err != nil {
+		return err
+	}
+
+	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, cl)
+	if err != nil {
 		return err
 	}
 
 	fns := make([]flow.TaskFn, 0, len(grmDeployments.Items))
 	for _, grmDeployment := range grmDeployments.Items {
-		if len(grmDeployment.Spec.Template.Spec.Containers) != 1 {
-			log.Info("Skipping migrated Gardener-Resource-Manager deployment because of missing container", "deployment", client.ObjectKeyFromObject(&grmDeployment))
-			continue
-		}
-		if grmDeployment.Spec.Template.Spec.Containers[0].Image == image.String() {
-			continue
-		}
-		fns = append(fns, func(ctx context.Context) error {
-			patch := client.StrategicMergeFrom(grmDeployment.DeepCopy())
-			grmDeployment.Spec.Template.Spec.Containers[0].Image = image.String()
+		for j, container := range grmDeployment.Spec.Template.Spec.Containers {
+			if container.Name == v1beta1constants.DeploymentNameGardenerResourceManager ||
+				grmDeployment.Spec.Template.Spec.Containers[j].Image == image.String() {
+				continue
+			}
 
-			log.Info("Updating Gardener-Resource-Manager", "deployment", client.ObjectKeyFromObject(&grmDeployment))
-			return cl.Patch(ctx, &grmDeployment, patch)
-		})
+			// Don't patch GRM in Runtime Garden cluster since it is usually not under the control of gardenlet (rather gardener-operator),
+			// and already updated to the right version, before Gardenlet is rolled out.
+			if grmDeployment.Namespace == v1beta1constants.GardenNamespace && seedIsGarden {
+				continue
+			}
+
+			fns = append(fns, func(ctx context.Context) error {
+				patch := client.StrategicMergeFrom(grmDeployment.DeepCopy())
+				grmDeployment.Spec.Template.Spec.Containers[j].Image = image.String()
+
+				log.Info("Updating Gardener-Resource-Manager", "deployment", client.ObjectKeyFromObject(&grmDeployment))
+				return cl.Patch(ctx, &grmDeployment, patch)
+			})
+			break
+		}
 	}
 
 	return flow.Parallel(fns...)(ctx)

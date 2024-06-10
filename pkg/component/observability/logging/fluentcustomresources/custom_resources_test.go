@@ -6,7 +6,6 @@ package fluentcustomresources_test
 
 import (
 	"context"
-	"strings"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/custom"
@@ -200,11 +199,11 @@ var _ = Describe("Custom Resources", func() {
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 			Expect(err).NotTo(HaveOccurred())
-			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet")
-			expectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor")
-			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension")
-			expectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser")
-			expectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2", "")
 		})
 	})
 
@@ -312,16 +311,3 @@ var _ = Describe("Custom Resources", func() {
 		})
 	})
 })
-
-func expectKindWithNameAndNamespace(manifests []string, kind, name string) {
-	var objectFound bool
-
-	for _, manifest := range manifests {
-		if strings.Contains(manifest, "kind: "+kind) && strings.Contains(manifest, "name: "+name) {
-			objectFound = true
-			break
-		}
-	}
-
-	ExpectWithOffset(1, objectFound).To(BeTrue())
-}

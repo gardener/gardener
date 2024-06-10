@@ -1851,7 +1851,7 @@ subjects:
 			},
 		}
 
-		compressedData, err := test.BrotliCompression([]byte(mutatingWebhookConfigurationYAML + "---\n" + clusterRoleBindingTargetYAML))
+		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML, clusterRoleBindingTargetYAML)
 		Expect(err).NotTo(HaveOccurred())
 
 		managedResourceSecret = &corev1.Secret{

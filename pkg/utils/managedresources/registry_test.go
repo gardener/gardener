@@ -141,7 +141,7 @@ roleRef:
 			It("should add the serialized object", func() {
 				registry.AddSerialized("secret__"+secret.Namespace+"__secret_name.yaml", []byte(secretSerialized))
 
-				compressedData, err := test.BrotliCompression([]byte(secretSerialized))
+				compressedData, err := test.BrotliCompressionForManifests(secretSerialized)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
@@ -155,8 +155,7 @@ roleRef:
 				objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)
 				Expect(err).NotTo(HaveOccurred())
 
-				serializedData := []byte(secretSerialized + "---\n" + roleBindingSerialized)
-				compressedData, err := test.BrotliCompression(serializedData)
+				compressedData, err := test.BrotliCompressionForManifests(secretSerialized, roleBindingSerialized)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(objectMap).To(Equal(map[string][]byte{

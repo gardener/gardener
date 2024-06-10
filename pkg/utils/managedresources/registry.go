@@ -184,11 +184,14 @@ func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]by
 	return r.SerializedObjects()
 }
 
-// RegisteredObjects returns a slices of registered objects.
+// RegisteredObjects returns a slice of registered objects.
 func (r *Registry) RegisteredObjects() []client.Object {
+	objectKeys := maps.Keys(r.nameToObject)
+	slices.Sort(objectKeys)
+
 	out := make([]client.Object, 0, len(r.nameToObject))
-	for _, object := range r.nameToObject {
-		out = append(out, object.obj)
+	for _, objectKey := range objectKeys {
+		out = append(out, r.nameToObject[objectKey].obj)
 	}
 	return out
 }
@@ -196,8 +199,8 @@ func (r *Registry) RegisteredObjects() []client.Object {
 // String returns the string representation of the registry.
 func (r *Registry) String() string {
 	out := make([]string, 0, len(r.nameToObject))
-	for _, object := range r.nameToObject {
-		out = append(out, fmt.Sprintf("---\n%s\n", object.serialization))
+	for name, object := range r.nameToObject {
+		out = append(out, fmt.Sprintf("* %s:\n%s", name, object.serialization))
 	}
 	return strings.Join(out, "\n\n")
 }
