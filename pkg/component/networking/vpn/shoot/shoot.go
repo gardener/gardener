@@ -588,13 +588,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 	if index != nil {
 		name = fmt.Sprintf("%s-s%d", containerName, *index)
 	}
-	command := []string{"/run-shoot-client.sh"}
-	if v.values.DisableRewrite {
-		command = nil
-	}
 	return &corev1.Container{
 		Name:            name,
-		Command:         command,
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env:             v.getEnvVars(index),
@@ -606,8 +601,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("100m"),
-				corev1.ResourceMemory: resource.MustParse("100Mi"),
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("10Mi"),
 			},
 			Limits: v.getResourceLimits(),
 		},
@@ -748,11 +743,11 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("100Mi"),
+			corev1.ResourceMemory: resource.MustParse("40Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("120Mi"),
+		corev1.ResourceMemory: resource.MustParse("60Mi"),
 	}
 }
 
@@ -846,7 +841,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		Name:            initContainerName,
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"setup"},
+		Command:         []string{"/bin/shoot-client", "setup"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "IS_SHOOT_CLIENT",
@@ -891,7 +886,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		}...)
 	}
 	if v.values.DisableRewrite {
-		container.Args = nil
+		container.Command = nil
 		container.Env = append(container.Env,
 			corev1.EnvVar{
 				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",

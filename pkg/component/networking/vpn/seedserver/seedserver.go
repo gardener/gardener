@@ -528,20 +528,19 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		})
-	}
-
-	if v.values.HighAvailabilityEnabled && v.values.DisableRewrite {
-		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
-		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+		exporterContainer := corev1.Container{
 			Name:            "openvpn-exporter",
 			Image:           v.values.ImageVPNSeedServer,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
-				"/openvpn-exporter",
-				"-openvpn.status_paths",
-				statusPath,
-				"-web.listen-address",
-				fmt.Sprintf(":%d", metricsPort),
+				"/bin/seed-server",
+				"exporter",
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "OPENVPN_STATUS_PATH",
+					Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+				},
 			},
 			Ports: []corev1.ContainerPort{
 				{
@@ -573,11 +572,11 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("20m"),
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
+					corev1.ResourceCPU:    resource.MustParse("10m"),
+					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
+					corev1.ResourceMemory: resource.MustParse("60Mi"),
 				},
 			},
 			VolumeMounts: []corev1.VolumeMount{
@@ -586,7 +585,18 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					MountPath: volumeMountPathStatusDir,
 				},
 			},
-		})
+		}
+		if v.values.DisableRewrite {
+			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
+			exporterContainer.Command = []string{
+				"/openvpn-exporter",
+				"-openvpn.status_paths",
+				statusPath,
+				"-web.listen-address",
+				fmt.Sprintf(":%d", metricsPort),
+			}
+		}
+		template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
 	}
 
 	return template
