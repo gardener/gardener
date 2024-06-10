@@ -6,7 +6,6 @@ package fluentbit_test
 
 import (
 	"context"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -281,15 +280,15 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			expectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config-684e0e58", namespace)
-			expectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-8259c", namespace)
-			expectKindWithNameAndNamespace(manifests, "ClusterFluentBitConfig", "fluent-bit-config", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterInput", "tail-kubernetes", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "02-containerd", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "03-add-tag-to-record", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterFilter", "zz-modify-severity", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
-			expectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config-684e0e58", namespace)
+			test.ExpectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-8259c", namespace)
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFluentBitConfig", "fluent-bit-config", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "tail-kubernetes", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "02-containerd", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "03-add-tag-to-record", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "zz-modify-severity", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald", "")
 
 			componenttest.PrometheusRule(prometheusRule, "testdata/fluent-bit.prometheusrule.test.yaml")
 		})
@@ -410,17 +409,3 @@ var _ = Describe("Fluent Bit", func() {
 		})
 	})
 })
-
-func expectKindWithNameAndNamespace(manifests []string, kind, name, namespace string) {
-	var objectFound bool
-
-	for _, manifest := range manifests {
-		if strings.Contains(manifest, "kind: "+kind) && strings.Contains(manifest, "name: "+name) &&
-			(namespace == "" || strings.Contains(manifest, "namespace: "+namespace)) {
-			objectFound = true
-			break
-		}
-	}
-
-	ExpectWithOffset(1, objectFound).To(BeTrue())
-}

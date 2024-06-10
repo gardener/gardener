@@ -335,7 +335,7 @@ var _ = Describe("Actuator", func() {
 			c := mockclient.NewMockClient(ctrl)
 
 			if webhookConfig != nil {
-				compressedData, err := test.BrotliCompression([]byte(`apiVersion: admissionregistration.k8s.io/v1
+				compressedData, err := test.BrotliCompressionForManifests(`apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -344,7 +344,7 @@ webhooks:
   clientConfig: {}
   name: ""
   sideEffects: null
-`))
+`)
 				Expect(err).NotTo(HaveOccurred())
 
 				createdMRSecretForShootWebhooks := &corev1.Secret{

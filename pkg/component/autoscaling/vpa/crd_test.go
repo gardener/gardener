@@ -88,8 +88,8 @@ var _ = Describe("CRD", func() {
 			data, err := test.BrotliDecompression(compressedData)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(data).To(ContainSubstring("VerticalPodAutoscaler"))
-			Expect(data).To(ContainSubstring("VerticalPodAutoscalerCheckpoint"))
+			Expect(data).To(ContainSubstring("listKind: VerticalPodAutoscalerList"))
+			Expect(data).To(ContainSubstring("listKind: VerticalPodAutoscalerCheckpointList"))
 		})
 	})
 })
