@@ -134,7 +134,7 @@ func (g *GardenerAPIServer) Start() error {
 
 func (g *GardenerAPIServer) runAPIServerBinary() error {
 	log.V(1).Info("Starting gardener-apiserver", "path", g.Path, "args", g.Args)
-	command := exec.Command(g.Path, g.Args...)
+	command := exec.Command(g.Path, g.Args...) // #nosec: G204 -- Test only.
 	session, err := gexec.Start(command, g.Out, g.Err)
 	if err != nil {
 		return err
