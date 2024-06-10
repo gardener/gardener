@@ -293,7 +293,7 @@ func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment
 func getParentImageVectorOverwrite() (*string, error) {
 	var imageVectorOverwrite *string
 	if overWritePath := os.Getenv(imagevectorutils.OverrideEnv); len(overWritePath) > 0 {
-		data, err := os.ReadFile(overWritePath)
+		data, err := os.ReadFile(overWritePath) // #nosec: G304 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +305,7 @@ func getParentImageVectorOverwrite() (*string, error) {
 func getParentComponentImageVectorOverwrites() (*string, error) {
 	var componentImageVectorOverwrites *string
 	if overWritePath := os.Getenv(imagevectorutils.ComponentOverrideEnv); len(overWritePath) > 0 {
-		data, err := os.ReadFile(overWritePath)
+		data, err := os.ReadFile(overWritePath) // #nosec: G304 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
 		if err != nil {
 			return nil, err
 		}

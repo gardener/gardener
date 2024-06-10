@@ -101,7 +101,7 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 
 // readDocuments reads documents from file
 func readDocuments(fp string) ([][]byte, error) {
-	b, err := os.ReadFile(fp)
+	b, err := os.ReadFile(fp) // #nosec: G304 -- Test only.
 	if err != nil {
 		return nil, err
 	}
