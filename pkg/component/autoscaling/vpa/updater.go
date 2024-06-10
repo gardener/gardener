@@ -155,7 +155,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
-							Name:          "server",
+							Name:          serverPortName,
 							ContainerPort: updaterPortServer,
 						},
 						{

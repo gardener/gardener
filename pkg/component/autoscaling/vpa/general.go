@@ -25,6 +25,7 @@ import (
 
 const (
 	metricsPortName = "metrics"
+	serverPortName  = "server"
 )
 
 func newDefaultLivenessProbe() *corev1.Probe {

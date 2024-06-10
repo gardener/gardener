@@ -214,7 +214,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
-							Name:          "server",
+							Name:          serverPortName,
 							ContainerPort: recommenderPortServer,
 						},
 						{
