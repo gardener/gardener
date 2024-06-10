@@ -276,6 +276,7 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(manifests).To(HaveLen(12))
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))

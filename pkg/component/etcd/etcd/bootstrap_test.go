@@ -45,7 +45,7 @@ var _ = Describe("Etcd", func() {
 		c            client.Client
 		bootstrapper component.DeployWaiter
 		etcdConfig   *config.ETCDConfig
-		contain      func(...client.Object) types.GomegaMatcher
+		consistOf    func(...client.Object) types.GomegaMatcher
 
 		ctx                      = context.Background()
 		namespace                = "shoot--foo--bar"
@@ -84,7 +84,7 @@ var _ = Describe("Etcd", func() {
 		}
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		contain = NewManagedResourceContainsObjectsMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwrite, priorityClassName)
 
@@ -103,13 +103,9 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#Deploy", func() {
-		BeforeEach(func() {
-			imageVectorOverwrite = nil
-			featureGates = nil
-			kubernetesVersion = semver.MustParse("1.25.0")
-		})
-
 		var (
+			expectedResources []client.Object
+
 			configMapName = "etcd-druid-imagevector-overwrite-4475dd36"
 
 			serviceAccount = &corev1.ServiceAccount{
@@ -535,6 +531,12 @@ var _ = Describe("Etcd", func() {
 			}
 		)
 
+		BeforeEach(func() {
+			imageVectorOverwrite = nil
+			featureGates = nil
+			kubernetesVersion = semver.MustParse("1.25.0")
+		})
+
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
@@ -557,30 +559,39 @@ var _ = Describe("Etcd", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
-			Expect(managedResource).To(contain(
+
+			expectedResources = []client.Object{
 				serviceAccount,
 				clusterRole,
 				clusterRoleBinding,
 				vpa,
 				service,
 				serviceMonitor,
-			))
+			}
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			manifests, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])
+			Expect(err).NotTo(HaveOccurred())
+			Expect(manifests).ToNot(BeEmpty())
+		})
+
+		AfterEach(func() {
+			Expect(managedResource).To(consistOf(expectedResources...))
 		})
 
 		Context("w/o image vector overwrite", func() {
 			JustBeforeEach(func() {
-				Expect(managedResource).To(contain(deploymentWithoutImageVectorOverwriteFor(false)))
+				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor(false))
 			})
 
 			Context("kubernetes versions < 1.26", func() {
 				It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-					Expect(managedResource).To(contain(podDisruptionFor(false)))
+					expectedResources = append(expectedResources, podDisruptionFor(false))
 				})
 			})
 
@@ -590,7 +601,7 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should successfully deploy all the resources", func() {
-					Expect(managedResource).To(contain(podDisruptionFor(true)))
+					expectedResources = append(expectedResources, podDisruptionFor(true))
 				})
 			})
 		})
@@ -603,11 +614,11 @@ var _ = Describe("Etcd", func() {
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
 				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, priorityClassName)
 
-				Expect(managedResource).To(contain(
+				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
 					podDisruptionFor(false),
-				))
+				)
 			})
 		})
 
@@ -619,10 +630,10 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources", func() {
-				Expect(managedResource).To(contain(
+				expectedResources = append(expectedResources,
 					deploymentWithoutImageVectorOverwriteFor(true),
 					podDisruptionFor(false),
-				))
+				)
 			})
 		})
 	})
