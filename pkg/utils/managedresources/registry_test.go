@@ -14,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Registry", func() {
@@ -51,8 +51,7 @@ var _ = Describe("Registry", func() {
 				},
 			},
 		}
-		secretFilename   = "secret__" + secret.Namespace + "__secret_name.yaml"
-		secretSerialized = []byte(`apiVersion: v1
+		secretSerialized = `apiVersion: v1
 kind: Secret
 metadata:
   annotations:
@@ -74,7 +73,7 @@ metadata:
     foo.bar/test-ea8edc28: "7"
   name: ` + secret.Name + `
   namespace: ` + secret.Namespace + `
-`)
+`
 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -82,8 +81,7 @@ metadata:
 				Namespace: "bar",
 			},
 		}
-		roleBindingFilename   = "rolebinding__" + roleBinding.Namespace + "__rolebinding.name.yaml"
-		roleBindingSerialized = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+		roleBindingSerialized = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
@@ -93,7 +91,7 @@ roleRef:
   apiGroup: ""
   kind: ""
   name: ""
-`)
+`
 	)
 
 	BeforeEach(func() {
@@ -130,56 +128,60 @@ roleRef:
 			Expect(registry.Add(secret)).To(Succeed())
 			Expect(registry.Add(roleBinding)).To(Succeed())
 
-			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
-				secretFilename:      secretSerialized,
-				roleBindingFilename: roleBindingSerialized,
-			}))
-		})
-	})
-
-	Describe("#AddSerialized", func() {
-		It("should add the serialized object", func() {
-			registry.AddSerialized(secretFilename, secretSerialized)
-
-			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
-				secretFilename: secretSerialized,
-			}))
-		})
-	})
-
-	Describe("#AddAllAndSerialize", func() {
-		It("should add all objects and return the serialized object map", func() {
-			objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)
+			serializedData := []byte(secretSerialized + "---\n" + roleBindingSerialized)
+			compressedData, err := test.BrotliCompression(serializedData)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(objectMap).To(Equal(map[string][]byte{
-				secretFilename:      secretSerialized,
-				roleBindingFilename: roleBindingSerialized,
+
+			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+				"data.yaml.br": compressedData,
 			}))
 		})
-	})
 
-	Describe("#RegisteredObjects", func() {
-		It("should return the registered objects", func() {
-			Expect(registry.Add(secret)).To(Succeed())
-			Expect(registry.Add(roleBinding)).To(Succeed())
+		Describe("#AddSerialized", func() {
+			It("should add the serialized object", func() {
+				registry.AddSerialized("secret__"+secret.Namespace+"__secret_name.yaml", []byte(secretSerialized))
 
-			Expect(registry.RegisteredObjects()).To(Equal(map[string]client.Object{
-				secretFilename:      secret,
-				roleBindingFilename: roleBinding,
-			}))
+				compressedData, err := test.BrotliCompressionForManifests(secretSerialized)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+					"data.yaml.br": compressedData,
+				}))
+			})
 		})
-	})
 
-	Describe("#String", func() {
-		It("should return the string representation of the registry", func() {
-			Expect(registry.Add(secret)).To(Succeed())
-			Expect(registry.Add(roleBinding)).To(Succeed())
+		Describe("#AddAllAndSerialize", func() {
+			It("should add all objects and return the serialized object map", func() {
+				objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)
+				Expect(err).NotTo(HaveOccurred())
 
-			result := registry.String()
-			Expect(result).To(ContainSubstring(`* ` + secretFilename + `:
-` + string(secretSerialized)))
-			Expect(result).To(ContainSubstring(`* ` + roleBindingFilename + `:
-` + string(roleBindingSerialized)))
+				compressedData, err := test.BrotliCompressionForManifests(secretSerialized, roleBindingSerialized)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(objectMap).To(Equal(map[string][]byte{
+					"data.yaml.br": compressedData,
+				}))
+			})
+		})
+
+		Describe("#RegisteredObjects", func() {
+			It("should return the registered objects", func() {
+				Expect(registry.Add(secret)).To(Succeed())
+				Expect(registry.Add(roleBinding)).To(Succeed())
+
+				Expect(registry.RegisteredObjects()).To(ConsistOf(roleBinding, secret))
+			})
+		})
+
+		Describe("#String", func() {
+			It("should return the string representation of the registry", func() {
+				Expect(registry.Add(secret)).To(Succeed())
+				Expect(registry.Add(roleBinding)).To(Succeed())
+
+				result := registry.String()
+				Expect(result).To(ContainSubstring(secretSerialized))
+				Expect(result).To(ContainSubstring(roleBindingSerialized))
+			})
 		})
 	})
 })

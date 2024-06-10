@@ -6,13 +6,17 @@ package system_test
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +35,9 @@ import (
 
 var _ = Describe("ShootSystem", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
+		contain             func(...client.Object) types.GomegaMatcher
 		managedResourceName = "shoot-core-system"
 		namespace           = "some-namespace"
 
@@ -85,6 +90,8 @@ var _ = Describe("ShootSystem", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		contain = NewManagedResourceContainsObjectsMatcher(c)
+
 		values = Values{
 			Extensions:            []string{extension1, extension2},
 			ExternalClusterDomain: &domain,
@@ -158,18 +165,19 @@ var _ = Describe("ShootSystem", func() {
 			})
 
 			var (
-				serviceAccountYAMLFor = func(name string) string {
-					return `apiVersion: v1
-automountServiceAccountToken: false
-kind: ServiceAccount
-metadata:
-  annotations:
-    resources.gardener.cloud/keep-object: "true"
-  creationTimestamp: null
-  name: ` + name + `
-  namespace: kube-system
-`
+				serviceAccount = func(name string) *corev1.ServiceAccount {
+					return &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      name,
+							Namespace: "kube-system",
+							Annotations: map[string]string{
+								"resources.gardener.cloud/keep-object": "true",
+							},
+						},
+						AutomountServiceAccountToken: ptr.To(false),
+					}
 				}
+
 				defaultKCMControllerSANames = []string{"attachdetach-controller",
 					"bootstrap-signer",
 					"certificate-controller",
@@ -211,9 +219,12 @@ metadata:
 				})
 
 				It("should successfully deploy all resources", func() {
+					expectedServiceAccounts := make([]client.Object, 0, len(defaultKCMControllerSANames)+8)
 					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector", "service-controller", "route-controller", "node-controller", "resource-claim-controller") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
+						expectedServiceAccounts = append(expectedServiceAccounts, serviceAccount(name))
 					}
+
+					Expect(managedResource).To(contain(expectedServiceAccounts...))
 				})
 			})
 
@@ -223,9 +234,12 @@ metadata:
 				})
 
 				It("should successfully deploy all resources", func() {
+					expectedServiceAccounts := make([]client.Object, 0, len(defaultKCMControllerSANames)+10)
 					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector", "service-controller", "route-controller", "node-controller", "resource-claim-controller", "legacy-service-account-token-cleaner", "validatingadmissionpolicy-status-controller") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
+						expectedServiceAccounts = append(expectedServiceAccounts, serviceAccount(name))
 					}
+
+					Expect(managedResource).To(contain(expectedServiceAccounts...))
 				})
 			})
 
@@ -235,9 +249,12 @@ metadata:
 				})
 
 				It("should successfully deploy all resources", func() {
+					expectedServiceAccounts := make([]client.Object, 0, len(defaultKCMControllerSANames)+10)
 					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector", "service-controller", "route-controller", "node-controller", "resource-claim-controller", "legacy-service-account-token-cleaner", "service-cidrs-controller") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
+						expectedServiceAccounts = append(expectedServiceAccounts, serviceAccount(name))
 					}
+
+					Expect(managedResource).To(contain(expectedServiceAccounts...))
 				})
 			})
 		})
@@ -249,35 +266,38 @@ metadata:
 				})
 
 				It("should not deploy any ConfigMap", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HaveKey("configmap__kube-system__shoot-info.yaml"))
+					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						Expect(manifest).NotTo(And(ContainSubstring("name: shoot-info"), ContainSubstring("kind: ConfigMap")))
 					}
 				})
 			})
 
-			configMap := `apiVersion: v1
-data:
-  domain: ` + domain + `
-  extensions: ` + extension1 + `,` + extension2 + `
-  kubernetesVersion: ` + kubernetesVersion + `
-  maintenanceBegin: ` + maintenanceBegin + `
-  maintenanceEnd: ` + maintenanceEnd + `
-  nodeNetwork: ` + nodeCIDR + `
-  podNetwork: ` + podCIDR + `
-  projectName: ` + projectName + `
-  provider: ` + providerType + `
-  region: ` + region + `
-  serviceNetwork: ` + serviceCIDR + `
-  shootName: ` + shootName + `
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  name: shoot-info
-  namespace: kube-system
-`
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-info",
+					Namespace: "kube-system",
+				},
+				Data: map[string]string{
+					"domain":            domain,
+					"extensions":        extension1 + `,` + extension2,
+					"kubernetesVersion": kubernetesVersion,
+					"maintenanceBegin":  maintenanceBegin,
+					"maintenanceEnd":    maintenanceEnd,
+					"nodeNetwork":       nodeCIDR,
+					"podNetwork":        podCIDR,
+					"projectName":       projectName,
+					"provider":          providerType,
+					"region":            region,
+					"serviceNetwork":    serviceCIDR,
+					"shootName":         shootName,
+				},
+			}
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["configmap__kube-system__shoot-info.yaml"])).To(Equal(configMap))
+				Expect(managedResource).To(contain(configMap))
 			})
 		})
 
@@ -288,14 +308,17 @@ metadata:
 				})
 
 				It("should not deploy any PriorityClasses", func() {
-					for key := range managedResourceSecret.Data {
-						Expect(key).NotTo(HavePrefix("priorityclass_"), key)
+					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						Expect(manifest).NotTo(ContainSubstring("kind: PriorityClass"))
 					}
 				})
 			})
 
 			It("should successfully deploy all well-known PriorityClasses", func() {
-				expectPriorityClasses(managedResourceSecret.Data)
+				expectPriorityClasses(managedResource, contain)
 			})
 		})
 
@@ -313,129 +336,203 @@ metadata:
 			})
 
 			var (
-				networkPolicyToAPIServer = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows traffic to the API server in TCP port 443 for
-      pods labeled with 'networking.gardener.cloud/to-apiserver=allowed'.
-  creationTimestamp: null
-  name: gardener.cloud--allow-to-apiserver
-  namespace: kube-system
-spec:
-  egress:
-  - ports:
-    - port: 443
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/to-apiserver: allowed
-  policyTypes:
-  - Egress
-`
-				networkPolicyToDNS = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows egress traffic from pods labeled with 'networking.gardener.cloud/to-dns=allowed'
-      to DNS running in the 'kube-system' namespace.
-  creationTimestamp: null
-  name: gardener.cloud--allow-to-dns
-  namespace: kube-system
-spec:
-  egress:
-  - ports:
-    - port: 8053
-      protocol: UDP
-    - port: 8053
-      protocol: TCP
-    to:
-    - podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - kube-dns
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-    to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
-    - podSelector:
-        matchExpressions:
-        - key: k8s-app
-          operator: In
-          values:
-          - node-local-dns
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/to-dns: allowed
-  policyTypes:
-  - Egress
-`
-				networkPolicyToKubelet = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows egress traffic to kubelet in TCP port 10250
-      for pods labeled with 'networking.gardener.cloud/to-kubelet=allowed'.
-  creationTimestamp: null
-  name: gardener.cloud--allow-to-kubelet
-  namespace: kube-system
-spec:
-  egress:
-  - ports:
-    - port: 10250
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/to-kubelet: allowed
-  policyTypes:
-  - Egress
-`
-				networkPolicyToPublicNetworks = `apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  annotations:
-    gardener.cloud/description: Allows egress traffic to all networks for pods labeled
-      with 'networking.gardener.cloud/to-public-networks=allowed'.
-  creationTimestamp: null
-  name: gardener.cloud--allow-to-public-networks
-  namespace: kube-system
-spec:
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
-  podSelector:
-    matchLabels:
-      networking.gardener.cloud/to-public-networks: allowed
-  policyTypes:
-  - Egress
-`
+				networkPolicyToAPIServer = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--allow-to-apiserver",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows traffic to the API server in TCP port 443 for pods labeled with 'networking.gardener.cloud/to-apiserver=allowed'.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"networking.gardener.cloud/to-apiserver": "allowed",
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{
+							{
+								Ports: []networkingv1.NetworkPolicyPort{
+									{
+										Protocol: ptr.To(corev1.ProtocolTCP),
+										Port:     ptr.To(intstr.FromInt32(443)),
+									},
+								},
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
+
+				networkPolicyToDNS = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--allow-to-dns",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows egress traffic from pods labeled with 'networking.gardener.cloud/to-dns=allowed' to DNS running in the 'kube-system' namespace.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"networking.gardener.cloud/to-dns": "allowed",
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{
+							{
+								Ports: []networkingv1.NetworkPolicyPort{
+									{
+										Protocol: ptr.To(corev1.ProtocolUDP),
+										Port:     ptr.To(intstr.FromInt32(8053)),
+									},
+									{
+										Protocol: ptr.To(corev1.ProtocolTCP),
+										Port:     ptr.To(intstr.FromInt32(8053)),
+									},
+								},
+								To: []networkingv1.NetworkPolicyPeer{
+									{
+										PodSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{
+													Key:      "k8s-app",
+													Operator: metav1.LabelSelectorOpIn,
+													Values:   []string{"kube-dns"},
+												},
+											},
+										},
+									},
+								},
+							},
+							{
+								Ports: []networkingv1.NetworkPolicyPort{
+									{
+										Protocol: ptr.To(corev1.ProtocolUDP),
+										Port:     ptr.To(intstr.FromInt32(53)),
+									},
+									{
+										Protocol: ptr.To(corev1.ProtocolTCP),
+										Port:     ptr.To(intstr.FromInt32(53)),
+									},
+								},
+								To: []networkingv1.NetworkPolicyPeer{
+									{
+										IPBlock: &networkingv1.IPBlock{
+											CIDR: "0.0.0.0/0",
+										},
+									},
+									{
+										IPBlock: &networkingv1.IPBlock{
+											CIDR: "::/0",
+										},
+									},
+									{
+										PodSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{
+													Key:      "k8s-app",
+													Operator: metav1.LabelSelectorOpIn,
+													Values:   []string{"node-local-dns"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
+
+				networkPolicyToKubelet = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--allow-to-kubelet",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows egress traffic to kubelet in TCP port 10250 for pods labeled with 'networking.gardener.cloud/to-kubelet=allowed'.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"networking.gardener.cloud/to-kubelet": "allowed",
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{
+							{
+								Ports: []networkingv1.NetworkPolicyPort{
+									{
+										Protocol: ptr.To(corev1.ProtocolTCP),
+										Port:     ptr.To(intstr.FromInt32(10250)),
+									},
+								},
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
+
+				networkPolicyToPublicNetworks = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--allow-to-public-networks",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows egress traffic to all networks for pods labeled with 'networking.gardener.cloud/to-public-networks=allowed'.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"networking.gardener.cloud/to-public-networks": "allowed",
+							},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{
+							{
+								To: []networkingv1.NetworkPolicyPeer{
+									{
+										IPBlock: &networkingv1.IPBlock{
+											CIDR: "0.0.0.0/0",
+										},
+									},
+									{
+										IPBlock: &networkingv1.IPBlock{
+											CIDR: "::/0",
+										},
+									},
+								},
+							},
+						},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
 			)
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-apiserver.yaml"])).To(Equal(networkPolicyToAPIServer))
-				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-dns.yaml"])).To(Equal(networkPolicyToDNS))
-				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-kubelet.yaml"])).To(Equal(networkPolicyToKubelet))
-				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-public-networks.yaml"])).To(Equal(networkPolicyToPublicNetworks))
+				Expect(managedResource).To(contain(
+					networkPolicyToAPIServer,
+					networkPolicyToDNS,
+					networkPolicyToKubelet,
+					networkPolicyToPublicNetworks,
+				))
 			})
 		})
 
 		Context("Read-Only resources", func() {
 			It("should do nothing when the API resource list is unset", func() {
-				Expect(managedResourceSecret.Data).NotTo(And(
-					HaveKey("clusterrole____gardener.cloud_system_read-only.yaml"),
-					HaveKey("clusterrolebinding____gardener.cloud_system_read-only.yaml"),
-				))
+				manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+
+				for _, manifest := range manifests {
+					Expect(manifest).NotTo(And(ContainSubstring("name: gardener.cloud:system:read-only"), ContainSubstring("kind: ClusterRole")))
+				}
 			})
 
 			When("API resource list is set", func() {
@@ -490,69 +587,60 @@ spec:
 				})
 
 				It("should successfully deploy the related RBAC resources", func() {
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-only.yaml"])).To(Equal(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:system:read-only
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - bar
-  resources:
-  - baz
-  - foo
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - fancyoperator.io
-  resources:
-  - fancyresource2
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - foo
-  resources:
-  - baz
-  verbs:
-  - get
-  - list
-  - watch
-`))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-only.yaml"])).To(Equal(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-  creationTimestamp: null
-  name: gardener.cloud:system:read-only
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:system:read-only
-subjects:
-- kind: Group
-  name: gardener.cloud:system:viewers
-`))
+					clusterRole := &rbacv1.ClusterRole{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:system:read-only",
+						},
+						Rules: []rbacv1.PolicyRule{
+							{
+								APIGroups: []string{""},
+								Resources: []string{"configmaps"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							{
+								APIGroups: []string{"apps"},
+								Resources: []string{"deployments"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							{
+								APIGroups: []string{"bar"},
+								Resources: []string{"baz", "foo"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							{
+								APIGroups: []string{"fancyoperator.io"},
+								Resources: []string{"fancyresource2"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+							{
+								APIGroups: []string{"foo"},
+								Resources: []string{"baz"},
+								Verbs:     []string{"get", "list", "watch"},
+							},
+						},
+					}
+
+					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gardener.cloud:system:read-only",
+							Annotations: map[string]string{
+								"resources.gardener.cloud/delete-on-invalid-update": "true",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     "ClusterRole",
+							Name:     "gardener.cloud:system:read-only",
+						},
+						Subjects: []rbacv1.Subject{
+							{
+								Kind: "Group",
+								Name: "gardener.cloud:system:viewers",
+							},
+						},
+					}
+
+					Expect(managedResource).To(contain(clusterRole, clusterRoleBinding))
 				})
 			})
 		})
@@ -667,7 +755,7 @@ subjects:
 	})
 })
 
-func expectPriorityClasses(data map[string][]byte) {
+func expectPriorityClasses(mr *resourcesv1alpha1.ManagedResource, contain func(...client.Object) types.GomegaMatcher) {
 	expected := []struct {
 		name        string
 		value       int32
@@ -679,15 +767,16 @@ func expectPriorityClasses(data map[string][]byte) {
 		{"gardener-shoot-system-600", 999999600, "PriorityClass for Shoot system components"},
 	}
 
+	expectedPriorityClasses := make([]client.Object, 0, len(expected))
 	for _, pc := range expected {
-		ExpectWithOffset(1, data).To(HaveKeyWithValue("priorityclass____"+pc.name+".yaml", []byte(`apiVersion: scheduling.k8s.io/v1
-description: `+pc.description+`
-kind: PriorityClass
-metadata:
-  creationTimestamp: null
-  name: `+pc.name+`
-value: `+strconv.FormatInt(int64(pc.value), 10)+`
-`),
-		))
+		expectedPriorityClasses = append(expectedPriorityClasses, &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: pc.name,
+			},
+			Description: pc.description,
+			Value:       pc.value,
+		})
 	}
+
+	ExpectWithOffset(1, mr).To(contain(expectedPriorityClasses...))
 }

@@ -647,15 +647,23 @@ func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *extensionswe
 		return err
 	}
 
-	if shootWebhookConfig.MutatingWebhookConfig != nil {
-		if _, _, err := codec.Decode(managedResourceSecret.Data["mutatingwebhookconfiguration____"+shootWebhookConfig.MutatingWebhookConfig.Name+".yaml"], nil, shootWebhookConfig.MutatingWebhookConfig); err != nil {
-			return err
+	manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+	if err != nil {
+		return err
+	}
+
+	for _, manifest := range manifests {
+		if shootWebhookConfig.MutatingWebhookConfig != nil && strings.Contains(manifest, "kind: MutatingWebhookConfiguration") && strings.Contains(manifest, "name: "+shootWebhookConfig.MutatingWebhookConfig.Name) {
+			if _, _, err := codec.Decode([]byte(manifest), nil, shootWebhookConfig.MutatingWebhookConfig); err != nil {
+				return err
+			}
+		}
+		if shootWebhookConfig.ValidatingWebhookConfig != nil && strings.Contains(manifest, "kind: ValidatingWebhookConfiguration") && strings.Contains(manifest, "name: "+shootWebhookConfig.ValidatingWebhookConfig.Name) {
+			if _, _, err := codec.Decode([]byte(manifest), nil, shootWebhookConfig.ValidatingWebhookConfig); err != nil {
+				return err
+			}
 		}
 	}
-	if shootWebhookConfig.ValidatingWebhookConfig != nil {
-		if _, _, err := codec.Decode(managedResourceSecret.Data["validatingwebhookconfiguration____"+shootWebhookConfig.ValidatingWebhookConfig.Name+".yaml"], nil, shootWebhookConfig.ValidatingWebhookConfig); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }

@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
@@ -175,9 +176,13 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		slices.Sort(secretKeys)
 
 		for _, secretKey := range secretKeys {
-			value := secret.Data[secretKey]
+			var reader io.Reader = bytes.NewReader(secret.Data[secretKey])
+			if strings.HasSuffix(secretKey, resourcesv1alpha1.BrotliCompressionSuffix) {
+				reader = brotli.NewReader(reader)
+			}
+
 			var (
-				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
+				decoder    = yaml.NewYAMLOrJSONDecoder(reader, 1024)
 				decodedObj map[string]any
 			)
 
@@ -268,7 +273,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 					continue
 				}
 
-				hash.Write(value)
+				hash.Write(secret.Data[secretKey])
 				newResourcesObjects = append(newResourcesObjects, newObj)
 				newResourcesObjectReferences = append(newResourcesObjectReferences, objectReference)
 			}

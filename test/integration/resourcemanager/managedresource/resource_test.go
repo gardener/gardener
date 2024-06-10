@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -120,17 +121,47 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("create managed resource", func() {
-		It("should successfully create the resources and maintain proper status conditions", func() {
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}).Should(Succeed())
+		Describe("successful creation", func() {
+			test := func() {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: testNamespace.Name,
+					},
+				}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Status.Conditions
-			}).Should(
-				ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
-			)
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
+			}
+
+			Context("with uncompressed data", func() {
+				It("should successfully create the resources and maintain proper status conditions", func() {
+					test()
+				})
+			})
+
+			Context("with compressed data", func() {
+				BeforeEach(func() {
+					compressedData, err := testutils.BrotliCompression(secretForManagedResource.Data[dataKey])
+					Expect(err).ToNot(HaveOccurred())
+
+					secretForManagedResource.Data[dataKey+".br"] = compressedData
+					delete(secretForManagedResource.Data, dataKey)
+				})
+
+				It("should successfully create the resources and maintain proper status conditions", func() {
+					test()
+				})
+			})
 		})
 
 		Context("missing secret", func() {

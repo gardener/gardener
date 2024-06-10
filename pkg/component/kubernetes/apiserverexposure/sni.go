@@ -135,7 +135,13 @@ func (s *sni) Deploy(ctx context.Context) error {
 		filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
 		registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		registry.AddSerialized(filename, envoyFilterSpec.Bytes())
-		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, managedResourceName, false, registry.SerializedObjects()); err != nil {
+
+		serializedObjects, err := registry.SerializedObjects()
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, managedResourceName, false, serializedObjects); err != nil {
 			return err
 		}
 	}
