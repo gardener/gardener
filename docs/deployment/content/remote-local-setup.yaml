@@ -55,7 +55,7 @@ spec:
             source ~/.kube-ps1.sh
             export PS1='[\w $(printf "$(kube_ps1)")]\$ '
             export TERM=xterm-256color
-            cd ~/gardener
+            cd ~/go/src/github.com/gardener/gardener
             echo -e "\e[1;33mTo attach to the \e[1;36mgardener\e[1;33m tmux session, run '\e[1;32mtmux attach -t gardener\e[1;33m'\e[0m"
           EOF
           cat > ~/.tmux.conf <<"EOF"
@@ -65,7 +65,9 @@ spec:
             set -g pane-border-status top
             set -g pane-border-format " #{pane_index} #{pane_title} - #{pane_current_command} "
           EOF
-          [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener.git
+          mkdir -p ~/go/src/github.com/gardener
+          cd ~/go/src/github.com/gardener
+          [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
           dockerd-entrypoint.sh &
           until docker ps >/dev/null 2>&1; do sleep 1; done
           tmux new -d -s gardener -n gardener
