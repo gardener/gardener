@@ -91,6 +91,7 @@ spec:
         # https://github.com/gardener/ci-infra/blob/dff565bced0f386dd1acb0743beb3831dae6c10d/config/prow/config.yaml#L288-L298
         - {name: cgroup,  mountPath: /sys/fs/cgroup}
         - {name: home,    mountPath: /root}
+        - {name: home,    mountPath: /var/lib/docker, subPath: .docker}
         - {name: modules, mountPath: /lib/modules, readOnly: true}
       volumes:
       - {name: cgroup,  hostPath: {type: Directory, path: /sys/fs/cgroup}}
