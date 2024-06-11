@@ -6,19 +6,13 @@ package dashboard_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -37,7 +31,7 @@ import (
 
 var _ = Describe("Kubernetes Dashboard", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName = "shoot-addon-kubernetes-dashboard"
 		namespace           = "some-namespace"
@@ -48,470 +42,397 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		values    Values
 		component component.DeployWaiter
 
-		consistOf             func(...client.Object) types.GomegaMatcher
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		namespaces = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"gardener.cloud/purpose": "kubernetes-dashboard",
-				},
-			},
-		}
+		namespacesYAML = `apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/purpose: kubernetes-dashboard
+  name: kubernetes-dashboard
+spec: {}
+status: {}
+`
 
-		role = &rbacv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					ResourceNames: []string{
-						"kubernetes-dashboard-key-holder",
-						"kubernetes-dashboard-certs",
-						"kubernetes-dashboard-csrf",
-					},
-					Resources: []string{"secrets"},
-					Verbs: []string{
-						"get",
-						"update",
-						"delete",
-					},
-				},
-				{
-					APIGroups: []string{""},
-					ResourceNames: []string{
-						"heapster",
-						"dashboard-metrics-scraper",
-					},
-					Resources: []string{"services"},
-					Verbs:     []string{"proxy"},
-				},
-				{
-					APIGroups: []string{""},
-					ResourceNames: []string{
-						"kubernetes-dashboard-settings",
-					},
-					Resources: []string{"configmaps"},
-					Verbs: []string{
-						"get",
-						"update",
-					},
-				},
-				{
-					APIGroups: []string{""},
-					ResourceNames: []string{
-						"heapster",
-						"http:heapster:",
-						"https:heapster:",
-						"dashboard-metrics-scraper",
-						"http:dashboard-metrics-scraper",
-					},
-					Resources: []string{"services/proxy"},
-					Verbs:     []string{"get"},
-				},
-			},
-		}
+		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - kubernetes-dashboard-key-holder
+  - kubernetes-dashboard-certs
+  - kubernetes-dashboard-csrf
+  resources:
+  - secrets
+  verbs:
+  - get
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resourceNames:
+  - heapster
+  - dashboard-metrics-scraper
+  resources:
+  - services
+  verbs:
+  - proxy
+- apiGroups:
+  - ""
+  resourceNames:
+  - kubernetes-dashboard-settings
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resourceNames:
+  - heapster
+  - 'http:heapster:'
+  - 'https:heapster:'
+  - dashboard-metrics-scraper
+  - http:dashboard-metrics-scraper
+  resources:
+  - services/proxy
+  verbs:
+  - get
+`
 
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-				Annotations: map[string]string{
-					"resources.gardener.cloud/delete-on-invalid-update": "true",
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Role",
-				Name:     "kubernetes-dashboard",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      "kubernetes-dashboard",
-					Namespace: "kubernetes-dashboard",
-				},
-			},
-		}
+		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubernetes-dashboard
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+`
 
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{"metrics.k8s.io"},
-					Resources: []string{"pods", "nodes"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-			},
-		}
+		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+rules:
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+`
 
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kubernetes-dashboard",
-				Annotations: map[string]string{
-					"resources.gardener.cloud/delete-on-invalid-update": "true",
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "kubernetes-dashboard",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      "kubernetes-dashboard",
-					Namespace: "kubernetes-dashboard",
-				},
-			},
-		}
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubernetes-dashboard
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+`
 
-		serviceAccount = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			AutomountServiceAccountToken: ptr.To(false),
-		}
+		serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+`
 
-		secretCerts = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard-certs",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Type: corev1.SecretTypeOpaque,
-		}
+		secretCertsYAML = `apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard-certs
+  namespace: kubernetes-dashboard
+type: Opaque
+`
 
-		secretCSRF = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard-csrf",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Data: map[string][]byte{
-				"csrf": []byte(""),
-			},
-			Type: corev1.SecretTypeOpaque,
-		}
+		secretCSRFYAML = `apiVersion: v1
+data:
+  csrf: ""
+kind: Secret
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard-csrf
+  namespace: kubernetes-dashboard
+type: Opaque
+`
 
-		secretKeyHolder = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard-key-holder",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Type: corev1.SecretTypeOpaque,
-		}
+		secretKeyHolderYAML = `apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard-key-holder
+  namespace: kubernetes-dashboard
+type: Opaque
+`
 
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard-settings",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-		}
+		configMapYAML = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard-settings
+  namespace: kubernetes-dashboard
+`
 
-		deploymentDashboardFor = func(apiserverHost *string, authenticationMode string) *appsv1.Deployment {
-			deployment := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kubernetes-dashboard",
-					Namespace: "kubernetes-dashboard",
-					Labels: map[string]string{
-						"gardener.cloud/role": "optional-addon",
-						"k8s-app":             "kubernetes-dashboard",
-						"origin":              "gardener",
-					},
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](2),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"k8s-app": "kubernetes-dashboard",
-						},
-					},
-					Strategy: appsv1.DeploymentStrategy{
-						Type: appsv1.RollingUpdateDeploymentStrategyType,
-						RollingUpdate: &appsv1.RollingUpdateDeployment{
-							MaxSurge:       ptr.To(intstr.IntOrString{IntVal: 0}),
-							MaxUnavailable: ptr.To(intstr.IntOrString{IntVal: 1}),
-						},
-					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								"gardener.cloud/role": "optional-addon",
-								"k8s-app":             "kubernetes-dashboard",
-								"origin":              "gardener",
-							},
-						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  "kubernetes-dashboard",
-									Image: "some-image:some-tag",
-									Args: []string{
-										"--auto-generate-certificates",
-										"--authentication-mode=" + authenticationMode,
-										"--namespace=kubernetes-dashboard",
-									},
-									ImagePullPolicy: corev1.PullIfNotPresent,
-									Ports: []corev1.ContainerPort{
-										{
-											ContainerPort: 8443,
-											Protocol:      corev1.ProtocolTCP,
-										},
-									},
-									Resources: corev1.ResourceRequirements{
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("256Mi"),
-										},
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("50m"),
-											corev1.ResourceMemory: resource.MustParse("50Mi"),
-										},
-									},
-									LivenessProbe: &corev1.Probe{
-										ProbeHandler: corev1.ProbeHandler{
-											HTTPGet: &corev1.HTTPGetAction{
-												Path:   "/",
-												Port:   intstr.IntOrString{IntVal: 8443},
-												Scheme: corev1.URISchemeHTTPS,
-											},
-										},
-										InitialDelaySeconds: 30,
-										TimeoutSeconds:      30,
-									},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											Name:      "kubernetes-dashboard-certs",
-											MountPath: "/certs",
-										},
-										{
-											Name:      "tmp-volume",
-											MountPath: "/tmp",
-										},
-									},
-									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
-										ReadOnlyRootFilesystem:   ptr.To(true),
-									},
-								},
-							},
-							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot:       ptr.To(true),
-								RunAsUser:          ptr.To[int64](1001),
-								RunAsGroup:         ptr.To[int64](2001),
-								FSGroup:            ptr.To[int64](1),
-								SupplementalGroups: []int64{1},
-								SeccompProfile: &corev1.SeccompProfile{
-									Type: corev1.SeccompProfileTypeRuntimeDefault,
-								},
-							},
-							ServiceAccountName: "kubernetes-dashboard",
-							Volumes: []corev1.Volume{
-								{
-									Name: "kubernetes-dashboard-certs",
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName: "kubernetes-dashboard-certs",
-										},
-									},
-								},
-								{
-									Name:         "tmp-volume",
-									VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
-								},
-							},
-						},
-					},
-				},
-			}
+		deploymentDashboardYAMLFor = func(apiserverHost *string, authenticationMode string) string {
+			out := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: optional-addon
+    k8s-app: kubernetes-dashboard
+    origin: gardener
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: optional-addon
+        k8s-app: kubernetes-dashboard
+        origin: gardener
+    spec:
+      containers:
+      - args:
+        - --auto-generate-certificates
+        - --authentication-mode=` + authenticationMode + `
+        - --namespace=kubernetes-dashboard
+`
 
 			if apiserverHost != nil {
-				deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-					Name:  "KUBERNETES_SERVICE_HOST",
-					Value: *apiserverHost,
-				})
+				out += `        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: ` + *apiserverHost + `
+`
 			}
 
-			return deployment
+			out += `        image: some-image:some-tag
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        name: kubernetes-dashboard
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /certs
+          name: kubernetes-dashboard-certs
+        - mountPath: /tmp
+          name: tmp-volume
+      securityContext:
+        fsGroup: 1
+        runAsGroup: 2001
+        runAsNonRoot: true
+        runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+        - 1
+      serviceAccountName: kubernetes-dashboard
+      volumes:
+      - name: kubernetes-dashboard-certs
+        secret:
+          secretName: kubernetes-dashboard-certs
+      - emptyDir: {}
+        name: tmp-volume
+status: {}
+`
+			return out
 		}
 
-		deploymentMetricsScraper = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dashboard-metrics-scraper",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"gardener.cloud/role": "optional-addon",
-					"k8s-app":             "dashboard-metrics-scraper",
-					"origin":              "gardener",
-				},
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"k8s-app": "dashboard-metrics-scraper",
-					},
-				},
-				Strategy: appsv1.DeploymentStrategy{},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"gardener.cloud/role": "optional-addon",
-							"k8s-app":             "dashboard-metrics-scraper",
-							"origin":              "gardener",
-						},
-					},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  "dashboard-metrics-scraper",
-								Image: "scraper-image:scraper-tag",
-								LivenessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path:   "/",
-											Port:   intstr.IntOrString{IntVal: 8000},
-											Scheme: corev1.URISchemeHTTP,
-										},
-									},
-									InitialDelaySeconds: 30,
-									TimeoutSeconds:      30,
-								},
-								Ports: []corev1.ContainerPort{
-									{
-										ContainerPort: 8000,
-										Protocol:      corev1.ProtocolTCP,
-									},
-								},
-								Resources: corev1.ResourceRequirements{},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									ReadOnlyRootFilesystem:   ptr.To(true),
-									RunAsNonRoot:             ptr.To(true),
-									RunAsUser:                ptr.To[int64](1001),
-									RunAsGroup:               ptr.To[int64](2001),
-									SeccompProfile: &corev1.SeccompProfile{
-										Type: corev1.SeccompProfileTypeRuntimeDefault,
-									},
-								},
-								VolumeMounts: []corev1.VolumeMount{{MountPath: "/tmp", Name: "tmp-volume"}},
-							},
-						},
-						SecurityContext: &corev1.PodSecurityContext{
-							FSGroup:            ptr.To[int64](1),
-							SupplementalGroups: []int64{1},
-						},
-						ServiceAccountName: "kubernetes-dashboard",
-						Volumes: []corev1.Volume{
-							{Name: "tmp-volume", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
-						},
-					},
-				},
-			},
-		}
+		deploymentMetricsScraperYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: optional-addon
+    k8s-app: dashboard-metrics-scraper
+    origin: gardener
+  name: dashboard-metrics-scraper
+  namespace: kubernetes-dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      k8s-app: dashboard-metrics-scraper
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: optional-addon
+        k8s-app: dashboard-metrics-scraper
+        origin: gardener
+    spec:
+      containers:
+      - image: scraper-image:scraper-tag
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        name: dashboard-metrics-scraper
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 2001
+          runAsNonRoot: true
+          runAsUser: 1001
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-volume
+      securityContext:
+        fsGroup: 1
+        supplementalGroups:
+        - 1
+      serviceAccountName: kubernetes-dashboard
+      volumes:
+      - emptyDir: {}
+        name: tmp-volume
+status: {}
+`
 
-		serviceDashboard = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{
-						Port:       443,
-						TargetPort: intstr.IntOrString{IntVal: 8443},
-					},
-				},
-				Selector: map[string]string{
-					"k8s-app": "kubernetes-dashboard",
-				},
-			},
-		}
+		serviceDashboardYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+spec:
+  ports:
+  - port: 443
+    targetPort: 8443
+  selector:
+    k8s-app: kubernetes-dashboard
+status:
+  loadBalancer: {}
+`
 
-		serviceMetricsScraper = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dashboard-metrics-scraper",
-				Namespace: "kubernetes-dashboard",
-				Labels: map[string]string{
-					"k8s-app": "dashboard-metrics-scraper",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{
-						Port:       8000,
-						TargetPort: intstr.IntOrString{IntVal: 8000},
-					},
-				},
-				Selector: map[string]string{
-					"k8s-app": "dashboard-metrics-scraper",
-				},
-			},
-		}
+		serviceMetricsScraperYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s-app: dashboard-metrics-scraper
+  name: dashboard-metrics-scraper
+  namespace: kubernetes-dashboard
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    k8s-app: dashboard-metrics-scraper
+status:
+  loadBalancer: {}
+`
 
-		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kubernetes-dashboard",
-				Namespace: "kubernetes-dashboard",
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName:    "*",
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						},
-					},
-				},
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-					Name:       "kubernetes-dashboard",
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
-				},
-			},
-		}
+		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kubernetes-dashboard
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 		values = Values{
 			Image:               image,
 			MetricsScraperImage: scraperImage,
@@ -533,14 +454,10 @@ var _ = Describe("Kubernetes Dashboard", func() {
 	})
 
 	Describe("#Deploy", func() {
-		var (
-			vpaEnabled        bool
-			expectedResources []client.Object
-		)
+		var vpaEnabled bool
 
 		BeforeEach(func() {
 			vpaEnabled = false
-			expectedResources = make([]client.Object, 0)
 		})
 
 		JustBeforeEach(func() {
@@ -566,35 +483,38 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
-			expectedResources = append(expectedResources,
-				namespaces,
-				role,
-				roleBinding,
-				clusterRole,
-				clusterRoleBinding,
-				serviceAccount,
-				secretCerts,
-				secretCSRF,
-				secretKeyHolder,
-				configMap,
-				serviceDashboard,
-				serviceMetricsScraper,
-				deploymentMetricsScraper,
-			)
-			if vpaEnabled {
-				expectedResources = append(expectedResources, vpa)
-			}
 
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			if vpaEnabled {
+				Expect(managedResourceSecret.Data).To(HaveLen(15))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(vpaYAML))
+			} else {
+				Expect(managedResourceSecret.Data).To(HaveLen(14))
+			}
+
+			Expect(string(managedResourceSecret.Data["namespace____kubernetes-dashboard.yaml"])).To(Equal(namespacesYAML))
+			Expect(string(managedResourceSecret.Data["role__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(roleYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____kubernetes-dashboard.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____kubernetes-dashboard.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-certs.yaml"])).To(Equal(secretCertsYAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-csrf.yaml"])).To(Equal(secretCSRFYAML))
+			Expect(string(managedResourceSecret.Data["secret__kubernetes-dashboard__kubernetes-dashboard-key-holder.yaml"])).To(Equal(secretKeyHolderYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kubernetes-dashboard__kubernetes-dashboard-settings.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["service__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(serviceDashboardYAML))
+			Expect(string(managedResourceSecret.Data["service__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(serviceMetricsScraperYAML))
+			fmt.Println(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"]))
+			Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__dashboard-metrics-scraper.yaml"])).To(Equal(deploymentMetricsScraperYAML))
 		})
 
 		Context("w/o apiserver host, w/o authentication mode, w/o vpa", func() {
 			It("should successfully deploy all resources", func() {
-				expectedResources = append(expectedResources, deploymentDashboardFor(nil, ""))
-				Expect(managedResource).To(consistOf(expectedResources...))
+				Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(nil, "")))
 			})
 		})
 
@@ -613,8 +533,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				expectedResources = append(expectedResources, deploymentDashboardFor(&apiserverHost, authenticationMode))
-				Expect(managedResource).To(consistOf(expectedResources...))
+				Expect(string(managedResourceSecret.Data["deployment__kubernetes-dashboard__kubernetes-dashboard.yaml"])).To(Equal(deploymentDashboardYAMLFor(&apiserverHost, authenticationMode)))
 			})
 		})
 	})

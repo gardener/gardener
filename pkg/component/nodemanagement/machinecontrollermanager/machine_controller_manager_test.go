@@ -40,7 +40,7 @@ import (
 
 var _ = Describe("MachineControllerManager", func() {
 	var (
-		ctx       = context.Background()
+		ctx       = context.TODO()
 		namespace = "shoot--foo--bar"
 
 		image                    = "mcm-image:tag"
@@ -52,11 +52,6 @@ var _ = Describe("MachineControllerManager", func() {
 		sm         secretsmanager.Interface
 		values     Values
 		mcm        Interface
-
-		clusterRoleYAML        string
-		clusterRoleBindingYAML string
-		roleYAML               string
-		roleBindingYAML        string
 
 		serviceAccount        *corev1.ServiceAccount
 		clusterRoleBinding    *rbacv1.ClusterRoleBinding
@@ -348,7 +343,7 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 		}
 
-		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		clusterRoleYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -427,7 +422,7 @@ rules:
   - watch
 `
 
-		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		clusterRoleBindingYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -442,7 +437,7 @@ subjects:
   namespace: kube-system
 `
 
-		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		roleYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
@@ -460,7 +455,7 @@ rules:
   - list
 `
 
-		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		roleBindingYAML := `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
@@ -480,6 +475,17 @@ subjects:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-machine-controller-manager",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				},
+			},
+			Type:      corev1.SecretTypeOpaque,
+			Immutable: ptr.To(true),
+			Data: map[string][]byte{
+				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml":            []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_machine-controller-manager.yaml":     []byte(clusterRoleBindingYAML),
+				"role__kube-system__gardener.cloud_target_machine-controller-manager.yaml":        []byte(roleYAML),
+				"rolebinding__kube-system__gardener.cloud_target_machine-controller-manager.yaml": []byte(roleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -550,18 +556,8 @@ subjects:
 			actualManagedResourceSecret := &corev1.Secret{}
 			managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
-			Expect(actualManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(actualManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-
-			manifests, err := test.ExtractManifestsFromManagedResourceData(actualManagedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(manifests).To(ConsistOf(
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				roleYAML,
-				roleBindingYAML,
-			))
+			managedResourceSecret.ResourceVersion = "1"
+			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
 		})
 
 		Context("Kubernetes versions < 1.26", func() {

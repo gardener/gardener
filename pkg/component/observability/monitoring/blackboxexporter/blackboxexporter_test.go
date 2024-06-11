@@ -34,7 +34,7 @@ import (
 
 var _ = Describe("BlackboxExporter", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName string
 		namespace           string
@@ -49,8 +49,6 @@ var _ = Describe("BlackboxExporter", func() {
 		values             Values
 		deployer           component.DeployWaiter
 
-		manifests             []string
-		expectedManifests     []string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
@@ -373,23 +371,17 @@ status: {}
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				var err error
-				manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				expectedManifests = []string{
-					serviceAccountYAML,
-					configMapYAML,
-					deploymentYAMLFor(values.ClusterType, values.IsGardenCluster),
-					serviceYAMLFor(values.ClusterType, values.IsGardenCluster),
-				}
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType, values.IsGardenCluster)))
+				Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType, values.IsGardenCluster)))
 			})
 
 			Context("w/o vpa enabled", func() {
 				Context("kubernetes versions < 1.26", func() {
 					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(false))
-						Expect(manifests).To(ContainElements(expectedManifests))
+						Expect(managedResourceSecret.Data).To(HaveLen(5))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 					})
 				})
 
@@ -399,8 +391,8 @@ status: {}
 					})
 
 					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(true))
-						Expect(manifests).To(ContainElements(expectedManifests))
+						Expect(managedResourceSecret.Data).To(HaveLen(5))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
 					})
 				})
 			})
@@ -411,8 +403,9 @@ status: {}
 				})
 
 				It("should successfully deploy the resources", func() {
-					expectedManifests = append(expectedManifests, pdbYAMLFor(false), vpaYAML)
-					Expect(manifests).To(ContainElements(expectedManifests))
+					Expect(managedResourceSecret.Data).To(HaveLen(6))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
 				})
 			})
 		})
@@ -477,16 +470,10 @@ status: {}
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				var err error
-				manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				expectedManifests = []string{
-					serviceAccountYAML,
-					configMapYAML,
-					deploymentYAMLFor(values.ClusterType, values.IsGardenCluster),
-					serviceYAMLFor(values.ClusterType, values.IsGardenCluster),
-				}
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__blackbox-exporter-config-eb6ac772.yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(deploymentYAMLFor(values.ClusterType, values.IsGardenCluster)))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType, values.IsGardenCluster)))
 			})
 
 			Context("shoot control plane", func() {
@@ -497,8 +484,8 @@ status: {}
 				Context("w/o vpa enabled", func() {
 					Context("kubernetes versions < 1.26", func() {
 						It("should successfully deploy the resources", func() {
-							expectedManifests = append(expectedManifests, pdbYAMLFor(false))
-							Expect(manifests).To(ContainElements(expectedManifests))
+							Expect(managedResourceSecret.Data).To(HaveLen(5))
+							Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 						})
 					})
 
@@ -508,8 +495,8 @@ status: {}
 						})
 
 						It("should successfully deploy the resources", func() {
-							expectedManifests = append(expectedManifests, pdbYAMLFor(true))
-							Expect(manifests).To(ContainElements(expectedManifests))
+							Expect(managedResourceSecret.Data).To(HaveLen(5))
+							Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
 						})
 					})
 				})
@@ -520,8 +507,9 @@ status: {}
 					})
 
 					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(false), vpaYAML)
-						Expect(manifests).To(ContainElements(expectedManifests))
+						Expect(managedResourceSecret.Data).To(HaveLen(6))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+						Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
 					})
 				})
 			})
@@ -535,8 +523,8 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, pdbYAMLFor(false))
-					Expect(manifests).To(ContainElements(expectedManifests))
+					Expect(managedResourceSecret.Data).To(HaveLen(5))
+					// other assertions are executed in JustBeforeEach bock above
 				})
 			})
 		})

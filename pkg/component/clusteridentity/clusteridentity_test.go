@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -32,36 +31,50 @@ var _ = Describe("ClusterIdentity", func() {
 	var (
 		c               client.Client
 		clusterIdentity Interface
-		consistOf       func(...client.Object) types.GomegaMatcher
 
-		ctx       = context.Background()
+		ctx       = context.TODO()
 		identity  = "hugo"
 		origin    = "shoot"
 		namespace = "shoot--foo--bar"
 
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster-identity",
-				Namespace: "kube-system",
-			},
-			Data: map[string]string{
-				"cluster-identity": identity,
-				"origin":           origin,
-			},
-			Immutable: ptr.To(true),
-		}
+		configMapYAML = `apiVersion: v1
+data:
+  cluster-identity: ` + identity + `
+  origin: ` + origin + `
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: cluster-identity
+  namespace: kube-system
+`
 
 		managedResourceName       = "shoot-core-cluster-identity"
 		managedResourceSecretName = "managedresource-shoot-core-cluster-identity"
 
-		managedResource *resourcesv1alpha1.ManagedResource
+		managedResourceSecret *corev1.Secret
+		managedResource       *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		clusterIdentity = NewForShoot(c, namespace, identity)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            managedResourceSecretName,
+				Namespace:       namespace,
+				ResourceVersion: "1",
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"configmap__kube-system__cluster-identity.yaml": []byte(configMapYAML),
+			},
+			Immutable: ptr.To(true),
+		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
@@ -87,7 +100,11 @@ var _ = Describe("ClusterIdentity", func() {
 
 			utilruntime.Must(references.InjectAnnotations(managedResource))
 			Expect(actualMr).To(DeepEqual(managedResource))
-			Expect(actualMr).To(consistOf(configMap))
+
+			actualMRSecret := &corev1.Secret{}
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualMRSecret)).To(Succeed())
+			Expect(actualMRSecret).To(Equal(managedResourceSecret))
 		})
 	})
 

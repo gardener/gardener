@@ -12,7 +12,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,8 +51,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
-		ctx          = context.Background()
-		consistOf    func(...client.Object) gomegatypes.GomegaMatcher
+		ctx                = context.TODO()
 		fakeErr            = fmt.Errorf("fake error")
 		namespace          = "shoot--foo--bar"
 		namespaceUID       = types.UID("1234567890")
@@ -111,6 +109,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		serviceName                      = "cluster-autoscaler"
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
+		managedResourceSecretName        = "managedresource-shoot-core-cluster-autoscaler"
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -423,137 +422,201 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 
-		clusterRoleShoot = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:target:cluster-autoscaler",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"events", "endpoints"},
-					Verbs:     []string{"create", "patch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods/eviction"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods/status"},
-					Verbs:     []string{"update"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"endpoints"},
-					ResourceNames: []string{"cluster-autoscaler"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"nodes"},
-					Verbs:     []string{"watch", "list", "get", "update"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"apps", "extensions"},
-					Resources: []string{"daemonsets", "replicasets", "statefulsets"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"policy"},
-					Resources: []string{"poddisruptionbudgets"},
-					Verbs:     []string{"watch", "list"},
-				},
-				{
-					APIGroups: []string{"storage.k8s.io"},
-					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities"},
-					Verbs:     []string{"watch", "list", "get"},
-				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{"coordination.k8s.io"},
-					ResourceNames: []string{"cluster-autoscaler"},
-					Resources:     []string{"leases"},
-					Verbs:         []string{"get", "update"},
-				},
-				{
-					APIGroups: []string{"batch", "extensions"},
-					Resources: []string{"jobs"},
-					Verbs:     []string{"get", "list", "patch", "watch"},
-				},
-				{
-					APIGroups: []string{"batch"},
-					Resources: []string{"jobs", "cronjobs"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-			},
-		}
+		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  - endpoints
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resourceNames:
+  - cluster-autoscaler
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - watch
+  - list
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - replicationcontrollers
+  - persistentvolumeclaims
+  - persistentvolumes
+  verbs:
+  - watch
+  - list
+  - get
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - watch
+  - list
+  - get
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - watch
+  - list
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  - csinodes
+  - csidrivers
+  - csistoragecapacities
+  verbs:
+  - watch
+  - list
+  - get
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - cluster-autoscaler
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - batch
+  - extensions
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+`
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:target:cluster-autoscaler
+subjects:
+- kind: ServiceAccount
+  name: cluster-autoscaler
+  namespace: kube-system
+`
 
-		clusterRoleBindingShoot = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:target:cluster-autoscaler",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:target:cluster-autoscaler",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      serviceAccountName,
-					Namespace: "kube-system",
-				},
-			},
-		}
+		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - watch
+  - list
+  - get
+  - create
+- apiGroups:
+  - ""
+  resourceNames:
+  - cluster-autoscaler-status
+  resources:
+  - configmaps
+  verbs:
+  - delete
+  - update
+`
 
-		roleShoot = &rbacv1.Role{
+		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:cluster-autoscaler
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:target:cluster-autoscaler
+subjects:
+- kind: ServiceAccount
+  name: cluster-autoscaler
+`
+		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:target:cluster-autoscaler",
-				Namespace: "kube-system",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"watch", "list", "get", "create"},
-				},
-				{
-					APIGroups:     []string{""},
-					ResourceNames: []string{"cluster-autoscaler-status"},
-					Resources:     []string{"configmaps"},
-					Verbs:         []string{"delete", "update"},
+				Name:            managedResourceSecretName,
+				Namespace:       namespace,
+				ResourceVersion: "1",
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
 				},
 			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"clusterrole____gardener.cloud_target_cluster-autoscaler.yaml":            []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_cluster-autoscaler.yaml":     []byte(clusterRoleBindingYAML),
+				"role__kube-system__gardener.cloud_target_cluster-autoscaler.yaml":        []byte(roleYAML),
+				"rolebinding__kube-system__gardener.cloud_target_cluster-autoscaler.yaml": []byte(roleBindingYAML),
+			},
+			Immutable: ptr.To(true),
 		}
-
-		roleBindingShoot = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:target:cluster-autoscaler",
-				Namespace: "kube-system",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Role",
-				Name:     "gardener.cloud:target:cluster-autoscaler",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind: "ServiceAccount",
-					Name: serviceAccountName,
-				},
-			},
-		}
-
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
@@ -574,7 +637,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -613,7 +675,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 				utilruntime.Must(references.InjectAnnotations(managedResource))
 				Expect(actualMr).To(DeepEqual(managedResource))
 
-				Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+				actualMRSecret := &corev1.Secret{}
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualMRSecret)).To(Succeed())
+				Expect(actualMRSecret).To(DeepEqual(managedResourceSecret))
 
 				actualServiceAccount := &corev1.ServiceAccount{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())

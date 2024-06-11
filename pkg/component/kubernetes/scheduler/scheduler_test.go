@@ -12,13 +12,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -49,7 +47,7 @@ var _ = Describe("KubeScheduler", func() {
 		c                             client.Client
 		sm                            secretsmanager.Interface
 		kubeScheduler                 component.DeployWaiter
-		ctx                           = context.Background()
+		ctx                           = context.TODO()
 		namespace                     = "shoot--foo--bar"
 		runtimeVersion, targetVersion *semver.Version
 		image                               = "registry.k8s.io/kube-scheduler:v1.27.2"
@@ -63,7 +61,6 @@ var _ = Describe("KubeScheduler", func() {
 			KubeMaxPDVols: ptr.To("23"),
 			Profile:       &profileBinPacking,
 		}
-		consistOf func(...client.Object) types.GomegaMatcher
 
 		secretNameClientCA = "ca-client"
 		secretNameServer   = "kube-scheduler-server"
@@ -463,42 +460,36 @@ var _ = Describe("KubeScheduler", func() {
 			},
 		}
 
-		clusterRoleBinding1 = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:target:kube-scheduler",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "system:kube-scheduler",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      "kube-scheduler",
-					Namespace: "kube-system",
-				},
-			},
-		}
-		clusterRoleBinding2 = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:target:kube-scheduler-volume",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     "system:volume-scheduler",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      "kube-scheduler",
-					Namespace: "kube-system",
-				},
-			},
-		}
-
-		managedResource *resourcesv1alpha1.ManagedResource
+		clusterRoleBinding1YAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:kube-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+- kind: ServiceAccount
+  name: kube-scheduler
+  namespace: kube-system
+`
+		clusterRoleBinding2YAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:kube-scheduler-volume
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:volume-scheduler
+subjects:
+- kind: ServiceAccount
+  name: kube-scheduler
+  namespace: kube-system
+`
+		managedResourceSecret *corev1.Secret
+		managedResource       *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -507,7 +498,6 @@ var _ = Describe("KubeScheduler", func() {
 		targetVersion = semver.MustParse("1.27.2")
 		runtimeVersion = semver.MustParse("1.25.2")
 		kubeScheduler = New(c, namespace, sm, runtimeVersion, targetVersion, image, replicas, configEmpty)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
@@ -516,6 +506,13 @@ var _ = Describe("KubeScheduler", func() {
 
 	Describe("#Deploy", func() {
 		BeforeEach(func() {
+			managedResourceSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceSecretName,
+					Namespace: namespace,
+				},
+				Type: corev1.SecretTypeOpaque,
+			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
@@ -563,7 +560,15 @@ var _ = Describe("KubeScheduler", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 				Expect(managedResource).To(DeepEqual(expectedMr))
-				Expect(managedResource).To(consistOf(clusterRoleBinding1, clusterRoleBinding2))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
+				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_target_kube-scheduler.yaml"]).To(Equal([]byte(clusterRoleBinding1YAML)))
+				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_target_kube-scheduler-volume.yaml"]).To(Equal([]byte(clusterRoleBinding2YAML)))
 
 				expectedConfigMap := configMapFor(expectedComponentConfigFilePath)
 				actualConfigMap := &corev1.ConfigMap{

@@ -111,7 +111,7 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 		return nil, err
 	}
 
-	return registry.SerializedObjects()
+	return registry.SerializedObjects(), nil
 }
 
 func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresources.Registry, name string, config gardencorev1beta1.SeedSettingExcessCapacityReservationConfig) error {

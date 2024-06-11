@@ -33,7 +33,7 @@ import (
 
 var _ = Describe("NodeProblemDetector", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName = "shoot-core-node-problem-detector"
 		namespace           = "some-namespace"
@@ -42,8 +42,6 @@ var _ = Describe("NodeProblemDetector", func() {
 		c                       client.Client
 		component               component.DeployWaiter
 		daemonSetPrometheusPort = 20257
-		manifests               []string
-		expectedManifests       []string
 		managedResource         *resourcesv1alpha1.ManagedResource
 		managedResourceSecret   *corev1.Secret
 		values                  Values
@@ -314,23 +312,16 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedManifests = []string{
-				serviceAccountYAML,
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				serviceYAML,
-			}
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__node-problem-detector.yaml"])).To(Equal(serviceYAML))
 		})
 
 		Context("w/o apiserver host, w/o vpaEnabled", func() {
 			It("should successfully deploy all resources", func() {
-				expectedManifests = append(expectedManifests, daemonsetYAMLFor(""))
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("")))
 			})
 		})
 
@@ -345,8 +336,9 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				expectedManifests = append(expectedManifests, vpaYAML, daemonsetYAMLFor(apiserverHost))
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost)))
 			})
 		})
 	})

@@ -12,8 +12,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 func init() {
@@ -123,13 +124,18 @@ func ShareSameReferenceAs(expected any) types.GomegaMatcher {
 // NewManagedResourceContainsObjectsMatcher returns a function for a matcher that checks
 // if the given objects are handled by the given managed resource.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceContainsObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
+func NewManagedResourceContainsObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
+		expectedObjToSerialized := make(map[client.Object]string)
+		for _, o := range objs {
+			obj := o
+			expectedObjToSerialized[obj] = testruntime.Serialize(obj, cl.Scheme())
+		}
+
 		return &managedResourceObjectsMatcher{
-			ctx:             context.Background(),
-			client:          c,
-			decoder:         serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
-			expectedObjects: expectedObjects(objs, c.Scheme()),
+			ctx:                     context.Background(),
+			cl:                      cl,
+			expectedObjToSerialized: expectedObjToSerialized,
 		}
 	}
 }
@@ -138,35 +144,19 @@ func NewManagedResourceContainsObjectsMatcher(c client.Client) func(...client.Ob
 // if the exact list of given objects are handled by the given managed resource.
 // Any extra objects found through the ManagedResource let the matcher fail.
 // It is expected that the data keys of referenced secret(s) follow the semantics of `managedresources.Registry`.
-func NewManagedResourceConsistOfObjectsMatcher(c client.Client) func(...client.Object) types.GomegaMatcher {
+func NewManagedResourceConsistOfObjectsMatcher(cl client.Client) func(...client.Object) types.GomegaMatcher {
 	return func(objs ...client.Object) types.GomegaMatcher {
+		expectedObjToSerialized := make(map[client.Object]string)
+		for _, o := range objs {
+			obj := o
+			expectedObjToSerialized[obj] = testruntime.Serialize(obj, cl.Scheme())
+		}
+
 		return &managedResourceObjectsMatcher{
-			ctx:               context.Background(),
-			client:            c,
-			decoder:           serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer(),
-			expectedObjects:   expectedObjects(objs, c.Scheme()),
-			extraObjectsCheck: true,
+			ctx:                     context.Background(),
+			cl:                      cl,
+			expectedObjToSerialized: expectedObjToSerialized,
+			extraObjectsCheck:       true,
 		}
 	}
-}
-
-func expectedObjects(objs []client.Object, scheme *runtime.Scheme) map[string]client.Object {
-	objects := make(map[string]client.Object)
-	for _, o := range objs {
-		obj := o
-
-		// Fill GVK information with the help of the scheme.
-		// Type meta is usually not explicitly configured when working with Kubernetes Go structs.
-		if obj.GetObjectKind().GroupVersionKind().Empty() {
-			gvk, _, err := scheme.ObjectKinds(obj)
-			if len(gvk) < 1 || err != nil {
-				continue
-			}
-			obj.GetObjectKind().SetGroupVersionKind(gvk[0])
-		}
-
-		objects[objectKey(obj, scheme)] = obj
-	}
-
-	return objects
 }

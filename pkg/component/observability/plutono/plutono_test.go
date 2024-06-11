@@ -43,7 +43,7 @@ import (
 
 var _ = Describe("Plutono", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName     = "plutono"
 		namespace               = "some-namespace"
@@ -98,8 +98,6 @@ var _ = Describe("Plutono", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			manifests []string
-
 			plutonoConfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "plutono-config-fd97f886",
@@ -591,12 +589,9 @@ status:
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Data).To(HaveLen(9))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Context("Cluster type is seed", func() {
@@ -612,24 +607,22 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["serviceaccount__some-namespace__plutono.yaml"])).To(Equal(testruntime.Serialize(serviceAccount, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["role__some-namespace__plutono-dashboard-refresher.yaml"])).To(Equal(testruntime.Serialize(role, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["rolebinding__some-namespace__plutono-dashboard-refresher.yaml"])).To(Equal(testruntime.Serialize(roleBinding, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-be28eaa6.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 22, values)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values)
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
 			})
 
@@ -639,24 +632,19 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-b320ffed.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 24, values)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values)
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
 			})
 		})
@@ -668,24 +656,19 @@ status:
 			})
 
 			It("should successfully deploy all resources", func() {
-				deployment := deploymentYAMLFor(values)
-				utilruntime.Must(references.InjectAnnotations(deployment))
-
-				Expect(manifests).To(ConsistOf(
-					testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-					testruntime.Serialize(serviceAccount, c.Scheme()),
-					testruntime.Serialize(role, c.Scheme()),
-					testruntime.Serialize(roleBinding, c.Scheme()),
-					testruntime.Serialize(deployment, c.Scheme()),
-					providerConfigMapYAML,
-					dataSourceConfigMapYAMLFor(values),
-					serviceYAMLFor(values),
-					ingressYAMLFor(values),
-				))
-
+				Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 				dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 				testDashboardConfigMap(dashboardsConfigMap, 35, values)
+				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+				managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+				Expect(err).ToNot(HaveOccurred())
+				deployment := deploymentYAMLFor(values)
+				utilruntime.Must(references.InjectAnnotations(deployment))
+				Expect(deployment).To(DeepEqual(managedResourceDeployment))
 			})
 
 			Context("w/ include istio, node-local-dns, mcm, ha-vpn, vpa", func() {
@@ -697,24 +680,19 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 39, values)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values)
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
 			})
 
@@ -724,24 +702,19 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
+					Expect(string(managedResourceSecret.Data["secret__some-namespace__plutono-config-fd97f886.yaml"])).To(Equal(testruntime.Serialize(plutonoConfigSecret, c.Scheme())))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-140e41f3.yaml"])).To(Equal(providerConfigMapYAML))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-f82429ca.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
 					testDashboardConfigMap(dashboardsConfigMap, 27, values)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values)
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
 			})
 		})

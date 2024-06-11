@@ -531,6 +531,7 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				"app":  "gardener",
 				"role": "admission-controller",

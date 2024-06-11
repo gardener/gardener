@@ -6,7 +6,6 @@ package vpa_test
 
 import (
 	"context"
-	_ "embed"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,13 +20,12 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("CRD", func() {
 	var (
-		ctx         = context.Background()
+		ctx         = context.TODO()
 		crdDeployer component.Deployer
 	)
 
@@ -79,17 +77,13 @@ var _ = Describe("CRD", func() {
 			crdDeployer = NewCRD(nil, registry)
 		})
 
-		It("should ensure CRDs are included", func() {
-			dataMap, err := registry.SerializedObjects()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(dataMap).To(HaveKey("data.yaml.br"))
+		DescribeTable("CRD is added to registry",
+			func(filename string) {
+				Expect(registry.SerializedObjects()).To(HaveKeyWithValue(filename, Not(BeEmpty())))
+			},
 
-			compressedData := dataMap["data.yaml.br"]
-			data, err := test.BrotliDecompression(compressedData)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(data).To(ContainSubstring("listKind: VerticalPodAutoscalerList"))
-			Expect(data).To(ContainSubstring("listKind: VerticalPodAutoscalerCheckpointList"))
-		})
+			Entry("VerticalPodAutoscaler", "crd-verticalpodautoscalers.yaml"),
+			Entry("VerticalPodAutoscalerCheckpoints", "crd-verticalpodautoscalercheckpoints.yaml"),
+		)
 	})
 })

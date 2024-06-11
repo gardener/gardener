@@ -50,8 +50,6 @@ var _ = Describe("NginxIngress", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 		managedResourceName   string
-		manifests             []string
-		expectedManifests     []string
 
 		configMapData, loadBalancerAnnotations map[string]string
 		configMapName                          string
@@ -695,29 +693,24 @@ status: {}
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				Expect(managedResourceSecret.Data).To(HaveLen(17))
 
-				var err error
-				manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				expectedManifests = []string{
-					clusterRoleYAML,
-					clusterRoleBindingYAML,
-					roleYAML,
-					roleBindingYAML,
-					serviceControllerYAML,
-					serviceBackendYAML,
-					serviceAccountYAML,
-					vpaYAML,
-					configMapYAMLFor(configMapName),
-					deploymentBackendYAML,
-					deploymentControllerYAMLFor(configMapName),
-					ingressClassYAML,
-					destinationRuleYAML,
-					gatewayYAML,
-					virtualServiceYAML(0),
-					virtualServiceYAML(1),
-				}
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_seed_nginx-ingress_role.yaml"])).To(Equal(roleYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_seed_nginx-ingress_role-binding.yaml"])).To(Equal(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAMLFor(configMapName)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapName)))
+				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["destinationrule__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(destinationRuleYAML))
+				Expect(string(managedResourceSecret.Data["gateway__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(gatewayYAML))
+				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller-0.yaml"])).To(Equal(virtualServiceYAML(0)))
+				Expect(string(managedResourceSecret.Data["virtualservice__"+namespace+"__nginx-ingress-controller-1.yaml"])).To(Equal(virtualServiceYAML(1)))
 			})
 
 			Context("Kubernetes version < 1.26", func() {
@@ -726,15 +719,13 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, podDisruptionBudgetYAMLFor(false))
-					Expect(manifests).To(ConsistOf(expectedManifests))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
 				})
 			})
 
 			Context("Kubernetes version >= 1.26", func() {
 				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, podDisruptionBudgetYAMLFor(true))
-					Expect(manifests).To(ConsistOf(expectedManifests))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
 				})
 			})
 		})
@@ -1319,24 +1310,18 @@ status: {}
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				var err error
-				manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				expectedManifests = []string{
-					serviceAccountYAML,
-					clusterRoleYAML,
-					clusterRoleBindingYAML,
-					serviceControllerYAML,
-					serviceBackendYAML,
-					configMapYAML,
-					roleYAML,
-					roleBindingYAML,
-					deploymentBackendYAML,
-					networkPolicyYAML,
-					ingressClassYAML,
-					deploymentControllerYAMLFor(configMapData),
-				}
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
+				Expect(string(managedResourceSecret.Data["configmap__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-from-nginx.yaml"])).To(Equal(networkPolicyYAML))
+				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapData)))
 			})
 
 			Context("w/ VPA", func() {
@@ -1345,8 +1330,9 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, vpaYAML)
-					Expect(manifests).To(ConsistOf(expectedManifests))
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
+
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
 				})
 			})
 
@@ -1356,7 +1342,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(manifests).To(ConsistOf(expectedManifests))
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
 				})
 			})
 		})

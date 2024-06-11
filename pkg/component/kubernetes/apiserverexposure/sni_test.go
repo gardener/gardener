@@ -30,7 +30,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -227,15 +226,11 @@ var _ = Describe("#SNI", func() {
 				managedResourceSecret := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Spec.SecretRefs[0].Name}, managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Data).To(HaveKey("data.yaml.br"))
 
-				mrData, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])
-				Expect(err).NotTo(HaveOccurred())
-
-				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(mrData, nil, &istionetworkingv1alpha3.EnvoyFilter{})
+				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["envoyfilter__istio-foo__test-namespace.yaml"], nil, &istionetworkingv1alpha3.EnvoyFilter{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
 				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)

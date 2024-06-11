@@ -5,13 +5,10 @@
 package nodeagent_test
 
 import (
-	"strings"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("RBAC", func() {
@@ -168,24 +165,16 @@ subjects:
 		})
 
 		It("should generate the expected RBAC resources", func() {
-			dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
+			data, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
 			Expect(err).NotTo(HaveOccurred())
-
-			Expect(dataMap).To(HaveKey("data.yaml.br"))
-			compressedData := dataMap["data.yaml.br"]
-			data, err := test.BrotliDecompression(compressedData)
-			Expect(err).NotTo(HaveOccurred())
-
-			manifests := strings.Split(string(data), "---\n")
-			Expect(manifests).To(ConsistOf(
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				roleYAML,
-				roleBindingYAML,
-				clusterRoleBindingNodeBootstrapperYAML,
-				clusterRoleBindingNodeClientYAML,
-				clusterRoleBindingSelfNodeClientYAML,
-			))
+			Expect(data).To(HaveLen(7))
+			Expect(string(data["clusterrole____gardener-node-agent.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(data["clusterrolebinding____gardener-node-agent.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(data["role__kube-system__gardener-node-agent.yaml"])).To(Equal(roleYAML))
+			Expect(string(data["rolebinding__kube-system__gardener-node-agent.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(data["clusterrolebinding____system_node-bootstrapper.yaml"])).To(Equal(clusterRoleBindingNodeBootstrapperYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_nodeclient.yaml"])).To(Equal(clusterRoleBindingNodeClientYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_selfnodeclient.yaml"])).To(Equal(clusterRoleBindingSelfNodeClientYAML))
 		})
 	})
 })

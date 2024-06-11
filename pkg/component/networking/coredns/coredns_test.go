@@ -36,7 +36,7 @@ import (
 
 var _ = Describe("CoreDNS", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName = "shoot-core-coredns"
 		namespace           = "some-namespace"
@@ -53,7 +53,6 @@ var _ = Describe("CoreDNS", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
-		manifests             []string
 
 		serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
@@ -761,58 +760,46 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
 			if cpaEnabled {
 				if vpaEnabled {
-					Expect(manifests).To(HaveLen(14))
+					Expect(managedResourceSecret.Data).To(HaveLen(14))
 				} else {
-					Expect(manifests).To(HaveLen(13))
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
 				}
 			} else {
-				Expect(manifests).To(HaveLen(10))
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 			}
-
-			Expect(manifests).To(ContainElements(
-				serviceAccountYAML,
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				configMapYAML(commonSuffixes),
-				configMapCustomYAML,
-				serviceYAML,
-				networkPolicyYAML,
-			))
-
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML(commonSuffixes)))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
 			if k8sGreaterEquals126 {
-				Expect(manifests).To(ContainElement(pdbYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(true)))
 			} else {
-				Expect(manifests).To(ContainElement(pdbYAMLFor(false)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(false)))
 			}
 			if cpaEnabled {
-				Expect(manifests).To(ContainElements(
-					cpasaYAML,
-					cpacrYAML,
-					cpacrbYAML,
-					cpaDeploymentYAML,
-				))
+				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpasaYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____system_coredns-autoscaler.yaml"])).To(Equal(cpacrYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns-autoscaler.yaml"])).To(Equal(cpacrbYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpaDeploymentYAML))
 				if vpaEnabled {
-					Expect(manifests).To(ContainElement(cpaDeploymentVpaYAML))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpaDeploymentVpaYAML))
 				} else {
-					Expect(manifests).NotTo(ContainElement(cpaDeploymentVpaYAML))
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
 				}
 			} else {
-				Expect(manifests).NotTo(ContainElements(
-					cpasaYAML,
-					cpacrYAML,
-					cpacrbYAML,
-					cpaDeploymentYAML,
-				))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["clusterrole____system_coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
 			}
 			if !cpaEnabled {
-				Expect(manifests).To(ContainElement(hpaYAML))
+				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAML))
 			}
 
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
@@ -828,7 +815,7 @@ status: {}
 
 		Context("w/o apiserver host, w/o pod annotations", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, true, true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
 			})
 		})
 
@@ -839,7 +826,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, true, true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
 			})
 		})
 
@@ -855,7 +842,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ContainElement(deploymentYAMLFor(apiserverHost, podAnnotations, true, true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, true, true)))
 			})
 		})
 
@@ -866,7 +853,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, true, true)))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, true, true)))
 			})
 
 			AfterEach(func() {
@@ -884,7 +871,7 @@ status: {}
 
 			Context("w/o apiserver host, w/o pod annotations", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, false, false)))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, false, false)))
 				})
 			})
 
@@ -900,7 +887,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					Expect(manifests).To(ContainElement(deploymentYAMLFor(apiserverHost, podAnnotations, false, false)))
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, false, false)))
 				})
 			})
 
@@ -912,7 +899,7 @@ status: {}
 
 				Context("w/o apiserver host, w/o pod annotations", func() {
 					It("should successfully deploy all resources", func() {
-						Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, false, false)))
+						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil, false, false)))
 					})
 				})
 			})

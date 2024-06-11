@@ -7,6 +7,7 @@ package matchers_test
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -152,6 +153,21 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 					deploymentModified := deployment.DeepCopy()
 					deploymentModified.Spec.MinReadySeconds += 1
 					ExpectWithOffset(1, managedResource).NotTo(matcher(deploymentModified))
+				})
+
+				It("should not find resources if data key does not match", func() {
+					managedResourceSecret := &corev1.Secret{}
+					ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret2), managedResourceSecret)).To(Succeed())
+
+					objectKey := fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name)
+					ExpectWithOffset(1, managedResourceSecret.Data).To(HaveKey(objectKey))
+
+					patch := client.MergeFrom(managedResourceSecret.DeepCopy())
+					managedResourceSecret.Data[strings.Trim(objectKey, ".yaml")] = managedResourceSecret.Data[objectKey]
+					delete(managedResourceSecret.Data, objectKey)
+					ExpectWithOffset(1, fakeClient.Patch(ctx, managedResourceSecret, patch)).To(Succeed())
+
+					ExpectWithOffset(1, managedResource).NotTo(matcher(deployment))
 				})
 			})
 

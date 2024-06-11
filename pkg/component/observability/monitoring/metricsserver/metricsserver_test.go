@@ -6,12 +6,16 @@ package metricsserver_test
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,12 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("MetricsServer", func() {
@@ -36,7 +37,7 @@ var _ = Describe("MetricsServer", func() {
 		sm            secretsmanager.Interface
 		metricsServer component.DeployWaiter
 
-		ctx               = context.Background()
+		ctx               = context.TODO()
 		namespace         = "shoot--foo--bar"
 		image             = "registry.k8s.io/metrics-server:v4.5.6"
 		kubeAPIServerHost = "foo.bar"
@@ -313,35 +314,13 @@ spec:
 			return out
 		}
 
-		serverSecretFor = func(data map[string][]byte) (string, string) {
-			serverSecret := &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "metrics-server",
-					Namespace: "kube-system",
-				},
-				Data: make(map[string][]byte),
-				Type: corev1.SecretTypeTLS,
-			}
-
-			serverSecret.Data["ca.crt"] = data["ca.crt"]
-			serverSecret.Data["ca.key"] = data["ca.key"]
-
-			ExpectWithOffset(1, kubernetesutils.MakeUnique(serverSecret)).To(Succeed())
-			serverSecretYAML := testruntime.Serialize(serverSecret, kubernetes.ShootScheme)
-
-			return serverSecret.Name, serverSecretYAML
-		}
-
 		managedResourceName       = "shoot-core-metrics-server"
 		managedResourceSecretName = "managedresource-shoot-core-metrics-server"
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
 
+		secretName          string
 		k8sGreaterEquals126 bool
 	)
 
@@ -377,12 +356,6 @@ spec:
 	})
 
 	Describe("#Deploy", func() {
-		var (
-			secretName        string
-			manifests         []string
-			expectedManifests []string
-		)
-
 		JustBeforeEach(func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
@@ -414,33 +387,41 @@ spec:
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
 
-			serverSecret, found := sm.Get("metrics-server")
-			Expect(found).To(BeTrue())
-
-			serverSecretName, serverSecretYAML := serverSecretFor(serverSecret.Data)
-			secretName = serverSecretName
-
-			expectedManifests = []string{
-				apiServiceYAML,
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				clusterRoleBindingAuthDelegatorYAML,
-				roleBindingYAML,
-				serviceYAML,
-				serviceAccountYAML,
-				pdbYAMLFor(k8sGreaterEquals126),
-				serverSecretYAML,
+			Expect(string(managedResourceSecret.Data["apiservice____v1beta1.metrics.k8s.io.yaml"])).To(Equal(apiServiceYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
+			if k8sGreaterEquals126 {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(true)))
+			} else {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(false)))
 			}
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
+		})
+
+		JustAfterEach(func() {
+			secret := &corev1.Secret{}
+			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
+			Expect(secret.Immutable).To(PointTo(BeTrue()))
+			Expect(secret.Data).NotTo(BeEmpty())
+			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
 		})
 
 		Context("w/o VPA, w/o host env", func() {
 			It("should successfully deploy all resources", func() {
-				expectedManifests = append(expectedManifests, deploymentYAMLFor(secretName, false, false))
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
+
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
+				}
+
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false, false)))
 			})
 		})
 
@@ -451,8 +432,17 @@ spec:
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				expectedManifests = append(expectedManifests, vpaYAML, deploymentYAMLFor(secretName, true, true))
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
+
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
+				}
+
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
 			})
 		})
 
@@ -465,8 +455,17 @@ spec:
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				expectedManifests = append(expectedManifests, vpaYAML, deploymentYAMLFor(secretName, true, true))
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
+
+				for key := range managedResourceSecret.Data {
+					if strings.HasPrefix(key, "secret__kube-system__") {
+						secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+						break
+					}
+				}
+
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true, true)))
 			})
 		})
 	})
@@ -495,3 +494,11 @@ spec:
 		})
 	})
 })
+
+func newCodec() runtime.Codec {
+	var groupVersions []schema.GroupVersion
+	for k := range kubernetes.ShootScheme.AllKnownTypes() {
+		groupVersions = append(groupVersions, k.GroupVersion())
+	}
+	return kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
+}

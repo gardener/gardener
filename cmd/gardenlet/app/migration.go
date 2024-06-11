@@ -10,29 +10,20 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.Cluster) error {
-	log.Info("Updating required Gardener-Resource-Manager deployments for managed resource compression support")
-	if err := updateGardenerResourceManager(ctx, log, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
@@ -43,54 +34,6 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 		return err
 	}
 	return nil
-}
-
-// TODO(timuthy): Remove after v1.97 was released.
-// updateGardenerResourceManager updates all GRM deployments in a seed cluster,
-// in order to roll out the Brotli compression support added in Gardener v1.96.
-func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl client.Client) error {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerResourceManager)
-	if err != nil {
-		return err
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
-	grmDeployments := &appsv1.DeploymentList{}
-	if err := cl.List(ctx, grmDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager})); err != nil {
-		return err
-	}
-
-	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, cl)
-	if err != nil {
-		return err
-	}
-
-	fns := make([]flow.TaskFn, 0, len(grmDeployments.Items))
-	for _, grmDeployment := range grmDeployments.Items {
-		for j, container := range grmDeployment.Spec.Template.Spec.Containers {
-			if container.Name == v1beta1constants.DeploymentNameGardenerResourceManager ||
-				grmDeployment.Spec.Template.Spec.Containers[j].Image == image.String() {
-				continue
-			}
-
-			// Don't patch GRM in Runtime Garden cluster since it is usually not under the control of gardenlet (rather gardener-operator),
-			// and already updated to the right version, before Gardenlet is rolled out.
-			if grmDeployment.Namespace == v1beta1constants.GardenNamespace && seedIsGarden {
-				continue
-			}
-
-			fns = append(fns, func(ctx context.Context) error {
-				patch := client.StrategicMergeFrom(grmDeployment.DeepCopy())
-				grmDeployment.Spec.Template.Spec.Containers[j].Image = image.String()
-
-				log.Info("Updating Gardener-Resource-Manager", "deployment", client.ObjectKeyFromObject(&grmDeployment))
-				return cl.Patch(ctx, &grmDeployment, patch)
-			})
-			break
-		}
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.

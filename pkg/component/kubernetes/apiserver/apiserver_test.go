@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -66,7 +65,7 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("KubeAPIServer", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		namespace         = "some-namespace"
 		vpaUpdateMode     = vpaautoscalingv1.UpdateModeOff
@@ -81,7 +80,6 @@ var _ = Describe("KubeAPIServer", func() {
 		runtimeVersion      *semver.Version
 		autoscalingConfig   apiserver.AutoscalingConfig
 		namePrefix          string
-		consistOf           func(...client.Object) types.GomegaMatcher
 
 		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                      = "ca"
@@ -118,6 +116,7 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapAuditPolicy       *corev1.ConfigMap
 		configMapEgressSelector    *corev1.ConfigMap
 		managedResource            *resourcesv1alpha1.ManagedResource
+		managedResourceSecret      *corev1.Secret
 
 		values Values
 	)
@@ -125,7 +124,6 @@ var _ = Describe("KubeAPIServer", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		version = semver.MustParse("1.25.1")
 		runtimeVersion = semver.MustParse("1.25.1")
@@ -201,6 +199,12 @@ var _ = Describe("KubeAPIServer", func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-kube-apiserver",
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-shoot-core-kube-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -1184,50 +1188,43 @@ var _ = Describe("KubeAPIServer", func() {
 		Describe("Shoot Resources", func() {
 			It("should successfully deploy the managed resource and its secret", func() {
 				var (
-					clusterRole = &rbacv1.ClusterRole{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "system:apiserver:kubelet",
-						},
-						Rules: []rbacv1.PolicyRule{
-							{
-								APIGroups: []string{""},
-								Resources: []string{
-									"nodes/proxy",
-									"nodes/stats",
-									"nodes/log",
-									"nodes/spec",
-									"nodes/metrics",
-								},
-								Verbs: []string{"*"},
-							},
-							{
-								NonResourceURLs: []string{"*"},
-								Verbs:           []string{"*"},
-							},
-						},
-					}
-
-					clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "system:apiserver:kubelet",
-							Annotations: map[string]string{
-								"resources.gardener.cloud/delete-on-invalid-update": "true",
-							},
-						},
-						RoleRef: rbacv1.RoleRef{
-							APIGroup: "rbac.authorization.k8s.io",
-							Kind:     "ClusterRole",
-							Name:     "system:apiserver:kubelet",
-						},
-						Subjects: []rbacv1.Subject{
-							{
-								Kind: "User",
-								Name: "system:kube-apiserver:kubelet",
-							},
-						},
-					}
+					clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: system:apiserver:kubelet
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes/proxy
+  - nodes/stats
+  - nodes/log
+  - nodes/spec
+  - nodes/metrics
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+`
+					clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: system:apiserver:kubelet
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:apiserver:kubelet
+subjects:
+- kind: User
+  name: system:kube-apiserver:kubelet
+`
 				)
-
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -1248,7 +1245,25 @@ var _ = Describe("KubeAPIServer", func() {
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 				Expect(managedResource).To(DeepEqual(expectedMr))
-				Expect(managedResource).To(consistOf(clusterRole, clusterRoleBinding))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceSecret.Name,
+						Namespace:       managedResourceSecret.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						},
+					},
+					Type:      corev1.SecretTypeOpaque,
+					Immutable: ptr.To(true),
+					Data: map[string][]byte{
+						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
+						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
+					},
+				}))
 			})
 		})
 
