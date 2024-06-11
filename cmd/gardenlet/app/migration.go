@@ -65,7 +65,7 @@ func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl clie
 	fns := make([]flow.TaskFn, 0, len(grmDeployments.Items))
 	for _, grmDeployment := range grmDeployments.Items {
 		for j, container := range grmDeployment.Spec.Template.Spec.Containers {
-			if container.Name == v1beta1constants.DeploymentNameGardenerResourceManager ||
+			if container.Name != v1beta1constants.DeploymentNameGardenerResourceManager ||
 				grmDeployment.Spec.Template.Spec.Containers[j].Image == image.String() {
 				continue
 			}
