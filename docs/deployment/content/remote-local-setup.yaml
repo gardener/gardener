@@ -119,7 +119,8 @@ spec:
             alias k=kubectl
             complete -o default -F __start_kubectl k
             source ~/.kube-ps1.sh
-            export PS1='[\w $(printf "$(kube_ps1)")]\$ '
+            source /usr/share/git-core/git-prompt.sh
+            export PS1='[\w $(printf "$(kube_ps1)")] $(__git_ps1 "(%s)") [$(date +%H:%M)]\$ '
             export TERM=xterm-256color
             cd ~/go/src/github.com/gardener/gardener
           EOF
