@@ -9,9 +9,12 @@ spec:
     - alert: EtcdMainDown
       expr: |
         sum(
-          up{job  = "virtual-garden-etcd",
-            role = "main"}
-        ) < 2
+          up{job="virtual-garden-etcd",
+             role="main"})
+        <=
+        count(
+          up{job="virtual-garden-etcd",
+             role="main"}) / 2
       for: 5m
       labels:
         severity: critical
@@ -29,9 +32,12 @@ spec:
     - alert: EtcdEventsDown
       expr: |
         sum(
-          up{job  = "virtual-garden-etcd",
-            role = "events"}
-        ) < 2
+          up{job="virtual-garden-etcd",
+             role="events"})
+        <=
+        count(
+          up{job="virtual-garden-etcd",
+             role="events"}) / 2
       for: 15m
       labels:
         severity: info
