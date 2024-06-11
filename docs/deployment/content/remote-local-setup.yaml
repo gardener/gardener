@@ -112,7 +112,8 @@ spec:
           echo
           EOF
           cat > ~/.bashrc <<"EOF"
-            export PATH=/usr/local/go/bin:$PATH
+            export GOPATH=~/go
+            export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
             source <(kubectl completion bash)
             alias k=kubectl
