@@ -28,6 +28,6 @@ spec:
         summary: >-
           The {{$labels.job}} server in landscape {{$externalLabels.landscape}}
           has too many failed attempts to log audit events.
-        description: >
+        description: >-
           The API server's cumulative failure rate in logging audit events is
           greater than 2%.

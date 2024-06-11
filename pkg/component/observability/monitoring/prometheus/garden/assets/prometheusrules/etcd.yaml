@@ -73,7 +73,7 @@ spec:
         summary: >-
           Virtual garden etcd main has no leader in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd main has no leader. Possible network partition in the etcd cluster.
 
     - alert: EtcdEventsNoLeader
