@@ -299,6 +299,20 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
+	// if the maintenance patch is not required and the last maintenance operation state is failed,
+	// this means the maintenance was retried and succeeded. Alternatively, changes could have been made
+	// outside of the maintenance window to fix the maintenance error. In either case, remove the failed state.
+	if !requirePatch && shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateFailed {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
+		shoot.Status.LastMaintenance.Description = "Maintenance succeeded"
+		shoot.Status.LastMaintenance.FailureReason = nil
+
+		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
+			return err
+		}
+	}
+
 	if shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
