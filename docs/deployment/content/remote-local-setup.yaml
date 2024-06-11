@@ -46,6 +46,70 @@ spec:
           bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud \
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
           echo 'source ~/.bashrc' > ~/.bash_profile
+
+          cat > ~/greeting.sh <<"EOF"
+          [ -n "$TMUX" ] && exit
+          normal='\e[0m'; green='\e[1;32m'; yellow='\e[1;33m'; cyan='\e[1;36m'; n=$normal; g=$green; y=$yellow; c=$cyan
+          echo -e "$(
+          cat <<GREETING_EOF
+          ${c}Welcome${y} to the remote local setup pod of ${c}Gardener${y}!${n}
+
+          ${c}Documentation:${n} https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md
+          ${y}To ${c}exec${y} into this pod, run '${g}kubectl exec -it remote-local-setup-0 -- sh${y}'${n}
+
+          ${y}To attach to the ${c}tmux${y} session, run '${g}tmux a${y}'${n}.
+          - ${y}mouse${n} support is enabled
+            - use the mouse to select panes or windows and to resize panes
+            - scroll the pane content with the mouse,
+              leave the "scroll mode" with '${y}q${n}' or scroll to the very bottom
+            - after selecting some text, copy it with '${y}right-click${n}' or
+              cancel the selection with '${y}q${n}'
+            - paste the copied text with '${y}⌘ right-click${n}'
+          - '${y}CTRL-b${n}, ?' is the tmux prefix: press and hold the 'CTRL' key,
+              press the 'b' key, let go of both keys and then
+              press e.g. the '?' key to show the keyboard shortcuts.
+            '${y}d${n}' - detach from the tmux session
+            '${y}c${n}' - new window
+            '${y}%${n}' or '${y}\"${n}' - new pane (horizontal or vertical split)
+            '${y}z${n}' - zoom in/out
+            '${y},${n}' - rename the window
+            '${y}]${n}','${y}=${n}' - paste (with history).
+              The ${y}clipboard${n} is managed by tmux:
+              copy with the ${y}mouse${n}, paste with these shortcuts or the mouse.
+              You can turn off mouse reporting in the terminal emulator
+              (⌘-R in the default Mac OS Terminal app) for native copy/paste.
+          - '${y}CTRL-d${n}' - exit a bash session. Not be confused with 'CTRL-b, d'
+
+          ${y}When this remote local setup pod is not needed, consider ${c}stopping${y} it
+          by scaling the StatefulSet to zero replicas:${n}
+            kubectl scale statefulset remote-local-setup --replicas 0
+
+          ${y}To ${c}start${y} it, simply scale it to 1 replica:${n}
+            kubectl scale statefulset remote-local-setup --replicas 1
+
+          Note that the persistent disk with the home folder,
+          the Gardener git repository, the go build cache and
+          the local container registry is retained between restarts.
+
+          ${y}The purge this environment, delete both the StatefulSet and the pvc:${n}
+            kubectl delete statefulset remote-local-setup
+            kubectl delete pvc    home-remote-local-setup-0
+          GREETING_EOF
+          )"
+          if grep -q server ~/.kube/config 2>/dev/null; then
+            echo
+            echo -e "$(
+          cat <<GREETING_EOF
+          ${y}To connect to the ${c}KinD${y} cluster from your ${c}laptop${y} with kubectl, run:${n}
+            kubectl exec remote-local-setup-0 -- sh -c 'cat ~/.kube/config' > kubeconfig
+            kubectl port-forward remote-local-setup-0 $(< ~/.kube/config grep server | awk -F : '{print $4}')
+            # in another terminal:
+            export KUBECONFIG=\$PWD/kubeconfig
+          GREETING_EOF
+            )"
+          fi
+          echo
+          EOF
           cat > ~/.bashrc <<"EOF"
             export PATH=/usr/local/go/bin:$PATH
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
@@ -56,7 +120,6 @@ spec:
             export PS1='[\w $(printf "$(kube_ps1)")]\$ '
             export TERM=xterm-256color
             cd ~/go/src/github.com/gardener/gardener
-            echo -e "\e[1;33mTo attach to the \e[1;36mgardener\e[1;33m tmux session, run '\e[1;32mtmux attach -t gardener\e[1;33m'\e[0m"
           EOF
           cat > ~/.tmux.conf <<"EOF"
             set -g mouse on
@@ -88,6 +151,7 @@ spec:
             - /tmp/ready
           failureThreshold: 100
           periodSeconds: 5
+        env: [{name: ENV, value: /root/greeting.sh}] # ash sources the ENV file
         resources:
           requests: {cpu: 8, memory: 8G}
           limits:   {cpu: 8, memory: 8G}
