@@ -29,6 +29,11 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
+          if [ ! -f /root/.config/k9s/config.yaml ]; then
+          echo k9s-theme       && mkdir -p ~/.config/k9s/skins \
+                               && wget -N "https://raw.githubusercontent.com/derailed/k9s/master/skins/kiss.yaml" && cp kiss.yaml ~/.config/k9s/skins \
+                               && yq -n '.k9s.ui.skin="kiss"' > /root/.config/k9s/config.yaml
+          fi
           echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
           echo kns             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" && cp kns /usr/local/bin/kns && chmod +x /usr/local/bin/kns
           echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
@@ -121,6 +126,7 @@ spec:
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
+            export XDG_CONFIG_HOME=~/.config
             export EDITOR=nvim
             export HISTFILESIZE=10000
             export HISTSIZE=10000
