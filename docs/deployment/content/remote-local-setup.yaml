@@ -121,6 +121,12 @@ spec:
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
+            export HISTFILESIZE=10000
+            export HISTSIZE=10000
+            export HISTTIMEFORMAT="%F %T "
+            export HISTCONTROL=ignorespace
+            export PROMPT_COMMAND='history -a'
+            shopt -s histappend
             source /usr/share/bash-completion/completions/kubectl
             complete -o default -F __start_kubectl k
             source ~/.kube-ps1.sh
