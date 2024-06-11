@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/certmanagement"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
@@ -116,6 +117,7 @@ type components struct {
 
 	gardenerDiscoveryServer component.DeployWaiter
 
+	certManagement            component.DeployWaiter
 	gardenerDashboard         gardenerdashboard.Interface
 	terminalControllerManager component.DeployWaiter
 
@@ -235,6 +237,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.certManagement, err = r.newCertManagement(garden)
 	if err != nil {
 		return
 	}
@@ -1034,6 +1040,26 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	}
 
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newCertManagement(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	config := garden.Spec.RuntimeCluster.CertManagement
+	if config == nil {
+		return certmanagement.NewDestroyer(certmanagement.New(r.RuntimeClientSet.Client(), certmanagement.Values{})), nil
+	}
+
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCertManagement)
+	if err != nil {
+		return nil, err
+	}
+
+	values := certmanagement.Values{
+		Image:         image.String(),
+		Namespace:     r.GardenNamespace,
+		Deployment:    config.Deployment,
+		DefaultIssuer: config.DefaultIssuer,
+	}
+	return certmanagement.New(r.RuntimeClientSet.Client(), values), nil
 }
 
 func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {

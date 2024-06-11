@@ -81,6 +81,68 @@ spec:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.
                 properties:
+                  certManagement:
+                    description: |-
+                      CertManagement configures the cert-management component for issuing TLS certificates
+                      from an ACME server.
+                    properties:
+                      defaultIssuer:
+                        description: DefaultIssuer is the default issuer used for
+                          requesting TLS certificates.
+                        properties:
+                          email:
+                            description: Email is the e-mail for the ACME user.
+                            minLength: 1
+                            pattern: ^[a-zA-Z0-9_\-\.]+@[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_\-]+$
+                            type: string
+                          precheckNameservers:
+                            description: |-
+                              PrecheckNameservers overwrites the default precheck nameservers used for checking DNS propagation.
+                              Format `host` or `host:port`, e.g. "8.8.8.8" same as "8.8.8.8:53" or "google-public-dns-a.google.com:53".
+                            items:
+                              type: string
+                            type: array
+                          secretRef:
+                            description: SecretRef is a reference to a secret containing
+                              a private key of the issuer (data key 'privateKey').
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          server:
+                            description: Server is the ACME server endpoint.
+                            minLength: 1
+                            type: string
+                        required:
+                        - email
+                        - server
+                        type: object
+                      deployment:
+                        description: Deployment contains configuration for deploying
+                          the cert-controller-manager.
+                        properties:
+                          caCertificatesSecretRef:
+                            description: |-
+                              CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
+                              The certificates are expected at key 'bundle.crt'.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    required:
+                    - defaultIssuer
+                    type: object
                   ingress:
                     description: Ingress configures Ingress specific settings for
                       the Garden cluster.

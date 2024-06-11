@@ -8,6 +8,7 @@ import (
 	"context"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -114,6 +115,7 @@ var (
 		monitoringv1.AddToScheme,
 		monitoringv1beta1.AddToScheme,
 		monitoringv1alpha1.AddToScheme,
+		certv1alpha1.AddToScheme,
 	)
 
 	shootSchemeBuilder = runtime.NewSchemeBuilder(

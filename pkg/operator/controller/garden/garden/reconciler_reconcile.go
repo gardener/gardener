@@ -494,6 +494,11 @@ func (r *Reconciler) reconcile(
 			Fn:           c.plutono.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Cert-Management",
+			Fn:           c.certManagement.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 	)
 
 	gardenCopy := garden.DeepCopy()
