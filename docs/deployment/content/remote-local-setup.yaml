@@ -20,6 +20,8 @@ spec:
         - |
           set -ex
           cd
+          mkdir -p ~/.cache/apk
+          ln -s ~/.cache/apk /etc/apk/cache
           apk add apache2-utils bash bash-completion bat bind-tools conntrack-tools coreutils curl \
                   diffutils dnsmasq docker-bash-completion findutils fzf g++ gawk gcompat git      \
                   git-prompt go grep helm inotify-tools jq k9s less lsof make mandoc mc moreutils  \
