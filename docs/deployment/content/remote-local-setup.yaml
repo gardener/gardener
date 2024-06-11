@@ -121,6 +121,7 @@ spec:
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
+            export EDITOR=nvim
             export HISTFILESIZE=10000
             export HISTSIZE=10000
             export HISTTIMEFORMAT="%F %T "
