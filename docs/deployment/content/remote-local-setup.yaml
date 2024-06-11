@@ -18,7 +18,7 @@ spec:
         - /bin/sh
         - -c
         - |
-          set -ex
+          set -ex -o pipefail
           cd
           mkdir -p ~/.cache/apk
           ln -s ~/.cache/apk /etc/apk/cache
