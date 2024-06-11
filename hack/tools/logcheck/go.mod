@@ -8,11 +8,11 @@ go 1.21
 require (
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 	// this has to be kept in sync with the used golangci-lint version
-	// use go version -m hack/tools/bin/golangci-lint to detect the dependency versions
-	golang.org/x/tools v0.21.0
+	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
+	golang.org/x/tools v0.22.0
 )
 
 require (
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 )
