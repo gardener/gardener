@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Reconciling project")
-	return r.reconcile(ctx, log, project)
+	return reconcile.Result{}, r.reconcile(ctx, log, project)
 }
 
 func patchProjectPhase(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, phase gardencorev1beta1.ProjectPhase) error {
@@ -79,18 +79,18 @@ func patchProjectPhase(ctx context.Context, c client.Client, project *gardencore
 	return c.Status().Patch(ctx, project, patch)
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) (reconcile.Result, error) {
+func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project) error {
 	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.Client, project, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
+			return fmt.Errorf("could not add finalizer: %w", err)
 		}
 	}
 
 	// If the project has no phase yet then we update it to be 'pending'.
 	if len(project.Status.Phase) == 0 {
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectPending); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
@@ -105,7 +105,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
-		return reconcile.Result{}, err
+		return err
 	}
 	r.Recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project", namespace.Name)
 
@@ -117,7 +117,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
@@ -128,7 +128,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if quotaConfig != nil {
@@ -137,7 +137,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 			if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 				log.Error(err, "Failed to update Project status")
 			}
-			return reconcile.Result{}, err
+			return err
 		}
 	}
 
@@ -148,7 +148,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if err := rbac.Deploy(ctx); err != nil {
@@ -156,7 +156,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
-		return reconcile.Result{}, err
+		return err
 	}
 
 	if err := rbac.DeleteStaleExtensionRolesResources(ctx); err != nil {
@@ -164,16 +164,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectFailed); err != nil {
 			log.Error(err, "Failed to update Project status")
 		}
-		return reconcile.Result{}, err
+		return err
 	}
 
 	// Update the project status to mark it as 'ready'.
 	if err := patchProjectPhase(ctx, r.Client, project, gardencorev1beta1.ProjectReady); err != nil {
 		r.Recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
-		return reconcile.Result{}, err
+		return err
 	}
 
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {

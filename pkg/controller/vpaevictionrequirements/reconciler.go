@@ -58,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Found the annotation "+constants.AnnotationVPAEvictionRequirementDownscaleRestriction, "value", value)
 	switch value {
 	case constants.EvictionRequirementNever:
-		return r.reconcileVPAForDownscaleDisabled(ctx, log, vpa)
+		return reconcile.Result{}, r.reconcileVPAForDownscaleDisabled(ctx, log, vpa)
 	case constants.EvictionRequirementInMaintenanceWindowOnly:
 		return r.reconcileVPAForDownscaleInMaintenanceOnly(ctx, log, vpa)
 	default:
@@ -129,16 +129,16 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
-func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, log logr.Logger, vpa *vpaautoscalingv1.VerticalPodAutoscaler) (reconcile.Result, error) {
+func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, log logr.Logger, vpa *vpaautoscalingv1.VerticalPodAutoscaler) error {
 	log.Info("Adding EvictionRequirement to deny downscaling")
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.SeedClient, vpa, func() error {
 		vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
 		return nil
 	}); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	log.Info("Not requeueing VPA")
-	return reconcile.Result{}, nil
+	return nil
 }
