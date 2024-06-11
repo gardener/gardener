@@ -27,12 +27,17 @@ spec:
                   git-prompt go grep helm inotify-tools jq k9s less lsof make mandoc mc moreutils  \
                   mount ncurses neovim parallel procps sed strace tar tcpdump tmux tmux-doc tzdata \
                   util-linux vim wget yq
-          echo kind              && curl -sL  "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" -o /usr/local/bin/kind && chmod +x /usr/local/bin/kind
-          echo kns               && curl -sL  "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" -o /usr/local/bin/kns && chmod +x /usr/local/bin/kns
-          echo ktx               && curl -sL  "https://raw.githubusercontent.com/blendle/kns/master/bin/ktx" -o /usr/local/bin/ktx && chmod +x /usr/local/bin/ktx
-          echo kube-ps1          && curl -sL  "https://raw.githubusercontent.com/jonmosco/kube-ps1/master/kube-ps1.sh" -o ~/.kube-ps1.sh
-          echo kubectl           && curl -sL  "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
-          echo tmux-completion   && curl -sL  "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux" -o /usr/share/bash-completion/completions/tmux
+          mkdir -p ~/.cache/wget
+          cd ~/.cache/wget
+          echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
+          echo kns             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" && cp kns /usr/local/bin/kns && chmod +x /usr/local/bin/kns
+          echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
+          echo ktx             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/ktx" && cp ktx /usr/local/bin/ktx && chmod +x /usr/local/bin/ktx
+          echo kube-ps1        && wget -N "https://raw.githubusercontent.com/jonmosco/kube-ps1/master/kube-ps1.sh" && cp kube-ps1.sh ~/.kube-ps1.sh
+          echo kubectl         && wget -N "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && cp kubectl /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
+          echo tmux-completion && wget -N "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux" && cp tmux /usr/share/bash-completion/completions/tmux
+          echo yaml2json       && wget -N "https://github.com/bronze1man/yaml2json/releases/download/$(curl -sL https://api.github.com/repos/bronze1man/yaml2json/releases/latest | jq .tag_name -r)/yaml2json_linux_amd64" && cp yaml2json_linux_amd64 /usr/local/bin/yaml2json && chmod +x /usr/local/bin/yaml2json
+          cd
           bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud \
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
           echo 'source ~/.bashrc' > ~/.bash_profile
