@@ -59,8 +59,12 @@ func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, prefi
 		globalMonitoringSecretReplica.Data = globalMonitoringSecret.Data
 		globalMonitoringSecretReplica.Immutable = globalMonitoringSecret.Immutable
 
-		if _, ok := globalMonitoringSecretReplica.Data[secretsutils.DataKeySHA1Auth]; !ok {
-			globalMonitoringSecretReplica.Data[secretsutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecret.Data[secretsutils.DataKeyUserName], globalMonitoringSecret.Data[secretsutils.DataKeyPassword])
+		if _, ok := globalMonitoringSecretReplica.Data[secretsutils.DataKeyAuth]; !ok {
+			credentials, err := utils.CreateBcryptCredentials(globalMonitoringSecret.Data[secretsutils.DataKeyUserName], globalMonitoringSecret.Data[secretsutils.DataKeyPassword])
+			if err != nil {
+				return err
+			}
+			globalMonitoringSecretReplica.Data[secretsutils.DataKeyAuth] = credentials
 		}
 
 		return nil

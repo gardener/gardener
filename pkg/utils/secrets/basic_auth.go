@@ -19,8 +19,8 @@ const (
 	DataKeyUserName = "username"
 	// DataKeyPassword is the key in a secret data holding the password.
 	DataKeyPassword = "password"
-	// DataKeySHA1Auth is the key in a secret data holding the sha1-schemed credentials pair as string.
-	DataKeySHA1Auth = "auth"
+	// DataKeyAuth is the key in a secret data holding the sha1-schemed credentials pair as string.
+	DataKeyAuth = "auth"
 )
 
 // BasicAuthSecretConfig contains the specification for a to-be-generated basic authentication secret.
@@ -44,6 +44,7 @@ type BasicAuth struct {
 
 	Username string
 	Password string
+	Auth     []byte
 }
 
 // GetName returns the name of the secret.
@@ -58,11 +59,17 @@ func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
 		return nil, err
 	}
 
+	auth, err := utils.CreateBcryptCredentials([]byte(s.Username), []byte(password))
+	if err != nil {
+		return nil, err
+	}
+
 	basicAuth := &BasicAuth{
 		Name: s.Name,
 
 		Username: s.Username,
 		Password: password,
+		Auth:     auth,
 	}
 
 	return basicAuth, nil
@@ -74,7 +81,7 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 
 	data[DataKeyUserName] = []byte(b.Username)
 	data[DataKeyPassword] = []byte(b.Password)
-	data[DataKeySHA1Auth] = utils.CreateSHA1Secret(data[DataKeyUserName], data[DataKeyPassword])
+	data[DataKeyAuth] = b.Auth
 
 	return data
 }

@@ -6,9 +6,11 @@ package gardener_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -51,7 +53,8 @@ var _ = Describe("Secrets", func() {
 				for k, v := range globalMonitoringSecret.Data {
 					Expect(secret.Data).To(HaveKeyWithValue(k, v), "have key "+k+" with value "+string(v))
 				}
-				Expect(secret.Data).To(HaveKeyWithValue("auth", []byte("bar:{SHA}u+lgol6jEdIdQGaek98gA7qbkKI=")))
+				hashedPassword := strings.TrimPrefix(string(secret.Data["auth"]), string(secret.Data["username"])+":")
+				Expect(bcrypt.CompareHashAndPassword([]byte(hashedPassword), secret.Data["password"])).To(Succeed())
 			}
 
 			secret, err := ReplicateGlobalMonitoringSecret(ctx, fakeClient, prefix, namespace, globalMonitoringSecret)
