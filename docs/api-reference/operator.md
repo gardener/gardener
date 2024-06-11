@@ -694,7 +694,7 @@ ExtensionDeploymentSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExtensionDeployment contains deployment configuration an extension.</p>
+<p>ExtensionDeployment contains the deployment configuration an extension.</p>
 </td>
 </tr>
 <tr>
@@ -708,7 +708,7 @@ AdmissionDeploymentSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>AdmissionDeployment contains deployment configuration for an admission controller.</p>
+<p>AdmissionDeployment contains the deployment configuration for an admission controller.</p>
 </td>
 </tr>
 </tbody>
@@ -968,7 +968,7 @@ ExtensionStatus
 </p>
 <p>
 <p>ExtensionDeploymentSpec specifies how to install the extension in a gardener landscape. The installation is split into two parts:
-- installing the extension in the garden cluster by creating the ControllerRegistration and ControllerDeployment.
+- installing the extension in the virtual garden cluster by creating the ControllerRegistration and ControllerDeployment
 - installing the extension in the runtime cluster (if necessary).</p>
 </p>
 <table>
@@ -1005,7 +1005,7 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </td>
 <td>
 <em>(Optional)</em>
-<p>Values are the deployment values used in the creation of the ControllerDeployment in the garden cluster.</p>
+<p>Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.</p>
 </td>
 </tr>
 <tr>
@@ -1017,7 +1017,7 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </td>
 <td>
 <em>(Optional)</em>
-<p>RuntimeClusterValues are the deployment values for the extension deployment running in the runtime cluster.</p>
+<p>RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.</p>
 </td>
 </tr>
 <tr>
@@ -1060,7 +1060,7 @@ github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository
 </td>
 <td>
 <em>(Optional)</em>
-<p>OCIRepository defines where to pull the chart.</p>
+<p>OCIRepository defines where to pull the chart from.</p>
 </td>
 </tr>
 </tbody>
@@ -1136,6 +1136,7 @@ int64
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>

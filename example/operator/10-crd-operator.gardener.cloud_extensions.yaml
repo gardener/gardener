@@ -51,7 +51,7 @@ spec:
                   and it's admission controller.
                 properties:
                   admission:
-                    description: AdmissionDeployment contains deployment configuration
+                    description: AdmissionDeployment contains the deployment configuration
                       for an admission controller.
                     properties:
                       runtimeCluster:
@@ -65,7 +65,7 @@ spec:
                             properties:
                               ociRepository:
                                 description: OCIRepository defines where to pull the
-                                  chart.
+                                  chart from.
                                 properties:
                                   digest:
                                     description: |-
@@ -101,7 +101,7 @@ spec:
                             properties:
                               ociRepository:
                                 description: OCIRepository defines where to pull the
-                                  chart.
+                                  chart from.
                                 properties:
                                   digest:
                                     description: |-
@@ -124,14 +124,15 @@ spec:
                         type: object
                     type: object
                   extension:
-                    description: ExtensionDeployment contains deployment configuration
+                    description: ExtensionDeployment contains the deployment configuration
                       an extension.
                     properties:
                       helm:
                         description: Helm contains the specification for a Helm deployment.
                         properties:
                           ociRepository:
-                            description: OCIRepository defines where to pull the chart.
+                            description: OCIRepository defines where to pull the chart
+                              from.
                             properties:
                               digest:
                                 description: |-
@@ -157,11 +158,13 @@ spec:
                         type: string
                       runtimeClusterValues:
                         description: RuntimeClusterValues are the deployment values
-                          for the extension deployment running in the runtime cluster.
+                          for the extension deployment running in the runtime garden
+                          cluster.
                         x-kubernetes-preserve-unknown-fields: true
                       values:
                         description: Values are the deployment values used in the
-                          creation of the ControllerDeployment in the garden cluster.
+                          creation of the ControllerDeployment in the virtual garden
+                          cluster.
                         x-kubernetes-preserve-unknown-fields: true
                     type: object
                 type: object

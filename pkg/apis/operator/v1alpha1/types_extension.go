@@ -55,27 +55,27 @@ type ExtensionSpec struct {
 // Deployment specifies how an extension can be installed for a gardener landscape. It includes the specification
 // for installing an extension and/or an admission controller.
 type Deployment struct {
-	// ExtensionDeployment contains deployment configuration an extension.
+	// ExtensionDeployment contains the deployment configuration an extension.
 	// +optional
 	ExtensionDeployment *ExtensionDeploymentSpec `json:"extension,omitempty"`
-	// AdmissionDeployment contains deployment configuration for an admission controller.
+	// AdmissionDeployment contains the deployment configuration for an admission controller.
 	// +optional
 	AdmissionDeployment *AdmissionDeploymentSpec `json:"admission,omitempty"`
 }
 
 // ExtensionDeploymentSpec specifies how to install the extension in a gardener landscape. The installation is split into two parts:
-// - installing the extension in the garden cluster by creating the ControllerRegistration and ControllerDeployment.
+// - installing the extension in the virtual garden cluster by creating the ControllerRegistration and ControllerDeployment
 // - installing the extension in the runtime cluster (if necessary).
 type ExtensionDeploymentSpec struct {
 	// DeploymentSpec is the deployment configuration for the extension.
 	// +optional
 	DeploymentSpec `json:",inline"`
 
-	// Values are the deployment values used in the creation of the ControllerDeployment in the garden cluster.
+	// Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 
-	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime cluster.
+	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
 	// +optional
 	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
 
@@ -108,7 +108,7 @@ type DeploymentSpec struct {
 
 // ExtensionHelm is the configuration for a helm deployment.
 type ExtensionHelm struct {
-	// OCIRepository defines where to pull the chart.
+	// OCIRepository defines where to pull the chart from.
 	// +optional
 	OCIRepository *gardencorev1.OCIRepository `json:"ociRepository,omitempty"`
 }
@@ -116,6 +116,7 @@ type ExtensionHelm struct {
 // ExtensionStatus is the status of a Gardener extension.
 type ExtensionStatus struct {
 	// ObservedGeneration is the most recent generation observed for this resource.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions represents the latest available observations of an Extension's current state.
 	// +patchMergeKey=type
