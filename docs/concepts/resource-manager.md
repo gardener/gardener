@@ -247,6 +247,14 @@ By default, cluster id is not used. If cluster id is specified, the format is `<
 
 In addition to the origin annotation, all objects managed by the resource manager get a dedicated label `resources.gardener.cloud/managed-by`. This label can be used to describe these objects with a [selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). By default it is set to "gardener", but this can be overwritten by setting the `.conrollers.managedResources.managedByLabelValue` field in the component configuration.
 
+#### Compression
+
+The number and size of manifests for a `ManagedResource` can accumulate to a considerable amount which leads to increased
+`Secret` data. A decent compression algorithm helps to reduce the footprint of such `Secret`s and the load they put on
+`etcd`, the `kube-apiserver`a and client caches.
+We found [Brotli](https://github.com/google/brotli) to be a suitable candidate for most use cases. When the `gardener-resource-manager`
+detects a data key with the known suffix `.bro`, it automatically un-compresses the data first before processing the contained manifest.  
+
 ### [`health` Controller](../../pkg/resourcemanager/controller/health)
 
 This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#managedResource-controller) at least once.

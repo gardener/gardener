@@ -5,9 +5,11 @@
 package managedresource_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -120,17 +122,46 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("create managed resource", func() {
-		It("should successfully create the resources and maintain proper status conditions", func() {
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}).Should(Succeed())
+		Describe("successful creation", func() {
+			test := func() {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: testNamespace.Name,
+					},
+				}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Status.Conditions
-			}).Should(
-				ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
-			)
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					ContainCondition(OfType(resourcesv1alpha1.ResourcesApplied), WithStatus(gardencorev1beta1.ConditionTrue), WithReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
+			}
+
+			Context("with uncompressed data", func() {
+				It("should successfully create the resources and maintain proper status conditions", func() {
+					test()
+				})
+			})
+
+			Context("with compressed data", func() {
+				BeforeEach(func() {
+					compressedData := compressData(secretForManagedResource.Data[dataKey])
+
+					secretForManagedResource.Data[dataKey+".br"] = compressedData
+					delete(secretForManagedResource.Data, dataKey)
+				})
+
+				It("should successfully create the resources and maintain proper status conditions", func() {
+					test()
+				})
+			})
 		})
 
 		Context("missing secret", func() {
@@ -1087,4 +1118,16 @@ func jsonDataForObject(obj runtime.Object) []byte {
 	jsonObject, err := json.Marshal(obj)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return jsonObject
+}
+
+func compressData(data []byte) []byte {
+	var buf bytes.Buffer
+	w := brotli.NewWriter(&buf)
+
+	_, err := w.Write(data)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(w.Close()).To(Succeed())
+
+	return buf.Bytes()
 }
