@@ -609,7 +609,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_label_role"},
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 							TargetLabel:  "role",
 						},
 						{
@@ -640,7 +640,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_label_role"},
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
 							TargetLabel:  "role",
 						},
 
