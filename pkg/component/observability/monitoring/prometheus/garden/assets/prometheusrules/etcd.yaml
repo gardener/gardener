@@ -25,7 +25,7 @@ spec:
         summary: >-
           Virtual garden etcd main cluster is down in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss. As
           long as etcd main is down the virtual garden cluster is unreachable.
 
@@ -48,7 +48,7 @@ spec:
         summary: >-
           Virtual garden etcd events cluster is down in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
           Cluster events cannot be collected.
 
@@ -97,7 +97,7 @@ spec:
         summary: >-
           Virtual garden etcd events has no leader in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd events has no leader. Possible network partition in the etcd cluster.
 
     - alert: EtcdHighNumberOfFailedProposals
@@ -113,7 +113,7 @@ spec:
         summary: >-
           High number of failed virtual garden etcd {{$labels.role}} proposals in
           landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} has seen {{$value}} proposal
           failures within the last hour.
 
@@ -141,7 +141,7 @@ spec:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
           practical limit in landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
           practical limit of 8GB. Etcd quota might need to be increased.
 
@@ -157,7 +157,7 @@ spec:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
           practical limit in landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
           practical limit of 8GB. Etcd quota must be increased to allow updates.
 
@@ -241,5 +241,5 @@ spec:
         severity: critical
       annotations:
         summary: Virtual garden etcd data restoration failure.
-        description: >
+        description: >-
           Virtual garden etcd data restoration was triggered, but has failed.

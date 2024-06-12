@@ -32,7 +32,7 @@ tests:
             exp_annotations:
               summary: >-
                 Virtual garden etcd main cluster is down in landscape landscape-unit-tests.
-              description: >
+              description: >-
                 Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss.
                 As long as etcd main is down the virtual garden cluster is unreachable.
 
@@ -78,7 +78,7 @@ tests:
             exp_annotations:
               summary: >-
                 Virtual garden etcd main cluster is down in landscape landscape-unit-tests.
-              description: >
+              description: >-
                 Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss.
                 As long as etcd main is down the virtual garden cluster is unreachable.
 
@@ -111,7 +111,7 @@ tests:
             exp_annotations:
               summary: >-
                 Virtual garden etcd events cluster is down in landscape landscape-unit-tests.
-              description: >
+              description: >-
                 Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
                 Cluster events cannot be collected.
 
@@ -157,7 +157,7 @@ tests:
             exp_annotations:
               summary: >-
                 Virtual garden etcd events cluster is down in landscape landscape-unit-tests.
-              description: >
+              description: >-
                 Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
                 Cluster events cannot be collected.
 
