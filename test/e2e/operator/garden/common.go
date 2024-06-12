@@ -105,7 +105,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: "gardener-operator/" + name,
+							BucketName: ptr.To("gardener-operator/" + name),
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
 							},

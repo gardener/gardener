@@ -434,6 +434,7 @@ When an object is not actively referenced anymore because the `Garden` specifica
 
 This reconciler inspects the following references:
 
+- DNS `Secret`s (`.spec.virtualCluster.dns.secretRef`)
 - ETCD backup `Secret`s (`.spec.virtualCluster.etcd.main.backup.secretRef`)
 - Admission plugin kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.admissionPlugins[].kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[].kubeconfigSecretName`)
 - Authentication webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.authentication.webhook.kubeconfigSecretName`)

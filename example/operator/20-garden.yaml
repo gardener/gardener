@@ -8,6 +8,18 @@ type: Opaque
 stringData:
   hostPath: "/etc/gardener/local-backupbuckets"
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: garden-dns-local
+  namespace: garden
+type: Opaque
+---
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+---
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:
@@ -28,6 +40,7 @@ spec:
       pods: 10.1.0.0/16
       services: 10.2.0.0/16
     provider:
+      region: local
       zones:
       - "0"
       - "1"
@@ -48,13 +61,20 @@ spec:
     dns:
       domains:
       - virtual-garden.local.gardener.cloud
+      provider: local
+    # providerConfig:
+    #   <some-provider-specific-config-for-the-dns-records>
+      secretRef:
+        name: garden-dns-local
     etcd:
       main:
         backup:
           provider: local
-          bucketName: gardener-operator
+        # providerConfig:
+        #   <some-provider-specific-config-for-the-backup-buckets>
           secretRef:
             name: virtual-garden-etcd-main-backup-local
+        # bucketName: gardener-operator # if not provided, gardener-operator attempts to create the bucket
         storage:
           capacity: 25Gi
         # className: default

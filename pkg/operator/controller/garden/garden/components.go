@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -90,6 +91,7 @@ type components struct {
 	istioCRD      component.Deployer
 	fluentCRD     component.Deployer
 	prometheusCRD component.Deployer
+	extensionCRD  component.Deployer
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -161,6 +163,7 @@ func (r *Reconciler) instantiateComponents(
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
+	c.extensionCRD = extensioncrds.NewCRD(applier, false, true)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -828,6 +831,14 @@ func getAPIServerDomains(domains []string) []string {
 	return apiServerDomains
 }
 
+func getIngressWildcardDomains(domains []string) []string {
+	wildcardDomains := make([]string, 0, len(domains))
+	for _, domain := range domains {
+		wildcardDomains = append(wildcardDomains, "*."+domain)
+	}
+	return wildcardDomains
+}
+
 func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
 	providerConfig, err := getNginxIngressConfig(garden)
 	if err != nil {
@@ -836,11 +847,6 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
-	}
-
-	var wildcardDomains []string
-	for _, domain := range garden.Spec.RuntimeCluster.Ingress.Domains {
-		wildcardDomains = append(wildcardDomains, "*."+domain)
 	}
 
 	return sharedcomponent.NewNginxIngress(
@@ -856,7 +862,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,
-		wildcardDomains,
+		getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains),
 		ingressGatewayValues[0].Labels,
 	)
 }

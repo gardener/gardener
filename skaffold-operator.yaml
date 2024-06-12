@@ -84,6 +84,7 @@ build:
             - pkg/component/etcd/etcd/constants
             - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
             - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
+            - pkg/component/extensions/crds
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
