@@ -19,7 +19,7 @@ const (
 	DataKeyUserName = "username"
 	// DataKeyPassword is the key in a secret data holding the password.
 	DataKeyPassword = "password"
-	// DataKeyAuth is the key in a secret data holding the sha1-schemed credentials pair as string.
+	// DataKeyAuth is the key in a secret data holding the basic authentication schemed credentials pair as string.
 	DataKeyAuth = "auth"
 )
 
