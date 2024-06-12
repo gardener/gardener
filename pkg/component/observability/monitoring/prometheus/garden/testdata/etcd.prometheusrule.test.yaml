@@ -1,0 +1,163 @@
+rule_files:
+- etcd.prometheusrule.yaml
+
+tests:
+
+  - name: EtcdMainDown:HighAvailability:NoQuorum
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x5"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-1"}
+        values: "0x5"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-2"}
+        values: "1x5"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdMainDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels:
+              role: main
+              service: VirtualGardenEtcd
+              severity: critical
+              topology: garden
+            exp_annotations:
+              summary: >-
+                Virtual garden etcd main cluster is down in landscape landscape-unit-tests.
+              description: >
+                Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss.
+                As long as etcd main is down the virtual garden cluster is unreachable.
+
+  - name: EtcdMainDown:HighAvailability:TolerateOneDown
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x5"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-1"}
+        values: "1x5"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-2"}
+        values: "1x5"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdMainDown
+        eval_time: 5m
+
+  - name: EtcdMainDown:Standalone
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "main", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x5"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdMainDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels:
+              role: main
+              service: VirtualGardenEtcd
+              severity: critical
+              topology: garden
+            exp_annotations:
+              summary: >-
+                Virtual garden etcd main cluster is down in landscape landscape-unit-tests.
+              description: >
+                Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss.
+                As long as etcd main is down the virtual garden cluster is unreachable.
+
+  - name: EtcdEventsDown:HighAvailability:NoQuorum
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x15"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-1"}
+        values: "0x15"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-2"}
+        values: "1x15"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdEventsDown
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels:
+              role: events
+              service: VirtualGardenEtcd
+              severity: info
+              topology: garden
+            exp_annotations:
+              summary: >-
+                Virtual garden etcd events cluster is down in landscape landscape-unit-tests.
+              description: >
+                Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
+                Cluster events cannot be collected.
+
+  - name: EtcdEventsDown:HighAvailability:TolerateOneDown
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x15"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-1"}
+        values: "1x15"
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-2"}
+        values: "1x15"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdEventsDown
+        eval_time: 15m
+
+  - name: EtcdEventsDown:Standalone
+    interval: 1m
+    input_series:
+      - series: up{job  = "virtual-garden-etcd",
+                   role = "events", 
+                   pod  = "virtual-garden-etcd-0"}
+        values: "0x15"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: EtcdEventsDown
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels:
+              role: events
+              service: VirtualGardenEtcd
+              severity: info
+              topology: garden
+            exp_annotations:
+              summary: >-
+                Virtual garden etcd events cluster is down in landscape landscape-unit-tests.
+              description: >
+                Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
+                Cluster events cannot be collected.
+
