@@ -570,7 +570,7 @@ var _ = Describe("Etcd", func() {
 							}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_label_role"},
 									TargetLabel:  "role",
 								},
 								{
@@ -600,7 +600,7 @@ var _ = Describe("Etcd", func() {
 							}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_label_role"},
 									TargetLabel:  "role",
 								},
 
