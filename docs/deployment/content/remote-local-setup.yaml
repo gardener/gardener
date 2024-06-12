@@ -148,6 +148,27 @@ spec:
             export PS1='[\w $(printf "$(kube_ps1)")] $(__git_ps1 "(%s)") [$(date +%H:%M)]\$ '
             stty -ixon
             cd ~/go/src/github.com/gardener/gardener
+            function pr {
+              if [ "$#" -ne 1 ]; then
+                echo "Usage: pr <id> - checkout the HEAD of PR <id>"
+                exit 1
+              fi
+              git fetch origin pull/$1/head 2>/dev/null
+              git checkout FETCH_HEAD
+              git tag pr_$1_$(git log --format=%h -1 HEAD) 2>/dev/null
+              git log -1 --oneline
+            }
+            function pr_base {
+              if [ "$#" -ne 1 ]; then
+                  echo "Usage: pr_base <id> - checkout the BASE of PR <id>"
+                  exit 1
+              fi
+              git fetch origin 2>/dev/null
+              git fetch origin pull/$1/head 2>/dev/null
+              git checkout $(git merge-base FETCH_HEAD origin/master)
+              git tag pr_base_$1_$(git log --format=%h -1 HEAD) 2>/dev/null
+              git log -1 --oneline
+            }
           EOF
           cat > ~/.tmux.conf <<"EOF"
             set -g mouse on
