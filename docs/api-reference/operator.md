@@ -672,7 +672,7 @@ string
 <a href="#operator.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>)
 </p>
 <p>
-<p>Deployment specifies how an extension can be installed for a gardener landscape. It includes the specification
+<p>Deployment specifies how an extension can be installed for a Gardener landscape. It includes the specification
 for installing an extension and/or an admission controller.</p>
 </p>
 <table>

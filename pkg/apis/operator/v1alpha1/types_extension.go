@@ -52,7 +52,7 @@ type ExtensionSpec struct {
 	Deployment *Deployment `json:"deployment,omitempty"`
 }
 
-// Deployment specifies how an extension can be installed for a gardener landscape. It includes the specification
+// Deployment specifies how an extension can be installed for a Gardener landscape. It includes the specification
 // for installing an extension and/or an admission controller.
 type Deployment struct {
 	// ExtensionDeployment contains the deployment configuration an extension.
