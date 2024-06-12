@@ -56,12 +56,12 @@ spec:
       expr: |
         sum(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "main"}
+                                 role = "main"}
         )
         <
         count(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "main"}
+                                 role = "main"}
         )
       for: 10m
       labels:
@@ -166,13 +166,13 @@ spec:
         (( time()
           -
           etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
-                                          kind = "Incr",
-                                          role = "main"}
+                                           kind = "Incr",
+                                           role = "main"}
           > bool 900
         )
         +
         ( etcdbr_snapshot_required{kind = "Incr",
-                                  role = "main"}
+                                   role = "main"}
           >= bool 1
         )
         == 2
@@ -199,13 +199,13 @@ spec:
         (( time()
           -
           etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
-                                          kind = "Full",
-                                          role = "main"}
+                                           kind = "Full",
+                                           role = "main"}
           > bool 86400
         )
         +
         ( etcdbr_snapshot_required{kind = "Full",
-                                  role = "main"}
+                                   role = "main"}
           >= bool 1
         )
         == 2
