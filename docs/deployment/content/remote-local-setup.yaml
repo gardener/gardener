@@ -195,6 +195,10 @@ spec:
             set -g pane-border-format " #{pane_index} #{pane_title} - #{pane_current_command} "
             set -g window-size smallest
           EOF
+          mkdir -p ~/.kube
+          if [ ! -f ~/.kube/config ]; then
+            echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
+          fi
           mkdir -p ~/go/src/github.com/gardener
           cd ~/go/src/github.com/gardener
           [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
