@@ -7,15 +7,15 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x5"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-1"}
         values: "0x5"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-2"}
         values: "1x5"
     external_labels:
@@ -40,15 +40,15 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x5"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-1"}
         values: "1x5"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-2"}
         values: "1x5"
     external_labels:
@@ -61,7 +61,7 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "main", 
+                   role = "virtual-garden-etcd-main",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x5"
     external_labels:
@@ -86,15 +86,15 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x15"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-1"}
         values: "0x15"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-2"}
         values: "1x15"
     external_labels:
@@ -119,15 +119,15 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x15"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-1"}
         values: "1x15"
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-2"}
         values: "1x15"
     external_labels:
@@ -140,7 +140,7 @@ tests:
     interval: 1m
     input_series:
       - series: up{job  = "virtual-garden-etcd",
-                   role = "events", 
+                   role = "virtual-garden-etcd-events",
                    pod  = "virtual-garden-etcd-0"}
         values: "0x15"
     external_labels:
