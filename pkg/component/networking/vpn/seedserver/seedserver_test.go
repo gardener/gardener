@@ -39,6 +39,7 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -418,6 +419,9 @@ var _ = Describe("VpnSeedServer", func() {
 					Template: *template(nodeNetwork, false),
 				},
 			}
+			deploy.Labels = utils.MergeStringMaps(deploy.Labels, map[string]string{
+				v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+			})
 
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy

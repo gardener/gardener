@@ -44,6 +44,8 @@ type Args struct {
 	Types []extensionswebhook.Type
 	// Mutator is a mutator to be used by the admission handler.
 	Mutator extensionswebhook.Mutator
+	// ObjectSelector is the label query for resources
+	ObjectSelector *metav1.LabelSelector
 }
 
 // New creates a new controlplane webhook with the given args.
@@ -73,6 +75,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Path:              getName(args.Kind),
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
 		NamespaceSelector: namespaceSelector,
+		ObjectSelector:    args.ObjectSelector,
 	}, nil
 }
 

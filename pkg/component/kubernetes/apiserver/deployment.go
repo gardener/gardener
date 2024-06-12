@@ -175,7 +175,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(GetLabels(), map[string]string{
-			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			resourcesv1alpha1.HighAvailabilityConfigType:               resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,

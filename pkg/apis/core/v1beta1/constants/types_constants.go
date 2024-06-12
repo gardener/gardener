@@ -553,6 +553,9 @@ const (
 	LabelProxy = "proxy"
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
+	// LabelExtensionWebhookControlplaneSelector is a constant for a label key for webhook object filter targets
+	//  the value can be true or false
+	LabelExtensionWebhookControlplaneSelector = LabelExtensionPrefix + "webhook-controlplane-selector"
 
 	// LabelShootNamespace is a constant for a label key that indicates a relationship to a shoot in the specified namespace.
 	LabelShootNamespace = "shoot.gardener.cloud/namespace"

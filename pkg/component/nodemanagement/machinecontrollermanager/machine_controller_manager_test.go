@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -168,7 +169,8 @@ var _ = Describe("MachineControllerManager", func() {
 					"app":                 "kubernetes",
 					"role":                "machine-controller-manager",
 					"gardener.cloud/role": "controlplane",
-					"high-availability-config.resources.gardener.cloud/type": "controller",
+					"high-availability-config.resources.gardener.cloud/type":   "controller",
+					v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -270,6 +272,9 @@ var _ = Describe("MachineControllerManager", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager-vpa",
 				Namespace: namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{

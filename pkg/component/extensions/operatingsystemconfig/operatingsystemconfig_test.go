@@ -221,7 +221,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 						Labels: map[string]string{
-							"worker.gardener.cloud/pool": worker.Name,
+							"worker.gardener.cloud/pool":                               worker.Name,
+							v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
 						},
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -256,7 +257,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 						Labels: map[string]string{
-							"worker.gardener.cloud/pool": worker.Name,
+							"worker.gardener.cloud/pool":                               worker.Name,
+							v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
 						},
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
