@@ -175,10 +175,11 @@ spec:
         securityContext:
           privileged: true
         volumeMounts:
-        # Without bind mounting `/sys/fs/cgroup` the shoot worker node fails currently; all the other components work fine
-        # Due to bind mounting `/sys/fs/cgroup` from the host, the docker container in this dind pod (i.e. the KinD cluster) uses a top level cgroup and hence is not constrained by the resource limits of this pod
-        # These host cgroups might leak, but it is probably not an issue e.g. due to hibernating the hosting Gardener dev k8s cluster so that the nodes are recreated regularly anyway
-        # To avoid conflicts on the top level docker cgroup, one dev pod per node is recommended
+        # Without bind mounting `/sys/fs/cgroup` the nested shoot worker node failed in this DinD pod.
+        # Due to bind mounting `/sys/fs/cgroup` from the host, the docker containers in this DinD pod (i.e. the KinD cluster)
+        # use a top level cgroup and hence are not constrained by the resource limits of this pod.
+        # The host cgroups might leak until the nodes are recreated e.g. when the hosting Gardener dev shoot cluster is hibernated.
+        # To avoid conflicts on the top level docker cgroup, only one remote-local-setup pod per node is recommended which is enforced by the high resource requests.
         # See
         # https://github.com/kubernetes-sigs/kind/issues/303
         # https://github.com/kubernetes/test-infra/blob/dcf27e157932c3e8680be4ae6cb8a4e2c7acf8cf/config/prow/config.yaml#L978-L988
