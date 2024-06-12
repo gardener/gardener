@@ -166,12 +166,8 @@ spec:
           read
         stdin: true
         startupProbe:
-          exec:
-            command:
-            - cat
-            - /tmp/ready
-          failureThreshold: 100
-          periodSeconds: 5
+          exec: {command: [cat, /tmp/ready]}
+          failureThreshold: 18
         env: [{name: ENV, value: /root/greeting.sh}] # ash sources the ENV file
         resources:
           requests: {cpu: 8, memory: 8G}
