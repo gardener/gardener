@@ -152,7 +152,7 @@ spec:
           mkdir -p ~/go/src/github.com/gardener
           cd ~/go/src/github.com/gardener
           [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
-          dockerd-entrypoint.sh &
+          dockerd-entrypoint.sh 2>&1 | tee ~/.dockerd.log &
           until docker ps >/dev/null 2>&1; do sleep 1; done
           tmux new -d -s gardener -n gardener
           tmux select-pane -T top
