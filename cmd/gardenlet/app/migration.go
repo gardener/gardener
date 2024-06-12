@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -47,7 +46,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 
 // TODO(timuthy): Remove after v1.97 was released.
 // updateGardenerResourceManager updates all GRM deployments in a seed cluster,
-// in order to roll out the Brotli compression support added in Gardener v1.96.
+// in order to roll out the Brotli compression support added in Gardener v1.97.
 func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl client.Client) error {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerResourceManager)
 	if err != nil {
@@ -56,26 +55,18 @@ func updateGardenerResourceManager(ctx context.Context, log logr.Logger, cl clie
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	grmDeployments := &appsv1.DeploymentList{}
-	if err := cl.List(ctx, grmDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager})); err != nil {
-		return err
-	}
-
-	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, cl)
-	if err != nil {
+	if err := cl.List(ctx, grmDeployments, client.MatchingLabels(map[string]string{
+		v1beta1constants.LabelApp:   v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+	})); err != nil {
 		return err
 	}
 
 	fns := make([]flow.TaskFn, 0, len(grmDeployments.Items))
 	for _, grmDeployment := range grmDeployments.Items {
 		for j, container := range grmDeployment.Spec.Template.Spec.Containers {
-			if container.Name == v1beta1constants.DeploymentNameGardenerResourceManager ||
+			if container.Name != v1beta1constants.DeploymentNameGardenerResourceManager ||
 				grmDeployment.Spec.Template.Spec.Containers[j].Image == image.String() {
-				continue
-			}
-
-			// Don't patch GRM in Runtime Garden cluster since it is usually not under the control of gardenlet (rather gardener-operator),
-			// and already updated to the right version, before Gardenlet is rolled out.
-			if grmDeployment.Namespace == v1beta1constants.GardenNamespace && seedIsGarden {
 				continue
 			}
 

@@ -5,9 +5,11 @@
 package managedresource_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -151,8 +152,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			Context("with compressed data", func() {
 				BeforeEach(func() {
-					compressedData, err := testutils.BrotliCompression(secretForManagedResource.Data[dataKey])
-					Expect(err).ToNot(HaveOccurred())
+					compressedData := compressData(secretForManagedResource.Data[dataKey])
 
 					secretForManagedResource.Data[dataKey+".br"] = compressedData
 					delete(secretForManagedResource.Data, dataKey)
@@ -1118,4 +1118,16 @@ func jsonDataForObject(obj runtime.Object) []byte {
 	jsonObject, err := json.Marshal(obj)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return jsonObject
+}
+
+func compressData(data []byte) []byte {
+	var buf bytes.Buffer
+	w := brotli.NewWriter(&buf)
+
+	_, err := w.Write(data)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(w.Close()).To(Succeed())
+
+	return buf.Bytes()
 }

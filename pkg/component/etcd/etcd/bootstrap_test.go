@@ -11,18 +11,9 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -45,9 +36,8 @@ var _ = Describe("Etcd", func() {
 		c            client.Client
 		bootstrapper component.DeployWaiter
 		etcdConfig   *config.ETCDConfig
-		consistOf    func(...client.Object) types.GomegaMatcher
 
-		ctx                      = context.Background()
+		ctx                      = context.TODO()
 		namespace                = "shoot--foo--bar"
 		kubernetesVersion        *semver.Version
 		etcdDruidImage           = "etcd/druid:1.2.3"
@@ -84,7 +74,6 @@ var _ = Describe("Etcd", func() {
 		}
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwrite, priorityClassName)
 
@@ -103,439 +92,437 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#Deploy", func() {
-		var (
-			expectedResources []client.Object
-
-			configMapName = "etcd-druid-imagevector-overwrite-4475dd36"
-
-			serviceAccount = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-druid",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-					},
-				},
-				AutomountServiceAccountToken: new(bool),
-			}
-
-			clusterRole = &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:system:etcd-druid",
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-					},
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{""},
-						Resources: []string{"pods"},
-						Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"secrets", "endpoints"},
-						Verbs:     []string{"get", "list", "patch", "update", "watch"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"events"},
-						Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"serviceaccounts"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					},
-					{
-						APIGroups: []string{"rbac.authorization.k8s.io"},
-						Resources: []string{"roles", "rolebindings"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"services", "configmaps"},
-						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
-					},
-					{
-						APIGroups: []string{"apps"},
-						Resources: []string{"statefulsets"},
-						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
-					},
-					{
-						APIGroups: []string{"batch"},
-						Resources: []string{"jobs"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					},
-					{
-						APIGroups: []string{"druid.gardener.cloud"},
-						Resources: []string{"etcds", "etcdcopybackupstasks"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					},
-					{
-						APIGroups: []string{"druid.gardener.cloud"},
-						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
-						Verbs:     []string{"get", "update", "patch", "create"},
-					},
-					{
-						APIGroups: []string{"coordination.k8s.io"},
-						Resources: []string{"leases"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
-					},
-					{
-						APIGroups: []string{""},
-						Resources: []string{"persistentvolumeclaims"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
-					{
-						APIGroups: []string{"policy"},
-						Resources: []string{"poddisruptionbudgets"},
-						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					},
-				},
-			}
-
-			clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:system:etcd-druid",
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-					},
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     "ClusterRole",
-					Name:     "gardener.cloud:system:etcd-druid",
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      "etcd-druid",
-						Namespace: namespace,
-					},
-				},
-			}
-
-			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-druid-vpa",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-					},
-				},
-				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-							{
-								ContainerName: "*",
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("100M"),
-								},
-							},
-						},
-					},
-					TargetRef: &autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-						Name:       "etcd-druid",
-					},
-					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
-					},
-				},
-			}
-
-			configMapImageVectorOverwrite = &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      configMapName,
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-						"resources.gardener.cloud/garbage-collectable-reference": "true",
-					},
-				},
-				Data: map[string]string{
-					"images_overwrite.yaml": *imageVectorOverwriteFull,
-				},
-				Immutable: ptr.To(true),
-			}
-
-			deploymentWithoutImageVectorOverwriteFor = func(useEtcdWrapper bool) *appsv1.Deployment {
-				deployment := &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "etcd-druid",
-						Namespace: namespace,
-						Labels: map[string]string{
-							"gardener.cloud/role": "etcd-druid",
-							"high-availability-config.resources.gardener.cloud/type": "controller",
-						},
-					},
-					Spec: appsv1.DeploymentSpec{
-						Replicas:             ptr.To[int32](1),
-						RevisionHistoryLimit: ptr.To[int32](1),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"gardener.cloud/role": "etcd-druid",
-							},
-						},
-						Template: corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"gardener.cloud/role":                            "etcd-druid",
-									"networking.gardener.cloud/to-dns":               "allowed",
-									"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-								},
-							},
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Command: []string{
-											"/etcd-druid",
-											"--enable-leader-election=true",
-											"--ignore-operation-annotation=false",
-											"--disable-etcd-serviceaccount-automount=true",
-											"--workers=25",
-											"--custodian-workers=3",
-											"--compaction-workers=3",
-											"--enable-backup-compaction=true",
-											"--etcd-events-threshold=1000000",
-											"--metrics-scrape-wait-duration=1m0s",
-											"--active-deadline-duration=3h0m0s",
-										},
-										Image:           etcdDruidImage,
-										ImagePullPolicy: corev1.PullIfNotPresent,
-										Name:            "etcd-druid",
-										Ports: []corev1.ContainerPort{
-											{
-												ContainerPort: 8080,
-											},
-										},
-										Resources: corev1.ResourceRequirements{
-											Limits: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("512Mi"),
-											},
-											Requests: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("50m"),
-												corev1.ResourceMemory: resource.MustParse("128Mi"),
-											},
-										},
-									},
-								},
-								PriorityClassName:  priorityClassName,
-								ServiceAccountName: "etcd-druid",
-							},
-						},
-					},
-				}
-
-				// Add feature gate command if useEtcdWrapper is true
-				if useEtcdWrapper {
-					deployment.Spec.Template.Spec.Containers[0].Command = append(
-						deployment.Spec.Template.Spec.Containers[0].Command,
-						"--feature-gates=UseEtcdWrapper=true",
-					)
-				}
-
-				return deployment
-			}
-
-			deploymentWithImageVectorOverwrite = &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-druid",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-						"high-availability-config.resources.gardener.cloud/type": "controller",
-					},
-					Annotations: map[string]string{
-						references.AnnotationKey(references.KindConfigMap, configMapName): configMapName,
-					},
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas:             ptr.To[int32](1),
-					RevisionHistoryLimit: ptr.To[int32](1),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"gardener.cloud/role": "etcd-druid",
-						},
-					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								"gardener.cloud/role":                            "etcd-druid",
-								"networking.gardener.cloud/to-dns":               "allowed",
-								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-							},
-							Annotations: map[string]string{
-								references.AnnotationKey(references.KindConfigMap, configMapName): configMapName,
-							},
-						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Command: []string{
-										"/etcd-druid",
-										"--enable-leader-election=true",
-										"--ignore-operation-annotation=false",
-										"--disable-etcd-serviceaccount-automount=true",
-										"--workers=25",
-										"--custodian-workers=3",
-										"--compaction-workers=3",
-										"--enable-backup-compaction=true",
-										"--etcd-events-threshold=1000000",
-										"--metrics-scrape-wait-duration=1m0s",
-										"--active-deadline-duration=3h0m0s",
-									},
-									Env: []corev1.EnvVar{
-										{
-											Name:  "IMAGEVECTOR_OVERWRITE",
-											Value: "/charts_overwrite/images_overwrite.yaml",
-										},
-									},
-									Image:           etcdDruidImage,
-									ImagePullPolicy: corev1.PullIfNotPresent,
-									Name:            "etcd-druid",
-									Ports: []corev1.ContainerPort{
-										{
-											ContainerPort: 8080,
-										},
-									},
-									Resources: corev1.ResourceRequirements{
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("512Mi"),
-										},
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("50m"),
-											corev1.ResourceMemory: resource.MustParse("128Mi"),
-										},
-									},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											MountPath: "/charts_overwrite",
-											Name:      "imagevector-overwrite",
-											ReadOnly:  true,
-										},
-									},
-								},
-							},
-							PriorityClassName:  priorityClassName,
-							ServiceAccountName: "etcd-druid",
-							Volumes: []corev1.Volume{
-								{
-									Name: "imagevector-overwrite",
-									VolumeSource: corev1.VolumeSource{
-										ConfigMap: &corev1.ConfigMapVolumeSource{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: configMapName,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			service = &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-druid",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-						"high-availability-config.resources.gardener.cloud/type": "controller",
-					},
-					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "metrics",
-							Port:       8080,
-							Protocol:   corev1.ProtocolTCP,
-							TargetPort: intstr.FromInt32(8080),
-						},
-					},
-					Selector: map[string]string{
-						"gardener.cloud/role": "etcd-druid",
-					},
-					Type: corev1.ServiceTypeClusterIP,
-				},
-			}
-
-			podDisruptionFor = func(k8sGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-				podDisruptionBudget := &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "etcd-druid",
-						Namespace: namespace,
-						Labels: map[string]string{
-							"gardener.cloud/role": "etcd-druid",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"gardener.cloud/role": "etcd-druid",
-							},
-						},
-					},
-					Status: policyv1.PodDisruptionBudgetStatus{
-						CurrentHealthy:     0,
-						DesiredHealthy:     0,
-						DisruptionsAllowed: 0,
-						ExpectedPods:       0,
-					},
-				}
-
-				if k8sGreaterEquals126 {
-					podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = ptr.To(policyv1.AlwaysAllow)
-				}
-
-				return podDisruptionBudget
-			}
-
-			serviceMonitor = &monitoringv1.ServiceMonitor{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cache-etcd-druid",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"prometheus": "cache",
-					},
-				},
-				Spec: monitoringv1.ServiceMonitorSpec{
-					Endpoints: []monitoringv1.Endpoint{
-						{
-							Port: "metrics",
-							MetricRelabelConfigs: []monitoringv1.RelabelConfig{
-								{
-									Action: "keep",
-									Regex:  "^(etcddruid_compaction_jobs_total|etcddruid_compaction_jobs_current|etcddruid_compaction_job_duration_seconds_bucket|etcddruid_compaction_job_duration_seconds_sum|etcddruid_compaction_job_duration_seconds_count|etcddruid_compaction_num_delta_events)$",
-									SourceLabels: []monitoringv1.LabelName{
-										"__name__",
-									},
-								},
-							},
-						},
-					},
-					NamespaceSelector: monitoringv1.NamespaceSelector{},
-					Selector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"gardener.cloud/role": "etcd-druid",
-						},
-					},
-				},
-			}
-		)
-
 		BeforeEach(func() {
 			imageVectorOverwrite = nil
 			featureGates = nil
 			kubernetesVersion = semver.MustParse("1.25.0")
 		})
+
+		var (
+			configMapName = "etcd-druid-imagevector-overwrite-4475dd36"
+
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: etcd-druid
+  namespace: ` + namespace + `
+`
+			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: gardener.cloud:system:etcd-druid
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - endpoints
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds
+  - etcdcopybackupstasks
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds/status
+  - etcds/finalizers
+  - etcdcopybackupstasks/status
+  - etcdcopybackupstasks/finalizers
+  verbs:
+  - get
+  - update
+  - patch
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+`
+			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: gardener.cloud:system:etcd-druid
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:etcd-druid
+subjects:
+- kind: ServiceAccount
+  name: etcd-druid
+  namespace: ` + namespace + `
+`
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: etcd-druid-vpa
+  namespace: ` + namespace + `
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        memory: 100M
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: etcd-druid
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
+			configMapImageVectorOverwriteYAML = `apiVersion: v1
+data:
+  images_overwrite.yaml: ` + *imageVectorOverwriteFull + `
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + configMapName + `
+  namespace: ` + namespace + `
+`
+
+			deploymentWithoutImageVectorOverwriteYAMLFor = func(useEtcdWrapper bool) string {
+				out := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: etcd-druid
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+    spec:
+      containers:
+      - command:
+        - /etcd-druid
+        - --enable-leader-election=true
+        - --ignore-operation-annotation=false
+        - --disable-etcd-serviceaccount-automount=true
+        - --workers=25
+        - --custodian-workers=3
+        - --compaction-workers=3
+        - --enable-backup-compaction=true
+        - --etcd-events-threshold=1000000
+        - --metrics-scrape-wait-duration=1m0s
+        - --active-deadline-duration=3h0m0s`
+				if useEtcdWrapper {
+					out += `
+        - --feature-gates=UseEtcdWrapper=true`
+				}
+				out += `
+        image: ` + etcdDruidImage + `
+        imagePullPolicy: IfNotPresent
+        name: etcd-druid
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+      priorityClassName: ` + priorityClassName + `
+      serviceAccountName: etcd-druid
+status: {}
+`
+				return out
+			}
+			deploymentWithImageVectorOverwriteYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: etcd-druid
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+    spec:
+      containers:
+      - command:
+        - /etcd-druid
+        - --enable-leader-election=true
+        - --ignore-operation-annotation=false
+        - --disable-etcd-serviceaccount-automount=true
+        - --workers=25
+        - --custodian-workers=3
+        - --compaction-workers=3
+        - --enable-backup-compaction=true
+        - --etcd-events-threshold=1000000
+        - --metrics-scrape-wait-duration=1m0s
+        - --active-deadline-duration=3h0m0s
+        env:
+        - name: IMAGEVECTOR_OVERWRITE
+          value: /charts_overwrite/images_overwrite.yaml
+        image: ` + etcdDruidImage + `
+        imagePullPolicy: IfNotPresent
+        name: etcd-druid
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /charts_overwrite
+          name: imagevector-overwrite
+          readOnly: true
+      priorityClassName: ` + priorityClassName + `
+      serviceAccountName: etcd-druid
+      volumes:
+      - configMap:
+          name: ` + configMapName + `
+        name: imagevector-overwrite
+status: {}
+`
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":8080}]'
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    gardener.cloud/role: etcd-druid
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
+			podDisruptionYAMLFor = func(k8sGreaterEquals126 bool) string {
+				out := `apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+`
+				if k8sGreaterEquals126 {
+					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
+				}
+				out += `status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
+				return out
+			}
+			serviceMonitorYAML = `apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  creationTimestamp: null
+  labels:
+    prometheus: cache
+  name: cache-etcd-druid
+  namespace: ` + namespace + `
+spec:
+  endpoints:
+  - metricRelabelings:
+    - action: keep
+      regex: ^(etcddruid_compaction_jobs_total|etcddruid_compaction_jobs_current|etcddruid_compaction_job_duration_seconds_bucket|etcddruid_compaction_job_duration_seconds_sum|etcddruid_compaction_job_duration_seconds_count|etcddruid_compaction_num_delta_events)$
+      sourceLabels:
+      - __name__
+    port: metrics
+  namespaceSelector: {}
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+`
+		)
 
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
@@ -560,38 +547,29 @@ var _ = Describe("Etcd", func() {
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResource).To(DeepEqual(expectedMr))
 
-			expectedResources = []client.Object{
-				serviceAccount,
-				clusterRole,
-				clusterRoleBinding,
-				vpa,
-				service,
-				serviceMonitor,
-			}
-
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			manifests, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])
-			Expect(err).NotTo(HaveOccurred())
-			Expect(manifests).ToNot(BeEmpty())
-		})
-
-		AfterEach(func() {
-			Expect(managedResource).To(consistOf(expectedResources...))
+			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__etcd-druid.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_etcd-druid.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_etcd-druid.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__etcd-druid-vpa.yaml"])).To(Equal(vpaYAML))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__etcd-druid.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["servicemonitor__"+namespace+"__cache-etcd-druid.yaml"])).To(Equal(serviceMonitorYAML))
 		})
 
 		Context("w/o image vector overwrite", func() {
 			JustBeforeEach(func() {
-				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor(false))
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(false)))
 			})
 
 			Context("kubernetes versions < 1.26", func() {
 				It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-					expectedResources = append(expectedResources, podDisruptionFor(false))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 				})
 			})
 
@@ -601,7 +579,7 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should successfully deploy all the resources", func() {
-					expectedResources = append(expectedResources, podDisruptionFor(true))
+					Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(true)))
 				})
 			})
 		})
@@ -612,13 +590,12 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
 				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, priorityClassName)
 
-				expectedResources = append(expectedResources,
-					deploymentWithImageVectorOverwrite,
-					configMapImageVectorOverwrite,
-					podDisruptionFor(false),
-				)
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithImageVectorOverwriteYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapImageVectorOverwriteYAML))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 			})
 		})
 
@@ -630,10 +607,9 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources", func() {
-				expectedResources = append(expectedResources,
-					deploymentWithoutImageVectorOverwriteFor(true),
-					podDisruptionFor(false),
-				)
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"])).To(Equal(deploymentWithoutImageVectorOverwriteYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__etcd-druid.yaml"])).To(Equal(podDisruptionYAMLFor(false)))
 			})
 		})
 	})

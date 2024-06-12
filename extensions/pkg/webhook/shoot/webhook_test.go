@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,11 +32,11 @@ import (
 
 var _ = Describe("Webhook", func() {
 	var (
-		ctx        = context.Background()
+		ctx        = context.TODO()
 		fakeClient client.Client
-		consistOf  func(...client.Object) types.GomegaMatcher
 
-		shootWebhookConfigs extensionswebhook.Configs
+		shootWebhookConfigs   extensionswebhook.Configs
+		shootWebhookConfigRaw map[string][]byte
 
 		extensionName       = "provider-test"
 		managedResourceName = "extension-provider-test-shoot-webhooks"
@@ -45,7 +44,6 @@ var _ = Describe("Webhook", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		shootWebhookConfigs = extensionswebhook.Configs{
 			MutatingWebhookConfig: &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -57,6 +55,17 @@ var _ = Describe("Webhook", func() {
 				}},
 			},
 		}
+		shootWebhookConfigRaw = map[string][]byte{"mutatingwebhookconfiguration____provider-test.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: provider-test
+webhooks:
+- admissionReviewVersions: null
+  clientConfig: {}
+  name: some-webhook
+  sideEffects: null
+`)}
 	})
 
 	Describe("#ReconcileWebhookConfig", func() {
@@ -71,7 +80,7 @@ var _ = Describe("Webhook", func() {
 
 		It("should reconcile the shoot webhook config", func() {
 			Expect(ReconcileWebhookConfig(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigs, cluster, true)).To(Succeed())
-			expectWebhookConfigReconciliation(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, consistOf)
+			expectWebhookConfigReconciliation(ctx, fakeClient, namespace, managedResourceName, shootWebhookConfigRaw)
 		})
 	})
 
@@ -178,8 +187,8 @@ var _ = Describe("Webhook", func() {
 
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace1.Name, managedResourceName)
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace2.Name, managedResourceName)
-			expectWebhookConfigReconciliation(ctx, fakeClient, namespace3.Name, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, consistOf)
-			expectWebhookConfigReconciliation(ctx, fakeClient, namespace4.Name, managedResourceName, shootWebhookConfigs.MutatingWebhookConfig, consistOf)
+			expectWebhookConfigReconciliation(ctx, fakeClient, namespace3.Name, managedResourceName, shootWebhookConfigRaw)
+			expectWebhookConfigReconciliation(ctx, fakeClient, namespace4.Name, managedResourceName, shootWebhookConfigRaw)
 			expectNoWebhookConfigReconciliation(ctx, fakeClient, namespace5.Name, managedResourceName)
 		})
 
@@ -208,7 +217,7 @@ var _ = Describe("Webhook", func() {
 	})
 })
 
-func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string, shootWebhook *admissionregistrationv1.MutatingWebhookConfiguration, consistOf func(...client.Object) types.GomegaMatcher) {
+func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string, shootWebhookConfigRaw map[string][]byte) {
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 	ExpectWithOffset(1, managedResource.Spec.SecretRefs).To(HaveLen(1))
@@ -216,7 +225,7 @@ func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Cl
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeOpaque))
-	Expect(managedResource).To(consistOf(shootWebhook))
+	ExpectWithOffset(1, secret.Data).To(Equal(shootWebhookConfigRaw))
 }
 
 func expectNoWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string) {

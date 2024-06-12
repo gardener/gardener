@@ -13,6 +13,7 @@ subjects:
   - kind: ServiceAccount
     name: istiod
     namespace: test
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

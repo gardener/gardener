@@ -107,12 +107,7 @@ func DeployResourceConfigs(
 			}
 		}
 
-		serializedObjects, err := registry.SerializedObjects()
-		if err != nil {
-			return err
-		}
-
-		return managedresources.CreateForSeedWithLabels(ctx, c, namespace, managedResourceName, false, managedResourceLabels, serializedObjects)
+		return managedresources.CreateForSeedWithLabels(ctx, c, namespace, managedResourceName, false, managedResourceLabels, registry.SerializedObjects())
 	}
 
 	for _, r := range allResources {
@@ -137,12 +132,7 @@ func DeployResourceConfigs(
 		}
 	}
 
-	serializedObjects, err := registry.SerializedObjects()
-	if err != nil {
-		return err
-	}
-
-	return managedresources.CreateForShoot(ctx, c, namespace, managedResourceName, managedresources.LabelValueGardener, false, serializedObjects)
+	return managedresources.CreateForShoot(ctx, c, namespace, managedResourceName, managedresources.LabelValueGardener, false, registry.SerializedObjects())
 }
 
 // DestroyResourceConfigs destroys the provided ResourceConfigs <allResources> based on the ClusterType.

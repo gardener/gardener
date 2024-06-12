@@ -283,7 +283,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	return registry.SerializedObjects()
+	return registry.SerializedObjects(), nil
 }
 
 func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {

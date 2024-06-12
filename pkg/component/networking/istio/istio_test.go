@@ -6,10 +6,14 @@ package istio_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/hexops/gotextdiff"
+	"github.com/hexops/gotextdiff/myers"
+	"github.com/hexops/gotextdiff/span"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -73,12 +77,12 @@ var _ = Describe("istiod", func() {
 
 		istioClusterRole = func(i int) string {
 			data, _ := os.ReadFile("./test_charts/istio_clusterrole.yaml")
-			return strings.Split(string(data), "---\n")[i]
+			return strings.TrimSpace(strings.Split(string(data), "---")[i])
 		}
 
 		istiodClusterRoleBinding = func(i int) string {
 			data, _ := os.ReadFile("./test_charts/istio_clusterrolebinding.yaml")
-			return strings.Split(string(data), "---\n")[i]
+			return strings.TrimSpace(strings.Split(string(data), "---")[i])
 		}
 
 		istiodDestinationRule = func() string {
@@ -145,7 +149,7 @@ var _ = Describe("istiod", func() {
 
 		istioIngressEnvoyVPNFilter = func(i int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_vpn_envoy_filter.yaml")
-			return strings.Split(string(data), "---\n")[i]
+			return strings.TrimSpace(strings.Split(string(data), "---")[i])
 		}
 
 		istioIngressEnvoyFilter = func() string {
@@ -247,10 +251,15 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_virtualservice.yaml")
 			return string(data)
 		}
+
+		diffConfig = func(actual, expected string) string {
+			edits := myers.ComputeEdits(span.URIFromPath("actual"), actual, expected)
+			return fmt.Sprint(gotextdiff.ToUnified("actual", "expected", actual, edits))
+		}
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		ctx = context.TODO()
 		igwAnnotations = map[string]string{"foo": "bar"}
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
@@ -349,7 +358,7 @@ var _ = Describe("istiod", func() {
 			))
 		})
 
-		checkSuccessfulDeployment := func(k8sVersionLess126 bool, minReplicas, maxReplicas *int) {
+		checkSuccessfulDeployment := func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -371,97 +380,76 @@ var _ = Describe("istiod", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			if igw[0].TerminateLoadBalancerProxyProtocol {
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(17))
+			} else {
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+			}
 			Expect(managedResourceIstioSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			expectedIstioManifests := []string{
-				istioIngressAutoscaler(minReplicas, maxReplicas),
-				istioIngressRole(),
-				istioIngressRoleBinding(),
-				istioIngressService(),
-				istioIngressServiceAccount(),
-				istioIngressDeployment(minReplicas),
-				istioIngressServiceMonitor(),
-				istioIngressEnvoyFilter(),
-			}
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"]), istioIngressAutoscaler(nil, nil))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_envoy-filter_test-ingress.yaml"]), istioIngressEnvoyFilter())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"]), istioIngressPodDisruptionBudget())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_role_test-ingress.yaml"]), istioIngressRole())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"]), istioIngressRoleBinding())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressService())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"]), istioIngressServiceAccount())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"]), istioIngressDeployment(nil))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["servicemonitor__istio-system__aggregate-istio-ingressgateway.yaml"]), istioIngressServiceMonitor())).To(BeEmpty())
 
-			expectedIstioSystemManifests := []string{
-				istiodConfigMap(),
-				istiodDeployment("1cb4501d4e8d2a8849d21c2aa5e0910c3ea03818bd9b322082fd9c6a8605f097"),
-				istiodService(),
-				istioClusterRole(0),
-				istioClusterRole(1),
-				istioClusterRole(2),
-				istiodClusterRoleBinding(0),
-				istiodClusterRoleBinding(1),
-				istiodClusterRoleBinding(2),
-				istiodDestinationRule(),
-				istiodRole(),
-				istiodRoleBinding(),
-				istiodServiceAccount(),
-				istiodAutoscale(),
-				istiodValidationWebhook(),
-				istiodServiceMonitor(),
-			}
-
-			if k8sVersionLess126 {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudgetLess126())
-				expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudgetLess126())
-			} else {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
-				expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
-			}
-
+			By("Verify istio-proxy-protocol resources")
 			if igw[0].TerminateLoadBalancerProxyProtocol {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterDual(), istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol.yaml"]), istioProxyProtocolEnvoyFilterDual())).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-sni.yaml"]), istioProxyProtocolEnvoyFilterSNI())).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress_envoyfilter_proxy-protocol-vpn.yaml"]), istioProxyProtocolEnvoyFilterVPN())).To(BeEmpty())
+			} else {
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"]), istioProxyProtocolEnvoyFilter())).To(BeEmpty())
 			}
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"]), istioProxyProtocolGateway())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"]), istioProxyProtocolVirtualService())).To(BeEmpty())
 
-			if !igw[0].TerminateLoadBalancerProxyProtocol && igw[0].ProxyProtocolEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilter())
-			}
-
-			if igw[0].ProxyProtocolEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolGateway(), istioProxyProtocolVirtualService())
-			}
-
-			if igw[0].VPNEnabled {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressVPNGateway(), istioIngressEnvoyVPNFilter(0), istioIngressEnvoyVPNFilter(1))
-			}
-
-			By("Verify istio resources")
-			var err error
-			istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(istioManifests).To(ConsistOf(expectedIstioManifests))
+			By("Verify istio-reversed-vpn resources")
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"]), istioIngressVPNGateway())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress_envoyfilter_reversed-vpn.yaml"]), istioIngressEnvoyVPNFilter(0))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress_envoyfilter_http-connect-listener.yaml"]), istioIngressEnvoyVPNFilter(1))).To(BeEmpty())
 
 			By("Verify istio-system resources")
-			if istiod.GetValues().Istiod.Enabled {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
-				managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
+			managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
-				Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
+			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(17))
+			Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(ptr.To(true)))
+			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-				istioSystemManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSystemSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(istioSystemManifests).To(ContainElements(expectedIstioSystemManifests))
-			} else {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(BeNotFoundError())
-			}
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"]), istiodConfigMap())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"]), istiodDeployment("1cb4501d4e8d2a8849d21c2aa5e0910c3ea03818bd9b322082fd9c6a8605f097"))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_service.yaml"]), istiodService())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole_clusterrole_istiod-clusterrole-istio-system.yaml"]), istioClusterRole(0))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole_clusterrole_istiod-gateway-controller-istio-system.yaml"]), istioClusterRole(1))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole_clusterrole_istio-reader-clusterrole-istio-system.yaml"]), istioClusterRole(2))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding_clusterrolebinding_istiod-clusterrole-istio-system.yaml"]), istiodClusterRoleBinding(0))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding_clusterrolebinding_istiod-gateway-controller-istio-system.yaml"]), istiodClusterRoleBinding(1))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding_clusterrolebinding_istio-reader-clusterrole-istio-system.yaml"]), istiodClusterRoleBinding(2))).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_destinationrule.yaml"]), istiodDestinationRule())).To(BeEmpty())
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"]), istiodPodDisruptionBudget())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_role.yaml"]), istiodRole())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_rolebinding.yaml"]), istiodRoleBinding())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_serviceaccount.yaml"]), istiodServiceAccount())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_autoscale.yaml"]), istiodAutoscale())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"]), istiodValidationWebhook())).To(BeEmpty())
+			Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["servicemonitor__istio-system__aggregate-istiod.yaml"]), istiodServiceMonitor())).To(BeEmpty())
 		}
 
 		Context("with proxy protocol termination", func() {
 			BeforeEach(func() {
 				igw[0].TerminateLoadBalancerProxyProtocol = true
-				igw[0].ProxyProtocolEnabled = true
 			})
 
-			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
-			})
+			It("should successfully deploy all resources", checkSuccessfulDeployment)
 		})
 
 		Context("without proxy protocol termination", func() {
@@ -469,9 +457,7 @@ var _ = Describe("istiod", func() {
 				igw[0].TerminateLoadBalancerProxyProtocol = false
 			})
 
-			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
-			})
+			It("should successfully deploy all resources", checkSuccessfulDeployment)
 		})
 
 		Context("kubernetes version < 1.26", func() {
@@ -496,7 +482,20 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy pdb with the correct spec", func() {
-				checkSuccessfulDeployment(true, nil, nil)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				if igw[0].TerminateLoadBalancerProxyProtocol {
+					Expect(managedResourceIstioSecret.Data).To(HaveLen(17))
+				} else {
+					Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+				}
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
+				managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
+				Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(17))
+
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"]), istioIngressPodDisruptionBudgetLess126())).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"]), istiodPodDisruptionBudgetLess126())).To(BeEmpty())
 			})
 		})
 
@@ -545,12 +544,11 @@ var _ = Describe("istiod", func() {
 					renderer,
 					Values{
 						Istiod: IstiodValues{
-							Enabled:           true,
-							Image:             "foo/bar",
-							Namespace:         deployNS,
-							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
-							TrustDomain:       "foo.local",
-							Zones:             []string{"a", "b", "c"},
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
 					},
@@ -558,7 +556,10 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy correct autoscaling", func() {
-				checkSuccessfulDeployment(false, &minReplicas, &maxReplicas)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"]), istioIngressAutoscaler(&minReplicas, &maxReplicas))).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"]), istioIngressDeployment(&minReplicas))).To(BeEmpty())
+
 			})
 		})
 
@@ -584,12 +585,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-
-				var err error
-				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(istioManifests).To(ContainElement(istioIngressServiceETPCluster()))
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceETPCluster())).To(BeEmpty())
 			})
 		})
 
@@ -615,12 +611,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct external traffic policy", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-
-				var err error
-				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(istioManifests).To(ContainElement(istioIngressServiceETPLocal()))
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceETPLocal())).To(BeEmpty())
 			})
 		})
 
@@ -647,12 +638,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct dualStack config and traffic policy local", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-
-				var err error
-				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(istioManifests).To(ContainElement(istioIngressServiceDualStackETP()))
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceDualStackETP())).To(BeEmpty())
 			})
 		})
 
@@ -677,12 +663,7 @@ var _ = Describe("istiod", func() {
 
 			It("should successfully deploy correct dualStack config", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
-
-				var err error
-				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(istioManifests).To(ContainElement(istioIngressServiceDualStack()))
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"]), istioIngressServiceDualStack())).To(BeEmpty())
 			})
 		})
 
@@ -697,12 +678,11 @@ var _ = Describe("istiod", func() {
 					renderer,
 					Values{
 						Istiod: IstiodValues{
-							Enabled:           true,
-							Image:             "foo/bar",
-							Namespace:         deployNS,
-							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
-							TrustDomain:       "foo.local",
-							Zones:             []string{"a", "b", "c"},
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
 					},
@@ -710,7 +690,16 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				if igw[0].TerminateLoadBalancerProxyProtocol {
+					Expect(managedResourceIstioSecret.Data).To(HaveLen(14))
+				} else {
+					Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
+				}
+
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
+				Expect(diffConfig(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"]), istioIngressDeployment(nil))).To(BeEmpty())
 			})
 		})
 
@@ -725,12 +714,11 @@ var _ = Describe("istiod", func() {
 					renderer,
 					Values{
 						Istiod: IstiodValues{
-							Enabled:           true,
-							Image:             "foo/bar",
-							Namespace:         deployNS,
-							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
-							TrustDomain:       "foo.local",
-							Zones:             []string{"a", "b", "c"},
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
 						},
 						IngressGateway: igw,
 					},
@@ -738,7 +726,13 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
+
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-virtualservice_test-ingress.yaml"])).To(BeEmpty())
 			})
 		})
 
@@ -765,7 +759,22 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
+
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_service.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrole.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_clusterrolebinding.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_namespace.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_poddisruptionbudget.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_role.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_rolebinding.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_serviceaccount.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_autoscale.yaml"))
+				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_validatingwebhookconfiguration.yaml"))
 			})
 		})
 	})

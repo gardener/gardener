@@ -251,8 +251,8 @@ In addition to the origin annotation, all objects managed by the resource manage
 
 The number and size of manifests for a `ManagedResource` can accumulate to a considerable amount which leads to increased `Secret` data.
 A decent compression algorithm helps to reduce the footprint of such `Secret`s and the load they put on `etcd`, the `kube-apiserver`, and client caches.
-We found [Brotli](https://github.com/google/brotli) to be a suitable candidate for most use cases (see comparison table [here](https://github.com/gardener/gardener/pull/9868)). 
-When the `gardener-resource-manager` detects a data key with the known suffix `.br`, it automatically un-compresses the data first before processing the contained manifest.  
+We found [Brotli](https://github.com/google/brotli) to be a suitable candidate for most use cases (see comparison table [here](https://github.com/gardener/gardener/pull/9868)).
+When the `gardener-resource-manager` detects a data key with the known suffix `.br`, it automatically un-compresses the data first before processing the contained manifest.
 
 ### [`health` Controller](../../pkg/resourcemanager/controller/health)
 

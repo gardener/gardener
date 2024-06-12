@@ -14,21 +14,16 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -50,7 +45,7 @@ import (
 
 var _ = Describe("VPNShoot", func() {
 	var (
-		ctx                 = context.Background()
+		ctx                 = context.TODO()
 		managedResourceName = "shoot-core-vpn-shoot"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
@@ -59,8 +54,6 @@ var _ = Describe("VPNShoot", func() {
 		sm       secretsmanager.Interface
 		vpnShoot component.DeployWaiter
 
-		contain               func(...client.Object) types.GomegaMatcher
-		manifests             []string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
@@ -207,7 +200,6 @@ var _ = Describe("VPNShoot", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		contain = NewManagedResourceContainsObjectsMatcher(c)
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceName,
@@ -230,173 +222,138 @@ var _ = Describe("VPNShoot", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			networkPolicy = &networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener.cloud--allow-vpn",
-					Namespace: "kube-system",
-					Annotations: map[string]string{
-						"gardener.cloud/description": "Allows the VPN to communicate with shoot components and makes the VPN reachable from the seed.",
-					},
-				},
-				Spec: networkingv1.NetworkPolicySpec{
-					Ingress: []networkingv1.NetworkPolicyIngressRule{{}},
-					Egress:  []networkingv1.NetworkPolicyEgressRule{{}},
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": "vpn-shoot",
-						},
-					},
-					PolicyTypes: []networkingv1.PolicyType{
-						networkingv1.PolicyTypeEgress,
-						networkingv1.PolicyTypeIngress,
-					},
-				},
-			}
+			networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows the VPN to communicate with shoot components
+      and makes the VPN reachable from the seed.
+  creationTimestamp: null
+  name: gardener.cloud--allow-vpn
+  namespace: kube-system
+spec:
+  egress:
+  - {}
+  ingress:
+  - {}
+  podSelector:
+    matchLabels:
+      app: vpn-shoot
+  policyTypes:
+  - Egress
+  - Ingress
+`
+			networkPolicyFromSeedYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows Ingress from the control plane to pods labeled
+      with 'networking.gardener.cloud/from-seed=allowed'.
+  creationTimestamp: null
+  name: gardener.cloud--allow-from-seed
+  namespace: kube-system
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: vpn-shoot
+          gardener.cloud/role: system-component
+          origin: gardener
+          type: tunnel
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/from-seed: allowed
+  policyTypes:
+  - Ingress
+`
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    app: vpn-shoot
+  name: vpn-shoot
+  namespace: kube-system
+`
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: vpn-shoot
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: vpn-shoot
+      controlledValues: RequestsOnly
+      minAllowed:
+        memory: 10Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vpn-shoot
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
+			vpaHAYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: vpn-shoot
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: vpn-shoot-s0
+      controlledValues: RequestsOnly
+      minAllowed:
+        memory: 10Mi
+    - containerName: vpn-shoot-s1
+      controlledValues: RequestsOnly
+      minAllowed:
+        memory: 10Mi
+    - containerName: vpn-shoot-s2
+      controlledValues: RequestsOnly
+      minAllowed:
+        memory: 10Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: vpn-shoot
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 
-			networkPolicyFromSeed = &networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener.cloud--allow-from-seed",
-					Namespace: "kube-system",
-					Annotations: map[string]string{
-						"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-seed=allowed'.",
-					},
-				},
-				Spec: networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"networking.gardener.cloud/from-seed": "allowed",
-						},
-					},
-					Ingress: []networkingv1.NetworkPolicyIngressRule{
-						{
-							From: []networkingv1.NetworkPolicyPeer{
-								{
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app":                 "vpn-shoot",
-											"gardener.cloud/role": "system-component",
-											"origin":              "gardener",
-											"type":                "tunnel",
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []networkingv1.PolicyType{
-						networkingv1.PolicyTypeIngress,
-					},
-				},
-			}
-
-			serviceAccount = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-shoot",
-					Namespace: "kube-system",
-					Labels: map[string]string{
-						"app": "vpn-shoot",
-					},
-				},
-				AutomountServiceAccountToken: ptr.To(false),
-			}
-
-			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-shoot",
-					Namespace: "kube-system",
-				},
-				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-					TargetRef: &autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-						Name:       "vpn-shoot",
-					},
-					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
-					},
-					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-							{
-								ContainerName:    "vpn-shoot",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("10Mi"),
-								},
-							},
-						},
-					},
-				},
-			}
-
-			vpaHA = &vpaautoscalingv1.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-shoot",
-					Namespace: "kube-system",
-				},
-				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-					TargetRef: &autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "StatefulSet",
-						Name:       "vpn-shoot",
-					},
-					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: func() *vpaautoscalingv1.UpdateMode {
-							mode := vpaautoscalingv1.UpdateModeAuto
-							return &mode
-						}(),
-					},
-					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-							{
-								ContainerName:    "vpn-shoot-s0",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("10Mi"),
-								},
-							},
-							{
-								ContainerName:    "vpn-shoot-s1",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("10Mi"),
-								},
-							},
-							{
-								ContainerName:    "vpn-shoot-s2",
-								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("10Mi"),
-								},
-							},
-						},
-					},
-				},
-			}
-
-			pdbFor = func(k8sGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-				pdb := &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "vpn-shoot",
-						Namespace: "kube-system",
-						Labels: map[string]string{
-							"app": "vpn-shoot",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: &intstr.IntOrString{IntVal: 1},
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"app": "vpn-shoot",
-							},
-						},
-					},
-				}
-
+			pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
+				out := `apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    app: vpn-shoot
+  name: vpn-shoot
+  namespace: kube-system
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: vpn-shoot
+`
 				if k8sGreaterEquals126 {
-					pdb.Spec.UnhealthyPodEvictionPolicy = ptr.To(policyv1.AlwaysAllow)
+					out += `  unhealthyPodEvictionPolicy: AlwaysAllow
+`
 				}
-
-				return pdb
+				out += `status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
+				return out
 			}
 
 			containerFor = func(clients int, index *int, vpaEnabled, highAvailable bool) *corev1.Container {
@@ -760,6 +717,10 @@ var _ = Describe("VPNShoot", func() {
 
 			statefulSetFor = func(servers, replicas int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, vpaEnabled bool) *appsv1.StatefulSet {
 				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "StatefulSet",
+					},
 					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth),
 					Spec: appsv1.StatefulSetSpec{
 						PodManagementPolicy:  appsv1.ParallelPodManagement,
@@ -807,6 +768,9 @@ var _ = Describe("VPNShoot", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-from-seed.yaml"])).To(Equal(networkPolicyFromSeedYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
 
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
@@ -817,16 +781,6 @@ var _ = Describe("VPNShoot", func() {
 			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 
 			componenttest.PrometheusRule(actualPrometheusRule, "testdata/shoot-tunnel-probe-apiserver-proxy.prometheusrule.test.yaml")
-
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(managedResource).To(contain(
-				networkPolicy,
-				networkPolicyFromSeed,
-				serviceAccount,
-			))
 		})
 
 		Context("IPv6", func() {
@@ -837,12 +791,14 @@ var _ = Describe("VPNShoot", func() {
 
 			It("should successfully deploy all resources", func() {
 				var (
-					secretNameClient  = expectVPNShootSecret(manifests)
-					secretNameCA      = expectCASecret(manifests)
-					secretNameTLSAuth = expectTLSAuthSecret(manifests)
+					secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data)
+					secretNameCA      = expectCASecret(managedResourceSecret.Data)
+					secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 				)
 
-				Expect(managedResource).To(contain(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
+				deployment := &appsv1.Deployment{}
+				Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+				Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
 			})
 		})
 
@@ -854,12 +810,14 @@ var _ = Describe("VPNShoot", func() {
 
 				It("should successfully deploy all resources", func() {
 					var (
-						secretNameClient  = expectVPNShootSecret(manifests)
-						secretNameCA      = expectCASecret(manifests)
-						secretNameTLSAuth = expectTLSAuthSecret(manifests)
+						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data)
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
-					Expect(managedResource).To(contain(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
 				})
 			})
 
@@ -869,16 +827,17 @@ var _ = Describe("VPNShoot", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
+
 					var (
-						secretNameClient  = expectVPNShootSecret(manifests)
-						secretNameCA      = expectCASecret(manifests)
-						secretNameTLSAuth = expectTLSAuthSecret(manifests)
+						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data)
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
-					Expect(managedResource).To(contain(
-						vpa,
-						deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled),
-					))
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
 				})
 			})
 
@@ -891,22 +850,24 @@ var _ = Describe("VPNShoot", func() {
 				})
 
 				JustBeforeEach(func() {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaHAYAML))
+
 					var (
-						secretNameClient0 = expectVPNShootSecret(manifests, "-0")
-						secretNameClient1 = expectVPNShootSecret(manifests, "-1")
-						secretNameCA      = expectCASecret(manifests)
-						secretNameTLSAuth = expectTLSAuthSecret(manifests)
+						secretNameClient0 = expectVPNShootSecret(managedResourceSecret.Data, "-0")
+						secretNameClient1 = expectVPNShootSecret(managedResourceSecret.Data, "-1")
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
-					Expect(managedResource).To(contain(
-						vpaHA,
-						statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled),
-					))
+					statefulSet := &appsv1.StatefulSet{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["statefulset__kube-system__vpn-shoot.yaml"], statefulSet)).To(Succeed())
+					expected := statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled)
+					Expect(statefulSet).To(DeepEqual(expected))
 				})
 
 				Context("kubernetes versions < 1.26", func() {
 					It("should successfully deploy all resources", func() {
-						Expect(managedResource).To(contain(pdbFor(false)))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__vpn-shoot.yaml"])).To(Equal(pdbYAMLFor(false)))
 					})
 				})
 
@@ -916,7 +877,7 @@ var _ = Describe("VPNShoot", func() {
 					})
 
 					It("should successfully deploy all resources", func() {
-						Expect(managedResource).To(contain(pdbFor(true)))
+						Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__vpn-shoot.yaml"])).To(Equal(pdbYAMLFor(true)))
 					})
 				})
 
@@ -1063,35 +1024,35 @@ var _ = Describe("VPNShoot", func() {
 	})
 })
 
-func expectVPNShootSecret(manifests []string, haSuffix ...string) string {
+func expectVPNShootSecret(data map[string][]byte, haSuffix ...string) string {
 	suffix := "client"
 
 	if len(haSuffix) > 0 {
 		suffix += haSuffix[0]
 	}
-	return expectSecret(manifests, suffix)
+	return expectSecret(data, suffix)
 }
 
-func expectCASecret(manifests []string) string {
-	return expectSecret(manifests, "ca")
+func expectCASecret(data map[string][]byte) string {
+	return expectSecret(data, "ca")
 }
 
-func expectTLSAuthSecret(manifests []string) string {
-	return expectSecret(manifests, "tlsauth")
+func expectTLSAuthSecret(data map[string][]byte) string {
+	return expectSecret(data, "tlsauth")
 }
 
-func expectSecret(manifests []string, suffix string) string {
-	var secretManifest string
+func expectSecret(data map[string][]byte, suffix string) string {
+	var secretName string
 
-	for _, manifest := range manifests {
-		if strings.Contains(manifest, "kind: Secret") && strings.Contains(manifest, "name: vpn-shoot-"+suffix) {
-			secretManifest = manifest
+	for key := range data {
+		if strings.HasPrefix(key, "secret__kube-system__vpn-shoot-"+suffix) {
+			secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
 			break
 		}
 	}
 
 	secret := &corev1.Secret{}
-	Expect(runtime.DecodeInto(newCodec(), []byte(secretManifest), secret)).To(Succeed())
+	Expect(runtime.DecodeInto(newCodec(), data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
 	if secret.Immutable == nil {
 		println("x")
 	}
@@ -1099,7 +1060,7 @@ func expectSecret(manifests []string, suffix string) string {
 	Expect(secret.Data).NotTo(BeEmpty())
 	Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
 
-	return secret.Name
+	return secretName
 }
 
 func newCodec() runtime.Codec {

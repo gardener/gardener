@@ -335,7 +335,9 @@ var _ = Describe("Actuator", func() {
 			c := mockclient.NewMockClient(ctrl)
 
 			if webhookConfig != nil {
-				compressedData, err := test.BrotliCompressionForManifests(`apiVersion: admissionregistration.k8s.io/v1
+				createdMRSecretForShootWebhooks := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
+					Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -344,13 +346,8 @@ webhooks:
   clientConfig: {}
   name: ""
   sideEffects: null
-`)
-				Expect(err).NotTo(HaveOccurred())
-
-				createdMRSecretForShootWebhooks := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-					Data:       map[string][]byte{"data.yaml.br": compressedData},
-					Type:       corev1.SecretTypeOpaque,
+`)},
+					Type: corev1.SecretTypeOpaque,
 				}
 
 				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForShootWebhooks))

@@ -9,9 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -36,40 +34,64 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		bootstrapper component.DeployWaiter
 
-		ctx       = context.Background()
+		ctx       = context.TODO()
 		namespace = "shoot--foo--bar"
 
-		consistOf                 func(...client.Object) types.GomegaMatcher
 		managedResourceName       = "cluster-autoscaler"
 		managedResourceSecretName = "managedresource-" + managedResourceName
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 		bootstrapper = NewBootstrapper(c, namespace)
 	})
 
 	Describe("#Deploy", func() {
 		var (
-			clusterRole = &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "system:cluster-autoscaler-seed",
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"machine.sapcloud.io"},
-						Resources: []string{"*"},
-						Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-					},
-					{
-						APIGroups: []string{"apps"},
-						Resources: []string{"deployments"},
-						Verbs:     []string{"get", "list", "watch"},
-					},
-				},
-			}
+			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: system:cluster-autoscaler-seed
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - '*'
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+`
 
+			expectedSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceSecretName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+					ResourceVersion: "1",
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"clusterrole____system_cluster-autoscaler-seed.yaml": []byte(clusterRoleYAML),
+				},
+				Immutable: ptr.To(true),
+			}
 			expectedMr = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
@@ -93,7 +115,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 			expectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: actualMr.Spec.SecretRefs[0].Name}}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(actualMr).To(DeepEqual(expectedMr))
-			Expect(actualMr).To(consistOf(clusterRole))
+
+			actualSecret := &corev1.Secret{}
+			expectedSecret.Name = actualMr.Spec.SecretRefs[0].Name
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+			Expect(actualSecret).To(DeepEqual(expectedSecret))
 		})
 	})
 

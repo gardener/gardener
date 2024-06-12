@@ -6,12 +6,11 @@ package runtime_test
 
 import (
 	"context"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -32,7 +31,7 @@ import (
 
 var _ = Describe("Runtime", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName = "garden-system"
 		namespace           = "some-namespace"
@@ -40,7 +39,6 @@ var _ = Describe("Runtime", func() {
 		c         client.Client
 		component component.DeployWaiter
 
-		consistOf             func(...client.Object) types.GomegaMatcher
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 	)
@@ -48,7 +46,6 @@ var _ = Describe("Runtime", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		component = New(c, namespace)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -97,14 +94,8 @@ var _ = Describe("Runtime", func() {
 		})
 
 		It("should successfully deploy the resources", func() {
-			priorityClasses := make([]client.Object, 0, 5)
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-500", 999999500))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-400", 999999400))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-300", 999999300))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-200", 999999200))
-			priorityClasses = append(priorityClasses, createPriorityClass("gardener-garden-system-100", 999999100))
-
-			Expect(managedResource).To(consistOf(priorityClasses...))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			expectPriorityClasses(managedResourceSecret.Data)
 		})
 	})
 
@@ -210,12 +201,28 @@ var _ = Describe("Runtime", func() {
 	})
 })
 
-func createPriorityClass(name string, value int32) *schedulingv1.PriorityClass {
-	return &schedulingv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Description: "PriorityClass for Garden system components",
-		Value:       value,
+func expectPriorityClasses(data map[string][]byte) {
+	expected := []struct {
+		name        string
+		value       int32
+		description string
+	}{
+		{"gardener-garden-system-500", 999999500, "PriorityClass for Garden system components"},
+		{"gardener-garden-system-400", 999999400, "PriorityClass for Garden system components"},
+		{"gardener-garden-system-300", 999999300, "PriorityClass for Garden system components"},
+		{"gardener-garden-system-200", 999999200, "PriorityClass for Garden system components"},
+		{"gardener-garden-system-100", 999999100, "PriorityClass for Garden system components"},
+	}
+
+	for _, pc := range expected {
+		ExpectWithOffset(1, data).To(HaveKeyWithValue("priorityclass____"+pc.name+".yaml", []byte(`apiVersion: scheduling.k8s.io/v1
+description: `+pc.description+`
+kind: PriorityClass
+metadata:
+  creationTimestamp: null
+  name: `+pc.name+`
+value: `+strconv.FormatInt(int64(pc.value), 10)+`
+`),
+		))
 	}
 }

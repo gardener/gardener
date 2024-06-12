@@ -34,7 +34,7 @@ import (
 
 var _ = Describe("NodeExporter", func() {
 	var (
-		ctx = context.Background()
+		ctx = context.TODO()
 
 		managedResourceName = "shoot-core-node-exporter"
 		namespace           = "some-namespace"
@@ -263,9 +263,6 @@ var _ = Describe("NodeExporter", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			manifests         []string
-			expectedManifests []string
-
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
@@ -457,6 +454,10 @@ status: {}
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
+
 			actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig), actualScrapeConfig)).To(Succeed())
 			Expect(actualScrapeConfig).To(DeepEqual(scrapeConfig))
@@ -466,21 +467,11 @@ status: {}
 			Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
 
 			componenttest.PrometheusRule(prometheusRule, "testdata/shoot-node-exporter.prometheusrule.test.yaml")
-
-			var err error
-			manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedManifests = []string{
-				serviceAccountYAML,
-				serviceYAML,
-				daemonSetYAML,
-			}
 		})
 
 		Context("VPA disabled", func() {
 			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(3))
 			})
 		})
 
@@ -490,8 +481,8 @@ status: {}
 			})
 
 			It("should successfully deploy the VPA resource", func() {
-				expectedManifests = append(expectedManifests, vpaYAML)
-				Expect(manifests).To(ConsistOf(expectedManifests))
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-exporter.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 	})
