@@ -291,7 +291,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         getDruidDeployCommands(b.etcdConfig),
+								Args:            getDruidDeployArgs(b.etcdConfig),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -399,9 +399,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
-	command := []string{
-		"/etcd-druid",
+func getDruidDeployArgs(etcdConfig *config.ETCDConfig) []string {
+	args := []string{
 		"--enable-leader-election=true",
 		"--ignore-operation-annotation=false",
 		"--disable-etcd-serviceaccount-automount=true",
@@ -413,19 +412,19 @@ func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
 	}
 
 	if etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration != nil {
-		command = append(command, "--metrics-scrape-wait-duration="+etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration.String())
+		args = append(args, "--metrics-scrape-wait-duration="+etcdConfig.BackupCompactionController.MetricsScrapeWaitDuration.Duration.String())
 	}
 
 	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
-		command = append(command, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
+		args = append(args, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}
 
-	// Add feature gates to the etcd druid command
+	// Add feature gates to the etcd druid args
 	if etcdConfig.FeatureGates != nil {
-		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(etcdConfig.FeatureGates))
+		args = append(args, kubernetesutils.FeatureGatesToCommandLineParameter(etcdConfig.FeatureGates))
 	}
 
-	return command
+	return args
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
