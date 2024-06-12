@@ -163,8 +163,7 @@ spec:
           tmux split-window \; select-pane -T config   ; sleep 1; tmux send "./hack/usage/generate-admin-kubeconf.sh > /tmp/kubeconfig-shoot-local.yaml # Get Kubeconfig for Shoot" \; select-layout even-vertical
           tmux split-window \; select-pane -T config   ; sleep 1; tmux send "make test-e2e-local-simple" # Run simple e2e test (create and delete shoot) \; select-layout even-vertical
           touch /tmp/ready
-          read
-        stdin: true
+          wait
         startupProbe:
           exec: {command: [cat, /tmp/ready]}
           failureThreshold: 18
