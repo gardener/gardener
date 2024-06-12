@@ -623,48 +623,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedPathControllerContainer())
-
-	container := *k.vpnSeedClientContainer(0)
-	container.Name = "vpn-client-init"
-	container.Args = []string{"setup"}
-	container.Command = nil
-	container.Env = append(container.Env, []corev1.EnvVar{
-		{
-			Name: "POD_NAME",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.name",
-				},
-			},
-		},
-		{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
-			},
-		},
-	}...)
-	if k.values.VPN.DisableRewrite {
-		container.Args = nil
-		container.Env = append(container.Env,
-			corev1.EnvVar{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
-			},
-			corev1.EnvVar{
-				Name:  "CONFIGURE_BONDING",
-				Value: "true",
-			})
-	}
-	container.LivenessProbe = nil
-	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-		Name:      volumeNameAPIServerAccess,
-		MountPath: volumeMountPathAPIServerAccess,
-		ReadOnly:  true,
-	})
-	deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, container)
+	deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, *k.vpnSeedClientInitContainer())
 
 	hostPathCharDev := corev1.HostPathCharDev
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
@@ -762,12 +721,56 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	}...)
 }
 
+func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
+	container := k.vpnSeedClientContainer(0)
+	container.Name = "vpn-client-init"
+	container.Args = []string{"setup"}
+	container.Command = []string{"/bin/shoot-client"}
+	container.Env = append(container.Env, []corev1.EnvVar{
+		{
+			Name: "POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+	}...)
+	if k.values.VPN.DisableRewrite {
+		container.Args = nil
+		container.Command = nil
+		container.Env = append(container.Env,
+			corev1.EnvVar{
+				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+				Value: "true",
+			},
+			corev1.EnvVar{
+				Name:  "CONFIGURE_BONDING",
+				Value: "true",
+			})
+	}
+	container.LivenessProbe = nil
+	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameAPIServerAccess,
+		MountPath: volumeMountPathAPIServerAccess,
+		ReadOnly:  true,
+	})
+	return container
+}
+
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 	container := &corev1.Container{
 		Name:            fmt.Sprintf("%s-%d", containerNameVPNSeedClient, index),
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/run-shoot-client.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "ENDPOINT",
@@ -854,6 +857,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/shoot-client"},
 		Args:            []string{"path-controller"},
 		Env: []corev1.EnvVar{
 			{
@@ -899,6 +903,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
 	if k.values.VPN.DisableRewrite {
+		container.Command = nil
 		container.Args = []string{"/path-controller.sh"}
 		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
