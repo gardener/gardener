@@ -139,6 +139,7 @@ spec:
             source ~/.kube-ps1.sh
             source /usr/share/git-core/git-prompt.sh
             export PS1='[\w $(printf "$(kube_ps1)")] $(__git_ps1 "(%s)") [$(date +%H:%M)]\$ '
+            stty -ixon
             cd ~/go/src/github.com/gardener/gardener
           EOF
           cat > ~/.tmux.conf <<"EOF"
