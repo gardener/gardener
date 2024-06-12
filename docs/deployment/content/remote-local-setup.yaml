@@ -144,6 +144,9 @@ spec:
           EOF
           cat > ~/.tmux.conf <<"EOF"
             set -g mouse on
+            bind -T copy-mode-vi MouseDown3Pane send -X copy-selection-and-cancel
+            bind -T copy-mode-vi MouseDown2Pane send -X copy-selection # Command right-click to copy without leaving the copy mode
+            bind -T copy-mode-vi MouseDragEnd1Pane send -X select-pane
             set -g mode-keys vi
             set -g default-shell /bin/bash
             set -g pane-border-status top
