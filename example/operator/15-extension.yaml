@@ -1,0 +1,28 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: local
+#spec:
+#  resources:
+#  - kind: BackupBucket
+#    type: local
+#    primary: true|false
+#    globallyEnabled: true|false # only valid if kind=Extension
+#    reconcileTimeout: 30s # only valid if kind=Extension
+#    lifecycle: {}
+#    workerlessSupported: true|false # only valid if kind=Extension
+#  deployment:
+#    admission:
+#      values: {}
+#      runtimeCluster:
+#        helm:
+#          ociRepository: {}
+#      virtualCluster:
+#        helm:
+#          ociRepository: {}
+#    extension:
+#      values: {}
+#      runtimeClusterValues: {}
+#      helm:
+#        ociRepository: {}
+#      policy: OnDemand|Always
