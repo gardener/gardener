@@ -66,7 +66,7 @@ KIND_VERSION ?= v0.23.0
 # renovate: datasource=github-releases depName=ko-build/ko
 KO_VERSION ?= v0.15.4
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.30.1
+KUBECTL_VERSION ?= v1.30.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 KUSTOMIZE_VERSION ?= v5.3.0
 # renovate: datasource=github-releases depName=prometheus/prometheus
