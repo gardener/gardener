@@ -132,7 +132,6 @@ spec:
           cat > ~/.bashrc <<"EOF"
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
-            export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
             export XDG_CONFIG_HOME=~/.config
             export EDITOR=nvim
             export HISTFILESIZE=10000
@@ -168,6 +167,21 @@ spec:
               git checkout $(git merge-base FETCH_HEAD origin/master)
               git tag pr_base_$1_$(git log --format=%h -1 HEAD) 2>/dev/null
               git log -1 --oneline
+            }
+            # copy the kubeconfig that is created by make kind.*-up to ~/.kube/config
+            # the namespace can be set with kns in this copied kubeconfig without affecting the original kubeconfig
+            function sync_kubeconfig {
+              FOLDER=$1
+              while true; do
+                if grep -q current-context $FOLDER/kubeconfig 2>/dev/null; then
+                  echo "[cp_kubeconfig] Copying $FOLDER/kubeconfig to the default path: ~/.kube/config."
+                  cp $FOLDER/kubeconfig ~/.kube/config
+                fi
+                if ! inotifywait -qq --include kubeconfig -e close_write,delete $FOLDER 2>/dev/null; then
+                  echo "[cp_kubeconfig] Waiting for $FOLDER to be created"
+                  sleep 1
+                fi
+              done
             }
           EOF
           cat > ~/.tmux.conf <<"EOF"
