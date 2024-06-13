@@ -221,22 +221,30 @@ setup_kind_with_lpp_resize_support() {
 }
 
 check_shell_dependencies() {
-  if ! sed --version  >/dev/null 2>&1; then
-    echo "WARNING: Your sed version does not support the --version flag. Please ensure you have a compatible version of GNU sed installed."
+  errors=()
+
+  if ! sed --version >/dev/null 2>&1; then
+    errors+=("Current sed version does not support the --version flag. Please ensure GNU sed is installed.")
   fi
 
   if tar --version 2>&1 | grep -q "bsdtar"; then
-    echo "WARNING: You are using BSD tar, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU tar installed."
+    errors+=("BSD tar detected. Please ensure GNU tar is installed.")
   fi
 
   if grep --version 2>&1 | grep -q "BSD grep"; then
-    echo "WARNING: You are using BSD grep, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU grep installed."
+    errors+=("BSD grep detected. Please ensure GNU grep is installed.")
   fi
 
-  if [ "$(uname -s)" = "Darwin" ]; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
     if gzip --version 2>&1 | grep -q "Apple"; then
-      echo "WARNING: You are using the built-in Apple gzip utility, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU gzip installed."
+      errors+=("Apple built-in gzip utility detected. Please ensure GNU gzip is installed.")
     fi
+  fi
+
+  if [ "${#errors[@]}" -gt 0 ]; then
+    printf 'Error: Required shell dependencies not met. Please refer to https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#macos-only-install-gnu-core-utilities:\n'
+    printf '    - %s\n' "${errors[@]}"
+    exit 1
   fi
 }
 
