@@ -378,7 +378,7 @@ aka "local setup", in a "remote" K8s pod.
 k apply -f docs/deployment/content/remote-local-setup.yaml
 k exec -it remote-local-setup-0 -- sh
 
-tmux -u a
+tmux a
 ```
 
 ### Caveats
