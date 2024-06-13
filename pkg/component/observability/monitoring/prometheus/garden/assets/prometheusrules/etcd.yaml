@@ -9,9 +9,12 @@ spec:
     - alert: EtcdMainDown
       expr: |
         sum(
-          up{job  = "virtual-garden-etcd",
-            role = "main"}
-        ) < 2
+          up{job="virtual-garden-etcd",
+             role="virtual-garden-etcd-main"})
+        <=
+        count(
+          up{job="virtual-garden-etcd",
+             role="virtual-garden-etcd-main"}) / 2
       for: 5m
       labels:
         severity: critical
@@ -22,16 +25,19 @@ spec:
         summary: >-
           Virtual garden etcd main cluster is down in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd main cluster is unavailable or cannot be scraped due to possible quorum loss. As
           long as etcd main is down the virtual garden cluster is unreachable.
 
     - alert: EtcdEventsDown
       expr: |
         sum(
-          up{job  = "virtual-garden-etcd",
-            role = "events"}
-        ) < 2
+          up{job="virtual-garden-etcd",
+             role="virtual-garden-etcd-events"})
+        <=
+        count(
+          up{job="virtual-garden-etcd",
+             role="virtual-garden-etcd-events"}) / 2
       for: 15m
       labels:
         severity: info
@@ -42,7 +48,7 @@ spec:
         summary: >-
           Virtual garden etcd events cluster is down in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd events cluster is unavailable or cannot be scraped due to possible quorum loss.
           Cluster events cannot be collected.
 
@@ -50,12 +56,12 @@ spec:
       expr: |
         sum(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "main"}
+                                 role = "virtual-garden-etcd-main"}
         )
         <
         count(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "main"}
+                                 role = "virtual-garden-etcd-main"}
         )
       for: 10m
       labels:
@@ -74,12 +80,12 @@ spec:
       expr: |
         sum(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "events"}
+                                 role = "virtual-garden-etcd-events"}
         )
         <
         count(
           etcd_server_has_leader{job  = "virtual-garden-etcd",
-                                role = "events"}
+                                 role = "virtual-garden-etcd-events"}
         )
       for: 15m
       labels:
@@ -91,7 +97,7 @@ spec:
         summary: >-
           Virtual garden etcd events has no leader in landscape
           {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd events has no leader. Possible network partition in the etcd cluster.
 
     - alert: EtcdHighNumberOfFailedProposals
@@ -107,7 +113,7 @@ spec:
         summary: >-
           High number of failed virtual garden etcd {{$labels.role}} proposals in
           landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} has seen {{$value}} proposal
           failures within the last hour.
 
@@ -135,7 +141,7 @@ spec:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
           practical limit in landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} DB size is approaching its current
           practical limit of 8GB. Etcd quota might need to be increased.
 
@@ -151,7 +157,7 @@ spec:
         summary: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
           practical limit in landscape {{$externalLabels.landscape}}.
-        description: >
+        description: >-
           Virtual garden etcd {{$labels.role}} DB size has crossed its current
           practical limit of 8GB. Etcd quota must be increased to allow updates.
 
@@ -160,13 +166,13 @@ spec:
         (( time()
           -
           etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
-                                          kind = "Incr",
-                                          role = "main"}
+                                           kind = "Incr",
+                                           role = "virtual-garden-etcd-main"}
           > bool 900
         )
         +
         ( etcdbr_snapshot_required{kind = "Incr",
-                                  role = "main"}
+                                   role = "virtual-garden-etcd-main"}
           >= bool 1
         )
         == 2
@@ -174,7 +180,7 @@ spec:
         +
         on(pod,role)
         group_left 0 *
-        ( etcd_server_is_leader{job = "virtual-garden-etcd-backup", role = "main"}
+        ( etcd_server_is_leader{job = "virtual-garden-etcd-backup", role = "virtual-garden-etcd-main"}
         == 1
         )
       for: 15m
@@ -193,13 +199,13 @@ spec:
         (( time()
           -
           etcdbr_snapshot_latest_timestamp{job  = "virtual-garden-etcd-backup",
-                                          kind = "Full",
-                                          role = "main"}
+                                           kind = "Full",
+                                           role = "virtual-garden-etcd-main"}
           > bool 86400
         )
         +
         ( etcdbr_snapshot_required{kind = "Full",
-                                  role = "main"}
+                                   role = "virtual-garden-etcd-main"}
           >= bool 1
         )
         == 2
@@ -225,7 +231,7 @@ spec:
       expr: |
         rate(
           etcdbr_restoration_duration_seconds_count{job       = "virtual-garden-etcd-backup",
-                                                    role      = "main",
+                                                    role      = "virtual-garden-etcd-main",
                                                     succeeded = "false"}[2m]
         )
         > 0
@@ -235,5 +241,5 @@ spec:
         severity: critical
       annotations:
         summary: Virtual garden etcd data restoration failure.
-        description: >
+        description: >-
           Virtual garden etcd data restoration was triggered, but has failed.

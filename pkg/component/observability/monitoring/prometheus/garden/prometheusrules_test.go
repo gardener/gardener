@@ -47,6 +47,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 			))
 
 			test.PrometheusRule(metering, "testdata/metering-meta.prometheusrule.test.yaml")
+			test.PrometheusRule(etcd, "testdata/etcd.prometheusrule.test.yaml")
 		})
 	})
 })
