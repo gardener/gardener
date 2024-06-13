@@ -22,10 +22,19 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
+)
+
+type decision string
+
+const (
+	csrApproved  decision = "csrApproved"
+	csrDenied    decision = "csrDenied"
+	csrNoOpinion decision = "csrNoOpinion"
 )
 
 // Reconciler reconciles CertificateSigningRequest objects.
@@ -74,9 +83,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("unable to parse csr: %w", err)
 	}
 
-	reason, allowed, err := r.mustApprove(ctx, csr, x509cr)
+	switch csr.Spec.SignerName {
+	case certificatesv1.KubeletServingSignerName:
+		err = r.handleKubeletServing(ctx, csr, x509cr)
+	case certificatesv1.KubeAPIServerClientSignerName:
+		err = r.handleKubeAPIServerClient(ctx, csr, x509cr)
+	default:
+		log.Info("Unknown signerName", "signerName", csr.Spec.SignerName)
+	}
+
+	return reconcile.Result{}, err
+}
+
+func (r *Reconciler) handleKubeletServing(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) error {
+	log := logf.FromContext(ctx)
+
+	reason, allowed, err := r.mustApproveKubeletServing(ctx, csr, x509cr)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed when checking for approval conditions: %w", err)
+		return fmt.Errorf("failed when checking for approval conditions: %w", err)
 	}
 
 	if allowed {
@@ -98,10 +122,44 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	_, err = r.CertificatesClient.UpdateApproval(ctx, csr.Name, csr, kubernetes.DefaultUpdateOptions())
-	return reconcile.Result{}, err
+	return err
 }
 
-func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, bool, error) {
+func (r *Reconciler) handleKubeAPIServerClient(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) error {
+	log := logf.FromContext(ctx)
+
+	reason, decision, err := r.mustApproveKubeAPIServerClient(ctx, csr, x509cr)
+	if err != nil {
+		return fmt.Errorf("failed when checking for approval conditions: %w", err)
+	}
+
+	switch decision {
+	case csrApproved:
+		log.Info("Auto-approving CSR", "reason", reason)
+		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateApproved,
+			Status:  corev1.ConditionTrue,
+			Reason:  "RequestApproved",
+			Message: fmt.Sprintf("Approving gardener-node-agent certificate CSR (%s)", reason),
+		})
+	case csrDenied:
+		log.Info("Denying CSR", "reason", reason)
+		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateDenied,
+			Status:  corev1.ConditionTrue,
+			Reason:  "RequestDenied",
+			Message: fmt.Sprintf("Denying gardener-node-agent certificate CSR (%s)", reason),
+		})
+	default:
+		log.V(1).Info("Not a CSR for gardener-node-agent", "reason", reason)
+		return nil
+	}
+
+	_, err = r.CertificatesClient.UpdateApproval(ctx, csr.Name, csr, kubernetes.DefaultUpdateOptions())
+	return err
+}
+
+func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, bool, error) {
 	if prefix := "system:node:"; !strings.HasPrefix(csr.Spec.Username, prefix) {
 		return fmt.Sprintf("username %q is not prefixed with %q", csr.Spec.Username, prefix), false, nil
 	}
@@ -165,4 +223,40 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 	}
 
 	return "all checks passed", true, nil
+}
+
+func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, decision, error) {
+	// Handle CSRs for gardener-node-agent only. There are other "kube-apiserver-client" CSRs which must not be touched.
+	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix) {
+		return fmt.Sprintf("commonName %q is not prefixed with %q", x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix), csrNoOpinion, nil
+	}
+
+	machineName := strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix)
+	machine := &machinev1alpha1.Machine{}
+	if err := r.SourceClient.Get(ctx, client.ObjectKey{Namespace: r.Config.MachineNamespace, Name: machineName}, machine); err != nil {
+		if apierrors.IsNotFound(err) {
+			return fmt.Sprintf("machine %q does not exist", machineName), csrDenied, nil
+		}
+		return "", csrNoOpinion, err
+	}
+
+	switch {
+	case strings.HasPrefix(csr.Spec.Username, "system:bootstrap:"):
+		if _, found := machine.Labels[machinev1alpha1.NodeLabelKey]; found {
+			return fmt.Sprintf("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", machineName), csrDenied, nil
+		}
+	case strings.HasPrefix(csr.Spec.Username, v1beta1constants.NodeAgentUserNamePrefix):
+		if csr.Spec.Username != x509cr.Subject.CommonName {
+			return fmt.Sprintf("username %q and commonName %q do not match", csr.Spec.Username, x509cr.Subject.CommonName), csrDenied, nil
+		}
+	// TODO(oliver-goetz): remove this case when NodeAgentAuthorizer feature gate is removed. It is used for migrating existing gardener-node-agents
+	case csr.Spec.Username == "system:serviceaccount:kube-system:gardener-node-agent":
+		if _, found := machine.Labels[machinev1alpha1.NodeLabelKey]; !found {
+			return "gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only", csrDenied, nil
+		}
+	default:
+		return fmt.Sprintf("username %q is not allowed to create CSRs for a gardener-node-agent", csr.Spec.Username), csrDenied, nil
+	}
+
+	return "all checks passed", csrApproved, nil
 }
