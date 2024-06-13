@@ -236,6 +236,10 @@ check_shell_dependencies() {
   fi
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
+    if ! date --version >/dev/null 2>&1; then
+      errors+=("Coreutils not found. Please ensure coreutils are installed.")
+    fi
+
     if gzip --version 2>&1 | grep -q "Apple"; then
       errors+=("Apple built-in gzip utility detected. Please ensure GNU gzip is installed.")
     fi
