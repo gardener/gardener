@@ -220,6 +220,28 @@ setup_kind_with_lpp_resize_support() {
   kubectl delete --ignore-not-found=true storageclass local-path
 }
 
+check_shell_dependencies() {
+  if ! sed --version  >/dev/null 2>&1; then
+    echo "WARNING: Your sed version does not support the --version flag. Please ensure you have a compatible version of GNU sed installed."
+  fi
+
+  if tar --version 2>&1 | grep -q "bsdtar"; then
+    echo "WARNING: You are using BSD tar, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU tar installed."
+  fi
+
+  if grep --version 2>&1 | grep -q "BSD grep"; then
+    echo "WARNING: You are using BSD grep, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU grep installed."
+  fi
+
+  if [ "$(uname -s)" = "Darwin" ]; then
+    if gzip --version 2>&1 | grep -q "Apple"; then
+      echo "WARNING: You are using the built-in Apple gzip utility, which may not be fully compatible with this script. Please ensure you have a compatible version of GNU gzip installed."
+    fi
+  fi
+}
+
+check_shell_dependencies
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
