@@ -46,6 +46,7 @@ spec:
           bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud \
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
           echo 'source ~/.bashrc' > ~/.bash_profile
+          ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
           cat > ~/greeting.sh <<"EOF"
           [ -n "$TMUX" ] && exit
