@@ -127,11 +127,6 @@ spec:
     #       memory: 1Gi
     #       ephemeralStorage: 1Gi
     #       pid: 1000
-    #     systemReserved:
-    #       cpu: 100m
-    #       memory: 1Gi
-    #       ephemeralStorage: 1Gi
-    #       pid: 1000
     # zones: # optional, only relevant if the provider supports availability zones
     # - europe-central-1a
     # - europe-central-1b
