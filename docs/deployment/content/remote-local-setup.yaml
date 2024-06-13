@@ -204,6 +204,55 @@ spec:
           [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
           nice dockerd-entrypoint.sh 2>&1 | tee ~/.dockerd.log &
           until docker ps >/dev/null 2>&1; do sleep 1; done
+
+          cat > /usr/local/bin/tmux_functions.sh <<"SCRIPT_EOF"
+          function wait_for_prompt {
+            # wait for the character '#' to appear in the last non empty line of the tmux pane indicating that the bash prompt is ready
+            while ! tmux capture-pane -p | grep -v ^$ | tail -n 1 | grep '#$' >/dev/null; do sleep .3; done
+          }
+
+          function wait_for_line {
+            # wait for a line to appear in the last non empty line of the tmux pane indicating that the input was echoed back by bash
+            while ! tmux capture-pane -p | grep -v ^$ | tail -n 1 | grep -F "$1" >/dev/null; do sleep .3; done
+          }
+
+          function send_commands {
+            wait_for_prompt
+            read -r line
+            tmux send "$line"
+            wait_for_line "$line"
+            while read -r line; do
+              tmux send Enter
+              wait_for_prompt
+              tmux send "$line"
+              wait_for_line "$line"
+            done
+            tmux send "$@"
+          }
+
+          function new_window {
+            tmux new-window -n "$1"
+            tmux select-pane -T "$2"
+            shift; shift
+            send_commands "$@"
+          }
+
+          function new_pane {
+            tmux split-window
+            tmux select-pane -T "$1"
+            tmux select-layout even-vertical
+            shift
+            send_commands "$@"
+          }
+
+          function new_horizontal_pane {
+            tmux split-window -h
+            tmux select-pane -T "$1"
+            shift
+            send_commands "$@"
+          }
+          SCRIPT_EOF
+
           tmux new -d -s gardener -n gardener
           tmux select-pane -T top
           tmux send top Enter; sleep 1; tmux send 1; sleep 1; tmux send C; sleep 1; tmux send i; sleep 1; tmux send t; sleep 1; tmux send V; sleep 1; tmux send s; sleep 1; tmux send 5 Enter
