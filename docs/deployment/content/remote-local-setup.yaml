@@ -77,6 +77,8 @@ spec:
           - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
           - '${g}prepare-gardener-ha.sh${n}'       (${y}default${n}) A 'make kind-ha-multi-zone-up gardener-ha-multi-zone-up' setup
              ${g}                      ${n}        with several tmux windows
+          - '${g}prepare-operator.sh${n}'          A 'make kind-operator-up operator-up' setup
+             ${g}                   ${n}           with several tmux windows
 
           The "Gardener HA" tmux session is prepared by default.
           To switch to another tmux session, please run the respective script.
@@ -361,6 +363,64 @@ spec:
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
             git log --oneline -1
+          EOF
+          new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
+            # Use this pane for ad-hoc commands
+          EOF
+          tmux select-window -t 0
+          tmux select-pane -t 1
+          SCRIPT_EOF
+
+          cat > /usr/local/bin/prepare-operator.sh <<"SCRIPT_EOF"
+          tmux kill-session 2>/dev/null || true
+          cd ~/go/src/github.com/gardener/gardener
+          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
+          cd - >/dev/null
+          mkdir -p ~/.kube
+          echo '{"current-context": "kind-gardener-operator-local"}' > ~/.kube/config
+          source /usr/local/bin/tmux_functions.sh
+          tmux new -d -s operator -n make -x 2000 -y 2000
+          tmux select-pane -T top; rm -f ~/.config/procps/toprc
+          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
+          new_pane "make kind-operator-up" <<"EOF"
+            sync_kubeconfig example/gardener-local/kind/operator & sleep 1
+            nice make kind-operator-down kind-operator-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
+          EOF
+          new_pane "make operator-up" <<"EOF"
+            export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig
+            nice make operator-up
+          EOF
+          new_window "lifecycle" "Create" <<"EOF"
+            k apply -f example/operator/20-garden.yaml
+          EOF
+          new_pane "Reconcile" <<"EOF"
+            k annotate garden local 'gardener.cloud/operation=reconcile'
+          EOF
+          new_window "garden" "garden" Enter <<"EOF"
+            watch k get garden
+          EOF
+          new_pane "last operations" <<"EOF"
+            k get garden local -o json -w | jq -r --unbuffered '.status.lastOperation | [.progress, .description] | join(" ")' | awk '{if (prev!=$0) print; fflush(); prev=$0}' | sed --unbuffered 's/,/, \n/g; s/$/\n/' | ts
+          EOF
+          new_pane "garden conditions" Enter <<"EOF"
+            watch -c "k get garden local -o yaml | yq -P -C '[.status.conditions[] | del(.lastTransitionTime, .lastUpdateTime)]' | grep --color=Always -E '\"False\"| Unknown| Progressing|$'"
+          EOF
+          new_window "pods" "pods" Enter <<"EOF"
+            # the while loop is used instead of watch to allow for scrolling a longer list in the tmux pane
+            while true; do clear; k get pods -A -o wide; sleep 10s; done
+          EOF
+          new_pane "not ready pods" Enter <<"EOF"
+            watch "k get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
+          EOF
+          new_window "virtual-garden" "virtual-garden" <<"EOF"
+            k -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig && export KUBECONFIG=/tmp/virtual-garden-kubeconfig
+          EOF
+          new_window "git" "git" Enter <<"EOF"
+            # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
+            git log --oneline -1
+          EOF
+          new_window "make generate" "make generate" <<"EOF"
+            nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
