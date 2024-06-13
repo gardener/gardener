@@ -105,6 +105,36 @@ func (k *kubeAPIServer) reconcilePrometheusRule(ctx context.Context, prometheusR
 						},
 					},
 					{
+						Alert: "OLKubeApiserverHighCPUConsumption",
+						Expr: intstr.FromString(`max(rate(container_cpu_usage_seconds_total{container="kube-apiserver"}[5m])) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="kube-apiserver",target_name="kube-apiserver",resource="cpu"}) > .8`),
+						For:  ptr.To(monitoringv1.Duration("10m")),
+						Labels: map[string]string{
+							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "KubeApiserver single replica is consuming too much CPU",
+							"description": "KubeApiserver single replica is consuming CPU over 80% of the max allowed value specified by VPA.",
+						},
+					},
+					{
+						Alert: "OLKubeApiserverHighRequestCount",
+						Expr: intstr.FromString(`sum(increase(apiserver_request_total{job="kube-apiserver"}[10m])) > (sum(increase(apiserver_request_total{job="kube-apiserver"}[10m] offset 10m)) * 1.70)`),
+						For:  ptr.To(monitoringv1.Duration("10m")),
+						Labels: map[string]string{
+							"service":    v1beta1constants.DeploymentNameKubeAPIServer,
+							"severity":   "warning",
+							"type":       "seed",
+							"visibility": "operator",
+						},
+						Annotations: map[string]string{
+							"summary":     "KubeApiserver request count is too high",
+							"description": "KubeApiserver request count is higher than 70% of the last 10 mins",
+						},
+					},
+					{
 						Record: "shoot:apiserver_watch_duration:quantile",
 						Expr:   intstr.FromString(`histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))`),
 						Labels: map[string]string{"quantile": "0.2"},
