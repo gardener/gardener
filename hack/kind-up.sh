@@ -224,7 +224,7 @@ check_shell_dependencies() {
   errors=()
 
   if ! sed --version >/dev/null 2>&1; then
-    errors+=("Current sed version does not support the --version flag. Please ensure GNU sed is installed.")
+    errors+=("Current sed version does not support --version flag. Please ensure GNU sed is installed.")
   fi
 
   if tar --version 2>&1 | grep -q "bsdtar"; then
@@ -237,7 +237,7 @@ check_shell_dependencies() {
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
     if ! date --version >/dev/null 2>&1; then
-      errors+=("Coreutils not found. Please ensure coreutils are installed.")
+      errors+=("Current date version does not support --version flag. Please ensure coreutils are installed.")
     fi
 
     if gzip --version 2>&1 | grep -q "Apple"; then
