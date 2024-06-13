@@ -154,8 +154,7 @@
       ],
       "excludePackagePatterns": [
         "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubesphere\/.+"
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+"
       ],
       "enabled": false
     },
@@ -166,7 +165,8 @@
       "excludePackagePatterns": [
         "gardener\/.+",
         "credativ\/.+",
-        "envoyproxy\/.+"
+        "envoyproxy\/.+",
+        "fluent\/.+"
       ],
       "enabled": false
     },
