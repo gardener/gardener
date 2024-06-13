@@ -57,16 +57,16 @@ require (
 	helm.sh/helm/v3 v3.14.4
 	istio.io/api v1.22.1
 	istio.io/client-go v1.22.0
-	k8s.io/api v0.29.5
+	k8s.io/api v0.29.6
 	k8s.io/apiextensions-apiserver v0.29.5
-	k8s.io/apimachinery v0.29.5
+	k8s.io/apimachinery v0.29.6
 	k8s.io/apiserver v0.29.5
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.1.2
-	k8s.io/client-go v0.29.5
+	k8s.io/client-go v0.29.6
 	k8s.io/cluster-bootstrap v0.29.5
 	k8s.io/code-generator v0.29.5
 	k8s.io/component-base v0.29.5
-	k8s.io/component-helpers v0.29.5
+	k8s.io/component-helpers v0.29.6
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-aggregator v0.29.5
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
