@@ -71,6 +71,11 @@ spec:
           ${c}Documentation:${n} https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md
           ${y}To ${c}exec${y} into this pod, run '${g}kubectl exec -it remote-local-setup-0 -- sh${y}'${n}
 
+          There are multiple variants of the local setup of Gardener
+          that can be prepared in a tmux session for convenience:
+
+          - '${g}prepare-gardener.sh${n}'          A basic 'make kind-up gardener-up' setup
+
           ${y}To attach to the ${c}tmux${y} session, run '${g}tmux a${y}'${n}.
           - ${y}mouse${n} support is enabled
             - use the mouse to select panes or windows and to resize panes
@@ -195,10 +200,6 @@ spec:
             set -g pane-border-format " #{pane_index} #{pane_title} - #{pane_current_command} "
             set -g window-size smallest
           EOF
-          mkdir -p ~/.kube
-          if [ ! -f ~/.kube/config ]; then
-            echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
-          fi
           mkdir -p ~/go/src/github.com/gardener
           cd ~/go/src/github.com/gardener
           [ -d gardener/.git ] || git clone -q https://github.com/gardener/gardener
@@ -253,14 +254,44 @@ spec:
           }
           SCRIPT_EOF
 
-          tmux new -d -s gardener -n gardener
-          tmux select-pane -T top
-          tmux send top Enter; sleep 1; tmux send 1; sleep 1; tmux send C; sleep 1; tmux send i; sleep 1; tmux send t; sleep 1; tmux send V; sleep 1; tmux send s; sleep 1; tmux send 5 Enter
-          tmux split-window \; select-pane -T kind     ; sleep 1; tmux send "make kind-up # Set up KinD cluster (Garden and Seed)" \; select-layout even-vertical
-          tmux split-window \; select-pane -T gardener ; sleep 1; tmux send "make gardener-up # Set up Gardener"\; select-layout even-vertical
-          tmux split-window \; select-pane -T shoot    ; sleep 1; tmux send "kubectl apply -f example/provider-local/shoot.yaml # Create a new shoot cluster "\; select-layout even-vertical
-          tmux split-window \; select-pane -T config   ; sleep 1; tmux send "./hack/usage/generate-admin-kubeconf.sh > /tmp/kubeconfig-shoot-local.yaml # Get Kubeconfig for Shoot" \; select-layout even-vertical
-          tmux split-window \; select-pane -T config   ; sleep 1; tmux send "make test-e2e-local-simple" # Run simple e2e test (create and delete shoot) \; select-layout even-vertical
+          cat > /usr/local/bin/prepare-gardener.sh <<"SCRIPT_EOF"
+          tmux kill-session 2>/dev/null || true
+          cd ~/go/src/github.com/gardener/gardener
+          make kind-down kind-ha-multi-zone-down kind-operator-down >/dev/null 2>&1
+          cd - >/dev/null
+          mkdir -p ~/.kube
+          echo '{"current-context": "kind-gardener-local"}' > ~/.kube/config
+          source /usr/local/bin/tmux_functions.sh
+          tmux new -d -s gardener -n gardener -x 2000 -y 2000
+          tmux select-pane -T top; rm -f ~/.config/procps/toprc
+          for k in top Enter z C c i t t m m V s 5 Enter E e W; do sleep .2; tmux send $k; done
+          new_pane "Set up the KinD cluster (Garden and Seed)" <<"EOF"
+            sync_kubeconfig example/gardener-local/kind/local & sleep 1
+            nice make kind-down kind-up && kubectl wait --for=condition=ready pod -A --all --timeout=-1s
+          EOF
+          new_pane "Set up Gardener" <<"EOF"
+            export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig
+            nice make gardener-up
+          EOF
+          new_pane "Create a shoot cluster" <<"EOF"
+            kubectl apply -f example/provider-local/shoot.yaml
+          EOF
+          new_pane "Access the shoot cluster" <<"EOF"
+            KUBECONFIG=<(generate-admin-kubeconf.sh) kubectl get pods -A
+          EOF
+          new_pane "Run simple e2e test (create and delete shoot)" <<"EOF"
+            make test-e2e-local-simple
+          EOF
+          new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
+            # Use this pane for ad-hoc commands
+          EOF
+          tmux select-window -t 0
+          tmux select-pane -t 1
+          SCRIPT_EOF
+
+          chmod +x /usr/local/bin/prepare-*.sh
+          /usr/local/bin/prepare-gardener.sh
+
           touch /tmp/ready
           wait
         startupProbe:
