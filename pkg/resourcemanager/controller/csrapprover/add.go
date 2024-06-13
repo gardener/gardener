@@ -44,7 +44,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 				predicate.NewPredicateFuncs(func(obj client.Object) bool {
 					csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
-					return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
+					return ok && (csr.Spec.SignerName == certificatesv1.KubeletServingSignerName || csr.Spec.SignerName == certificatesv1.KubeAPIServerClientSignerName)
 				}),
 			),
 		).Complete(r)
