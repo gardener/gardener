@@ -46,7 +46,6 @@ spec:
           echo node-shell      && krew install node-shell
           bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud \
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
-          echo 'source ~/.bashrc' > ~/.bash_profile
           ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
           cat > ~/greeting.sh <<"EOF"
@@ -113,11 +112,16 @@ spec:
           fi
           echo
           EOF
+          kubectl completion bash > /usr/share/bash-completion/completions/kubectl
+          cat > ~/.bash_profile <<"EOF"
+            source /etc/bash/bashrc
+            source ~/.bashrc
+          EOF
           cat > ~/.bashrc <<"EOF"
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export KUBECONFIG=~/gardener/example/gardener-local/kind/local/kubeconfig:/tmp/kubeconfig-shoot-local.yaml
-            source <(kubectl completion bash)
+            source /usr/share/bash-completion/completions/kubectl
             complete -o default -F __start_kubectl k
             source ~/.kube-ps1.sh
             source /usr/share/git-core/git-prompt.sh
