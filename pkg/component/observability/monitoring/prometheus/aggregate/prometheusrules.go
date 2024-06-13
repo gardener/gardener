@@ -69,7 +69,7 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 						},
 						{
 							Alert: "TooManyEtcdSnapshotCompactionJobsFailing",
-							Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h])) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
+							Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h]) >= 1) > 0.1`),
 							For:   ptr.To(monitoringv1.Duration("10m")),
 							Labels: map[string]string{
 								"severity":   "warning",
