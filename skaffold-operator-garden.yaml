@@ -19,7 +19,7 @@ deploy:
             command:
               - bash
               - -ec
-              - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
+              - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d | sed -e 's/api.virtual-garden.local.gardener.cloud.*/api.virtual-garden.local.gardener.cloud:31443/' > $VIRTUAL_GARDEN_KUBECONFIG
 ---
 apiVersion: skaffold/v4beta7
 kind: Config

@@ -35,9 +35,9 @@ local_address="127.0.0.1"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address="::1"
 fi
-local_address_operator="127.0.0.3"
+local_address_operator="127.0.0.1"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
-  local_address_operator="::3"
+  local_address_operator="::1"
 fi
 
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
