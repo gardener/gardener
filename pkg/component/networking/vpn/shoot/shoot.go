@@ -94,6 +94,9 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
+	// DisableRewrite disable VPN go-rewrite
+	// TODO (MartinWeindel) remove after Oct 2024
+	DisableRewrite bool
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -598,8 +601,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("100m"),
-				corev1.ResourceMemory: resource.MustParse("100Mi"),
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("10Mi"),
 			},
 			Limits: v.getResourceLimits(),
 		},
@@ -698,10 +701,6 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: v.indexedReversedHeader(index),
 		},
 		corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-			Value: "true",
-		},
-		corev1.EnvVar{
 			Name:  "IS_SHOOT_CLIENT",
 			Value: "true",
 		},
@@ -710,6 +709,10 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	if index != nil {
 		envVariables = append(envVariables,
 			[]corev1.EnvVar{
+				{
+					Name:  "IS_HA",
+					Value: "true",
+				},
 				{
 					Name:  "VPN_SERVER_INDEX",
 					Value: strconv.Itoa(*index),
@@ -725,17 +728,26 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			}...)
 	}
 
+	if v.values.DisableRewrite {
+		envVariables = append(envVariables,
+			corev1.EnvVar{
+				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+				Value: "true",
+			},
+		)
+	}
+
 	return envVariables
 }
 
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("100Mi"),
+			corev1.ResourceMemory: resource.MustParse("40Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("120Mi"),
+		corev1.ResourceMemory: resource.MustParse("60Mi"),
 	}
 }
 
@@ -829,6 +841,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 		Name:            initContainerName,
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/shoot-client", "setup"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "IS_SHOOT_CLIENT",
@@ -841,10 +854,6 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 						FieldPath: "metadata.name",
 					},
 				},
-			},
-			{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
@@ -863,7 +872,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 	if v.values.HighAvailabilityEnabled {
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
-				Name:  "CONFIGURE_BONDING",
+				Name:  "IS_HA",
 				Value: "true",
 			},
 			{
@@ -875,6 +884,21 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
+	}
+	if v.values.DisableRewrite {
+		container.Command = nil
+		container.Env = append(container.Env,
+			corev1.EnvVar{
+				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+				Value: "true",
+			})
+		if v.values.HighAvailabilityEnabled {
+			container.Env = append(container.Env,
+				corev1.EnvVar{
+					Name:  "CONFIGURE_BONDING",
+					Value: "true",
+				})
+		}
 	}
 	return []corev1.Container{container}
 }
